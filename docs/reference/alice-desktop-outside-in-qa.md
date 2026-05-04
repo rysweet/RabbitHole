@@ -126,9 +126,19 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
 
 `--timeout-seconds` applies to `xvfb-real-alice` execution. Manual scenarios write checklists immediately.
 
+### Prepare a gated smoke without execution
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-package-smoke \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
+```
+
+`--prepare-only` is the intentional preflight mode for gated command smokes. It writes `outcome=gated-not-run` evidence and returns success without executing the configured command.
+
 ### Exit behavior
 
-Runner and validator commands return a non-zero exit status when the catalog is invalid, a requested scenario is unknown, a scenario path is outside the active catalog, a timeout value is invalid, an automation mode is unsupported, or a required launch/evidence capture step fails.
+Runner and validator commands return a non-zero exit status when the catalog is invalid, a requested scenario is unknown, a scenario path is outside the active catalog, a timeout value is invalid, an automation mode is unsupported, a gated command smoke is not enabled and `--prepare-only` was not requested, or a required launch/evidence capture step fails.
 
 ## Environment variables
 
@@ -138,7 +148,7 @@ Runner and validator commands return a non-zero exit status when the catalog is 
 | `ALICE_QA_DISPLAY` | Xvfb runs | First free display from `:90` through `:120` | Reuses a specific X display instead of selecting one automatically. |
 | `ALICE_QA_SCREEN` | Xvfb runs | `1280x900x24` | Sets Xvfb screen geometry. |
 | `ALICE_QA_READY_WAIT_SECONDS` | Xvfb runs | Scenario `automation.readyWaitSeconds` | Overrides the scenario readiness wait before screenshot capture. |
-| `ALICE_QA_RUN_GATED_SMOKES` | Gated command smokes | unset | Set to `1` to execute configured command smokes. When unset, the runner writes `outcome=gated-not-run` status and a checklist. |
+| `ALICE_QA_RUN_GATED_SMOKES` | Gated command smokes | unset | Set to `1` to execute configured command smokes. When unset, the runner writes `outcome=gated-not-run` status and a checklist, then exits non-zero unless `--prepare-only` was requested. |
 | `NODE_OPTIONS` | Surrounding Node tooling | unset | Use `--max-old-space-size=32768` when a larger QA orchestrator invokes Node-based helpers around this lane. The lane itself does not require Node. |
 
 Example:
@@ -280,7 +290,7 @@ Gated command smoke preparation includes:
 | Artifact | Description |
 | --- | --- |
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
-| `status.txt` | Scenario ID, automation mode, `outcome=gated-not-run`, gate name, command, working directory, timeout, and generated checklist name. |
+| `status.txt` | Scenario ID, automation mode, `outcome=gated-not-run`, gate name, skip mode, command, working directory, timeout, and generated checklist name. |
 | `manual-evidence-checklist.txt` | Review checklist describing what evidence is required when the gate is enabled or fulfilled elsewhere. |
 
 Enabled gated command smoke execution also includes:

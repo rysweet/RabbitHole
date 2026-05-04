@@ -11,7 +11,7 @@ from pathlib import Path
 USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
-  amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>]
+  amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
 
 Run from the Alice repository root or one of its child directories.
 """
