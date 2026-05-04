@@ -219,8 +219,11 @@ public class XmlProjectIo implements ProjectIo {
           String uuidText = xmlElement.getAttribute(XML_RESOURCE_UUID_ATTRIBUTE);
           String entryName = xmlElement.getAttribute(XML_RESOURCE_ENTRY_NAME_ATTRIBUTE);
           if ((className != null) && (uuidText != null) && (entryName != null)) {
-            byte[] data = InputStreamUtilities.getBytes(container.getInputStream(entryName));
-            if (data != null) {
+            try (InputStream resourceStream = container.getInputStream(entryName)) {
+              if (resourceStream == null) {
+                throw new IOException("Archive does not contain resource entry " + entryName);
+              }
+              byte[] data = InputStreamUtilities.getBytes(resourceStream);
               try {
                 Class<? extends Resource> resourceCls = (Class<? extends Resource>) ClassUtilities.forName(className);
                 Resource resource = createResource(resourceCls, uuidText);
@@ -229,8 +232,6 @@ public class XmlProjectIo implements ProjectIo {
               } catch (ClassNotFoundException cnfe) {
                 PrintUtilities.println("WARNING: no class for name:", className);
               }
-            } else {
-              PrintUtilities.println("WARNING: no data for resource:", entryName);
             }
           }
         }

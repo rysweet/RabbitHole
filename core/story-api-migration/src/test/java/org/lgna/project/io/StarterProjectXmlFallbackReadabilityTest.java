@@ -1,27 +1,42 @@
 package org.lgna.project.io;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.lgna.common.Resource;
 import org.lgna.project.Project;
+import org.lgna.story.resourceutilities.ModelResourceInfo;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class StarterProjectXmlFallbackReadabilityTest {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private static final List<String> REPRESENTATIVE_LEGACY_PROJECT_ARCHIVES = Arrays.asList(
       "magic2.a3p",
       "lagoonMinimum.a3p",
@@ -84,6 +99,42 @@ public class StarterProjectXmlFallbackReadabilityTest {
         foundResourceBearingFixture);
   }
 
+
+  @Test
+  public void readingCommittedTemplateAndGalleryMetadataDoesNotMutateFixtures() throws Exception {
+    Path templateArchive = starterProjectsDirectory().resolve("lagoonMinimum.a3p");
+    Path galleryMetadata = galleryDirectory()
+        .resolve("assets/alice/aliceModelResources/org/lgna/story/resources/aircraft/SpaceShip.xml");
+    byte[] templateBefore = sha256(templateArchive);
+    byte[] galleryBefore = sha256(galleryMetadata);
+
+    Project project = IoUtilities.readProject(templateArchive.toFile());
+    ModelResourceInfo modelInfo = new ModelResourceInfo(
+        DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(galleryMetadata.toFile()));
+
+    assertNotNull(project.getProgramType());
+    assertEquals("SpaceShip", modelInfo.getModelName());
+    assertEquals("SpaceShip", modelInfo.createModelManifest().description.name);
+    assertArrayEquals("starter template archive should be read-only", templateBefore, sha256(templateArchive));
+    assertArrayEquals("gallery metadata should be read-only", galleryBefore, sha256(galleryMetadata));
+  }
+
+  @Test
+  public void missingCommittedTemplateMediaFailsExplicitlyWithoutMutatingArchive() throws Exception {
+    Path sourceArchive = starterProjectsDirectory().resolve("lagoonMinimum.a3p");
+    String missingEntry = "resources/sandDunesLight_diffuse.png";
+    Path damagedArchive = temporaryFolder.newFile("lagoon-missing-media.a3p").toPath();
+    copyArchiveWithoutEntry(sourceArchive, damagedArchive, missingEntry);
+    byte[] sourceBefore = sha256(sourceArchive);
+    byte[] damagedBefore = sha256(damagedArchive);
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(damagedArchive.toFile()));
+
+    assertTrue(thrown.getMessage().contains(missingEntry));
+    assertArrayEquals("committed source fixture should not be mutated by failed read", sourceBefore, sha256(sourceArchive));
+    assertArrayEquals("damaged archive should not be mutated by failed read", damagedBefore, sha256(damagedArchive));
+  }
+
   private static Path starterProjectsDirectory() {
     Path current = Paths.get("").toAbsolutePath();
     while (current != null) {
@@ -95,6 +146,46 @@ public class StarterProjectXmlFallbackReadabilityTest {
     }
     fail("Unable to find core/resources/src/application/resources/starter-projects from " + Paths.get("").toAbsolutePath());
     return null;
+  }
+
+
+  private static Path galleryDirectory() {
+    Path current = Paths.get("").toAbsolutePath();
+    while (current != null) {
+      Path candidate = current.resolve("core/resources/src/application/resources/gallery");
+      if (Files.isDirectory(candidate)) {
+        return candidate;
+      }
+      current = current.getParent();
+    }
+    fail("Unable to find core/resources/src/application/resources/gallery from " + Paths.get("").toAbsolutePath());
+    return null;
+  }
+
+  private static byte[] sha256(Path file) throws Exception {
+    return MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file));
+  }
+
+  private static void copyArchiveWithoutEntry(Path source, Path destination, String omittedEntry) throws IOException {
+    try (ZipFile zipFile = new ZipFile(source.toFile());
+         ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destination.toFile()))) {
+      Enumeration<? extends ZipEntry> entries = zipFile.entries();
+      while (entries.hasMoreElements()) {
+        ZipEntry entry = entries.nextElement();
+        if (entry.getName().equals(omittedEntry)) {
+          continue;
+        }
+        ZipEntry copy = new ZipEntry(entry.getName());
+        copy.setTime(entry.getTime());
+        zipOutputStream.putNextEntry(copy);
+        if (!entry.isDirectory()) {
+          try (var inputStream = zipFile.getInputStream(entry)) {
+            inputStream.transferTo(zipOutputStream);
+          }
+        }
+        zipOutputStream.closeEntry();
+      }
+    }
   }
 
   private static String readTrimmedEntry(ZipFile zipFile, ZipEntry zipEntry) throws IOException {
