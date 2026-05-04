@@ -255,6 +255,33 @@ public class ProjectCodeGeneratorTest {
   }
 
   @Test
+  public void generateCodeRejectsResourceFileConflictWithoutOverwritingDestination() throws Exception {
+    byte[] data = "hello alice".getBytes(StandardCharsets.UTF_8);
+    Project project = new Project(programType("Program"), Project.SceneCameraType.WindowCamera);
+    project.addResource(new TestResource("note.txt", "text/plain", data));
+    File aliceProject = temporaryFolder.newFile("synthetic-resource-conflict.a3p");
+    IoUtilities.writeProject(aliceProject, project);
+    File sourceDirectory = temporaryFolder.newFolder("conflicting-resource-src");
+    Path resourcePath = sourceDirectory.toPath().resolve("resources").resolve("note.txt");
+    String handAuthoredResource = "hand-authored note\n";
+    Files.createDirectories(resourcePath.getParent());
+    Files.writeString(resourcePath, handAuthoredResource);
+
+    try {
+      ProjectCodeGenerator.generateCode(aliceProject, sourceDirectory, null, false);
+      fail("Expected IOException for existing resource destination");
+    } catch (java.io.IOException expected) {
+      assertTrue(expected.getMessage(), expected.getMessage().contains("Generated destination already exists"));
+      assertTrue(expected.getMessage(), expected.getMessage().contains("resources"));
+    }
+
+    assertEquals(handAuthoredResource, Files.readString(resourcePath));
+    assertFalse(Files.exists(sourceDirectory.toPath().resolve("Program.java")));
+    assertFalse(Files.exists(sourceDirectory.toPath().resolve("Resources.java")));
+    assertFalse(Files.exists(sourceDirectory.toPath().resolve("AliceJavaFXLauncher.java")));
+  }
+
+  @Test
   public void generatedSyntheticAliceProjectSourcesCompile() throws Exception {
     File aliceProject = temporaryFolder.newFile("synthetic-compile.a3p");
     IoUtilities.writeProject(
