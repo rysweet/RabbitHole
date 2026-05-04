@@ -38,6 +38,8 @@ public class Decoder {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle type uses linked members that the AST decoder does not support.",
           e);
+    } catch (RuntimeException e) {
+      throw new IllegalArgumentException("Unable to parse Tweedle type.", e);
     }
     if (tweedleType instanceof TweedleClass tweedleClass) {
       return decodeClass(tweedleClass);

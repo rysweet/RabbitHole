@@ -1,11 +1,11 @@
 # Project Save and Export Operations
 
-This reference describes the `core/ide` project Save, Save As, and Export operation layer and the characterization-test feature planned for it.
+This reference describes the `core/ide` project Save, Save As, and Export operation layer and the characterization-test feature for it.
 
 ## Contents
 
 - [Package](#package)
-- [Planned feature scope](#planned-feature-scope)
+- [Characterization scope](#characterization-scope)
 - [Operation responsibilities](#operation-responsibilities)
 - [User-visible behavior](#user-visible-behavior)
 - [API reference](#api-reference)
@@ -22,7 +22,7 @@ The save/export operation layer is implemented in:
 core/ide/src/main/java/org/alice/ide/croquet/models/projecturi/
 ```
 
-The first characterization tests for this layer should be added in the matching test package:
+Characterization tests for this layer live in the matching test package:
 
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
@@ -30,25 +30,25 @@ core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
 
 The operation layer routes Croquet actions to `ProjectApplication` save/export behavior. Archive file contents remain owned by lower-level project IO classes.
 
-## Planned feature scope
+## Characterization scope
 
-The feature to build is a characterization-test layer for the existing operation behavior. It should not change production Save, Save As, or Export behavior.
+The characterization-test layer covers existing operation behavior. It does not change production Save, Save As, or Export behavior.
 
-Build this first:
+The direct operation coverage includes:
 
 | Scope | Expected implementation |
 | --- | --- |
-| Direct operation tests | Add JUnit 4 tests in `org.alice.ide.croquet.models.projecturi` for prompt rules, extension selection, and toolbar text clobbering. |
+| Direct operation tests | JUnit 4 tests in `org.alice.ide.croquet.models.projecturi` cover prompt rules, extension selection, and toolbar text clobbering. |
 | Compatibility assertions | Assert the exact behavior currently implemented by `SaveProjectOperation`, `SaveAsProjectOperation`, and `ExportProjectOperation`. |
 | Portable file fixtures | Use real files from JUnit `TemporaryFolder`; use a missing file as the portable "cannot be reused" Save case. |
 
-Do not build this in the first pass:
+These areas stay outside direct operation tests:
 
 | Deferred scope | Reason |
 | --- | --- |
-| `AbstractSaveOperation.perform(UserActivity)` flow tests | The current method directly reaches static/UI-bound collaborators and final save/export methods. Add a small package-private seam before testing this flow. |
-| New mocking framework | The intended feature should use existing JUnit 4 patterns and narrow production seams instead of PowerMock-style interception. |
 | Archive content verification | Archive bytes and project serialization belong to lower-level project IO tests, not operation-routing tests. |
+| New mocking framework | The intended feature should use existing JUnit 4 patterns and narrow production seams instead of PowerMock-style interception. |
+| Display-backed Swing/JavaFX testing | Desktop launch evidence belongs to the outside-in QA lane and Xvfb-backed scenarios. |
 
 ## Operation responsibilities
 
@@ -72,7 +72,7 @@ When Alice is saving a backup copy, the save dialog uses the main project file b
 
 If the user cancels the save dialog, the Croquet `UserActivity` is canceled and no save/export call is made. If a save/export call succeeds, the activity is finished.
 
-If a save/export call raises `IOException`, Alice shows an error dialog, hides the wait cursor, and prompts again. The retry loop continues until the user cancels or a later save/export attempt succeeds.
+If a save/export call raises `IOException`, Alice shows an error dialog, hides the wait cursor, and prompts again. Current-file Save retries suggest the current project base name. Prompted Save As or Export-style retries also keep the current project base name when one exists; if there is no current file, the retry prompt has no suggested base name. The characterized retry loop continues until the user cancels or a later save/export attempt succeeds.
 
 ## API reference
 
@@ -139,9 +139,9 @@ ExportProjectOperation operation = new ExportProjectOperation();
 
 ## Testing notes
 
-Start with direct characterization tests in the same package as the operations. Those tests can call protected prompt and extension methods without changing production visibility.
+Direct operation tests live in the same package as the operations. Those tests can call protected prompt and extension methods without changing production visibility.
 
-| Behavior | First-pass direct test target |
+| Behavior | Direct test target |
 | --- | --- |
 | Save prompts when the current file is `null` | `SaveProjectOperation.isPromptNecessary(null)` |
 | Save does not prompt for a writable current file | `SaveProjectOperation.isPromptNecessary(writableFile)` |
@@ -154,9 +154,17 @@ Start with direct characterization tests in the same package as the operations. 
 | Export uses export extension | `ExportProjectOperation.getExtension()` |
 | Export clobbers toolbar text | `ExportProjectOperation.isToolBarTextClobbered()` |
 
-Flow-level tests for `AbstractSaveOperation.perform(UserActivity)` need a narrow seam before they can avoid UI/static interception. The current implementation directly uses `StageIDE.getActiveInstance()`, `DocumentFrame.showSaveFileDialog(...)`, `Dialogs.showError(...)`, and final `ProjectApplication.saveProjectTo(File)` / `exportProjectTo(File)` methods.
+Flow-level tests use the package-private `SaveOperationFlow` seam so they can avoid UI/static interception while preserving the production adapter in `AbstractSaveOperation.perform(UserActivity)`.
 
-Prefer a package-private flow context or runner over adding a mocking framework. The seam should expose only the current URI file, backup state, dialog result, wait cursor hooks, save/export callback, error reporting, and activity outcome needed to characterize the existing flow. That seam is a later refactor step, not part of the first direct-test feature.
+| Flow behavior | Flow test target |
+| --- | --- |
+| Writable current file saves without prompting | `SaveOperationFlowTest` supplies a writable file and asserts save callback, wait cursor, and finish behavior. |
+| Prompt cancellation stops the action | `SaveOperationFlowTest` returns `null` from the dialog and asserts no save callback and canceled activity. |
+| Backup save copy naming | `SaveOperationFlowTest` supplies the main project file and asserts the prompted base name ends with ` Copy`. |
+| Current-file Save `IOException` retry | `SaveOperationFlowTest` throws from the first callback, asserts error reporting and wait cursor cleanup, then succeeds on retry. |
+| Current-file Save `IOException` followed by cancel | `SaveOperationFlowTest` throws from the first callback, returns `null` from the retry prompt, and asserts canceled activity. |
+| Prompted current-project retry | `SaveOperationFlowTest` prompts first, fails the selected destination, and asserts retry keeps the current project base name. |
+| Prompted no-current-file retry cancellation | `SaveOperationFlowTest` prompts first, fails the selected destination, and asserts retry cancellation keeps no suggested base name. |
 
 ## Configuration
 
@@ -165,18 +173,22 @@ There is no runtime configuration flag for Save, Save As, or Export routing. The
 Developer validation uses the existing Maven configuration:
 
 ```bash
-mvn -pl core/ide test
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  test
 ```
 
 For broad Maven validation from a fresh checkout or worktree, initialize the Tweedle grammar submodule first:
 
 ```bash
 git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
 ```
 
 ## Compatibility rules
 
-Tests and later refactors in this package preserve these rules:
+Tests and refactors in this package preserve these rules:
 
 1. `SaveProjectOperation` keeps the exact writable-file prompt rule.
 2. `SaveAsProjectOperation` always prompts.
@@ -187,7 +199,7 @@ Tests and later refactors in this package preserve these rules:
 7. Export delegates to `ProjectApplication.exportProjectTo(File)`.
 8. A successful save/export calls `UserActivity.finish()`.
 9. A canceled dialog calls `UserActivity.cancel()` and does not save.
-10. `IOException` keeps the retry loop behavior and surfaces the error.
+10. Characterized `IOException` retry paths keep retry loop behavior and surface the error.
 11. Wait cursor show/hide wraps every attempted save/export.
 12. Public operation identities and UUIDs stay unchanged.
 

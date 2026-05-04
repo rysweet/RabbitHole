@@ -536,6 +536,76 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonTypeReaderReportsUnsupportedTypeReferenceFormat() throws Exception {
+    TypeManifest manifest = typeManifest("SyntheticType");
+    TypeReference typeReference = new TypeReference("SyntheticType", "src/SyntheticType.xml", "xml");
+    manifest.resources.add(typeReference);
+    File typeFile = temporaryFolder.newFile("unsupported-type-reference-format.a3c");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(typeFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "<type/>");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeFile));
+
+    assertTrue(thrown.getMessage().contains("SyntheticType"));
+    assertTrue(thrown.getMessage().contains("xml"));
+    assertTrue(thrown.getMessage().contains(typeReference.file));
+  }
+
+  @Test
+  public void jsonPlayerReaderReportsMissingTweedleTypeEntry() throws Exception {
+    TypeReference typeReference = new TypeReference("Program", "src/MissingProgram.twe", "tweedle");
+    File exportFile = temporaryFolder.newFile("missing-tweedle-entry.a3w");
+    writePlayerArchiveManifestOnly(exportFile, typeReference);
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue(thrown.getMessage().contains(typeReference.file));
+  }
+
+  @Test
+  public void jsonTypeReaderReportsMissingTweedleTypeEntry() throws Exception {
+    TypeManifest manifest = typeManifest("SyntheticType");
+    TypeReference typeReference = new TypeReference("SyntheticType", "src/MissingSyntheticType.twe", "tweedle");
+    manifest.resources.add(typeReference);
+    File typeFile = temporaryFolder.newFile("missing-tweedle-entry.a3c");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(typeFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeFile));
+
+    assertTrue(thrown.getMessage().contains(typeReference.file));
+  }
+
+  @Test
+  public void jsonPlayerReaderWrapsMalformedTweedleTypeEntry() throws Exception {
+    File exportFile = temporaryFolder.newFile("malformed-tweedle-entry.a3w");
+    writeJsonPlayerArchive(exportFile, "Program", "class Program extends {}");
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue(thrown.getMessage().contains("Unable to decode Tweedle type entry"));
+    assertTrue(thrown.getMessage().contains("src/Program.twe"));
+  }
+
+  @Test
+  public void jsonTypeReaderWrapsMalformedTweedleTypeEntry() throws Exception {
+    File typeFile = temporaryFolder.newFile("malformed-tweedle-entry.a3c");
+    writeJsonTypeArchive(typeFile, "SyntheticType", "class SyntheticType extends {}");
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeFile));
+
+    assertTrue(thrown.getMessage().contains("Unable to decode Tweedle type entry"));
+    assertTrue(thrown.getMessage().contains("src/SyntheticType.twe"));
+  }
+
+  @Test
   public void readsSimpleJsonPlayerArchiveTweedleProgram() throws Exception {
     File exportFile = temporaryFolder.newFile("json-simple-program.a3w");
     writeJsonPlayerArchive(exportFile, "Program", "class Program extends SProgram models Program {}");
@@ -544,6 +614,16 @@ public class IoUtilitiesTest {
 
     assertNotNull("Simple Tweedle player archives should decode a program type.", readProject.getProgramType());
     assertEquals("Program", readProject.getProgramType().getName());
+  }
+
+  @Test
+  public void unsupportedJsonPlayerTweedleConstructsRemainUndecoded() throws Exception {
+    File exportFile = temporaryFolder.newFile("json-unsupported-program.a3w");
+    writeJsonPlayerArchive(exportFile, "Program", "class Program { WholeNumber count; }");
+
+    Project readProject = IoUtilities.readProject(exportFile);
+
+    assertNull("Unsupported Tweedle members remain documented null program type behavior for now.", readProject.getProgramType());
   }
 
   @Test

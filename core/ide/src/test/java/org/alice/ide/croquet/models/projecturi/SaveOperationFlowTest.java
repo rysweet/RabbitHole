@@ -126,6 +126,63 @@ public class SaveOperationFlowTest {
     assertTrue(context.canceled);
   }
 
+  @Test
+  public void promptedJourneyIOExceptionRetriesWithCurrentProjectBaseName() throws Exception {
+    File currentProject = temporaryFolder.newFile("world.a3p");
+    File failedDestination = new File(temporaryFolder.getRoot(), "classroom-copy.a3p");
+    File retryDestination = new File(temporaryFolder.getRoot(), "classroom-copy-retry.a3p");
+    FakeContext context = new FakeContext(temporaryFolder.getRoot());
+    context.currentFile = currentProject;
+    context.promptFiles.add(failedDestination);
+    context.promptFiles.add(retryDestination);
+    List<File> savedFiles = new ArrayList<>();
+    AtomicInteger attempts = new AtomicInteger();
+
+    SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> {
+      savedFiles.add(file);
+      if (attempts.getAndIncrement() == 0) {
+        throw new IOException("share unavailable");
+      }
+    });
+
+    assertEquals(Arrays.asList(failedDestination, retryDestination), savedFiles);
+    assertEquals(Arrays.asList(
+        new DialogRequest(temporaryFolder.getRoot(), "world", PROJECT_EXTENSION),
+        new DialogRequest(temporaryFolder.getRoot(), "world", PROJECT_EXTENSION)), context.dialogRequests);
+    assertEquals(Arrays.asList(new ErrorMessage("Unable to save file", "share unavailable")), context.errorMessages);
+    assertEquals(Arrays.asList(
+        "showWaitCursor",
+        "hideWaitCursor",
+        "showWaitCursor",
+        "hideWaitCursor",
+        "finish"), context.events);
+    assertTrue(context.finished);
+    assertFalse(context.canceled);
+  }
+
+  @Test
+  public void promptedJourneyWithoutCurrentFileRetriesCancelWithoutSuggestedBaseName() throws Exception {
+    File failedDestination = new File(temporaryFolder.getRoot(), "new-world.a3p");
+    FakeContext context = new FakeContext(temporaryFolder.getRoot());
+    context.promptFiles.add(failedDestination);
+    context.promptFiles.add(null);
+    List<File> savedFiles = new ArrayList<>();
+
+    SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> {
+      savedFiles.add(file);
+      throw new IOException("read only folder");
+    });
+
+    assertEquals(Arrays.asList(failedDestination), savedFiles);
+    assertEquals(Arrays.asList(
+        new DialogRequest(temporaryFolder.getRoot(), null, PROJECT_EXTENSION),
+        new DialogRequest(temporaryFolder.getRoot(), null, PROJECT_EXTENSION)), context.dialogRequests);
+    assertEquals(Arrays.asList(new ErrorMessage("Unable to save file", "read only folder")), context.errorMessages);
+    assertEquals(Arrays.asList("showWaitCursor", "hideWaitCursor", "cancel"), context.events);
+    assertFalse(context.finished);
+    assertTrue(context.canceled);
+  }
+
   private static final class FakeContext implements SaveOperationFlow.Context {
     private final File defaultDirectory;
     private final Queue<File> promptFiles = new LinkedList<>();
