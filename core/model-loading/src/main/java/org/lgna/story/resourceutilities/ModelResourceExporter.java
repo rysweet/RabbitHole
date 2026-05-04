@@ -1414,62 +1414,64 @@ public class ModelResourceExporter {
     return xmlFile;
   }
 
-  private File createXMLFile(String root, boolean forceRebuild) {
+  File createXMLFile(String root, boolean forceRebuild) throws IOException {
     File outputFile = getXMLFile(root);
-    try {
-      if (!forceRebuild && (this.xmlFile != null) && this.xmlFile.exists()) {
-        if (!outputFile.exists()) {
-          FileUtilities.createParentDirectoriesIfNecessary(outputFile);
-          outputFile.createNewFile();
-        }
-        FileUtilities.copyFile(this.xmlFile, outputFile);
-        return outputFile;
-      } else {
-        //This path does not indent the xml
-        //            Document doc = this.createXMLDocument();
-        //            XMLUtilities.write(doc, outputFile);
+    if (!forceRebuild && (this.xmlFile != null) && this.xmlFile.exists()) {
+      ensureOutputFile(outputFile, "XML resource");
+      FileUtilities.copyFile(this.xmlFile, outputFile);
+      return outputFile;
+    } else {
+      //This path does not indent the xml
+      //            Document doc = this.createXMLDocument();
+      //            XMLUtilities.write(doc, outputFile);
 
-        //This path does indenting
-        String xmlString = this.createXMLString();
-        if (!outputFile.exists()) {
-          FileUtilities.createParentDirectoriesIfNecessary(outputFile);
-          outputFile.createNewFile();
-        }
-        FileWriter fw = new FileWriter(outputFile);
+      //This path does indenting
+      String xmlString = this.createXMLString();
+      ensureOutputFile(outputFile, "XML resource");
+      try (FileWriter fw = new FileWriter(outputFile)) {
         fw.write(xmlString);
-        fw.close();
-
-        return outputFile;
       }
-    } catch (Exception e) {
-      e.printStackTrace();
+
+      return outputFile;
     }
-    return null;
 
   }
 
-  private File saveImageToFile(String fileName, Image image) {
+  private static void ensureOutputFile(File outputFile, String description) throws IOException {
+    FileUtilities.createParentDirectoriesIfNecessary(outputFile);
+    if (!outputFile.exists() && !outputFile.createNewFile()) {
+      throw new IOException("Failed to create " + description + " file: " + outputFile);
+    }
+    if (!outputFile.isFile()) {
+      throw new IOException(description + " path is not a file: " + outputFile);
+    }
+  }
+
+  private File saveImageToFile(String fileName, Image image) throws IOException {
+    if (image == null) {
+      throw new IOException("Cannot write thumbnail " + fileName + " because the image is null");
+    }
+    int width;
+    int height;
     try {
-      int width = image.getWidth(null);
-      int height = image.getHeight(null);
-      if ((width == 0) || (height == 0)) {
-        return null;
-      }
-    } catch (Exception e) {
-      return null;
+      width = image.getWidth(null);
+      height = image.getHeight(null);
+    } catch (RuntimeException e) {
+      throw new IOException("Cannot read thumbnail dimensions for " + fileName, e);
+    }
+    if ((width <= 0) || (height <= 0)) {
+      throw new IOException("Cannot write thumbnail " + fileName + " with invalid dimensions " + width + "x" + height);
     }
     File outputFile = new File(fileName);
     try {
-      if (!outputFile.exists()) {
-        FileUtilities.createParentDirectoriesIfNecessary(outputFile);
-        outputFile.createNewFile();
-      }
+      ensureOutputFile(outputFile, "thumbnail");
       ImageUtilities.write(outputFile, image);
       return outputFile;
-    } catch (Exception e) {
-      e.printStackTrace();
+    } catch (IOException e) {
+      throw new IOException("Failed to write thumbnail " + outputFile, e);
+    } catch (RuntimeException e) {
+      throw new IOException("Failed to write thumbnail " + outputFile, e);
     }
-    return null;
   }
 
   public String getThumbnailPath(String rootPath, String thumbnailName) {
@@ -1495,7 +1497,7 @@ public class ModelResourceExporter {
     return imgSrc;
   }
 
-  private List<File> saveThumbnailsToDir(String root) {
+  List<File> saveThumbnailsToDir(String root) throws IOException {
     List<File> thumbnailFiles = new LinkedList<File>();
     List<String> thumbnailsCreated = new LinkedList<String>();
     if ((this.existingThumbnails != null) && !this.existingThumbnails.isEmpty()) {
@@ -1504,23 +1506,20 @@ public class ModelResourceExporter {
           thumbnailFiles.add(entry.getValue());
           thumbnailsCreated.add(entry.getKey());
         } else {
-          System.err.println("FAILED TO FIND THUMBNAIL FILE '" + entry.getValue() + "'");
-          return null;
+          throw new FileNotFoundException("Missing thumbnail file '" + entry.getValue() + "'");
         }
       }
     }
     for (Entry<ModelSubResourceExporter, Image> entry : this.thumbnails.entrySet()) {
-      if (!thumbnailsCreated.contains(entry.getKey())) {
-        String thumbnailName = AliceResourceUtilities.getThumbnailResourceFileName(entry.getKey().getModelName(), entry.getKey().getTextureName());
+      String thumbnailName = AliceResourceUtilities.getThumbnailResourceFileName(entry.getKey().getModelName(), entry.getKey().getTextureName());
+      if (!thumbnailsCreated.contains(thumbnailName)) {
         File f = saveImageToFile(getThumbnailPath(root, thumbnailName), entry.getValue());
-        if (f != null) {
-          thumbnailsCreated.add(thumbnailName);
-          thumbnailFiles.add(f);
-        }
+        thumbnailsCreated.add(thumbnailName);
+        thumbnailFiles.add(f);
       }
     }
     if (this.subResources.isEmpty()) {
-      System.err.println("NO SUB RESOURCES ON " + this.resourceName);
+      throw new IOException("Cannot create thumbnails for " + this.resourceName + " because no sub resources were registered");
     }
     ModelSubResourceExporter firstSubResource = this.subResources.getFirst();
     String firstThumbName = AliceResourceUtilities.getThumbnailResourceFileName(firstSubResource.getModelName(), firstSubResource.getTextureName());
@@ -1528,19 +1527,17 @@ public class ModelResourceExporter {
     File firstThumbFile = new File(getThumbnailPath(root, firstThumbName));
     File classThumbFile = new File(getThumbnailPath(root, classThumbName));
 
-    //TODO: Handle this error in a better way
     try {
       BufferedImage classThumb = createClassThumb(ImageUtilities.read(firstThumbFile));
+      if (classThumb == null) {
+        throw new IOException("Thumbnail image is unreadable: " + firstThumbFile);
+      }
       ImageUtilities.write(classThumbFile, classThumb);
       thumbnailFiles.add(classThumbFile);
     } catch (IOException ioe) {
-      ioe.printStackTrace();
-      System.err.println("Error reading thumbnail " + firstThumbFile + ", Deleting it...");
-      firstThumbFile.delete();
-    } catch (Exception e) {
-      e.printStackTrace();
-      System.err.println("Error reading thumbnail " + firstThumbFile + ", Deleting it...");
-      firstThumbFile.delete();
+      throw new IOException("Failed to create class thumbnail " + classThumbFile + " from " + firstThumbFile, ioe);
+    } catch (RuntimeException e) {
+      throw new IOException("Failed to create class thumbnail " + classThumbFile + " from " + firstThumbFile, e);
     }
 
     return thumbnailFiles;
