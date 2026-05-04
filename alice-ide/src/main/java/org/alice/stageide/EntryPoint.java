@@ -62,6 +62,7 @@ import org.lgna.project.reflect.ClassInfoManager;
 
 import javax.swing.*;
 import java.awt.Frame;
+import java.awt.GraphicsEnvironment;
 import java.util.Locale;
 
 /**
@@ -73,6 +74,8 @@ public class EntryPoint extends Application {
   private static HeapWatchDog heapMonitor;
 
   public static void main(final String[] args) {
+    requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
+
     final CrashDetector crashDetector = new CrashDetector(EntryPoint.class);
     if (crashDetector.isPreviouslyOpenedButNotSucessfullyClosed()) {
       String propertyName = "org.alice.stageide.isCrashDetectionDesired";
@@ -148,6 +151,12 @@ public class EntryPoint extends Application {
     });
     // Call to initialize JavaFX
     launch(args);
+  }
+
+  static void requireGraphicalEnvironmentForDesktopLaunch(boolean isHeadless) {
+    if (isHeadless) {
+      throw new IllegalStateException("Alice desktop launch requires a graphical environment.");
+    }
   }
 
   private static void loadClassInfos() {
