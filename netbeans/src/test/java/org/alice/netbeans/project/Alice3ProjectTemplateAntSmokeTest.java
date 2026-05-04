@@ -1,6 +1,12 @@
 package org.alice.netbeans.project;
+import org.alice.netbeans.Alice3LibraryClasspathTestSupport;
+import org.alice.netbeans.Alice3ProjectTemplateWizardIterator;
 import org.apache.tools.ant.launch.Launcher;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.netbeans.api.project.ProjectManager;
+import org.netbeans.spi.project.ProjectManagerImplementation;
 import org.lgna.common.resources.AudioResource;
 import org.lgna.project.Project;
 import org.lgna.project.ast.BlockStatement;
@@ -10,33 +16,30 @@ import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.project.io.IoUtilities;
 import org.lgna.story.SProgram;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
+import org.openide.WizardDescriptor;
+import org.openide.filesystems.FileObject;
+import org.openide.filesystems.FileUtil;
+import org.openide.util.Lookup;
+import org.openide.util.Mutex;
+import org.openide.util.lookup.Lookups;
+import org.openide.util.lookup.ProxyLookup;
 
 import java.io.File;
-import java.io.StringReader;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.IntStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -45,9 +48,9 @@ import static org.junit.Assert.assertTrue;
 
 public class Alice3ProjectTemplateAntSmokeTest {
   private static final Path TARGET = Path.of("target");
-  private static final String MODULE_EXTENSION_ROOT = "nbinst:/modules/ext/org.alice.netbeans/";
-  private static final Set<String> OPTIONAL_LIBRARY_ARTIFACTS = Set.of("models-nonfree", "story-api-nonfree");
-  private static final Map<String, Path> MODULE_OUTPUTS = moduleOutputs();
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
   public void packagedProjectTemplateBuildsAndRunsGeneratedAliceProjectWithAlice3LibraryClasspath() throws Exception {
@@ -129,12 +132,134 @@ public class Alice3ProjectTemplateAntSmokeTest {
     assertTrue(antRunLog, !antRunLog.contains("Java Result:"));
   }
 
+  @Test
+  public void exportsResourceBearingProjectWithAlice3LibraryAndPackagesResources() throws Exception {
+    Path smokeRoot = temporaryFolder.newFolder("wizard-resource-smoke").toPath();
+    Path projectDirectory = smokeRoot.resolve("ExportedResourceWorld");
+    Files.createDirectories(smokeRoot);
+
+    byte[] resourceData = "alice wizard resource\n".getBytes(StandardCharsets.UTF_8);
+    Path audioFile = smokeRoot.resolve("probe.wav");
+    Files.write(audioFile, resourceData);
+    Project project = new Project(programType("Program"), Project.SceneCameraType.WindowCamera);
+    project.addResource(new AudioResource(audioFile.toFile(), "audio.x_wav"));
+    Path aliceProject = smokeRoot.resolve("resource-world.a3p");
+    IoUtilities.writeProject(aliceProject.toFile(), project);
+
+    instantiateAliceProjectThroughWizard(aliceProject, projectDirectory);
+
+    Path sourceDirectory = projectDirectory.resolve("src");
+    assertGeneratedProjectStructure(projectDirectory, sourceDirectory);
+    assertProjectMetadataUsesAlice3Library(projectDirectory, "ExportedResourceWorld");
+    assertResourceSourceAndBytes(sourceDirectory, smokeRoot, resourceData);
+
+    Path antScratch = smokeRoot.resolve("ant-scratch");
+    Files.createDirectories(antScratch);
+    Path userProperties = smokeRoot.resolve("user.properties");
+    writeLibraryProperties(userProperties, antScratch);
+
+    String antLog = executeAntJarTarget(projectDirectory, userProperties, antScratch);
+
+    Path jarPath = projectDirectory.resolve("dist/ExportedResourceWorld.jar");
+    assertTrue(antLog, Files.exists(jarPath));
+    assertJarContainsGeneratedProject(jarPath);
+    assertJarContainsEntry(jarPath, "Resources.class");
+    assertJarEntryBytes(jarPath, "resources/probe.wav", resourceData);
+  }
+
   private static void generateProjectCodeWithoutFormatting(Path aliceProject, Path sourceDirectory) throws Exception {
     ProjectCodeGenerator.generateCode(
         aliceProject.toAbsolutePath().normalize().toFile(),
         sourceDirectory.toAbsolutePath().normalize().toFile(),
         null,
         false);
+  }
+
+  private static void instantiateAliceProjectThroughWizard(Path aliceProject, Path projectDirectory) throws Exception {
+    Files.createDirectories(projectDirectory);
+    File templateFile = FileUtil.normalizeFile(TARGET.resolve("classes/org/alice/netbeans/ProjectTemplate.zip").toAbsolutePath().toFile());
+    File normalizedProjectDirectory = FileUtil.normalizeFile(projectDirectory.toFile());
+    File normalizedAliceProject = FileUtil.normalizeFile(aliceProject.toFile());
+    FileObject template = FileUtil.toFileObject(templateFile);
+    assertNotNull("ProjectTemplate.zip must be available as a test resource", template);
+
+    WizardDescriptor wizard = new WizardDescriptor(new WizardDescriptor.Panel[0]);
+    wizard.putProperty("targetTemplate", template);
+    wizard.putProperty("projdir", normalizedProjectDirectory);
+    wizard.putProperty("aliceProjectFile", normalizedAliceProject);
+
+    Alice3ProjectTemplateWizardIterator iterator = Alice3ProjectTemplateWizardIterator.createIterator();
+    iterator.initialize(wizard);
+    try {
+      Set<FileObject> instantiated = instantiateWithNetBeansProjectLookup(iterator);
+      assertTrue(instantiated.contains(FileUtil.toFileObject(normalizedProjectDirectory)));
+      assertTrue(instantiated.contains(FileUtil.toFileObject(FileUtil.normalizeFile(projectDirectory.resolve("src").toFile()))));
+    } finally {
+      iterator.uninitialize(wizard);
+    }
+  }
+
+  private static Set<FileObject> instantiateWithNetBeansProjectLookup(Alice3ProjectTemplateWizardIterator iterator) throws Exception {
+    Lookup originalLookup = Lookup.getDefault();
+    Lookup lookup = new ProxyLookup(
+        Lookups.fixed(new TestProjectManagerImplementation()),
+        originalLookup);
+    List<Exception> failures = new ArrayList<>();
+    List<Set<FileObject>> result = new ArrayList<>();
+    Lookups.executeWith(lookup, () -> {
+      try {
+        result.add(iterator.instantiate(null));
+      } catch (Exception ex) {
+        failures.add(ex);
+      }
+    });
+    if (!failures.isEmpty()) {
+      throw failures.get(0);
+    }
+    return result.get(0);
+  }
+
+  private static void assertGeneratedProjectStructure(Path projectDirectory, Path sourceDirectory) {
+    assertTrue(Files.exists(projectDirectory.resolve("build.xml")));
+    assertTrue(Files.exists(projectDirectory.resolve("manifest.mf")));
+    assertTrue(Files.exists(projectDirectory.resolve("nbproject/project.xml")));
+    assertTrue(Files.exists(projectDirectory.resolve("nbproject/project.properties")));
+    assertTrue(Files.exists(projectDirectory.resolve("nbproject/build-impl.xml")));
+    assertTrue(Files.exists(sourceDirectory.resolve("Program.java")));
+    assertTrue(Files.exists(sourceDirectory.resolve("AliceJavaFXLauncher.java")));
+    assertTrue(Files.exists(sourceDirectory.resolve("Resources.java")));
+    assertTrue(Files.exists(sourceDirectory.resolve("resources/probe.wav")));
+  }
+
+  private static void assertProjectMetadataUsesAlice3Library(Path projectDirectory, String projectName) throws Exception {
+    Properties properties = loadProperties(projectDirectory.resolve("nbproject/project.properties"));
+    assertEquals("src", properties.getProperty("src.dir"));
+    assertEquals("build", properties.getProperty("build.dir"));
+    assertEquals("${build.dir}/classes", properties.getProperty("build.classes.dir"));
+    assertEquals("${libs.Alice3Library.classpath}", properties.getProperty("javac.classpath").trim());
+    assertEquals("AliceJavaFXLauncher", properties.getProperty("main.class"));
+    assertEquals(projectName, properties.getProperty("application.title").trim());
+    assertEquals("${dist.dir}/" + projectName + ".jar", properties.getProperty("dist.jar").trim());
+    String runClasspath = properties.getProperty("run.classpath");
+    assertTrue(runClasspath, runClasspath.contains("${build.classes.dir}"));
+    assertTrue(runClasspath, runClasspath.contains("${javac.classpath}"));
+  }
+
+  private static Properties loadProperties(Path propertiesPath) throws Exception {
+    Properties properties = new Properties();
+    try (var reader = Files.newBufferedReader(propertiesPath, StandardCharsets.UTF_8)) {
+      properties.load(reader);
+    }
+    return properties;
+  }
+
+  private static void assertResourceSourceAndBytes(Path sourceDirectory, Path smokeRoot, byte[] resourceData) throws Exception {
+    Path resourcePath = sourceDirectory.resolve("resources/probe.wav");
+    assertArrayEquals(resourceData, Files.readAllBytes(resourcePath));
+    String resourcesSource = Files.readString(sourceDirectory.resolve("Resources.java"));
+    assertTrue(resourcesSource, resourcesSource.contains("resources/probe.wav"));
+    assertTrue(resourcesSource, resourcesSource.contains("audio.x_wav"));
+    assertTrue(resourcesSource, !resourcesSource.contains(smokeRoot.toAbsolutePath().normalize().toString()));
   }
 
   private static void writeAntRunProbe(Path sourceDirectory) throws Exception {
@@ -284,103 +409,11 @@ public class Alice3ProjectTemplateAntSmokeTest {
   }
 
   private static String antRuntimeClasspath() throws URISyntaxException {
-    return String.join(
-        File.pathSeparator,
-        Path.of(Launcher.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(),
-        Path.of(org.apache.tools.ant.Project.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
+    return Alice3LibraryClasspathTestSupport.antRuntimeClasspath();
   }
 
   private static void writeLibraryProperties(Path userProperties, Path antScratch) throws Exception {
-    Files.createDirectories(userProperties.getParent());
-    Files.createFile(antScratch.resolve("aliceSource.jar"));
-
-    Properties properties = new Properties();
-    properties.setProperty("libs.Alice3Library.classpath", aliceLibraryClasspath());
-    properties.setProperty(
-        "libs.Alice3Library.src",
-        antScratch.resolve("aliceSource.jar").toAbsolutePath().normalize().toString());
-    try (var writer = Files.newBufferedWriter(userProperties, StandardCharsets.UTF_8)) {
-      properties.store(writer, "Alice3 Ant smoke test library bindings");
-    }
-  }
-
-  private static String aliceLibraryClasspath() throws Exception {
-    List<String> missing = new ArrayList<>();
-    List<String> entries = new ArrayList<>();
-
-    for (String resource : classpathResources()) {
-      String artifactId = resource.substring(resource.lastIndexOf('/') + 1, resource.length() - ".jar".length());
-      Optional<Path> entry = resolveArtifact(artifactId);
-      if (entry.isPresent()) {
-        entries.add(entry.get().toAbsolutePath().normalize().toString());
-      } else if (!OPTIONAL_LIBRARY_ARTIFACTS.contains(artifactId)) {
-        missing.add(artifactId);
-      }
-    }
-
-    assertTrue("Missing Alice3Library classpath artifacts: " + missing, missing.isEmpty());
-    assertTrue(
-        "Alice3Library smoke classpath should include story-api",
-        entries.stream().anyMatch(entry -> entry.contains("story-api")));
-    return String.join(File.pathSeparator, entries);
-  }
-
-  private static Optional<Path> resolveArtifact(String artifactId) {
-    Path moduleOutput = MODULE_OUTPUTS.get(artifactId);
-    if ((moduleOutput != null) && Files.exists(moduleOutput)) {
-      return Optional.of(moduleOutput);
-    }
-    List<Path> matchingJars = testClasspathEntries().stream()
-        .filter(path -> isJarForArtifact(path, artifactId))
-        .toList();
-    Optional<Path> jarWithClasses = matchingJars.stream()
-        .filter(Alice3ProjectTemplateAntSmokeTest::containsClassEntry)
-        .findFirst()
-        .or(() -> matchingJars.stream().findFirst());
-    return jarWithClasses;
-  }
-
-  private static boolean containsClassEntry(Path jarPath) {
-    try (JarFile jarFile = new JarFile(jarPath.toFile())) {
-      return jarFile.stream().anyMatch(entry -> !entry.isDirectory() && entry.getName().endsWith(".class"));
-    } catch (Exception e) {
-      return false;
-    }
-  }
-
-  private static boolean isJarForArtifact(Path path, String artifactId) {
-    String fileName = path.getFileName().toString();
-    return fileName.equals(artifactId + ".jar")
-        || (fileName.startsWith(artifactId + "-") && fileName.endsWith(".jar"));
-  }
-
-  private static List<Path> testClasspathEntries() {
-    String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path", ""));
-    return List.of(classpath.split(File.pathSeparator)).stream()
-        .filter(entry -> !entry.isBlank())
-        .map(Path::of)
-        .toList();
-  }
-
-  private static List<String> classpathResources() throws Exception {
-    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-    var builder = factory.newDocumentBuilder();
-    builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
-    Document document = builder.parse(TARGET.resolve("classes/org/alice/netbeans/Alice3Library.xml").toFile());
-    NodeList volumes = document.getElementsByTagName("volume");
-    return IntStream.range(0, volumes.getLength())
-        .mapToObj(index -> (Element) volumes.item(index))
-        .filter(volume -> "classpath".equals(volume.getElementsByTagName("type").item(0).getTextContent()))
-        .flatMap(volume -> elements(volume.getElementsByTagName("resource")).stream())
-        .map(Element::getTextContent)
-        .filter(resource -> resource.startsWith(MODULE_EXTENSION_ROOT))
-        .toList();
-  }
-
-  private static List<Element> elements(NodeList nodes) {
-    return IntStream.range(0, nodes.getLength())
-        .mapToObj(index -> (Element) nodes.item(index))
-        .toList();
+    Alice3LibraryClasspathTestSupport.writeLibraryProperties(userProperties, antScratch);
   }
 
   private static void unzip(Path archive, Path destination) throws Exception {
@@ -411,21 +444,58 @@ public class Alice3ProjectTemplateAntSmokeTest {
     }
   }
 
-  private static Map<String, Path> moduleOutputs() {
-    Map<String, Path> outputs = new LinkedHashMap<>();
-    outputs.put("util", Path.of("../core/util/target/classes"));
-    outputs.put("scenegraph", Path.of("../core/scenegraph/target/classes"));
-    outputs.put("glrender", Path.of("../core/glrender/target/classes"));
-    outputs.put("ast", Path.of("../core/ast/target/classes"));
-    outputs.put("story-api", Path.of("../core/story-api/target/classes"));
-    outputs.put("tweedle", Path.of("../core/tweedle/target/classes"));
-    outputs.put("models", Path.of("../core/models/target/classes"));
-    outputs.put("models-nonfree", Path.of("../core-nonfree/models/target/classes"));
-    outputs.put("story-api-nonfree", Path.of("../core-nonfree/story-api/target/classes"));
-    return outputs.entrySet().stream()
-        .collect(
-            LinkedHashMap::new,
-            (map, entry) -> map.put(entry.getKey(), entry.getValue().toAbsolutePath().normalize()),
-            Map::putAll);
+  private static final class TestProjectManagerImplementation implements ProjectManagerImplementation {
+    private final Mutex mutex = new Mutex();
+
+    @Override
+    public void init(ProjectManagerCallBack callback) {
+    }
+
+    @Override
+    public Mutex getMutex() {
+      return mutex;
+    }
+
+    @Override
+    public Mutex getMutex(boolean autoSave, org.netbeans.api.project.Project project, org.netbeans.api.project.Project... otherProjects) {
+      return mutex;
+    }
+
+    @Override
+    public org.netbeans.api.project.Project findProject(FileObject projectDirectory) {
+      return null;
+    }
+
+    @Override
+    public ProjectManager.Result isProject(FileObject projectDirectory) {
+      return null;
+    }
+
+    @Override
+    public void clearNonProjectCache() {
+    }
+
+    @Override
+    public Set<org.netbeans.api.project.Project> getModifiedProjects() {
+      return Set.of();
+    }
+
+    @Override
+    public boolean isModified(org.netbeans.api.project.Project project) {
+      return false;
+    }
+
+    @Override
+    public boolean isValid(org.netbeans.api.project.Project project) {
+      return true;
+    }
+
+    @Override
+    public void saveProject(org.netbeans.api.project.Project project) {
+    }
+
+    @Override
+    public void saveAllProjects() {
+    }
   }
 }
