@@ -87,14 +87,17 @@ The reference should use `resources/probe.wav`. It should not use `/home/dev/ali
 
 If you are using NetBeans, choose **Clean and Build**.
 
-If you are using terminal Ant and NetBeans is not supplying `Alice3Library`, create a local property file:
+If you are using terminal Ant and NetBeans is not supplying `Alice3Library`, create a local property file. The classpath must include every classpath artifact from `netbeans/src/main/resources/org/alice/netbeans/Alice3Library.xml`; the block below shows the shape but is intentionally abbreviated:
 
 ```bash
 cat > /home/dev/alice3-library.properties <<'EOF'
-libs.Alice3Library.classpath=/home/dev/alice3/core/util/target/classes:/home/dev/alice3/core/scenegraph/target/classes:/home/dev/alice3/core/glrender/target/classes:/home/dev/alice3/core/ast/target/classes:/home/dev/alice3/core/story-api/target/classes:/home/dev/alice3/core/tweedle/target/classes:/home/dev/alice3/core/models/target/classes:/home/dev/.m2/repository/org/openjfx/javafx-base/21/javafx-base-21.jar:/home/dev/.m2/repository/org/openjfx/javafx-graphics/21/javafx-graphics-21.jar:/home/dev/.m2/repository/org/openjfx/javafx-media/21/javafx-media-21.jar
+# Abbreviated shape only: replace with the complete path list from Alice3Library.xml.
+libs.Alice3Library.classpath=/path/to/jackson-core.jar:/path/to/jogl-all.jar:/home/dev/alice3/core/util/target/classes:/home/dev/alice3/core/scenegraph/target/classes:/home/dev/alice3/core/glrender/target/classes:/home/dev/alice3/core/ast/target/classes:/home/dev/alice3/core/story-api/target/classes:/home/dev/alice3/core/tweedle/target/classes:/home/dev/alice3/core/models/target/classes:/home/dev/.m2/repository/org/openjfx/javafx-base/21.0.7/javafx-base-21.0.7.jar:/home/dev/.m2/repository/org/openjfx/javafx-graphics/21.0.7/javafx-graphics-21.0.7.jar:/home/dev/.m2/repository/org/openjfx/javafx-media/21.0.7/javafx-media-21.0.7.jar
 libs.Alice3Library.src=/home/dev/alice3/netbeans/target/aliceSource.jar
 EOF
 ```
+
+Do not use the abbreviated `libs.Alice3Library.classpath` literally. Expand it to all required descriptor entries, using `:` as the separator on Linux/macOS and `;` on Windows.
 
 Build:
 

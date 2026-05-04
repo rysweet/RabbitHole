@@ -19,7 +19,7 @@ Use:
 - Java 21.
 - A NetBeans installation with the Alice 3 plugin installed.
 - An Alice `.a3p` project.
-- Apache Ant when building the generated project from a terminal.
+- Apache Ant and a complete local `Alice3Library` binding when building the generated project from a terminal.
 
 The export does not require Git LFS downloads. If the Alice project already contains resources, those bytes are copied from the `.a3p` archive into the generated Java project.
 
@@ -88,11 +88,11 @@ src.dir=src
 
 Inside NetBeans, use **Run** or **Clean and Build** on the generated project.
 
-From a terminal, run:
+From a terminal, first create a complete `Alice3Library` user properties file as shown in the next section, then run:
 
 ```bash
 cd /home/dev/netbeans-projects/ExportedResourceWorld
-ant jar
+ant -Duser.properties.file=/home/dev/alice3-library.properties jar
 ```
 
 The generated artifact is:
@@ -118,16 +118,19 @@ resources/probe.wav
 
 ## Configure Alice3Library outside NetBeans
 
-NetBeans resolves `Alice3Library` from the Alice plugin. Terminal Ant builds need the same property values.
+NetBeans resolves `Alice3Library` from the Alice plugin. Terminal Ant builds need equivalent property values. The classpath must include every classpath artifact in `netbeans/src/main/resources/org/alice/netbeans/Alice3Library.xml`, including the Jackson, JAI, Commons, JOGL/GlueGen, Alice module, and JavaFX entries.
 
 Create a local properties file outside the generated project:
 
 ```bash
 cat > /home/dev/alice3-library.properties <<'EOF'
-libs.Alice3Library.classpath=/home/dev/alice3/core/util/target/classes:/home/dev/alice3/core/scenegraph/target/classes:/home/dev/alice3/core/glrender/target/classes:/home/dev/alice3/core/ast/target/classes:/home/dev/alice3/core/story-api/target/classes:/home/dev/alice3/core/tweedle/target/classes:/home/dev/alice3/core/models/target/classes:/home/dev/.m2/repository/org/openjfx/javafx-base/21/javafx-base-21.jar:/home/dev/.m2/repository/org/openjfx/javafx-graphics/21/javafx-graphics-21.jar:/home/dev/.m2/repository/org/openjfx/javafx-media/21/javafx-media-21.jar
+# Abbreviated shape only: replace with the complete path list from Alice3Library.xml.
+libs.Alice3Library.classpath=/path/to/jackson-core.jar:/path/to/jogl-all.jar:/home/dev/alice3/core/util/target/classes:/home/dev/alice3/core/scenegraph/target/classes:/home/dev/alice3/core/glrender/target/classes:/home/dev/alice3/core/ast/target/classes:/home/dev/alice3/core/story-api/target/classes:/home/dev/alice3/core/tweedle/target/classes:/home/dev/alice3/core/models/target/classes:/home/dev/.m2/repository/org/openjfx/javafx-base/21.0.7/javafx-base-21.0.7.jar:/home/dev/.m2/repository/org/openjfx/javafx-graphics/21.0.7/javafx-graphics-21.0.7.jar:/home/dev/.m2/repository/org/openjfx/javafx-media/21.0.7/javafx-media-21.0.7.jar
 libs.Alice3Library.src=/home/dev/alice3/netbeans/target/aliceSource.jar
 EOF
 ```
+
+Do not use the abbreviated `libs.Alice3Library.classpath` literally. Expand it to all required descriptor entries, using `:` as the separator on Linux/macOS and `;` on Windows.
 
 Use the property file with Ant:
 
@@ -173,5 +176,5 @@ test -s resources/probe.wav
 | Ant reports `Property libs.Alice3Library.classpath has not been set` | Build inside NetBeans or pass `-Duser.properties.file=/path/to/alice3-library.properties`. |
 | `Program.java` compiles but `Resources.java` is missing | The source `.a3p` has no resources, or the resources were not saved into the archive before export. |
 | The JAR is named `Alice3JavaApplication.jar` instead of the project name | Re-run export through the wizard so `application.title` and `dist.jar` are rewritten for the destination directory. |
-| JavaFX classes are missing at compile or run time | Add the JavaFX JARs from `Alice3Library` to `libs.Alice3Library.classpath`, or build from NetBeans with the Alice plugin installed. |
+| Third-party or JavaFX classes are missing at compile or run time | Expand `libs.Alice3Library.classpath` to every classpath entry in `Alice3Library.xml`, or build from NetBeans with the Alice plugin installed. |
 | Broad Maven validation fails with missing Tweedle parser classes | Run `git submodule update --init tweedle-lang` from the repository root. |

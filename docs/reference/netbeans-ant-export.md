@@ -16,7 +16,7 @@ This reference describes the Alice 3 NetBeans project export contract: the wizar
 
 ## Scope
 
-The NetBeans export path converts an existing Alice `.a3p` project into a Java SE Ant project that can be opened by NetBeans, compiled by Ant, and packaged as an executable JAR.
+The NetBeans export path converts an existing Alice `.a3p` project into a Java SE Ant project that can be opened by NetBeans, compiled by Ant, and packaged as a JAR with an `AliceJavaFXLauncher` `Main-Class` manifest entry.
 
 The durable contract is owned by the NetBeans module:
 
@@ -42,7 +42,7 @@ In NetBeans, the Alice plugin registers a project template named **Java Project 
 
 When the wizard finishes, it:
 
-1. Creates the destination directory if needed.
+1. Creates the destination directory if needed, or reuses it when no template entries conflict.
 2. Expands `ProjectTemplate.zip` into that directory.
 3. Renames generated NetBeans metadata to match the project directory name.
 4. Creates `src/`.
@@ -127,9 +127,19 @@ The plugin registers the library at:
 netbeans/src/main/resources/org/alice/netbeans/Alice3Library.xml
 ```
 
-The classpath volume includes the Alice runtime and third-party dependencies needed by generated programs, including:
+The classpath volume includes the Alice runtime and third-party dependencies needed by generated programs. The descriptor is the source of truth; at the time of writing it includes:
 
 ```text
+jackson-core.jar
+jackson-databind.jar
+jackson-annotations.jar
+jackson-datatype-jsr310.jar
+jai-codec.jar
+jai-core.jar
+commons-text.jar
+commons-lang3.jar
+gluegen-rt.jar
+jogl-all.jar
 util.jar
 scenegraph.jar
 glrender.jar
@@ -142,14 +152,18 @@ javafx-graphics.jar
 javafx-media.jar
 ```
 
-When building an exported project outside the NetBeans IDE, supply the library properties through a user properties file instead of editing `nbproject/project.properties`:
+When building an exported project outside the NetBeans IDE, supply the library properties through a user properties file instead of editing `nbproject/project.properties`. The classpath must include every required classpath entry from `Alice3Library.xml`; an incomplete file can let some generated projects compile while failing others at compile or run time.
+
+This excerpt shows the property shape and the current JavaFX artifact version. It is not a complete classpath:
 
 ```properties
-libs.Alice3Library.classpath=/home/dev/alice3/core/util/target/classes:/home/dev/alice3/core/story-api/target/classes:/home/dev/.m2/repository/org/openjfx/javafx-graphics/21/javafx-graphics-21.jar
+libs.Alice3Library.classpath=/home/dev/alice3/core/util/target/classes:/home/dev/alice3/core/story-api/target/classes:/home/dev/.m2/repository/org/openjfx/javafx-graphics/21.0.7/javafx-graphics-21.0.7.jar
 libs.Alice3Library.src=/home/dev/alice3/netbeans/target/aliceSource.jar
 ```
 
 Use the platform path separator for `libs.Alice3Library.classpath`: `:` on Linux/macOS and `;` on Windows.
+
+The characterization tests generate their terminal Ant property file from the `Alice3Library.xml` classpath volume through `Alice3LibraryClasspathTestSupport`, so the test binding stays aligned with the plugin descriptor instead of hard-coding a partial dependency list.
 
 The generated `run.jvmargs` uses `libs.Alice3Library.src` to derive the Alice root directory:
 
