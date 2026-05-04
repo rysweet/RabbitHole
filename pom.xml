@@ -686,6 +686,9 @@
 
     <profile>
       <id>coverage</id>
+      <modules>
+        <module>coverage-report</module>
+      </modules>
       <build>
         <plugins>
           <plugin>
