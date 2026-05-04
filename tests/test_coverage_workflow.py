@@ -19,6 +19,21 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         self.assertLess(generate_step, summarize_step)
         self.assertIn("mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify", workflow)
 
+    def test_coverage_workflow_checkout_avoids_lfs_and_initializes_submodules(self) -> None:
+        workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
+        checkout_step = re.search(
+            r"name: Check out source(?P<body>.*?)- name: Set up JDK 21",
+            workflow,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(checkout_step)
+        assert checkout_step is not None
+
+        self.assertIn("uses: actions/checkout@v4", checkout_step.group("body"))
+        self.assertIn("lfs: false", checkout_step.group("body"))
+        self.assertIn("submodules: recursive", checkout_step.group("body"))
+        self.assertNotIn("git lfs", workflow.lower())
+
     def test_coverage_workflow_enforces_aggregate_and_module_ratchets(self) -> None:
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
         expected_thresholds = [
@@ -47,6 +62,31 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         self.assertIn("if: always()", summary_step.group("body"))
         self.assertIn("--output coverage-summary.md", summary_step.group("body"))
         self.assertIn("if: always()", workflow[summary_step.end() :])
+
+    def test_coverage_workflow_uploads_summary_and_diagnostics_without_requiring_success(self) -> None:
+        workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
+        upload_step = re.search(
+            r"name: Upload coverage reports(?P<body>.*)",
+            workflow,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(upload_step)
+        assert upload_step is not None
+
+        body = upload_step.group("body")
+        expected_artifacts = [
+            "coverage-summary.md",
+            "coverage-report/target/site/jacoco-aggregate/**",
+            "**/target/site/jacoco/**",
+            "**/target/jacoco.exec",
+            "**/target/surefire-reports/**",
+        ]
+
+        self.assertIn("if: always()", body)
+        self.assertIn("if-no-files-found: warn", body)
+        for artifact in expected_artifacts:
+            with self.subTest(artifact=artifact):
+                self.assertIn(artifact, body)
 
 
 if __name__ == "__main__":

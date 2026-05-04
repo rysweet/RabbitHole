@@ -89,7 +89,9 @@ python3 scripts/summarize-jacoco-coverage.py \
 ```
 
 The command passes only when every configured module report exists, every module
-appears at most once, and every configured line coverage floor is met.
+appears at most once, and every configured line coverage floor is met. Keep the
+aggregate floor within `0` through `100` by CI policy; module floors are also
+validated by the summary script.
 
 ## 5. Review one hotspot candidate
 
@@ -108,6 +110,12 @@ For each candidate, answer the protection questions:
 If the tests do not clearly protect the exact behavior, skip the refactor and
 record the reason. A skipped refactor is a valid outcome for this lane.
 
+For the model export hotspot, compare the proposed change with the
+[model resource exporter reference](../reference/model-resource-exporter.md).
+A safe change keeps callers on `ModelResourceExporter`, keeps helper classes
+package-private, and preserves XML output, Java enum output, thumbnail behavior,
+and checked `IOException` reporting.
+
 ## 6. Keep the pull request focused
 
 A cohesive ratchet-only pull request includes:
@@ -123,7 +131,8 @@ notes. Do not include a second hotspot in the same pull request.
 
 ## 7. Record the outcome
 
-Update the tracking issues and pull request notes with language like:
+Update the pull request notes and any repo-owned tracking issue or investigation
+artifact with language like:
 
 ```text
 Measured no-Sims aggregate line coverage at 10.24%.

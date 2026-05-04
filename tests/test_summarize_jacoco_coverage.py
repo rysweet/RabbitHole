@@ -172,6 +172,68 @@ class CoverageSummaryCliTest(unittest.TestCase):
         self.assertIn("| core/ast | 75.00% | 60.00% | FAIL |", summary)
         self.assertIn("| core/tweedle | 50.00% | missing | FAIL |", summary)
 
+    def test_cli_fails_and_writes_summary_when_required_aggregate_report_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            summary_path = root / "coverage-summary.md"
+            write_jacoco_csv(root, "core/ast/target/site/jacoco/jacoco.csv", [(20, 80)])
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--root",
+                    str(root),
+                    "--output",
+                    str(summary_path),
+                    "--min-aggregate-line-percent",
+                    "8.0",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            summary = summary_path.read_text(encoding="utf-8")
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("Result: FAIL - aggregate report was not found.", result.stdout)
+        self.assertIn("Result: FAIL - aggregate report was not found.", summary)
+
+    def test_cli_rejects_out_of_range_aggregate_thresholds_before_writing_summary(self) -> None:
+        for threshold in ("-0.1", "100.1"):
+            with self.subTest(threshold=threshold):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    root = Path(temp_dir)
+                    summary_path = root / "coverage-summary.md"
+                    write_jacoco_csv(
+                        root,
+                        "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+                        [(0, 100)],
+                    )
+
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            str(SCRIPT_PATH),
+                            "--root",
+                            str(root),
+                            "--output",
+                            str(summary_path),
+                            "--min-aggregate-line-percent",
+                            threshold,
+                        ],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                    )
+
+                    self.assertEqual(2, result.returncode)
+                    self.assertIn(
+                        "aggregate threshold percent must be between 0 and 100",
+                        result.stderr,
+                    )
+                    self.assertFalse(summary_path.exists())
+
     def test_cli_rejects_duplicate_module_thresholds(self) -> None:
         result = subprocess.run(
             [
@@ -189,6 +251,30 @@ class CoverageSummaryCliTest(unittest.TestCase):
 
         self.assertEqual(2, result.returncode)
         self.assertIn("duplicate module threshold for core/ast", result.stderr)
+
+    def test_cli_rejects_duplicate_module_thresholds_before_writing_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            summary_path = Path(temp_dir) / "coverage-summary.md"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--output",
+                    str(summary_path),
+                    "--min-module-line-percent",
+                    "core/ast=18.0",
+                    "--min-module-line-percent",
+                    "core/ast=19.0",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("duplicate module threshold for core/ast", result.stderr)
+        self.assertFalse(summary_path.exists())
 
 
 if __name__ == "__main__":

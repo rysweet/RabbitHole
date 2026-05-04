@@ -79,7 +79,8 @@ python3 scripts/summarize-jacoco-coverage.py \
 ```
 
 Use repository-relative module paths exactly as they appear in
-`coverage-summary.md`.
+`coverage-summary.md`. Keep aggregate and module floors in the `0` through `100`
+range; the summary script rejects threshold values outside that range.
 
 ## 4. Validate the ratchet locally
 
@@ -119,9 +120,16 @@ Use this checklist:
 If any answer is not clearly yes, skip the refactor. Do not add new tests merely
 to justify a production refactor in this lane.
 
+When the candidate is `ModelResourceExporter`, use the
+[model resource exporter reference](../reference/model-resource-exporter.md) as
+the behavior contract. The safe refactor boundary is extraction into
+package-private Java, XML, or thumbnail helpers while preserving the exporter
+API, generated XML, generated Java, thumbnail paths, and checked error handling.
+
 ## 6. Document the decision
 
-Update the pull request description and `drinkme` tracking issues with:
+Update the pull request description and any repo-owned tracking issue or
+investigation artifact with:
 
 - measured aggregate coverage;
 - measured coverage for each ratcheted module;

@@ -53,6 +53,18 @@ def parse_module_threshold(value: str) -> ModuleThreshold:
     return ModuleThreshold(module_name=module_name, minimum_percent=minimum)
 
 
+def parse_aggregate_threshold(value: str) -> float:
+    try:
+        minimum = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("aggregate threshold percent must be a number") from exc
+
+    if minimum < 0.0 or minimum > 100.0:
+        raise argparse.ArgumentTypeError("aggregate threshold percent must be between 0 and 100")
+
+    return minimum
+
+
 def read_line_coverage(path: Path, name: str) -> Optional[Coverage]:
     covered = 0
     missed = 0
@@ -188,7 +200,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, help="write Markdown summary to this path")
     parser.add_argument(
         "--min-aggregate-line-percent",
-        type=float,
+        type=parse_aggregate_threshold,
         help="fail when aggregate line coverage is missing or below this percentage",
     )
     parser.add_argument(

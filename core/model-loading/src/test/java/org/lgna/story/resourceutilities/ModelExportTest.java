@@ -14,6 +14,7 @@ import javax.tools.ToolProvider;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
@@ -118,6 +119,45 @@ public class ModelExportTest {
   }
 
   @Test
+  public void subResourceTagsWithNullTextureApplyToEveryMatchingModel() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.setBoundingBox("TestProp", AxisAlignedBox.createAxisAlignedBox(-1.0, 0.0, -2.0, 1.0, 3.0, 2.0));
+    exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+    exporter.addResource("VariantProp", "Blue", "ALICE", null, null);
+    exporter.setBoundingBox("VariantProp", AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5));
+
+    exporter.addSubResourceTags("VariantProp", null, "variant-tag");
+
+    Document xml = parseXml(exporter.createXMLString());
+    NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
+
+    assertEquals(2, resources.getLength());
+    assertOnlyChildText((Element) resources.item(0), "Tag", "variant-tag");
+    assertOnlyChildText((Element) resources.item(1), "Tag", "variant-tag");
+  }
+
+  @Test
+  public void modelExporterComputesClassBoundingBoxFromSubResourceBounds() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addResource("FirstProp", "Default", "ALICE", null, null);
+    exporter.addResource("SecondProp", "Default", "ALICE", null, null);
+    exporter.setBoundingBox("FirstProp", AxisAlignedBox.createAxisAlignedBox(-1.0, 0.0, -2.0, 1.0, 3.0, 2.0));
+    exporter.setBoundingBox("SecondProp", AxisAlignedBox.createAxisAlignedBox(-3.0, -1.0, -4.0, 2.0, 4.0, 5.0));
+
+    Document xml = parseXml(exporter.createXMLString());
+    Element classBox = (Element) xml.getDocumentElement().getElementsByTagName("BoundingBox").item(0);
+    Element min = (Element) classBox.getElementsByTagName("Min").item(0);
+    Element max = (Element) classBox.getElementsByTagName("Max").item(0);
+
+    assertEquals("-3.0", min.getAttribute("x"));
+    assertEquals("-1.0", min.getAttribute("y"));
+    assertEquals("-4.0", min.getAttribute("z"));
+    assertEquals("2.0", max.getAttribute("x"));
+    assertEquals("4.0", max.getAttribute("y"));
+    assertEquals("5.0", max.getAttribute("z"));
+  }
+
+  @Test
   public void createXmlFileWritesPackageResourcePathAndGeneratedXml() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
     Path root = newTestWorkDir("xml-file");
@@ -155,6 +195,32 @@ public class ModelExportTest {
 
     assertTrue(error.getMessage().contains("Failed to create class thumbnail"));
     assertTrue("Bad thumbnail should be preserved for diagnosis", Files.exists(thumbnailPath));
+  }
+
+  @Test
+  public void saveThumbnailsFailsWhenNoSubResourcesWereRegistered() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    Path root = newTestWorkDir("no-subresources");
+
+    IOException error = assertThrows(IOException.class, () -> exporter.saveThumbnailsToDir(root.toString()));
+
+    assertTrue(error.getMessage().contains("no sub resources were registered"));
+  }
+
+  @Test
+  public void saveThumbnailsFailsWhenRegisteredThumbnailDisappearsBeforeSave() throws Exception {
+    ModelResourceExporter exporter = createSyntheticPropExporter();
+    Path root = newTestWorkDir("deleted-thumbnail");
+    String thumbnailName = AliceResourceUtilities.getThumbnailResourceFileName("TestProp", "Default");
+    Path thumbnailPath = Path.of(exporter.getThumbnailPath(root.toString(), thumbnailName));
+    Files.createDirectories(thumbnailPath.getParent());
+    Files.writeString(thumbnailPath, "removed before save", StandardCharsets.UTF_8);
+    exporter.addExistingThumbnail(thumbnailName, thumbnailPath.toFile());
+    Files.delete(thumbnailPath);
+
+    FileNotFoundException error = assertThrows(FileNotFoundException.class, () -> exporter.saveThumbnailsToDir(root.toString()));
+
+    assertTrue(error.getMessage().contains(thumbnailPath.toString()));
   }
 
   @Test
