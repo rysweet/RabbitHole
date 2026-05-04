@@ -10,12 +10,6 @@ repository.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to build the first compatibility-test layer for the save/export operations.
 - [Tutorial: Add a Save Operation Characterization Test](./tutorials/save-operation-characterization-test.md) - A guided example for the first direct Save operation characterization test.
 
-## NetBeans Ant export
-
-- [NetBeans Ant Export Reference](./reference/netbeans-ant-export.md) - Generated project layout, Alice3Library configuration, resource packaging, API seams, and compatibility rules for exported NetBeans Ant projects.
-- [Export an Alice Project to a NetBeans Ant Project](./howto/export-alice-project-to-netbeans-ant.md) - How to export an `.a3p` project, build it with Ant, and verify generated project metadata and resources.
-- [Tutorial: Export a Resource-Bearing Alice Project to Ant](./tutorials/netbeans-ant-export-with-resources.md) - A guided walkthrough for a resource-bearing Alice project export and packaged JAR inspection.
-
 ## QA and acceptance testing
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
