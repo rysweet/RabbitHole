@@ -1061,38 +1061,7 @@ public class ModelResourceExporter {
   public String createJavaCode() throws DataFormatException {
     StringBuilder sb = new StringBuilder();
 
-    sb.append(JavaCodeUtilities.getCopyrightComment());
-    sb.append(JavaCodeUtilities.LINE_RETURN);
-    sb.append("package " + this.classData.packageString + ";" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
-    sb.append("import org.lgna.project.annotations.*;" + JavaCodeUtilities.LINE_RETURN);
-    sb.append("import org.lgna.story.implementation.JointIdTransformationPair;" + JavaCodeUtilities.LINE_RETURN);
-    sb.append("import org.lgna.story.Orientation;" + JavaCodeUtilities.LINE_RETURN);
-    sb.append("import org.lgna.story.Position;" + JavaCodeUtilities.LINE_RETURN);
-    sb.append("import org.lgna.story.resources.ImplementationAndVisualType;" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
-    if (this.isDeprecated) {
-      sb.append("@Deprecated" + JavaCodeUtilities.LINE_RETURN);
-    }
-    sb.append("public enum " + this.getJavaClassName() + " implements " + this.classData.superClass.getCanonicalName() + " {" + JavaCodeUtilities.LINE_RETURN);
-    assert !this.subResources.isEmpty();
-    boolean isFirst = true;
-    for (int i = 0; i < this.subResources.size(); i++) {
-      ModelSubResourceExporter resource = this.subResources.get(i);
-      String resourceEnumName = createResourceEnumName(this, resource);
-      if (isValidEnumName(resource.getModelName(), resourceEnumName)) {
-        if (!isFirst) {
-          sb.append("," + JavaCodeUtilities.LINE_RETURN);
-        }
-        String typeString = "";
-        if (!resource.getTypeString().equals(ImplementationAndVisualType.ALICE.toString())) {
-          typeString = "( ImplementationAndVisualType." + resource.getTypeString() + " )";
-        }
-        sb.append("\t" + resourceEnumName + typeString);
-        isFirst = false;
-      } else {
-        System.out.println("SKIPPING ENUM NAME: " + resourceEnumName);
-      }
-    }
-    sb.append(";" + JavaCodeUtilities.LINE_RETURN);
+    ModelResourceJavaGenerator.appendPreambleAndEnumConstants(sb, this);
     List<String> existingIds = getExistingJointIds(this.classData.superClass);
     boolean addedRoots = false;
     List<Tuple2<String, String>> trimmedSkeleton = makeCodeReadyTree(this.jointList);
@@ -1371,7 +1340,7 @@ public class ModelResourceExporter {
     }
   }
 
-  private String getJavaClassName() {
+  String getJavaClassName() {
     return this.className + AliceResourceClassUtilities.RESOURCE_SUFFIX;
   }
 

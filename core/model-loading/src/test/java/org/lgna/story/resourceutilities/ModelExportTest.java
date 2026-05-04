@@ -66,6 +66,18 @@ public class ModelExportTest {
   }
 
   @Test
+  public void modelExporterKeepsGeneratedEnumConstantsAndResourceTypes() throws Exception {
+    ModelResourceExporter exporter = createSyntheticPropExporter();
+    exporter.addResource("VariantProp", "Default", "SIMS2", null, null);
+
+    String javaCode = exporter.createJavaCode();
+
+    assertTrue(javaCode.contains("DEFAULT,"));
+    assertTrue(javaCode.contains("VARIANT_PROP( ImplementationAndVisualType.SIMS2 )"));
+    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
+  }
+
+  @Test
   public void modelExporterOnlyWritesSubResourceTagsUniqueFromParent() throws Exception {
     ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
     exporter.addTags("shared-tag");
