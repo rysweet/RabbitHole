@@ -29,9 +29,17 @@ jobs:
       - name: Generate no-Sims aggregate and per-module coverage reports
         run: mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
 
-      - name: Summarize and gate aggregate line coverage
+      - name: Summarize and gate line coverage
         if: always()
-        run: python3 scripts/summarize-jacoco-coverage.py --output coverage-summary.md --min-aggregate-line-percent 8.0
+        run: |
+          python3 scripts/summarize-jacoco-coverage.py \
+            --output coverage-summary.md \
+            --min-aggregate-line-percent 8.0 \
+            --min-module-line-percent core/ast=18.0 \
+            --min-module-line-percent core/model-loading=10.0 \
+            --min-module-line-percent core/story-api-migration=75.0 \
+            --min-module-line-percent core/tweedle=50.0 \
+            --min-module-line-percent netbeans=25.0
 
       - name: Upload coverage reports
         if: always()

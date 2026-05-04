@@ -74,14 +74,24 @@ Generate no-Sims aggregate and per-module coverage reports:
 
     cd ${alice3}
     mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
-    python3 scripts/summarize-jacoco-coverage.py --output coverage-summary.md --min-aggregate-line-percent 8.0
+    python3 scripts/summarize-jacoco-coverage.py \
+      --output coverage-summary.md \
+      --min-aggregate-line-percent 8.0 \
+      --min-module-line-percent core/ast=18.0 \
+      --min-module-line-percent core/model-loading=10.0 \
+      --min-module-line-percent core/story-api-migration=75.0 \
+      --min-module-line-percent core/tweedle=50.0 \
+      --min-module-line-percent netbeans=25.0
 
 The aggregate HTML report is written to `coverage-report/target/site/jacoco-aggregate/index.html`.
 Per-module HTML reports are written under each module's `target/site/jacoco/index.html` when JaCoCo
 produces module-level data. CI uploads those reports plus `coverage-summary.md` as the
 `coverage-no-sims-reports` artifact for pull requests. CI enforces an 8.0% aggregate no-Sims line
-coverage floor as an honest ratchet from the current low baseline; raise it as characterization
-coverage grows toward the 70% mission target. See the [coverage reporting reference](docs/reference/coverage-reporting.md).
+coverage floor plus conservative module floors for covered modernization areas; raise them as
+characterization coverage grows toward the 70% mission target. See the
+[coverage reporting reference](docs/reference/coverage-reporting.md), the
+[coverage ratchet how-to](docs/howto/expand-coverage-ratchets.md), and the
+[coverage ratchet tutorial](docs/tutorials/coverage-ratchet-and-hotspot-review.md).
 
 Outside-in desktop acceptance scenarios live in `qa/outside-in/alice-desktop/`. See the [documentation index](docs/index.md), the [Alice desktop outside-in QA guide](docs/howto/alice-desktop-outside-in-qa.md), and the [QA reference](docs/reference/alice-desktop-outside-in-qa.md) for usage, scenario schema, evidence expectations, and configuration.
 

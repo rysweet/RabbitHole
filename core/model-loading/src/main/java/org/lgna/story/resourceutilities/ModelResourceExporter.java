@@ -101,6 +101,10 @@ public class ModelResourceExporter {
     }
   }
 
+  private interface SubResourceTagUpdater {
+    void addTags(ModelSubResourceExporter subResource, String... tags);
+  }
+
   private String resourceName;
   private String className;
   private List<String> tags = new LinkedList<String>();
@@ -579,35 +583,23 @@ public class ModelResourceExporter {
   }
 
   public void addSubResourceTags(String modelName, String textureName, String... tags) {
-    if ((tags != null) && (tags.length > 0)) {
-      for (ModelSubResourceExporter subResource : this.subResources) {
-        if (subResource.getModelName().equalsIgnoreCase(modelName)) {
-          if ((textureName == null) || subResource.getTextureName().equalsIgnoreCase(textureName)) {
-            subResource.addTags(tags);
-          }
-        }
-      }
-    }
+    addTagsToMatchingSubResources(modelName, textureName, tags, ModelSubResourceExporter::addTags);
   }
 
   public void addSubResourceGroupTags(String modelName, String textureName, String... tags) {
-    if ((tags != null) && (tags.length > 0)) {
-      for (ModelSubResourceExporter subResource : this.subResources) {
-        if (subResource.getModelName().equalsIgnoreCase(modelName)) {
-          if ((textureName == null) || subResource.getTextureName().equalsIgnoreCase(textureName)) {
-            subResource.addGroupTags(tags);
-          }
-        }
-      }
-    }
+    addTagsToMatchingSubResources(modelName, textureName, tags, ModelSubResourceExporter::addGroupTags);
   }
 
   public void addSubResourceThemeTags(String modelName, String textureName, String... tags) {
+    addTagsToMatchingSubResources(modelName, textureName, tags, ModelSubResourceExporter::addThemeTags);
+  }
+
+  private void addTagsToMatchingSubResources(String modelName, String textureName, String[] tags, SubResourceTagUpdater updater) {
     if ((tags != null) && (tags.length > 0)) {
       for (ModelSubResourceExporter subResource : this.subResources) {
         if (subResource.getModelName().equalsIgnoreCase(modelName)) {
           if ((textureName == null) || subResource.getTextureName().equalsIgnoreCase(textureName)) {
-            subResource.addThemeTags(tags);
+            updater.addTags(subResource, tags);
           }
         }
       }

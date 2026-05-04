@@ -27,6 +27,32 @@ class Coverage:
         return 100.0 * self.covered / self.total if self.total else 0.0
 
 
+@dataclass(frozen=True)
+class ModuleThreshold:
+    module_name: str
+    minimum_percent: float
+
+
+def parse_module_threshold(value: str) -> ModuleThreshold:
+    if "=" not in value:
+        raise argparse.ArgumentTypeError("module threshold must use MODULE=PERCENT")
+
+    module_name, minimum_text = value.rsplit("=", 1)
+    module_name = module_name.strip()
+    if not module_name:
+        raise argparse.ArgumentTypeError("module threshold must include a module name")
+
+    try:
+        minimum = float(minimum_text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("module threshold percent must be a number") from exc
+
+    if minimum < 0.0 or minimum > 100.0:
+        raise argparse.ArgumentTypeError("module threshold percent must be between 0 and 100")
+
+    return ModuleThreshold(module_name=module_name, minimum_percent=minimum)
+
+
 def read_line_coverage(path: Path, name: str) -> Optional[Coverage]:
     covered = 0
     missed = 0
@@ -122,6 +148,40 @@ def append_gate(markdown: str, aggregate: Optional[Coverage], minimum: float) ->
     return "\n".join(lines), passed
 
 
+def append_module_gates(
+    markdown: str,
+    module_reports: List[Coverage],
+    thresholds: List[ModuleThreshold],
+) -> Tuple[str, bool]:
+    reports_by_name = {coverage.name: coverage for coverage in module_reports}
+    passed_all = True
+    lines = [
+        markdown.rstrip(),
+        "",
+        "## Module coverage gates",
+        "",
+        "| Module | Required line coverage | Actual line coverage | Result |",
+        "| --- | ---: | ---: | --- |",
+    ]
+    for threshold in thresholds:
+        coverage = reports_by_name.get(threshold.module_name)
+        if coverage is None:
+            passed_all = False
+            lines.append(
+                f"| {threshold.module_name} | {threshold.minimum_percent:.2f}% | missing | FAIL |"
+            )
+            continue
+
+        passed = coverage.percent >= threshold.minimum_percent
+        passed_all = passed_all and passed
+        result = "PASS" if passed else "FAIL"
+        lines.append(
+            f"| {coverage.name} | {threshold.minimum_percent:.2f}% | {coverage.percent:.2f}% | {result} |"
+        )
+    lines.append("")
+    return "\n".join(lines), passed_all
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root")
@@ -131,7 +191,20 @@ def main() -> int:
         type=float,
         help="fail when aggregate line coverage is missing or below this percentage",
     )
+    parser.add_argument(
+        "--min-module-line-percent",
+        action="append",
+        default=[],
+        metavar="MODULE=PERCENT",
+        type=parse_module_threshold,
+        help="fail when a module line coverage report is missing or below this percentage",
+    )
     args = parser.parse_args()
+    seen_modules = set()
+    for threshold in args.min_module_line_percent:
+        if threshold.module_name in seen_modules:
+            parser.error(f"duplicate module threshold for {threshold.module_name}")
+        seen_modules.add(threshold.module_name)
 
     root = args.root.resolve()
     aggregate, module_reports = collect_reports(root)
@@ -139,6 +212,13 @@ def main() -> int:
     passed = True
     if args.min_aggregate_line_percent is not None:
         markdown, passed = append_gate(markdown, aggregate, args.min_aggregate_line_percent)
+    if args.min_module_line_percent:
+        markdown, module_passed = append_module_gates(
+            markdown,
+            module_reports,
+            args.min_module_line_percent,
+        )
+        passed = passed and module_passed
     print(markdown)
 
     if args.output:
