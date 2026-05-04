@@ -47,7 +47,7 @@ public class Alice3ProjectTemplateAntSmokeTest {
   private static final Map<String, Path> MODULE_OUTPUTS = moduleOutputs();
 
   @Test
-  public void packagedProjectTemplateBuildsGeneratedAliceProjectJarWithAlice3LibraryClasspath() throws Exception {
+  public void packagedProjectTemplateBuildsAndRunsGeneratedAliceProjectWithAlice3LibraryClasspath() throws Exception {
     Path smokeRoot = TARGET.resolve("ant-smoke");
     Path projectDirectory = smokeRoot.resolve("project");
     deleteRecursively(smokeRoot);
@@ -60,6 +60,7 @@ public class Alice3ProjectTemplateAntSmokeTest {
         aliceProject.toFile(),
         new Project(programType("Program"), Project.SceneCameraType.WindowCamera));
     generateProjectCodeWithoutFormatting(aliceProject, sourceDirectory);
+    writeAntRunProbe(sourceDirectory);
 
     Path antScratch = smokeRoot.resolve("ant-scratch");
     Files.createDirectories(antScratch);
@@ -67,10 +68,14 @@ public class Alice3ProjectTemplateAntSmokeTest {
     writeLibraryProperties(userProperties, antScratch);
 
     String antLog = executeAntJarTarget(projectDirectory, userProperties, antScratch);
+    String antRunLog = executeAntRunTarget(projectDirectory, userProperties, antScratch);
 
     Path jarPath = projectDirectory.resolve("dist/Alice3JavaApplication.jar");
     assertTrue(antLog, Files.exists(projectDirectory.resolve("build/classes/Program.class")));
     assertTrue(antLog, Files.exists(projectDirectory.resolve("build/classes/AliceJavaFXLauncher.class")));
+    assertTrue(antRunLog, Files.exists(projectDirectory.resolve("build/classes/AntRunProbe.class")));
+    assertTrue(antRunLog, antRunLog.contains("ANT_RUN_PROBE_OK org.lgna.story.SProgram args=1"));
+    assertTrue(antRunLog, !antRunLog.contains("Java Result:"));
     assertTrue(antLog, Files.exists(jarPath));
     assertJarContainsGeneratedProject(jarPath);
   }
@@ -81,6 +86,23 @@ public class Alice3ProjectTemplateAntSmokeTest {
         sourceDirectory.toAbsolutePath().normalize().toFile(),
         null,
         false);
+  }
+
+  private static void writeAntRunProbe(Path sourceDirectory) throws Exception {
+    Files.writeString(
+        sourceDirectory.resolve("AntRunProbe.java"),
+        """
+        public class AntRunProbe {
+            public static void main(String[] args) {
+                if (!org.lgna.story.SProgram.class.equals(Program.class.getSuperclass())) {
+                    throw new AssertionError(Program.class.getSuperclass().getName());
+                }
+                Program.main(args);
+                System.out.println("ANT_RUN_PROBE_OK " + Program.class.getSuperclass().getName() + " args=" + args.length);
+            }
+        }
+        """,
+        StandardCharsets.UTF_8);
   }
 
   private static NamedUserType programType(String name) {
@@ -114,10 +136,32 @@ public class Alice3ProjectTemplateAntSmokeTest {
   }
 
   private static String executeAntJarTarget(Path projectDirectory, Path userProperties, Path antScratch) {
+    return executeAntTarget(projectDirectory, userProperties, antScratch, "jar", "ant-jar.log", Map.of());
+  }
+
+  private static String executeAntRunTarget(Path projectDirectory, Path userProperties, Path antScratch) {
+    // The default AliceJavaFXLauncher needs a display; this headless probe proves the NetBeans run target,
+    // generated Program class, and populated Alice3Library classpath up to that GUI boundary.
+    return executeAntTarget(
+        projectDirectory,
+        userProperties,
+        antScratch,
+        "run",
+        "ant-run.log",
+        Map.of("main.class", "AntRunProbe", "application.args", "from-ant-run"));
+  }
+
+  private static String executeAntTarget(
+      Path projectDirectory,
+      Path userProperties,
+      Path antScratch,
+      String targetName,
+      String logFileName,
+      Map<String, String> antProperties) {
     Path buildFile = projectDirectory.resolve("build.xml").toAbsolutePath().normalize();
-    Path outputFile = antScratch.resolve("ant-jar.log");
+    Path outputFile = antScratch.resolve(logFileName);
     try {
-      Process process = new ProcessBuilder(
+      List<String> command = new ArrayList<>(List.of(
           Path.of(System.getProperty("java.home"), "bin", "java").toString(),
           "-Djava.io.tmpdir=" + antScratch.toAbsolutePath().normalize(),
           "-cp",
@@ -125,8 +169,11 @@ public class Alice3ProjectTemplateAntSmokeTest {
           Launcher.class.getName(),
           "-f",
           buildFile.toString(),
-          "-Duser.properties.file=" + userProperties.toAbsolutePath().normalize(),
-          "jar")
+          "-Duser.properties.file=" + userProperties.toAbsolutePath().normalize()));
+      antProperties.forEach((name, value) -> command.add("-D" + name + "=" + value));
+      command.add(targetName);
+
+      Process process = new ProcessBuilder(command)
           .directory(projectDirectory.toFile())
           .redirectErrorStream(true)
           .redirectOutput(outputFile.toFile())
@@ -140,12 +187,12 @@ public class Alice3ProjectTemplateAntSmokeTest {
       }
       String output = Files.readString(outputFile, StandardCharsets.UTF_8);
       if (!exited) {
-        throw new AssertionError("Ant smoke timed out\n" + output);
+        throw new AssertionError("Ant smoke timed out running " + targetName + "\n" + output);
       }
       assertTrue(output, process.exitValue() == 0);
       return output;
     } catch (Exception ex) {
-      throw new AssertionError("Unable to execute Ant smoke", ex);
+      throw new AssertionError("Unable to execute Ant smoke target " + targetName, ex);
     }
   }
 

@@ -60,6 +60,18 @@ public class ModelExportTest {
   }
 
   @Test
+  public void modelExporterKeepsGeneratedEnumConstantsAndResourceTypes() throws Exception {
+    ModelResourceExporter exporter = createSyntheticPropExporter();
+    exporter.addResource("VariantProp", "Default", "SIMS2", null, null);
+
+    String javaCode = exporter.createJavaCode();
+
+    assertTrue(javaCode.contains("DEFAULT,"));
+    assertTrue(javaCode.contains("VARIANT_PROP( ImplementationAndVisualType.SIMS2 )"));
+    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
+  }
+
+  @Test
   public void modelExporterOnlyWritesSubResourceTagsUniqueFromParent() throws Exception {
     ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
     exporter.addTags("shared-tag");
@@ -108,10 +120,12 @@ public class ModelExportTest {
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     assertNotNull("Tests must run on a JDK, not a JRE", compiler);
 
-    Path sourceRoot = Files.createTempDirectory("alice-model-export-source");
-    Path classRoot = Files.createTempDirectory("alice-model-export-classes");
+    Path testRoot = Path.of("target", "model-export-test", Long.toString(System.nanoTime()));
+    Path sourceRoot = testRoot.resolve("source");
+    Path classRoot = testRoot.resolve("classes");
     Path sourceFile = sourceRoot.resolve(sourcePath);
     Files.createDirectories(sourceFile.getParent());
+    Files.createDirectories(classRoot);
     Files.writeString(sourceFile, source, StandardCharsets.UTF_8);
 
     ByteArrayOutputStream compilerOutput = new ByteArrayOutputStream();
