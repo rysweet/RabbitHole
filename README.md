@@ -70,14 +70,16 @@ Run unit tests
     cd ${alice3}
     mvn test
 
-Generate a module-scoped coverage baseline without enforcing a minimum threshold:
+Generate no-Sims aggregate and per-module coverage reports without enforcing a minimum threshold:
 
     cd ${alice3}
-    mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage -pl core/util -am verify
+    mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
+    python3 scripts/summarize-jacoco-coverage.py --output coverage-summary.md
 
-The HTML report is written to `core/util/target/site/jacoco/index.html`; XML and
-CSV baselines are written in the same directory. CI uploads those files as the
-`coverage-core-util-baseline` artifact for pull requests.
+The aggregate HTML report is written to `coverage-report/target/site/jacoco-aggregate/index.html`.
+Per-module HTML reports are written under each module's `target/site/jacoco/index.html` when JaCoCo
+produces module-level data. CI uploads those reports plus `coverage-summary.md` as the
+`coverage-no-sims-reports` artifact for pull requests. No coverage threshold is enforced yet.
 
 Outside-in desktop acceptance scenarios live in `qa/outside-in/alice-desktop/`. See the [documentation index](docs/index.md), the [Alice desktop outside-in QA guide](docs/howto/alice-desktop-outside-in-qa.md), and the [QA reference](docs/reference/alice-desktop-outside-in-qa.md) for usage, scenario schema, evidence expectations, and configuration.
 

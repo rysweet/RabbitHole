@@ -12,7 +12,7 @@ userActions:
   - Execute the launch smoke through the existing runner when UI gating is enabled.
   - Review the first-window or startup-signal evidence.
 expectedOutcomes:
-  - By default the scenario records a gated-not-run status instead of requiring a real GUI.
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
   - When the gate is enabled, the launch smoke produces startup evidence without uncaught startup failure.
   - Future Swing automation can replace this placeholder without changing the scenario catalog boundary.
 automation:

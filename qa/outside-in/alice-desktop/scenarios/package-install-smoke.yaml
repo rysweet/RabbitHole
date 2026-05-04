@@ -15,7 +15,7 @@ userActions:
   - Install the produced package in a disposable environment when an installer artifact is available.
   - Launch Alice once from the installed entry point and record the result.
 expectedOutcomes:
-  - By default the scenario records a gated-not-run status instead of building installers.
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
   - When the gate is enabled, the package command exits successfully and records artifact listings.
   - Any install attempt uses a disposable environment and either launches Alice or fails with a captured install log.
 automation:

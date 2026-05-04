@@ -12,7 +12,7 @@ userActions:
   - Run the focused wizard, palette, and completion command smoke.
   - Review the command output for project wizard validation, palette wiring, and completion resources.
 expectedOutcomes:
-  - By default the scenario records a gated-not-run status instead of running NetBeans module tests.
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
   - When the gate is enabled, focused wizard, palette, and completion checks exit successfully.
   - Command evidence covers the user-visible create-project wizard, palette availability, and code completion affordances where current tests can observe them.
 automation:

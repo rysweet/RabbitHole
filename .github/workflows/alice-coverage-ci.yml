@@ -1,4 +1,4 @@
-name: Alice Coverage Baseline
+name: Alice Coverage Reports
 
 on:
   push:
@@ -29,16 +29,22 @@ jobs:
           java-version: '21'
           maven-version: 3.9.9
 
-      - name: Generate core/util coverage baseline
-        run: mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage -pl core/util -am verify
+      - name: Generate no-Sims aggregate and per-module coverage reports
+        run: mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
 
-      - name: Upload core/util coverage report
+      - name: Summarize line coverage
+        if: always()
+        run: python3 scripts/summarize-jacoco-coverage.py --output coverage-summary.md
+
+      - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-core-util-baseline
+          name: coverage-no-sims-reports
           path: |
-            core/util/target/site/jacoco/**
-            core/util/target/jacoco.exec
-            core/util/target/surefire-reports/**
+            coverage-summary.md
+            coverage-report/target/site/jacoco-aggregate/**
+            **/target/site/jacoco/**
+            **/target/jacoco.exec
+            **/target/surefire-reports/**
           if-no-files-found: warn

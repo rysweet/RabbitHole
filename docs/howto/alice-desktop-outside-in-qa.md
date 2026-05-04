@@ -196,7 +196,7 @@ The runner accepts these environment variables:
 | `ALICE_QA_DISPLAY` | Reuse a specific X display instead of selecting a free display from `:90` through `:120`. | `ALICE_QA_DISPLAY=:99` |
 | `ALICE_QA_SCREEN` | Set Xvfb screen geometry. Defaults to `1280x900x24`. | `ALICE_QA_SCREEN=1600x1000x24` |
 | `ALICE_QA_READY_WAIT_SECONDS` | Override the scenario readiness wait before screenshot capture. | `ALICE_QA_READY_WAIT_SECONDS=60` |
-| `ALICE_QA_RUN_GATED_SMOKES` | Run gated CLI/UI smoke commands instead of only preparing status/checklist evidence. | `ALICE_QA_RUN_GATED_SMOKES=1` |
+| `ALICE_QA_RUN_GATED_SMOKES` | Run gated CLI/UI smoke commands instead of recording a non-success gated skip. | `ALICE_QA_RUN_GATED_SMOKES=1` |
 
 Example:
 
@@ -213,7 +213,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
   --timeout-seconds 180
 ```
 
-Gated command smokes cover exported-project, NetBeans package, package/install, project IO, failure path, future UI startup, and wizard/palette/completion paths. Without `ALICE_QA_RUN_GATED_SMOKES=1`, those scenarios exit successfully after writing `status.txt` with `outcome=gated-not-run` and a checklist. Enable the gate only in a worktree prepared for the configured Maven, packaging, or display-backed command.
+Gated command smokes cover exported-project, NetBeans package, package/install, project IO, failure path, future UI startup, and wizard/palette/completion paths. Without `ALICE_QA_RUN_GATED_SMOKES=1`, those scenarios write `status.txt` with `outcome=gated-not-run` and exit non-zero so they cannot pass by accident. Use `--prepare-only` for intentional preflight/checklist preparation. Enable the gate only in a worktree prepared for the configured Maven, packaging, or display-backed command.
 
 The QA lane itself does not require Node.js. If a surrounding QA orchestrator invokes Node-based tooling around this lane, use:
 

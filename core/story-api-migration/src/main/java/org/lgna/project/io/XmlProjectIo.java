@@ -219,24 +219,52 @@ public class XmlProjectIo implements ProjectIo {
           String uuidText = xmlElement.getAttribute(XML_RESOURCE_UUID_ATTRIBUTE);
           String entryName = xmlElement.getAttribute(XML_RESOURCE_ENTRY_NAME_ATTRIBUTE);
           if ((className != null) && (uuidText != null) && (entryName != null)) {
-            try (InputStream resourceStream = container.getInputStream(entryName)) {
-              if (resourceStream == null) {
-                throw new IOException("Archive does not contain resource entry " + entryName);
-              }
-              byte[] data = InputStreamUtilities.getBytes(resourceStream);
-              try {
-                Class<? extends Resource> resourceCls = (Class<? extends Resource>) ClassUtilities.forName(className);
-                Resource resource = createResource(resourceCls, uuidText);
-                resource.decodeAttributes(xmlElement, data);
-                resources.add(resource);
-              } catch (ClassNotFoundException cnfe) {
-                PrintUtilities.println("WARNING: no class for name:", className);
-              }
+            byte[] data = readResourceData(entryName, xmlElement);
+            try {
+              Class<? extends Resource> resourceCls = (Class<? extends Resource>) ClassUtilities.forName(className);
+              Resource resource = createResource(resourceCls, uuidText);
+              resource.decodeAttributes(xmlElement, data);
+              resources.add(resource);
+            } catch (ClassNotFoundException cnfe) {
+              throw new IOException(
+                  "Unknown resource class '" + className + "' for " + resourceContext(xmlElement, entryName),
+                  cnfe);
             }
           }
         }
       }
       return resources;
+    }
+
+    private byte[] readResourceData(String entryName, Element xmlElement) throws IOException {
+      InputStream resourceStream = container.getInputStream(entryName);
+      if (resourceStream == null) {
+        throw new IOException("Missing resource data for " + resourceContext(xmlElement, entryName));
+      }
+      try (InputStream is = resourceStream) {
+        byte[] data = InputStreamUtilities.getBytes(is);
+        if (data == null) {
+          throw new IOException("Missing resource data for " + resourceContext(xmlElement, entryName));
+        }
+        return data;
+      } catch (IOException ioe) {
+        throw new IOException("Unable to read resource data for " + resourceContext(xmlElement, entryName), ioe);
+      }
+    }
+
+    private static String resourceContext(Element xmlElement, String entryName) {
+      String resourceName = xmlElement.getAttribute("name");
+      String uuidText = xmlElement.getAttribute(XML_RESOURCE_UUID_ATTRIBUTE);
+      StringBuilder sb = new StringBuilder("resource");
+      if ((resourceName != null) && !resourceName.isEmpty()) {
+        sb.append(" '").append(resourceName).append("'");
+      } else if ((uuidText != null) && !uuidText.isEmpty()) {
+        sb.append(" with UUID '").append(uuidText).append("'");
+      }
+      if ((entryName != null) && !entryName.isEmpty()) {
+        sb.append(" at archive entry '").append(entryName).append("'");
+      }
+      return sb.toString();
     }
 
     private static Resource createResource(Class<? extends Resource> resourceCls, String uuidText) throws IOException {

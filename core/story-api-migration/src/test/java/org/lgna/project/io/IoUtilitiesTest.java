@@ -113,6 +113,34 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void xmlProjectReaderReportsMissingResourceDataArchiveEntry() throws Exception {
+    File projectFile = temporaryFolder.newFile("missing-xml-resource-data.a3p");
+    String entryName = "resources/missing.txt";
+    String resourceName = "missing.txt";
+    writeXmlProjectArchive(projectFile, TestResource.class.getName(), resourceName, entryName, null);
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectFile));
+
+    assertTrue(thrown.getMessage().contains(resourceName));
+    assertTrue(thrown.getMessage().contains(entryName));
+  }
+
+  @Test
+  public void xmlProjectReaderReportsUnknownResourceClassWithContext() throws Exception {
+    File projectFile = temporaryFolder.newFile("unknown-xml-resource-class.a3p");
+    String entryName = "resources/ghost.txt";
+    String resourceName = "ghost.txt";
+    String className = "org.lgna.project.io.DoesNotExistResource";
+    writeXmlProjectArchive(projectFile, className, resourceName, entryName, "ghost".getBytes(StandardCharsets.UTF_8));
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectFile));
+
+    assertTrue(thrown.getMessage().contains(className));
+    assertTrue(thrown.getMessage().contains(resourceName));
+    assertTrue(thrown.getMessage().contains(entryName));
+  }
+
+  @Test
   public void writeProjectIncludesProvidedThumbnailAndManifestIcon() throws Exception {
     Project project = new Project(programType("Program"), Project.SceneCameraType.WindowCamera);
     File projectFile = temporaryFolder.newFile("synthetic-thumbnail.a3p");
@@ -963,6 +991,48 @@ public class IoUtilitiesTest {
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     XMLUtilities.write((new XmlEncoderDecoder()).encode(programType(name)), outputStream);
     return outputStream.toByteArray();
+  }
+
+  private static void writeXmlProjectArchive(
+      File file,
+      String resourceClassName,
+      String resourceName,
+      String resourceEntryName,
+      byte[] resourceData) throws Exception {
+    String manifestJson = """
+        {
+          "description": {
+            "name": "Program"
+          },
+          "metadata": {
+            "fileType": "a3p"
+          },
+          "projectStructure": {
+            "sceneCameraType": "WindowCamera"
+          }
+        }
+        """;
+    String resourcesXml = String.format(
+        """
+            <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+            <root>
+              <resource className="%s" uuid="%s" entryName="%s" name="%s" originalFileName="%s" contentType="text/plain"/>
+            </root>
+            """,
+        resourceClassName,
+        UUID.randomUUID(),
+        resourceEntryName,
+        resourceName,
+        resourceName);
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(file))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, manifestJson);
+      writeZipEntry(zipOutputStream, "programType.xml", encodedProgramTypeXml("Program"));
+      writeZipEntry(zipOutputStream, "resources.xml", resourcesXml);
+      if (resourceData != null) {
+        writeZipEntry(zipOutputStream, resourceEntryName, resourceData);
+      }
+    }
   }
 
   private static void writeZipEntry(ZipOutputStream zipOutputStream, String name, String content) throws Exception {

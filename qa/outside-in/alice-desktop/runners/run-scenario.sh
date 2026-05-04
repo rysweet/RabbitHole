@@ -11,7 +11,7 @@ usage() {
 usage:
   run-scenario.sh list
   run-scenario.sh validate
-  run-scenario.sh run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>]
+  run-scenario.sh run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
 
 Environment:
   ALICE_QA_SCENARIO_DIR  Override the directory containing scenario YAML files.
@@ -20,8 +20,9 @@ Environment:
   ALICE_QA_READY_WAIT_SECONDS
                          Override GUI readiness wait before screenshot capture.
   ALICE_QA_RUN_GATED_SMOKES=1
-                         Execute gated command smoke scenarios. By default they
-                         only write status and checklist evidence.
+                         Execute gated command smoke scenarios.
+                         Without it, gated smokes write gated-not-run evidence
+                         and exit non-zero unless --prepare-only is requested.
 EOF
 }
 
@@ -515,6 +516,7 @@ run_gated_command_smoke() {
   local scenario_json=$1
   local run_dir=$2
   local timeout_override=$3
+  local prepare_only=$4
 
   local automation_fields cwd configured_timeout scenario_id automation_mode run_timeout checklist exit_code outcome resolved_cwd
   local -a argv
@@ -530,20 +532,29 @@ run_gated_command_smoke() {
   resolved_cwd=$(resolve_automation_cwd "$cwd")
   write_environment "$run_dir"
 
-  if [ "${ALICE_QA_RUN_GATED_SMOKES:-}" != "1" ]; then
+  if [ "$prepare_only" = "1" ] || [ "${ALICE_QA_RUN_GATED_SMOKES:-}" != "1" ]; then
     checklist=$(write_checklist "$scenario_json" "$run_dir")
     {
       printf 'scenario=%s\n' "$scenario_id"
       printf 'automationMode=%s\n' "$automation_mode"
       printf 'outcome=gated-not-run\n'
       printf 'gate=ALICE_QA_RUN_GATED_SMOKES\n'
+      if [ "$prepare_only" = "1" ]; then
+        printf 'skipMode=prepare-only\n'
+      else
+        printf 'skipMode=missing-gate\n'
+      fi
       printf 'checklist=%s\n' "$(basename "$checklist")"
       printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
       printf 'cwd=%s\n' "$cwd"
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     } > "$run_dir/status.txt"
-    printf 'Gated command scenario prepared: set ALICE_QA_RUN_GATED_SMOKES=1 to execute %s\n' "$scenario_id"
-    return 0
+    if [ "$prepare_only" = "1" ]; then
+      printf 'Gated command scenario prepared without execution: %s\n' "$scenario_id"
+      return 0
+    fi
+    printf 'Gated command scenario not run: set ALICE_QA_RUN_GATED_SMOKES=1 to execute %s, or pass --prepare-only to record an intentional skip.\n' "$scenario_id" >&2
+    return 3
   fi
 
   set +e
@@ -596,6 +607,7 @@ case "$command_name" in
 
     evidence_base="$BASE_DIR/evidence"
     timeout_override=
+    prepare_only=0
     while [ "$#" -gt 0 ]; do
       case "$1" in
         --evidence-dir)
@@ -614,6 +626,10 @@ case "$command_name" in
           timeout_override=$2
           validate_positive_integer "$timeout_override" "timeout"
           shift 2
+          ;;
+        --prepare-only)
+          prepare_only=1
+          shift
           ;;
         *)
           printf 'unknown argument: %s\n' "$1" >&2
@@ -636,7 +652,7 @@ case "$command_name" in
         run_xvfb_real_alice "$scenario_json" "$run_dir" "$timeout_override"
         ;;
       gated-command-smoke)
-        run_gated_command_smoke "$scenario_json" "$run_dir" "$timeout_override"
+        run_gated_command_smoke "$scenario_json" "$run_dir" "$timeout_override" "$prepare_only"
         ;;
       manual-evidence-required)
         write_environment "$run_dir"

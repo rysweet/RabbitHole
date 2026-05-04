@@ -131,14 +131,15 @@ The save/load scenario is complete only after the workflow has been performed in
 
 ## Step 6: Prepare a gated command smoke
 
-Run a gated smoke without enabling heavy execution:
+Prepare gated smoke evidence without enabling heavy execution:
 
 ```bash
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-package-smoke \
+  --prepare-only \
   --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
 ```
 
-The runner writes `status.txt` with `outcome=gated-not-run` plus a checklist. To execute the configured Maven/package command in a prepared worktree, rerun with:
+The runner writes `status.txt` with `outcome=gated-not-run` plus a checklist. Omitting both `--prepare-only` and `ALICE_QA_RUN_GATED_SMOKES=1` exits non-zero so a gated skip cannot pass by accident. To execute the configured Maven/package command in a prepared worktree, rerun with:
 
 ```bash
 ALICE_QA_RUN_GATED_SMOKES=1 \
