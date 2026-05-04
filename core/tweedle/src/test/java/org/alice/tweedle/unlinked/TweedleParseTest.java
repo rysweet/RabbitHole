@@ -21,6 +21,18 @@ public class TweedleParseTest {
   }
 
   @Test
+  public void emptySourceShouldReturnNullType() {
+    TweedleType tested = parseType("");
+
+    assertNull("The parser currently returns null for empty type source.", tested);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void malformedSuperclassShouldFailAtCurrentParserBoundary() {
+    parseType("class SThing extends {}");
+  }
+
+  @Test
   public void aRootClassShouldBeCreated() {
     TweedleType tested = parseType("class SThing {}");
 
@@ -171,6 +183,15 @@ public class TweedleParseTest {
     TweedleClass tested = (TweedleClass) parseType(scene);
 
     assertFalse("The class should have a method.", tested.getMethods().isEmpty());
+  }
+
+  @Test
+  public void classWithFieldShouldHaveProperty() {
+    TweedleClass tested = (TweedleClass) parseType("class Scene extends SScene { WholeNumber count; }");
+
+    assertFalse("The class should have a property.", tested.getProperties().isEmpty());
+    assertEquals("The property should be named.", "count", tested.getProperties().getFirst().getName());
+    assertEquals("The property should be a WholeNumber.", TweedleTypes.WHOLE_NUMBER, tested.getProperties().getFirst().getType());
   }
 
   @Test

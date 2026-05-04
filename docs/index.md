@@ -16,6 +16,7 @@ repository.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
 - [Coverage reporting reference](./reference/coverage-reporting.md) - aggregate JaCoCo reporting, CI ratchet gate, and path from the current low baseline toward 70% line coverage.
+- [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
 
 ## Formal specification lane
 
