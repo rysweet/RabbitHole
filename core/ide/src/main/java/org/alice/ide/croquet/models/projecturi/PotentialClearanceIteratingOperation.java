@@ -68,20 +68,35 @@ public abstract class PotentialClearanceIteratingOperation extends Operation {
   protected List<Triggerable> createIteratingData() {
     List<Triggerable> steps = Lists.newLinkedList();
     ProjectApplication application = ProjectApplication.getActiveInstance();
-    boolean isPostClearanceModelDesired = this.postClearanceModel != null;
-    if (application.isBackup() || !application.isProjectUpToDateWithFile()) {
+    boolean isClearanceRequired = application.isBackup() || !application.isProjectUpToDateWithFile();
+    DirtyProjectNavigationPlan.PromptChoice promptChoice = null;
+    if (isClearanceRequired) {
       YesNoCancelResult result = Dialogs.confirmOrCancel(findLocalizedText("title"), findLocalizedText("message"));
-      if (result == YesNoCancelResult.CANCEL) {
-        throw new CancelException();
-      }
-      if (result == YesNoCancelResult.YES) {
-        steps.add(SaveProjectOperation.getInstance());
-      } else {
-        application.backupActiveProject();
-      }
+      promptChoice = switch (result) {
+      case YES -> DirtyProjectNavigationPlan.PromptChoice.SAVE;
+      case NO -> DirtyProjectNavigationPlan.PromptChoice.DISCARD;
+      case CANCEL -> DirtyProjectNavigationPlan.PromptChoice.CANCEL;
+      };
     }
-    if (isPostClearanceModelDesired) {
-      steps.add(this.postClearanceModel);
+
+    DirtyProjectNavigationPlan plan = DirtyProjectNavigationPlan.choose(
+        isClearanceRequired, promptChoice, this.postClearanceModel != null);
+    for (DirtyProjectNavigationPlan.Action action : plan.getActions()) {
+      switch (action) {
+      case CANCEL:
+        throw new CancelException();
+      case SAVE_CURRENT_PROJECT:
+        steps.add(SaveProjectOperation.getInstance());
+        break;
+      case BACK_UP_CURRENT_PROJECT:
+        application.backupActiveProject();
+        break;
+      case RUN_POST_CLEARANCE:
+        steps.add(this.postClearanceModel);
+        break;
+      default:
+        throw new AssertionError(action);
+      }
     }
     return steps;
   }
