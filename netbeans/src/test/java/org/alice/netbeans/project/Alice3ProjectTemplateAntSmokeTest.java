@@ -87,6 +87,34 @@ public class Alice3ProjectTemplateAntSmokeTest {
   }
 
   @Test
+  public void exportedProjectJarTargetReportsCommandLineClasspath() throws Exception {
+    Path smokeRoot = TARGET.resolve("ant-jar-command-line-smoke");
+    Path projectDirectory = smokeRoot.resolve("project");
+    deleteRecursively(smokeRoot);
+
+    unzip(TARGET.resolve("classes/org/alice/netbeans/ProjectTemplate.zip"), projectDirectory);
+    Path sourceDirectory = projectDirectory.resolve("src");
+    Files.createDirectories(sourceDirectory);
+    Path aliceProject = smokeRoot.resolve("jar-command-line-world.a3p");
+    IoUtilities.writeProject(
+        aliceProject.toFile(),
+        new Project(programType("Program"), Project.SceneCameraType.WindowCamera));
+    generateProjectCodeWithoutFormatting(aliceProject, sourceDirectory);
+
+    Path antScratch = smokeRoot.resolve("ant-scratch");
+    Files.createDirectories(antScratch);
+    Path userProperties = smokeRoot.resolve("user.properties");
+    writeLibraryProperties(userProperties, antScratch);
+
+    String antLog = executeAntJarTarget(projectDirectory, userProperties, antScratch);
+
+    Path jarPath = projectDirectory.resolve("dist/Alice3JavaApplication.jar");
+    assertTrue(antLog, Files.exists(jarPath));
+    assertJarContainsGeneratedProject(jarPath);
+    assertAntJarLogReportsCommandLineClasspath(antLog, jarPath);
+  }
+
+  @Test
   public void exportedResourceProjectAntJarPackagesGeneratedResourcesAndRunTargetLoadsThem() throws Exception {
     Path smokeRoot = TARGET.resolve("ant-resource-smoke");
     Path projectDirectory = smokeRoot.resolve("project");
@@ -437,6 +465,17 @@ public class Alice3ProjectTemplateAntSmokeTest {
       assertTrue("Jar manifest should be present", manifest != null);
       assertEquals("AliceJavaFXLauncher", manifest.getMainAttributes().getValue("Main-Class"));
     }
+  }
+
+  private static void assertAntJarLogReportsCommandLineClasspath(String antLog, Path jarPath) {
+    String normalizedLog = antLog.replace(File.separatorChar, '/');
+    String normalizedJarPath = jarPath.toAbsolutePath().normalize().toString().replace(File.separatorChar, '/');
+    assertTrue(antLog, antLog.contains("To run this application from the command line without Ant, try:"));
+    assertTrue(antLog, antLog.contains(" -cp "));
+    assertTrue(normalizedLog, normalizedLog.contains(normalizedJarPath));
+    assertTrue(antLog, antLog.contains("AliceJavaFXLauncher"));
+    assertTrue(antLog, antLog.contains("story-api"));
+    assertTrue(antLog, antLog.contains("javafx-graphics"));
   }
 
   private static void assertJarContainsEntry(Path jarPath, String entryName) throws Exception {
