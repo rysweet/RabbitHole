@@ -133,6 +133,41 @@ public class Alice3ProjectTemplateAntSmokeTest {
   }
 
   @Test
+  public void exportedProjectAntRunTargetAppliesRuntimeJvmArgumentsUpToGuiBoundary() throws Exception {
+    Path smokeRoot = TARGET.resolve("ant-runtime-configuration-smoke");
+    Path projectDirectory = smokeRoot.resolve("project");
+    deleteRecursively(smokeRoot);
+
+    unzip(TARGET.resolve("classes/org/alice/netbeans/ProjectTemplate.zip"), projectDirectory);
+    Path sourceDirectory = projectDirectory.resolve("src");
+    Files.createDirectories(sourceDirectory);
+    Path aliceProject = smokeRoot.resolve("runtime-configuration-world.a3p");
+    IoUtilities.writeProject(
+        aliceProject.toFile(),
+        new Project(programType("Program"), Project.SceneCameraType.WindowCamera));
+    generateProjectCodeWithoutFormatting(aliceProject, sourceDirectory);
+    writeAntRuntimeConfigurationProbe(sourceDirectory);
+
+    Path antScratch = smokeRoot.resolve("ant-scratch");
+    Files.createDirectories(antScratch);
+    Path userProperties = smokeRoot.resolve("user.properties");
+    writeLibraryProperties(userProperties, antScratch);
+
+    String antRunLog = executeAntTarget(
+        projectDirectory,
+        userProperties,
+        antScratch,
+        "run",
+        "ant-runtime-configuration-run.log",
+        Map.of("main.class", "AntRuntimeConfigurationProbe"));
+
+    assertTrue(antRunLog, Files.exists(projectDirectory.resolve("build/classes/AntRuntimeConfigurationProbe.class")));
+    assertTrue(antRunLog, antRunLog.contains("ANT_RUNTIME_CONFIGURATION_PROBE_OK "));
+    assertTrue(antRunLog, antRunLog.contains("aliceSource.jar_root"));
+    assertTrue(antRunLog, !antRunLog.contains("Java Result:"));
+  }
+
+  @Test
   public void exportsResourceBearingProjectWithAlice3LibraryAndPackagesResources() throws Exception {
     Path smokeRoot = temporaryFolder.newFolder("wizard-resource-smoke").toPath();
     Path projectDirectory = smokeRoot.resolve("ExportedResourceWorld");
@@ -297,6 +332,35 @@ public class Alice3ProjectTemplateAntSmokeTest {
                     throw new AssertionError("resources/probe.wav missing from runtime classpath");
                 }
                 System.out.println("ANT_RESOURCE_PROBE_OK " + resource.getContentType() + " " + body.trim());
+            }
+        }
+        """,
+        StandardCharsets.UTF_8);
+  }
+
+  private static void writeAntRuntimeConfigurationProbe(Path sourceDirectory) throws Exception {
+    Files.writeString(
+        sourceDirectory.resolve("AntRuntimeConfigurationProbe.java"),
+        """
+        public class AntRuntimeConfigurationProbe {
+            public static void main(String[] args) {
+                boolean assertionsEnabled = false;
+                assert assertionsEnabled = true;
+                if (!assertionsEnabled) {
+                    throw new AssertionError("Assertions were not enabled by run.jvmargs");
+                }
+                String aliceRootDirectory = System.getProperty("org.alice.ide.rootDirectory");
+                if ((aliceRootDirectory == null) || aliceRootDirectory.isBlank()) {
+                    throw new AssertionError("org.alice.ide.rootDirectory was not set");
+                }
+                if (aliceRootDirectory.contains("${")) {
+                    throw new AssertionError("Unresolved Alice root directory: " + aliceRootDirectory);
+                }
+                String normalizedAliceRootDirectory = aliceRootDirectory.replace('\\\\', '/');
+                if (!normalizedAliceRootDirectory.endsWith("aliceSource.jar_root")) {
+                    throw new AssertionError("Unexpected Alice root directory: " + aliceRootDirectory);
+                }
+                System.out.println("ANT_RUNTIME_CONFIGURATION_PROBE_OK " + normalizedAliceRootDirectory);
             }
         }
         """,

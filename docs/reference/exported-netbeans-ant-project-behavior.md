@@ -1,10 +1,10 @@
 # Exported NetBeans Ant Project Behavior
 
-This reference documents the intended exported Alice 3 NetBeans project behavior
-for the next characterization slice. The planned smoke should prove that an
-exported project is not only source-generatable and classpath-compilable: its Ant
-`run` target also consumes the exported project runtime metadata that can be
-verified before the Alice GUI launch boundary.
+This reference documents the exported Alice 3 NetBeans project behavior covered
+by the headless characterization smoke. The smoke proves that an exported project
+is not only source-generatable and classpath-compilable: its Ant `run` target
+also consumes the exported project runtime metadata that can be verified before
+the Alice GUI launch boundary.
 
 ## Contents
 
@@ -26,7 +26,7 @@ The exported project behavior lives in the NetBeans project template:
 netbeans/src/main/resources/ProjectTemplate/
 ```
 
-The planned characterization coverage belongs beside the NetBeans export tests:
+The characterization coverage belongs beside the NetBeans export tests:
 
 ```text
 netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java
@@ -72,7 +72,7 @@ runtime configuration expected by exported projects.
 | Assertions | Enabled by `-ea` from `run.jvmargs`. |
 | GlueGen temp cache | Disabled by `-Djogamp.gluegen.UseTempJarCache=false`. |
 | Alice root directory | Provided through `-Dorg.alice.ide.rootDirectory="${libs.Alice3Library.src}_root"`. |
-| Java module access | Supplied by the exported template's `--add-opens` arguments; not directly asserted by the planned probe unless the probe is expanded to inspect JVM input arguments. |
+| Java module access | Supplied by the exported template's `--add-opens` arguments; not directly asserted by the probe unless it is expanded to inspect JVM input arguments. |
 | Ant failure handling | Nonzero Java execution is not accepted as success; the log must not contain `Java Result:`. |
 
 ## Configuration
@@ -95,19 +95,19 @@ libs.Alice3Library.classpath=/path/to/alice/runtime/jars
 libs.Alice3Library.src=/path/to/aliceSource.jar
 ```
 
-The planned characterization test writes those properties through
+The characterization test writes those properties through
 `Alice3LibraryClasspathTestSupport`, using local build outputs and scratch files
 instead of Sims, nonfree modules, Git LFS payloads, or external downloads.
 
 ## Executable characterization
 
-The intended executable characterization is:
+The executable characterization is:
 
 ```text
 Alice3ProjectTemplateAntSmokeTest.exportedProjectAntRunTargetAppliesRuntimeJvmArgumentsUpToGuiBoundary
 ```
 
-The planned test creates all inputs under a temporary or target-local smoke
+The test creates all inputs under a target-local smoke
 directory:
 
 1. Unpack `ProjectTemplate.zip` into a temporary exported project directory.
@@ -155,8 +155,7 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-After the planned smoke is implemented, run the focused exported-project Ant
-smoke:
+Run the focused exported-project Ant smoke:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip \
@@ -186,8 +185,7 @@ test -d tweedle-lang/Grammar
 
 ## Tutorial: verify exported Ant runtime metadata
 
-Use this flow when reviewing or extending the exported-project Ant behavior after
-the planned smoke is implemented.
+Use this flow when reviewing or extending the exported-project Ant behavior.
 
 ### Step 1: Start from a no-Sims checkout
 
@@ -234,7 +232,7 @@ proves the exported `run` target passes assertions, Alice system properties, and
 interpolated library paths to the launched JVM.
 
 The exported template still carries module-open arguments in `run.jvmargs`.
-Those arguments are part of the template contract, but the planned probe only
+Those arguments are part of the template contract, but the current probe only
 proves them if it is expanded to inspect JVM input arguments.
 
 Do not treat this smoke as evidence that the full Alice GUI launched, rendered a
