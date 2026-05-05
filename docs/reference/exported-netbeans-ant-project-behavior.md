@@ -1,10 +1,10 @@
 # Exported NetBeans Ant Project Behavior
 
-This reference documents the exported Alice 3 NetBeans project behavior that is
-protected by characterization tests. The protected slice proves that an exported
-project is not only source-generatable and classpath-compilable: its Ant `run`
-target also consumes the exported project runtime metadata up to the Alice GUI
-launch boundary.
+This reference documents the intended exported Alice 3 NetBeans project behavior
+for the next characterization slice. The planned smoke should prove that an
+exported project is not only source-generatable and classpath-compilable: its Ant
+`run` target also consumes the exported project runtime metadata that can be
+verified before the Alice GUI launch boundary.
 
 ## Contents
 
@@ -26,19 +26,19 @@ The exported project behavior lives in the NetBeans project template:
 netbeans/src/main/resources/ProjectTemplate/
 ```
 
-Characterization coverage lives beside the NetBeans export tests:
+The planned characterization coverage belongs beside the NetBeans export tests:
 
 ```text
 netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java
 ```
 
 The behavior slice covers a generated, LFS-free Alice project exported into the
-NetBeans Ant template. It verifies that the exported Ant `run` target:
+NetBeans Ant template. It should verify that the exported Ant `run` target:
 
 1. Compiles generated Alice project source and a small runtime probe.
 2. Launches the requested `main.class` through the template's Ant `run` target.
-3. Applies `run.jvmargs`, including assertions and Alice runtime system
-   properties.
+3. Applies the observable `run.jvmargs` behavior required by the smoke:
+   assertions and Alice runtime system properties.
 4. Resolves the Alice library source-root interpolation used by
    `org.alice.ide.rootDirectory`.
 5. Fails loudly if Java exits nonzero instead of accepting `Java Result:` as a
@@ -46,7 +46,8 @@ NetBeans Ant template. It verifies that the exported Ant `run` target:
 
 This is a behavior-level exported-project contract. It intentionally goes beyond
 checking generated source text, compile success, or classpath presence, but it
-does not claim full Alice GUI launch coverage.
+does not claim full Alice GUI launch coverage or direct proof of every JVM
+argument in the template.
 
 ## User-visible behavior
 
@@ -71,7 +72,7 @@ runtime configuration expected by exported projects.
 | Assertions | Enabled by `-ea` from `run.jvmargs`. |
 | GlueGen temp cache | Disabled by `-Djogamp.gluegen.UseTempJarCache=false`. |
 | Alice root directory | Provided through `-Dorg.alice.ide.rootDirectory="${libs.Alice3Library.src}_root"`. |
-| Java module access | Supplied by the exported template's `--add-opens` arguments. |
+| Java module access | Supplied by the exported template's `--add-opens` arguments; not directly asserted by the planned probe unless the probe is expanded to inspect JVM input arguments. |
 | Ant failure handling | Nonzero Java execution is not accepted as success; the log must not contain `Java Result:`. |
 
 ## Configuration
@@ -94,29 +95,20 @@ libs.Alice3Library.classpath=/path/to/alice/runtime/jars
 libs.Alice3Library.src=/path/to/aliceSource.jar
 ```
 
-The characterization test writes those properties through
+The planned characterization test writes those properties through
 `Alice3LibraryClasspathTestSupport`, using local build outputs and scratch files
 instead of Sims, nonfree modules, Git LFS payloads, or external downloads.
 
-When running validation through automation that preserves local Node settings,
-keep the repository preference:
-
-```bash
-export NODE_OPTIONS=--max-old-space-size=32768
-```
-
-The Maven and Ant behavior itself is Java-based; `NODE_OPTIONS` is preserved for
-workflow compatibility with repository automation.
-
 ## Executable characterization
 
-The executable characterization is:
+The intended executable characterization is:
 
 ```text
 Alice3ProjectTemplateAntSmokeTest.exportedProjectAntRunTargetAppliesRuntimeJvmArgumentsUpToGuiBoundary
 ```
 
-The test creates all inputs under a temporary or target-local smoke directory:
+The planned test creates all inputs under a temporary or target-local smoke
+directory:
 
 1. Unpack `ProjectTemplate.zip` into a temporary exported project directory.
 2. Generate a synthetic `.a3p` project with no LFS or Sims dependencies.
@@ -126,7 +118,8 @@ The test creates all inputs under a temporary or target-local smoke directory:
 6. Run the exported Ant `run` target with `main.class` set to the probe class.
 7. Assert that the Ant log contains a success marker and no `Java Result:`.
 
-The probe checks behavior that can be proven locally:
+The probe checks behavior that can be proven locally without launching the Alice
+GUI:
 
 | Probe assertion | Why it matters |
 | --- | --- |
@@ -154,18 +147,18 @@ change is explicitly documented and characterized.
 
 ## Validation commands
 
-Run focused validation from the repository root. Initialize the Tweedle grammar
-submodule before Maven validation:
+Run validation from the repository root. Initialize the Tweedle grammar submodule
+before Maven validation:
 
 ```bash
 git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Run the focused exported-project Ant smoke:
+After the planned smoke is implemented, run the focused exported-project Ant
+smoke:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl netbeans -am \
   -DfailIfNoTests=false \
@@ -177,7 +170,6 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 Run the relevant no-Sims NetBeans reactor validation:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl netbeans -am \
   -DfailIfNoTests=false \
@@ -194,7 +186,8 @@ test -d tweedle-lang/Grammar
 
 ## Tutorial: verify exported Ant runtime metadata
 
-Use this flow when reviewing or extending the exported-project Ant behavior.
+Use this flow when reviewing or extending the exported-project Ant behavior after
+the planned smoke is implemented.
 
 ### Step 1: Start from a no-Sims checkout
 
@@ -213,7 +206,6 @@ characterization generates a synthetic Alice project and local Ant fixtures.
 Run:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl netbeans -am \
   -DfailIfNoTests=false \
@@ -237,9 +229,13 @@ Java Result:
 ### Step 3: Interpret the evidence
 
 Treat a passing focused smoke as evidence that the exported Ant project consumes
-runtime metadata correctly up to the GUI launch boundary. It proves the exported
-`run` target passes assertions, Alice system properties, interpolated library
-paths, module-open arguments, and classpath settings to the launched JVM.
+the runtime metadata asserted by the probe up to the GUI launch boundary. It
+proves the exported `run` target passes assertions, Alice system properties, and
+interpolated library paths to the launched JVM.
+
+The exported template still carries module-open arguments in `run.jvmargs`.
+Those arguments are part of the template contract, but the planned probe only
+proves them if it is expanded to inspect JVM input arguments.
 
 Do not treat this smoke as evidence that the full Alice GUI launched, rendered a
 window, loaded media, or completed a user workflow. Full desktop evidence stays
@@ -250,7 +246,6 @@ in the outside-in QA lane.
 After changing the template, generator, or NetBeans export behavior, run:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl netbeans -am \
   -DfailIfNoTests=false \
@@ -275,9 +270,10 @@ runtime configuration regression.
 
 ## Limits
 
-This feature proves the highest exported-project behavior that is deterministic
+This feature targets the highest exported-project behavior that is deterministic
 in local no-Sims validation: the Ant `run` target launches a class through the
-exported runtime configuration. It does not launch Alice's GUI in the smoke test.
+observable exported runtime configuration. It does not launch Alice's GUI in the
+smoke test.
 
 Full exported-project GUI launch, interactive run/debug behavior, media-heavy
 projects, and display-backed workflows require outside-in desktop QA evidence or
