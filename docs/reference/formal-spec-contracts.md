@@ -91,6 +91,9 @@ same policy through Java seams: `FileProjectLoader` returns `null` for corrupt
 archives, `ProjectBackupSelector` chooses the next trusted candidate,
 `ProjectLoadFailurePlan` chooses the recovery action, and
 `ProjectLoadFailureDispatchPlan` reaches the final user-visible load target.
+The TLA+ model treats readability as known at the policy level; the Java
+implementation learns that fact by loading the accepted candidate and retrying
+when the load fails.
 
 ### Constants
 
@@ -120,7 +123,7 @@ archives, `ProjectBackupSelector` chooses the next trusted candidate,
 | --- | --- |
 | `LoadingMain` | Alice is attempting to load the primary project. |
 | `SelectingBackup` | Alice is selecting the newest remaining backup candidate. |
-| `PromptBackup` | Alice is offering a readable backup to the user. |
+| `PromptBackup` | Alice is offering a backup that the model classifies as readable. |
 | `LoadingBackup` | Alice is loading the accepted backup. |
 | `Final` | Alice has reached a terminal recovery outcome. |
 
@@ -131,7 +134,7 @@ archives, `ProjectBackupSelector` chooses the next trusted candidate,
 | `TypeOK` | All variables stay within the modeled domains. |
 | `CorruptPrimaryDoesNotReplaceCurrentBeforeFinal` | A failed primary load does not replace the current project before a terminal decision. |
 | `LoadedBackupWasReadable` | A loaded backup must be one of the readable backups. |
-| `PromptedBackupsAreReadable` | Alice offers only readable backups to the user. |
+| `PromptedBackupsAreReadable` | In the model, Alice offers only backups classified as readable. Java validates the equivalent outcome by retrying failed accepted loads until a readable backup succeeds or no backup remains. |
 | `PromptedBackupsAreSafe` | Alice never offers unsafe backup candidates to the user. |
 | `UnloadableBackupsSkipped` | Earlier backups in the newest-first order are skipped only after they are marked unloadable or unsafe. |
 | `FinalOutcomeExactlyOne` | Final states have one terminal outcome and no pending attempt or candidate. |
@@ -183,7 +186,7 @@ java -cp /path/to/tla2tools.jar tlc2.TLC BackupLoadRecovery.cfg
 | Resource preservation and safe entries | Gherkin `@export @resources` and `@security` scenarios | `IoUtilitiesTest` |
 | Missing, future, or corrupt archive metadata | Gherkin `@load @failure` scenarios | `IoUtilitiesTest` |
 | Corrupt primary backup recovery | Gherkin `@backup-recovery` scenarios and TLA+ `MainLoadFails` | `ProjectBackupSelectorTest`, `ProjectBackupRecoveryIoTest`, `ProjectLoadFailurePlanTest`, `ProjectLoadFailureDispatchPlanTest` |
-| Newest readable backup selection | TLA+ `NextBackup`, `OfferReadableBackup`, and `SkipUnreadableBackup` | `ProjectBackupSelectorTest` |
+| Newest trusted candidate selection and readable recovery outcome | TLA+ `NextBackup`, `OfferReadableBackup`, and `SkipUnreadableBackup` | `ProjectBackupSelectorTest` and `ProjectBackupRecoveryIoTest` |
 | Terminal recovery outcome | TLA+ final-state invariants | `ProjectBackupRecoveryIoTest`, `ProjectLoadFailurePlanTest`, and `ProjectLoadFailureDispatchPlanTest` |
 
 ## Implemented coverage

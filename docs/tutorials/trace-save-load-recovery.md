@@ -16,9 +16,10 @@ The backup recovery scenarios describe this user-visible flow:
 1. Alice attempts to load `world.a3p`.
 2. The primary project is corrupt.
 3. Alice checks the newest backups first.
-4. Alice skips backups that cannot be loaded.
-5. Alice offers the newest readable backup.
-6. The user either accepts the backup or reaches a new-project outcome.
+4. Alice skips known unloadable or unsafe candidates.
+5. Alice offers the next trusted backup candidate.
+6. Accepted backups that fail to load are marked unloadable and retried until a
+   readable backup loads or Alice reaches a new-project outcome.
 
 The scenarios avoid dialog implementation details. They define the observable
 contract that users and tests rely on.
@@ -44,8 +45,9 @@ The model names the same recovery steps:
 | `BackupLoadSucceeds` | The accepted backup becomes the loaded project. |
 
 The `NextBackup` definition chooses the remaining backup with the smallest
-newest-first order index. That is the formal rule behind newest-readable backup
-selection.
+newest-first order index. The model treats backup readability as policy-level
+state; the Java implementation discovers readability by attempting to load the
+accepted backup and then retrying on failure.
 
 ## Match the model to Java tests
 

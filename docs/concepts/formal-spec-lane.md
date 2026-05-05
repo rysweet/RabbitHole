@@ -54,8 +54,8 @@ tied to focused JUnit characterization so future modernization can detect drift.
 - A corrupt primary project does not replace the current project before the user
   reaches a recovery or new-project outcome.
 - Backup recovery considers candidates in newest-first order, skips known
-  unloadable candidates, never escapes the backup directory, offers the newest
-  readable backup, and reaches one terminal result.
+  unloadable candidates, never escapes the backup directory, retries accepted
+  candidates that fail to load, and reaches one terminal result.
 
 ## Implemented coverage
 

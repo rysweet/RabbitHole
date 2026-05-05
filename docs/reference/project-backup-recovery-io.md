@@ -41,19 +41,22 @@ observable contract:
 
 1. The failed primary load does not replace the current project with a partially
    decoded project.
-2. Alice checks backup candidates inside the trusted backup directory in
+2. Alice checks trusted backup candidates inside the backup directory in
    newest-first order.
 3. Missing, unsafe, symlinked, out-of-directory, or already unloadable backup
    candidates are not offered.
-4. A readable backup is offered for recovery.
-5. If an offered backup also fails during recovery, Alice records that backup as
-   unloadable and offers the next candidate.
+4. Alice offers the next trusted candidate for recovery.
+5. If the user accepts a candidate and that backup fails to load, Alice records
+   that backup as unloadable and offers the next candidate.
 6. If no backup remains, Alice dispatches the same user-visible failure path as
    the current application flow: no project is loaded and the new-project path is
    shown.
 
 The characterization deliberately stays above broad UI automation. It verifies
 the dispatch plan that drives user-visible behavior instead of clicking dialogs.
+The formal-spec artifacts use "readable backup" as the recovery outcome; the
+Java implementation discovers readability by attempting the accepted backup load,
+not by pre-decoding every candidate before prompting.
 
 ## API and seam reference
 
