@@ -102,6 +102,20 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     compileAllGeneratedSources("generated-scene-model-event-rendering-call-classes", sourceDirectory);
   }
 
+  @Test
+  public void generatedSyntheticSceneListenerRegistrationSourceCompiles() throws Exception {
+    Path sourceDirectory = generateProgramSource(
+        "synthetic-scene-listener-registration-call.a3p",
+        programTypeWithSceneListenerRegistrationCalls(),
+        "generated-scene-listener-registration-call-src");
+
+    Path scenePath = sourceDirectory.resolve("Scene.java");
+    String sceneSource = Files.readString(scenePath);
+    assertTrue(sceneSource, sceneSource.contains("this.addTimeListener(null,2);"));
+    assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener(null);"));
+    compileAllGeneratedSources("generated-scene-listener-registration-call-classes", sourceDirectory);
+  }
+
   private Path generateProgramSource(String projectFileName, NamedUserType programType, String sourceDirectoryName)
       throws Exception {
     File aliceProject = temporaryFolder.newFile(projectFileName);
@@ -192,6 +206,46 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
                 say,
                 new org.lgna.project.ast.StringLiteral("hello box"))));
     type.methods.add(configureWorld);
+    return type;
+  }
+
+  private static NamedUserType programTypeWithSceneListenerRegistrationCalls() {
+    NamedUserType type = programType("Program");
+    NamedUserType sceneType = sceneTypeWithListenerRegistrationCalls();
+    type.fields.add(new UserField("scene", sceneType));
+    return type;
+  }
+
+  private static NamedUserType sceneTypeWithListenerRegistrationCalls() {
+    NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
+    JavaMethod addTimeListener = AstUtilities.lookupMethod(
+        SScene.class,
+        "addTimeListener",
+        TimeListener.class,
+        Number.class,
+        AddTimeListener.Detail[].class);
+    JavaMethod addSceneActivationListener = AstUtilities.lookupMethod(
+        SScene.class,
+        "addSceneActivationListener",
+        SceneActivationListener.class);
+    UserMethod handleActiveChanged = new UserMethod(
+        "handleActiveChanged",
+        Void.TYPE,
+        new UserParameter[] {
+            new UserParameter("isActive", Boolean.class),
+            new UserParameter("activationCount", Integer.class)
+        },
+        new BlockStatement(
+            AstUtilities.createMethodInvocationStatement(
+                new ThisExpression(),
+                addTimeListener,
+                new NullLiteral(),
+                new IntegerLiteral(2)),
+            AstUtilities.createMethodInvocationStatement(
+                new ThisExpression(),
+                addSceneActivationListener,
+                new NullLiteral())));
+    type.methods.add(handleActiveChanged);
     return type;
   }
 
