@@ -44,6 +44,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -122,7 +124,7 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
   }
 
   @Test
-  public void generatedSyntheticSceneActivationListenerRunsHeadless() throws Exception {
+  public void generatedSyntheticSceneActivationListenerDispatchesHeadless() throws Exception {
     Path sourceDirectory = generateProgramSource(
         "synthetic-scene-activation-listener-runtime.a3p",
         programTypeWithExecutableSceneActivationListenerRegistration(),
@@ -132,10 +134,12 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     String sceneSource = Files.readString(scenePath);
     assertTrue(sceneSource, sceneSource.contains("public void handleActiveChanged(Boolean isActive,Integer activationCount)"));
     assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener((SceneActivationEvent p0) ->"));
+    assertTrue(sceneSource, sceneSource.contains("ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationEvent();"));
 
     Path classesDirectory = compileAllGeneratedSources(
         "generated-scene-activation-listener-runtime-classes",
         sourceDirectory);
+    sceneActivationEventLatch = new CountDownLatch(1);
     try (URLClassLoader classLoader = new URLClassLoader(
         new URL[] {classesDirectory.toUri().toURL()},
         Thread.currentThread().getContextClassLoader())) {
@@ -146,8 +150,19 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
       var handleActiveChanged = sceneClass.getDeclaredMethod("handleActiveChanged", Boolean.class, Integer.class);
       handleActiveChanged.setAccessible(true);
       handleActiveChanged.invoke(scene, Boolean.TRUE, 1);
+      Object sceneImplementation = sceneClass.getMethod("getImplementation").invoke(scene);
+      Object eventManager = sceneImplementation.getClass().getMethod("getEventManager").invoke(sceneImplementation);
+      eventManager.getClass().getMethod("sceneActivated").invoke(eventManager);
+      assertTrue("Generated scene activation listener should run when the runtime event fires",
+          sceneActivationEventLatch.await(5, TimeUnit.SECONDS));
     }
   }
+
+  public static void recordSceneActivationEvent() {
+    sceneActivationEventLatch.countDown();
+  }
+
+  private static CountDownLatch sceneActivationEventLatch;
 
   private Path generateProgramSource(String projectFileName, NamedUserType programType, String sourceDirectoryName)
       throws Exception {
@@ -313,7 +328,13 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
   private static LambdaExpression listenerLambda(Class<?> listenerClass, String commentText) {
     LambdaExpression expression = AstUtilities.createLambdaExpression(listenerClass);
     UserLambda lambda = (UserLambda) expression.value.getValue();
+    JavaMethod recordSceneActivationEvent = AstUtilities.lookupMethod(
+        ProjectCodeGeneratorStoryApiGeneratedSourceTest.class,
+        "recordSceneActivationEvent");
     lambda.body.getValue().statements.add(new Comment(commentText));
+    lambda.body.getValue().statements.add(AstUtilities.createMethodInvocationStatement(
+        new org.lgna.project.ast.TypeExpression(recordSceneActivationEvent.getDeclaringType()),
+        recordSceneActivationEvent));
     return expression;
   }
 
