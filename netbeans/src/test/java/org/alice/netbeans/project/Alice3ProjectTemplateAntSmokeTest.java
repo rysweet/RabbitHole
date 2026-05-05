@@ -508,7 +508,7 @@ public class Alice3ProjectTemplateAntSmokeTest {
         Map.of("main.class", "AntRunProbe", "application.args", "from-ant-run"));
   }
 
-  private static String executeAntTarget(
+  static String executeAntTarget(
       Path projectDirectory,
       Path userProperties,
       Path antScratch,
@@ -557,7 +557,7 @@ public class Alice3ProjectTemplateAntSmokeTest {
     return Alice3LibraryClasspathTestSupport.antRuntimeClasspath();
   }
 
-  private static void writeLibraryProperties(Path userProperties, Path antScratch) throws Exception {
+  static void writeLibraryProperties(Path userProperties, Path antScratch) throws Exception {
     Alice3LibraryClasspathTestSupport.writeLibraryProperties(userProperties, antScratch);
   }
 
