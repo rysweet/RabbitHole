@@ -123,6 +123,21 @@ current decode boundary explicitly: simple program source can round trip, while
 unsupported resource-expression source currently leaves the program type
 undecoded even though binary resource data reads back.
 
+For a manifest-declared type/resource boundary, keep the fixture small:
+
+```text
+version.txt
+manifest.json
+src/<ProgramType>.twe
+resources/<resource-name>
+```
+
+Use a `manifest.json` that includes both a Tweedle `TypeReference` and a valid
+resource reference. If the Tweedle source contains an unsupported member, assert
+that `IoUtilities.readProject` returns no decoded program type while the resource
+identity, name, content type, and bytes are still readable. Do not describe that
+case as a full player archive program/type decode.
+
 For resource-bearing `.a3c` type archives:
 
 ```text
@@ -159,6 +174,12 @@ For resource-bearing fixtures, assert:
 - bytes;
 - AST `ResourceExpression` binding to the decoded resource object when the
   archive contains a resource expression.
+
+For JSON/player archives with unsupported Tweedle, assert the resource values
+directly on the returned project resources and assert that the program type is
+`null`. That pairing is the current honest boundary: resources are readable, but
+the unsupported manifest-declared Tweedle program is not decoded into an
+editable Alice program type.
 
 For round-trip coverage, write the decoded object to a second archive and repeat
 the same archive-entry and readback assertions.

@@ -159,6 +159,23 @@ to a program type, but generated source containing the current resource
 expression shape remains undecoded; the archive still preserves and reads back
 the referenced binary resource.
 
+#### Manifest-declared Tweedle boundary with resources
+
+A JSON/player archive can declare a Tweedle program type and manifest-backed
+resources in the same `manifest.json`. The reader treats those as two observable
+boundaries:
+
+| Manifest entry | Current readback behavior |
+| --- | --- |
+| `TypeReference` with format `tweedle` and supported `src/<Program>.twe` source | `IoUtilities.readProject(File)` returns a project with a decoded program type. |
+| `TypeReference` with format `tweedle` and unsupported Tweedle members in `src/<Program>.twe` | `IoUtilities.readProject(File)` returns a project whose program type is `null`; this is the documented incomplete Tweedle decode boundary, not a successful full program decode. |
+| Valid image or audio resource reference with matching archive data | Resource identity, name, original file name, content type, and bytes remain readable even when the Tweedle program type is not decoded. |
+
+This boundary keeps player/export resource compatibility honest. Tests may
+assert resource readback for manifest-declared resources, but they must not infer
+that an unsupported Tweedle `TypeReference` has produced an editable Alice
+program type.
+
 ### Type `.a3c` XML fallback archive
 
 `IoUtilities.writeType(File, NamedUserType, DataSource...)` writes type archives
@@ -350,6 +367,27 @@ Then the simple Tweedle program type decodes and scene-camera metadata is
      preserved
 ```
 
+### Characterize a manifest-declared `.a3w` type/resource boundary
+
+```text
+Given a JSON/player archive named manifest-type-boundary-resource.a3w
+And manifest.json declares description.name ProgramWithUnsupportedType
+And manifest.json includes a tweedle TypeReference to
+    src/ProgramWithUnsupportedType.twe
+And that Tweedle entry contains an unsupported member declaration
+And manifest.json includes an image resource reference to
+    resources/boundary-picture.png
+When IoUtilities.readProject reads the archive
+Then the returned Project exists
+And the Project program type is null
+And the image resource id, name, original file name, content type, and bytes are
+    preserved
+```
+
+This is resource-oriented player archive compatibility. It documents that
+resource readback can remain useful at the JSON/player boundary without claiming
+that unsupported Tweedle source has been decoded into a full Alice program/type.
+
 ### Characterize generated `.a3c` type behavior
 
 ```text
@@ -385,3 +423,6 @@ Then the second archive preserves the same observable contract
 10. Missing or mismatched manifest-named JSON player program types fail fast with
     `IOException`; `IoUtilitiesTest` covers both the missing type-reference and
     mismatched program-name cases.
+11. Manifest-declared JSON player resources remain readable when an unsupported
+    Tweedle `TypeReference` leaves the program type undecoded; this is not a full
+    player-to-editor decode contract.
