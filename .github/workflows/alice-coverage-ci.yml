@@ -34,6 +34,7 @@ jobs:
         run: |
           python3 scripts/summarize-jacoco-coverage.py \
             --output coverage-summary.md \
+            --evidence-manifest coverage-evidence-manifest.json \
             --min-aggregate-line-percent 8.0 \
             --min-module-line-percent core/ast=18.0 \
             --min-module-line-percent core/model-loading=10.0 \
@@ -45,9 +46,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-no-sims-reports
+          name: alice-coverage-evidence-no-sims
           path: |
             coverage-summary.md
+            coverage-evidence-manifest.json
             coverage-report/target/site/jacoco-aggregate/**
             **/target/site/jacoco/**
             **/target/jacoco.exec

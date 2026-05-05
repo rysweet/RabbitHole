@@ -61,6 +61,10 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         assert summary_step is not None
         self.assertIn("if: always()", summary_step.group("body"))
         self.assertIn("--output coverage-summary.md", summary_step.group("body"))
+        self.assertIn(
+            "--evidence-manifest coverage-evidence-manifest.json",
+            summary_step.group("body"),
+        )
         self.assertIn("if: always()", workflow[summary_step.end() :])
 
     def test_coverage_workflow_uploads_summary_and_diagnostics_without_requiring_success(self) -> None:
@@ -76,6 +80,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         body = upload_step.group("body")
         expected_artifacts = [
             "coverage-summary.md",
+            "coverage-evidence-manifest.json",
             "coverage-report/target/site/jacoco-aggregate/**",
             "**/target/site/jacoco/**",
             "**/target/jacoco.exec",
@@ -83,6 +88,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         ]
 
         self.assertIn("if: always()", body)
+        self.assertIn("name: alice-coverage-evidence-no-sims", body)
         self.assertIn("if-no-files-found: warn", body)
         for artifact in expected_artifacts:
             with self.subTest(artifact=artifact):

@@ -5,10 +5,18 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
+
+
+AGGREGATE_CSV = Path("coverage-report/target/site/jacoco-aggregate/jacoco.csv")
+COVERAGE_MODEL = "no-sims"
+JACOCO_SOURCE = "jacoco"
+MAVEN_COVERAGE_COMMAND = "mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify"
+VCS_DIR_NAMES = {".git", ".hg", ".svn"}
 
 
 @dataclass(frozen=True)
@@ -68,7 +76,7 @@ def parse_aggregate_threshold(value: str) -> float:
 def read_line_coverage(path: Path, name: str) -> Optional[Coverage]:
     covered = 0
     missed = 0
-    with path.open(newline="") as handle:
+    with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             covered += int(row["LINE_COVERED"])
             missed += int(row["LINE_MISSED"])
@@ -85,7 +93,7 @@ def module_name(csv_path: Path, root: Path) -> str:
 
 
 def collect_reports(root: Path) -> Tuple[Optional[Coverage], List[Coverage]]:
-    aggregate_path = root / "coverage-report" / "target" / "site" / "jacoco-aggregate" / "jacoco.csv"
+    aggregate_path = root / AGGREGATE_CSV
     aggregate = read_line_coverage(aggregate_path, "no-Sims reactor") if aggregate_path.exists() else None
 
     module_reports: List[Coverage] = []
@@ -96,6 +104,143 @@ def collect_reports(root: Path) -> Tuple[Optional[Coverage], List[Coverage]]:
         if coverage is not None:
             module_reports.append(coverage)
     return aggregate, module_reports
+
+
+def relative_path(path: Path, root: Path) -> str:
+    return path.resolve().relative_to(root.resolve()).as_posix()
+
+
+def coverage_metrics(coverage: Coverage) -> dict[str, float | int]:
+    return {
+        "lineCoveragePercent": round(coverage.percent, 2),
+        "covered": coverage.covered,
+        "missed": coverage.missed,
+        "total": coverage.total,
+    }
+
+
+def aggregate_manifest(root: Path, aggregate: Optional[Coverage]) -> dict[str, Any]:
+    aggregate_path = root / AGGREGATE_CSV
+    entry: dict[str, Any] = {
+        "expectedCsv": AGGREGATE_CSV.as_posix(),
+        "state": "missing",
+    }
+    if aggregate_path.exists():
+        entry["state"] = "present" if aggregate is not None else "empty"
+    if aggregate is not None:
+        entry.update(coverage_metrics(aggregate))
+    return entry
+
+
+def module_manifest_entries(root: Path) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for path in sorted(root.glob("**/target/site/jacoco/jacoco.csv")):
+        if "jacoco-aggregate" in path.parts:
+            continue
+        module = module_name(path, root)
+        coverage = read_line_coverage(path, module)
+        entry: dict[str, Any] = {
+            "module": module,
+            "csv": relative_path(path, root),
+            "state": "present" if coverage is not None else "empty",
+        }
+        if coverage is not None:
+            entry.update(coverage_metrics(coverage))
+        entries.append(entry)
+    return sorted(entries, key=lambda item: item["module"])
+
+
+def iter_files_under(path: Path) -> list[Path]:
+    if path.is_file():
+        return [path]
+    if not path.is_dir():
+        return []
+
+    files: list[Path] = []
+    for current, dirnames, filenames in os.walk(path):
+        dirnames[:] = sorted(dirname for dirname in dirnames if dirname not in VCS_DIR_NAMES)
+        for filename in sorted(filenames):
+            files.append(Path(current) / filename)
+    return files
+
+
+def coverage_artifact_entries(root: Path) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    aggregate_dir = root / "coverage-report" / "target" / "site" / "jacoco-aggregate"
+    for path in iter_files_under(aggregate_dir):
+        entries.append({"kind": "aggregate-report", "path": relative_path(path, root)})
+
+    for path in sorted(root.glob("**/target/site/jacoco/**")):
+        if path.is_file() and "jacoco-aggregate" not in path.parts:
+            entries.append({"kind": "module-report", "path": relative_path(path, root)})
+
+    for path in sorted(root.glob("**/target/jacoco.exec")):
+        if path.is_file():
+            entries.append({"kind": "exec-data", "path": relative_path(path, root)})
+
+    for path in sorted(root.glob("**/target/surefire-reports/**")):
+        if path.is_file():
+            entries.append({"kind": "surefire-report", "path": relative_path(path, root)})
+
+    return sorted(entries, key=lambda item: (item["kind"], item["path"]))
+
+
+def gate_state(coverage: Optional[Coverage], minimum_percent: float) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "minimumPercent": minimum_percent,
+        "state": "fail",
+    }
+    if coverage is not None:
+        entry["lineCoveragePercent"] = round(coverage.percent, 2)
+        if coverage.percent >= minimum_percent:
+            entry["state"] = "pass"
+    return entry
+
+
+def gate_manifest(
+    aggregate: Optional[Coverage],
+    module_reports: List[Coverage],
+    aggregate_threshold: Optional[float],
+    module_thresholds: List[ModuleThreshold],
+) -> dict[str, Any]:
+    aggregate_entry = (
+        gate_state(aggregate, aggregate_threshold)
+        if aggregate_threshold is not None
+        else {"state": "not-configured"}
+    )
+    reports_by_name = {coverage.name: coverage for coverage in module_reports}
+    module_entries: list[dict[str, Any]] = []
+    for threshold in sorted(module_thresholds, key=lambda item: item.module_name):
+        entry = {
+            "module": threshold.module_name,
+            **gate_state(reports_by_name.get(threshold.module_name), threshold.minimum_percent),
+        }
+        module_entries.append(entry)
+    return {"aggregate": aggregate_entry, "modules": module_entries}
+
+
+def render_manifest(
+    root: Path,
+    aggregate: Optional[Coverage],
+    module_reports: List[Coverage],
+    aggregate_threshold: Optional[float],
+    module_thresholds: List[ModuleThreshold],
+) -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "coverageModel": COVERAGE_MODEL,
+        "source": JACOCO_SOURCE,
+        "mavenCommand": MAVEN_COVERAGE_COMMAND,
+        "aggregate": aggregate_manifest(root, aggregate),
+        "modules": module_manifest_entries(root),
+        "artifacts": coverage_artifact_entries(root),
+        "gates": gate_manifest(
+            aggregate,
+            module_reports,
+            aggregate_threshold,
+            module_thresholds,
+        ),
+    }
 
 
 def row(coverage: Coverage) -> str:
@@ -132,6 +277,12 @@ def render_markdown(aggregate: Optional[Coverage], module_reports: List[Coverage
     if not module_reports:
         lines.append("| _none_ | n/a | 0 | 0 | 0 |")
     lines.append("")
+    lines.extend([
+        "## Evidence inventory",
+        "",
+        "Run with `--evidence-manifest coverage-evidence-manifest.json` to write a deterministic JSON inventory of JaCoCo reports, diagnostic artifacts, and gate results.",
+        "",
+    ])
     lines.append("Coverage gate details appear below when a threshold is requested.")
     lines.append("")
     return "\n".join(lines)
@@ -199,6 +350,11 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root")
     parser.add_argument("--output", type=Path, help="write Markdown summary to this path")
     parser.add_argument(
+        "--evidence-manifest",
+        type=Path,
+        help="write deterministic JSON coverage evidence inventory to this path",
+    )
+    parser.add_argument(
         "--min-aggregate-line-percent",
         type=parse_aggregate_threshold,
         help="fail when aggregate line coverage is missing or below this percentage",
@@ -235,6 +391,18 @@ def main() -> int:
 
     if args.output:
         args.output.write_text(markdown, encoding="utf-8")
+    if args.evidence_manifest:
+        manifest = render_manifest(
+            root,
+            aggregate,
+            module_reports,
+            args.min_aggregate_line_percent,
+            args.min_module_line_percent,
+        )
+        args.evidence_manifest.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
     github_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if github_summary:

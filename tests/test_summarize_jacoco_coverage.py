@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
@@ -43,6 +44,123 @@ class CoverageSummaryComponentTest(unittest.TestCase):
         self.assertEqual("no-Sims reactor", aggregate.name)
         self.assertEqual(75.0, aggregate.percent)
         self.assertEqual(["core/ast"], [coverage.name for coverage in module_reports])
+
+    def test_render_manifest_inventories_reports_artifacts_and_gates_deterministically(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_jacoco_csv(
+                root,
+                "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+                [(25, 75)],
+            )
+            write_jacoco_csv(root, "netbeans/target/site/jacoco/jacoco.csv", [(60, 40)])
+            write_jacoco_csv(root, "core/empty/target/site/jacoco/jacoco.csv", [(0, 0)])
+            write_jacoco_csv(root, "core/ast/target/site/jacoco/jacoco.csv", [(20, 80)])
+            (root / "coverage-report/target/site/jacoco-aggregate/index.html").write_text(
+                "aggregate",
+                encoding="utf-8",
+            )
+            (root / "core/ast/target/site/jacoco/index.html").write_text(
+                "module",
+                encoding="utf-8",
+            )
+            (root / "core/ast/target/jacoco.exec").write_bytes(b"exec")
+            surefire_report = root / "core/ast/target/surefire-reports/TEST-core.ast.xml"
+            surefire_report.parent.mkdir(parents=True, exist_ok=True)
+            surefire_report.write_text("<testsuite />\n", encoding="utf-8")
+            aggregate, module_reports = coverage_script.collect_reports(root)
+
+            manifest = coverage_script.render_manifest(
+                root,
+                aggregate,
+                module_reports,
+                70.0,
+                [
+                    coverage_script.ModuleThreshold("netbeans", 50.0),
+                    coverage_script.ModuleThreshold("core/missing", 10.0),
+                    coverage_script.ModuleThreshold("core/ast", 75.0),
+                ],
+            )
+
+        self.assertEqual(1, manifest["schemaVersion"])
+        self.assertEqual("no-sims", manifest["coverageModel"])
+        self.assertEqual("jacoco", manifest["source"])
+        self.assertEqual(
+            "mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify",
+            manifest["mavenCommand"],
+        )
+        self.assertEqual(
+            {
+                "expectedCsv": "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+                "state": "present",
+                "lineCoveragePercent": 75.0,
+                "covered": 75,
+                "missed": 25,
+                "total": 100,
+            },
+            manifest["aggregate"],
+        )
+        self.assertEqual(
+            ["core/ast", "core/empty", "netbeans"],
+            [entry["module"] for entry in manifest["modules"]],
+        )
+        self.assertEqual("empty", manifest["modules"][1]["state"])
+        self.assertNotIn("lineCoveragePercent", manifest["modules"][1])
+        self.assertEqual(
+            {
+                "minimumPercent": 70.0,
+                "state": "pass",
+                "lineCoveragePercent": 75.0,
+            },
+            manifest["gates"]["aggregate"],
+        )
+        self.assertEqual(
+            ["core/ast", "core/missing", "netbeans"],
+            [entry["module"] for entry in manifest["gates"]["modules"]],
+        )
+        self.assertEqual("pass", manifest["gates"]["modules"][0]["state"])
+        self.assertEqual("fail", manifest["gates"]["modules"][1]["state"])
+        self.assertEqual("fail", manifest["gates"]["modules"][2]["state"])
+        self.assertEqual(
+            sorted(manifest["artifacts"], key=lambda item: (item["kind"], item["path"])),
+            manifest["artifacts"],
+        )
+        self.assertIn(
+            {"kind": "aggregate-report", "path": "coverage-report/target/site/jacoco-aggregate/index.html"},
+            manifest["artifacts"],
+        )
+        self.assertIn(
+            {"kind": "module-report", "path": "core/ast/target/site/jacoco/index.html"},
+            manifest["artifacts"],
+        )
+        self.assertIn(
+            {"kind": "exec-data", "path": "core/ast/target/jacoco.exec"},
+            manifest["artifacts"],
+        )
+        self.assertIn(
+            {"kind": "surefire-report", "path": "core/ast/target/surefire-reports/TEST-core.ast.xml"},
+            manifest["artifacts"],
+        )
+        self.assertNotIn(str(Path(tempfile.gettempdir())), json.dumps(manifest, sort_keys=True))
+
+    def test_render_manifest_marks_missing_and_empty_aggregate_without_false_zero_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            missing_manifest = coverage_script.render_manifest(root, None, [], None, [])
+
+            write_jacoco_csv(
+                root,
+                "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+                [(0, 0)],
+            )
+            aggregate, module_reports = coverage_script.collect_reports(root)
+            empty_manifest = coverage_script.render_manifest(root, aggregate, module_reports, None, [])
+
+        self.assertEqual("missing", missing_manifest["aggregate"]["state"])
+        self.assertNotIn("lineCoveragePercent", missing_manifest["aggregate"])
+        self.assertEqual("empty", empty_manifest["aggregate"]["state"])
+        self.assertNotIn("lineCoveragePercent", empty_manifest["aggregate"])
+        self.assertEqual({"state": "not-configured"}, empty_manifest["gates"]["aggregate"])
 
     def test_append_module_gates_renders_pass_fail_and_missing_rows(self) -> None:
         markdown, passed = coverage_script.append_module_gates(
@@ -100,6 +218,7 @@ class CoverageSummaryCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             summary_path = root / "coverage-summary.md"
+            manifest_path = root / "coverage-evidence-manifest.json"
             write_jacoco_csv(
                 root,
                 "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
@@ -116,6 +235,8 @@ class CoverageSummaryCliTest(unittest.TestCase):
                     str(root),
                     "--output",
                     str(summary_path),
+                    "--evidence-manifest",
+                    str(manifest_path),
                     "--min-aggregate-line-percent",
                     "85.0",
                     "--min-module-line-percent",
@@ -130,15 +251,19 @@ class CoverageSummaryCliTest(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, result.stderr)
             summary = summary_path.read_text(encoding="utf-8")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         self.assertIn("Result: PASS", result.stdout)
         self.assertIn("| core/ast | 75.00% | 80.00% | PASS |", summary)
         self.assertIn("| netbeans | 25.00% | 30.00% | PASS |", summary)
+        self.assertEqual("pass", manifest["gates"]["aggregate"]["state"])
+        self.assertEqual("coverage-report/target/site/jacoco-aggregate/jacoco.csv", manifest["aggregate"]["expectedCsv"])
 
     def test_cli_fails_and_writes_summary_for_low_or_missing_module_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             summary_path = root / "coverage-summary.md"
+            manifest_path = root / "coverage-evidence-manifest.json"
             write_jacoco_csv(
                 root,
                 "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
@@ -154,6 +279,8 @@ class CoverageSummaryCliTest(unittest.TestCase):
                     str(root),
                     "--output",
                     str(summary_path),
+                    "--evidence-manifest",
+                    str(manifest_path),
                     "--min-aggregate-line-percent",
                     "80.0",
                     "--min-module-line-percent",
@@ -168,9 +295,13 @@ class CoverageSummaryCliTest(unittest.TestCase):
 
             self.assertEqual(2, result.returncode, result.stdout)
             summary = summary_path.read_text(encoding="utf-8")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         self.assertIn("| core/ast | 75.00% | 60.00% | FAIL |", summary)
         self.assertIn("| core/tweedle | 50.00% | missing | FAIL |", summary)
+        self.assertEqual("pass", manifest["gates"]["aggregate"]["state"])
+        self.assertEqual("fail", manifest["gates"]["modules"][0]["state"])
+        self.assertEqual("fail", manifest["gates"]["modules"][1]["state"])
 
     def test_cli_fails_and_writes_summary_when_required_aggregate_report_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -205,6 +336,7 @@ class CoverageSummaryCliTest(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as temp_dir:
                     root = Path(temp_dir)
                     summary_path = root / "coverage-summary.md"
+                    manifest_path = root / "coverage-evidence-manifest.json"
                     write_jacoco_csv(
                         root,
                         "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
@@ -219,6 +351,8 @@ class CoverageSummaryCliTest(unittest.TestCase):
                             str(root),
                             "--output",
                             str(summary_path),
+                            "--evidence-manifest",
+                            str(manifest_path),
                             "--min-aggregate-line-percent",
                             threshold,
                         ],
@@ -233,6 +367,7 @@ class CoverageSummaryCliTest(unittest.TestCase):
                         result.stderr,
                     )
                     self.assertFalse(summary_path.exists())
+                    self.assertFalse(manifest_path.exists())
 
     def test_cli_rejects_duplicate_module_thresholds(self) -> None:
         result = subprocess.run(
@@ -255,6 +390,7 @@ class CoverageSummaryCliTest(unittest.TestCase):
     def test_cli_rejects_duplicate_module_thresholds_before_writing_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             summary_path = Path(temp_dir) / "coverage-summary.md"
+            manifest_path = Path(temp_dir) / "coverage-evidence-manifest.json"
 
             result = subprocess.run(
                 [
@@ -262,6 +398,8 @@ class CoverageSummaryCliTest(unittest.TestCase):
                     str(SCRIPT_PATH),
                     "--output",
                     str(summary_path),
+                    "--evidence-manifest",
+                    str(manifest_path),
                     "--min-module-line-percent",
                     "core/ast=18.0",
                     "--min-module-line-percent",
@@ -275,6 +413,7 @@ class CoverageSummaryCliTest(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertIn("duplicate module threshold for core/ast", result.stderr)
         self.assertFalse(summary_path.exists())
+        self.assertFalse(manifest_path.exists())
 
 
 if __name__ == "__main__":
