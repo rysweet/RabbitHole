@@ -15,6 +15,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -68,6 +69,87 @@ public class ProjectBackupRecoveryIoTest {
     assertEquals("note.txt", readResource.getOriginalFileName());
     assertEquals("text/plain", readResource.getContentType());
     assertArrayEquals(data, readResource.getData());
+  }
+
+  @Test
+  public void corruptMainProjectAndAllBackupsPlanUserVisibleFailure() throws Exception {
+    File corruptMainProject = temporaryFolder.newFile("world.a3p");
+    Files.writeString(corruptMainProject.toPath(), "not a project archive", StandardCharsets.UTF_8);
+    File backupDirectory = temporaryFolder.newFolder("world.bak");
+    File corruptNewestBackup = new File(backupDirectory, "auto20240102_140000.a3p");
+    Files.writeString(corruptNewestBackup.toPath(), "not a newest backup archive", StandardCharsets.UTF_8);
+    File corruptOlderBackup = new File(backupDirectory, "auto20240102_130000.a3p");
+    Files.writeString(corruptOlderBackup.toPath(), "not an older backup archive", StandardCharsets.UTF_8);
+    File[] newestFirstBackups = new File[] {corruptNewestBackup, corruptOlderBackup};
+    ProjectBackupSelector selector = new ProjectBackupSelector(file -> {
+      throw new AssertionError("corrupted main project should not compare backup times");
+    });
+
+    Project mainProject = new TestFileProjectLoader(corruptMainProject).loadNow();
+    Set<String> unloadableFiles = new HashSet<>();
+    unloadableFiles.add(corruptMainProject.getName());
+    File newestBackup = selector.getNextBackup(
+        LocalDateTime.MIN,
+        backupDirectory,
+        newestFirstBackups,
+        true,
+        unloadableFiles);
+    ProjectLoadFailurePlan initialRecoveryPlan = ProjectLoadFailurePlan.choose(
+        false,
+        false,
+        true,
+        false,
+        newestBackup,
+        corruptMainProject);
+    Project newestBackupProject = new TestFileProjectLoader(initialRecoveryPlan.getBackupToLoad()).loadNow();
+
+    unloadableFiles.add(corruptNewestBackup.getName());
+    File olderBackup = selector.getNextBackup(
+        LocalDateTime.MIN,
+        backupDirectory,
+        newestFirstBackups,
+        true,
+        unloadableFiles);
+    ProjectLoadFailurePlan retryRecoveryPlan = ProjectLoadFailurePlan.choose(
+        true,
+        true,
+        true,
+        false,
+        olderBackup,
+        corruptNewestBackup);
+    Project olderBackupProject = new TestFileProjectLoader(retryRecoveryPlan.getBackupToLoad()).loadNow();
+
+    unloadableFiles.add(corruptOlderBackup.getName());
+    File exhaustedBackups = selector.getNextBackup(
+        LocalDateTime.MIN,
+        backupDirectory,
+        newestFirstBackups,
+        true,
+        unloadableFiles);
+    ProjectLoadFailurePlan exhaustedRecoveryPlan = ProjectLoadFailurePlan.choose(
+        true,
+        true,
+        true,
+        false,
+        exhaustedBackups,
+        corruptOlderBackup);
+    ProjectLoadFailureDispatchPlan dispatch = ProjectLoadFailureDispatchPlan.afterUserChoice(
+        exhaustedRecoveryPlan.getAction(),
+        false);
+
+    assertNull(mainProject);
+    assertEquals(ProjectLoadFailurePlan.Action.PROMPT_LOAD_BACKUP, initialRecoveryPlan.getAction());
+    assertEquals(corruptNewestBackup, initialRecoveryPlan.getBackupToLoad());
+    assertNull(newestBackupProject);
+    assertEquals(ProjectLoadFailurePlan.Action.PROMPT_LOAD_BACKUP, retryRecoveryPlan.getAction());
+    assertEquals(corruptOlderBackup, retryRecoveryPlan.getBackupToLoad());
+    assertEquals(corruptNewestBackup.getName(), retryRecoveryPlan.getFailedBackupName());
+    assertNull(olderBackupProject);
+    assertNull(exhaustedBackups);
+    assertEquals(ProjectLoadFailurePlan.Action.SHOW_PROJECT_AND_ALL_BACKUPS_LOAD_ERROR, exhaustedRecoveryPlan.getAction());
+    assertNull(exhaustedRecoveryPlan.getBackupToLoad());
+    assertEquals(ProjectLoadFailureDispatchPlan.LoadTarget.NONE, dispatch.getLoadTarget());
+    assertTrue(dispatch.shouldShowNewProject());
   }
 
   private static NamedUserType programType(String name) {
