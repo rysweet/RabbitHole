@@ -168,6 +168,48 @@ public class Alice3ProjectTemplateAntSmokeTest {
   }
 
   @Test
+  public void exportedProjectAntCleanTargetRemovesGeneratedBuildOutputs() throws Exception {
+    Path smokeRoot = TARGET.resolve("ant-clean-smoke");
+    Path projectDirectory = smokeRoot.resolve("project");
+    deleteRecursively(smokeRoot);
+
+    unzip(TARGET.resolve("classes/org/alice/netbeans/ProjectTemplate.zip"), projectDirectory);
+    Path sourceDirectory = projectDirectory.resolve("src");
+    Files.createDirectories(sourceDirectory);
+    Path aliceProject = smokeRoot.resolve("clean-world.a3p");
+    IoUtilities.writeProject(
+        aliceProject.toFile(),
+        new Project(programType("Program"), Project.SceneCameraType.WindowCamera));
+    generateProjectCodeWithoutFormatting(aliceProject, sourceDirectory);
+
+    Path antScratch = smokeRoot.resolve("ant-scratch");
+    Files.createDirectories(antScratch);
+    Path userProperties = smokeRoot.resolve("user.properties");
+    writeLibraryProperties(userProperties, antScratch);
+
+    String antJarLog = executeAntJarTarget(projectDirectory, userProperties, antScratch);
+
+    Path buildDirectory = projectDirectory.resolve("build");
+    Path distDirectory = projectDirectory.resolve("dist");
+    Path jarPath = distDirectory.resolve("Alice3JavaApplication.jar");
+    assertTrue(antJarLog, Files.exists(buildDirectory.resolve("classes/Program.class")));
+    assertTrue(antJarLog, Files.exists(jarPath));
+
+    String antCleanLog = executeAntTarget(
+        projectDirectory,
+        userProperties,
+        antScratch,
+        "clean",
+        "ant-clean.log",
+        Map.of());
+
+    assertTrue(antCleanLog, Files.notExists(buildDirectory));
+    assertTrue(antCleanLog, Files.notExists(distDirectory));
+    assertTrue(antCleanLog, Files.exists(sourceDirectory.resolve("Program.java")));
+    assertTrue(antCleanLog, Files.exists(projectDirectory.resolve("build.xml")));
+  }
+
+  @Test
   public void exportsResourceBearingProjectWithAlice3LibraryAndPackagesResources() throws Exception {
     Path smokeRoot = temporaryFolder.newFolder("wizard-resource-smoke").toPath();
     Path projectDirectory = smokeRoot.resolve("ExportedResourceWorld");
