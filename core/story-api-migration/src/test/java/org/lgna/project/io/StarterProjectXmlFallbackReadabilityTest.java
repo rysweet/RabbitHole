@@ -6,9 +6,11 @@ import org.junit.rules.TemporaryFolder;
 import org.lgna.common.Resource;
 import org.lgna.project.Project;
 import org.lgna.project.Version;
+import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserMethod;
+import org.lgna.project.ast.UserParameter;
 import org.lgna.project.migration.ProjectMigrationManager;
 import org.lgna.story.resourceutilities.ModelResourceInfo;
 
@@ -192,6 +194,26 @@ public class StarterProjectXmlFallbackReadabilityTest {
   }
 
   @Test
+  public void lagoonMinimumFixtureDecodesSpecificStarterModelTypeSemantics() throws Exception {
+    String archiveName = "lagoonMinimum.a3p";
+    Project project = IoUtilities.readProject(starterProjectsDirectory().resolve(archiveName).toFile());
+    NamedUserType sceneType = sceneTypeFor(archiveName, project.getProgramType());
+
+    NamedUserType sandcastleType = namedTypeForField(sceneType, "sandcastle34");
+
+    assertEquals("lagoonMinimum.a3p should decode the sandcastle34 field as committed starter content",
+        "Sandcastle", sandcastleType.getName());
+    assertEquals("lagoonMinimum.a3p should preserve the starter model constructor shape",
+        1, sandcastleType.constructors.size());
+    NamedUserConstructor constructor = sandcastleType.constructors.get(0);
+    assertEquals("lagoonMinimum.a3p should preserve the starter model resource parameter",
+        1, constructor.getRequiredParameters().size());
+    UserParameter resourceParameter = constructor.getRequiredParameters().get(0);
+    assertEquals("resource", resourceParameter.getName());
+    assertEquals("SandcastleResource", resourceParameter.getValueType().getName());
+  }
+
+  @Test
   public void representativeStarterProjectFixturesRoundTripAfterMigration() throws Exception {
     for (StarterProjectExpectation expectation : REPRESENTATIVE_LEGACY_PROJECT_ARCHIVES) {
       Project migratedProject = IoUtilities.readProject(starterProjectsDirectory().resolve(expectation.archiveName).toFile());
@@ -371,6 +393,22 @@ public class StarterProjectXmlFallbackReadabilityTest {
     }
     Collections.sort(signatures);
     return signatures;
+  }
+
+  private static NamedUserType namedTypeForField(NamedUserType type, String fieldName) {
+    UserField field = fieldNamed(type, fieldName);
+
+    assertTrue(fieldName + " should decode as a named user type", field.getValueType() instanceof NamedUserType);
+    return (NamedUserType) field.getValueType();
+  }
+
+  private static UserField fieldNamed(NamedUserType type, String fieldName) {
+    for (UserField field : type.fields) {
+      if (fieldName.equals(field.getName())) {
+        return field;
+      }
+    }
+    throw new AssertionError("Missing scene field " + fieldName);
   }
 
   private static boolean hasFieldNamed(NamedUserType type, String fieldName) {
