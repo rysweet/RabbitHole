@@ -457,6 +457,59 @@ class ModernizationScorecardCliTest(unittest.TestCase):
         assert_scorecard_uses_public_reviewer_instructions(self, first_markdown)
         self.assertNotIn(str(Path(tempfile.gettempdir())), first_markdown)
 
+    def test_cli_rejects_output_traversal_outside_root_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "one" / "two" / "repo"
+            root.mkdir(parents=True)
+            unsafe_output = "../../../tmp/out.md"
+            escaped_output = (root / unsafe_output).resolve()
+
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT_PATH), "--root", str(root), "--output", unsafe_output],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(2, result.returncode)
+            self.assertEqual("", result.stdout)
+            self.assertIn("error: --output must resolve inside --root", result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
+            self.assertFalse(escaped_output.exists())
+
+    def test_cli_accepts_relative_and_absolute_outputs_inside_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_workflow(root)
+            write_validator(root, standard_scenarios())
+            initialize_git_repo(root)
+            relative_output = Path("review-artifacts/relative-scorecard.md")
+            absolute_output = root / "review-artifacts" / "absolute-scorecard.md"
+
+            cases = (
+                (relative_output, root / relative_output),
+                (absolute_output, absolute_output),
+            )
+            results = [
+                (
+                    expected_output,
+                    subprocess.run(
+                        [sys.executable, str(SCRIPT_PATH), "--root", str(root), "--output", str(output_arg)],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                    ),
+                )
+                for output_arg, expected_output in cases
+            ]
+
+            for output, result in results:
+                with self.subTest(output=output):
+                    self.assertEqual(0, result.returncode, result.stderr)
+                    self.assertEqual("", result.stdout)
+                    self.assertTrue(output.exists())
+                    self.assertIn("# Alice Modernization Scorecard", output.read_text(encoding="utf-8"))
+
     def test_cli_reports_measured_aggregate_coverage_without_pretending_low_coverage_meets_70_percent(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

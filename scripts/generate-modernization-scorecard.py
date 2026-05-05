@@ -828,6 +828,16 @@ def render_scorecard(root: Path) -> str:
     return "\n".join(lines) + "\n"
 
 
+def resolve_output_path(root: Path, output: Path, parser: argparse.ArgumentParser) -> Path:
+    candidate = output if output.is_absolute() else root / output
+    resolved_output = candidate.resolve()
+    try:
+        resolved_output.relative_to(root)
+    except ValueError:
+        parser.error(f"--output must resolve inside --root: {output}")
+    return resolved_output
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root to inspect")
@@ -838,16 +848,15 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         parser.error(f"--root must be an existing directory: {args.root}")
 
+    output = resolve_output_path(root, args.output, parser) if args.output else None
+
     try:
         markdown = render_scorecard(root)
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 1
 
-    if args.output:
-        output = args.output
-        if not output.is_absolute():
-            output = root / output
+    if output:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(markdown, encoding="utf-8")
     else:
