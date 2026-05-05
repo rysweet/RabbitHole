@@ -6,6 +6,7 @@ import org.alice.tweedle.file.Manifest;
 import org.alice.tweedle.file.ManifestEncoderDecoder;
 import org.alice.tweedle.file.ProjectManifest;
 import org.alice.tweedle.file.ResourceReference;
+import org.alice.tweedle.file.TypeManifest;
 import org.alice.tweedle.file.TypeReference;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,12 +27,15 @@ import org.lgna.story.SProgram;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -102,6 +106,30 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertNull("Resource expressions currently exceed supported Tweedle rehydration for .a3w program types.",
         readProject.getProgramType());
     Resource readResource = onlyResource(readProject.getResources());
+    assertEquals(imageResource.getId(), readResource.getId());
+    assertEquals(imageResource.getName(), readResource.getName());
+    assertEquals(imageResource.getOriginalFileName(), readResource.getOriginalFileName());
+    assertEquals(imageResource.getContentType(), readResource.getContentType());
+    assertArrayEquals(imageResource.getData(), readResource.getData());
+  }
+
+  @Test
+  public void generatedJsonTypeArchiveCharacterizesUnsupportedTweedleAsNullTypeWithResourceReadbackWithoutExternalFixture() throws Exception {
+    ImageResource imageResource = generatedImageResource("json-type-texture.png", 0xFF339966);
+    File typeArchive = temporaryFolder.newFile("generated-json-type.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonType",
+        "class GeneratedJsonType extends SProgram { WholeNumber count; }",
+        imageResource);
+
+    TypeResourcesPair readType = IoUtilities.readType(typeArchive);
+
+    assertNotNull("Generated JSON .a3c archive should read a type/resources pair", readType);
+    assertNull("Tweedle member decoding is not implemented yet, so JSON .a3c type reads preserve the current null type boundary.",
+        readType.getType());
+    Resource readResource = onlyResource(readType.getResources());
     assertEquals(imageResource.getId(), readResource.getId());
     assertEquals(imageResource.getName(), readResource.getName());
     assertEquals(imageResource.getOriginalFileName(), readResource.getOriginalFileName());
@@ -311,6 +339,45 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     return ManifestEncoderDecoder.fromJson(
         readEntry(zipFile, zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME)),
         ProjectManifest.class);
+  }
+
+  private static void writeJsonTypeArchive(
+      File archive,
+      String typeName,
+      String tweedleSource,
+      ImageResource imageResource) throws Exception {
+    TypeManifest manifest = new TypeManifest();
+    manifest.description.name = typeName;
+    manifest.metadata.fileType = IoUtilities.TYPE_EXTENSION;
+    manifest.metadata.identifier.name = typeName;
+    manifest.metadata.identifier.type = Manifest.ProjectType.Library;
+    manifest.resources.add(new TypeReference(typeName, "src/" + typeName + ".twe", "tweedle"));
+
+    ImageReference imageReference = new ImageReference(imageResource);
+    imageReference.file = "resources/" + imageResource.getName();
+    manifest.resources.add(imageReference);
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(archive))) {
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.VERSION_ENTRY_NAME,
+          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.MANIFEST_ENTRY_NAME,
+          ManifestEncoderDecoder.toJson(manifest).getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "src/" + typeName + ".twe",
+          tweedleSource.getBytes(StandardCharsets.UTF_8));
+      writeEntry(zipOutputStream, imageReference.file, imageResource.getData());
+    }
+  }
+
+  private static void writeEntry(ZipOutputStream zipOutputStream, String entryName, byte[] bytes) throws IOException {
+    zipOutputStream.putNextEntry(new ZipEntry(entryName));
+    zipOutputStream.write(bytes);
+    zipOutputStream.closeEntry();
   }
 
   private static String readEntry(ZipFile zipFile, ZipEntry zipEntry) throws Exception {
