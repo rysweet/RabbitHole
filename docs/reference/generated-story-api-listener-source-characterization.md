@@ -1,14 +1,14 @@
 # Generated Story API Listener Source Characterization
 
-This reference documents the headless NetBeans characterization for generated
-Story API source that registers scene event listeners. It proves that a
-synthetic Alice project can generate listener registration calls into
-`Scene.java` and compile the generated Java without launching Alice or depending
-on Sims, nonfree resources, Git LFS payloads, or desktop UI.
+This reference defines the headless NetBeans characterization for generated Story
+API source that registers scene event listeners. The feature is an evidence lane:
+a synthetic Alice project should generate listener registration calls into
+`Scene.java`, then compile the generated Java without launching Alice or
+depending on Sims, nonfree resources, Git LFS payloads, or desktop UI.
 
 ## Contents
 
-- [Scope](#scope)
+- [Feature intent](#feature-intent)
 - [Generated-source contract](#generated-source-contract)
 - [Executable characterization](#executable-characterization)
 - [API reference](#api-reference)
@@ -19,9 +19,9 @@ on Sims, nonfree resources, Git LFS payloads, or desktop UI.
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
 
-## Scope
+## Feature intent
 
-The characterization belongs to the NetBeans generated-source test suite:
+The feature belongs to the NetBeans generated-source test suite:
 
 ```text
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
@@ -32,17 +32,18 @@ It covers one narrow behavior slice:
 1. Build a deterministic synthetic `Program` and `Scene` AST in memory.
 2. Write the project to a temporary `.a3p` archive with `IoUtilities.writeProject`.
 3. Generate Java source with `ProjectCodeGenerator.generateCode(..., false)`.
-4. Assert that generated `Scene.java` preserves the listener-only activation
-   method body.
+4. Assert that generated `Scene.java` contains the listener-only fixture method
+   body.
 5. Compile all generated Java source files with the JDK compiler.
 
-This is generated-source characterization, not runtime event dispatch coverage.
-It does not start Alice, JavaFX, Swing, NetBeans UI, exported launcher code, or a
-desktop event loop.
+This is generated-source characterization, not runtime event dispatch coverage or
+a desktop launch feature. Passing evidence must come from source generation and
+compilation only; it must not start Alice, JavaFX, Swing, NetBeans UI, exported
+launcher code, listener invocation, or a desktop event loop.
 
 ## Generated-source contract
 
-The listener characterization protects source emitted for scene listener
+The listener characterization must protect source emitted for scene listener
 registration calls on `SScene`.
 
 | Synthetic AST call | Required generated source |
@@ -53,7 +54,9 @@ registration calls on `SScene`.
 The calls are placed in a synthetic `Scene` user type assignable to
 `org.lgna.story.SScene`. The fixture method is named `handleActiveChanged`,
 accepts `Boolean isActive` and `Integer activationCount`, and its body contains
-only the two listener registration calls. The scene type is reachable through a
+only the two listener registration calls. That method shape is fixture input; it
+does not mean activation events are dispatched, callbacks are invoked, or the
+registered listeners are runtime-valid. The scene type is reachable through a
 `Program` field so `ProjectCodeGenerator` emits both `Program.java` and
 `Scene.java`.
 
@@ -83,8 +86,9 @@ The characterization succeeds when:
 
 ## API reference
 
-This feature adds no public Java API. The stable surface is the generated-source
-behavior of existing Alice APIs and test helpers.
+This feature adds no public Java API and should not require production generator
+or runtime API changes. The stable surface is the generated-source behavior of
+existing Alice APIs and test helpers.
 
 | Surface | Contract |
 | --- | --- |
@@ -94,9 +98,9 @@ behavior of existing Alice APIs and test helpers.
 | `SScene.addTimeListener(TimeListener, Number, AddTimeListener.Detail...)` | Remains source-generatable as a scene instance call with listener, interval, and optional detail arguments. |
 | `SScene.addSceneActivationListener(SceneActivationListener)` | Remains source-generatable as a scene instance call with the listener argument. |
 
-Production generator or runtime behavior should not change for this
-characterization unless the test exposes a directly related defect. In that case
-the behavior change must be documented and covered by focused tests.
+Production generator or runtime behavior should not change for this evidence lane
+unless the implementation exposes a directly related source-generation defect. In
+that case the behavior change must be documented and covered by focused tests.
 
 ## Configuration
 
