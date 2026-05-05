@@ -29,4 +29,6 @@ bin/*
 out/*
 *.dae
 # Agent runtime/session artifacts
+.copilot/
 .claude/runtime/
+__pycache__/
