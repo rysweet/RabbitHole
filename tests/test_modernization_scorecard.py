@@ -154,6 +154,36 @@ def write_validator(root: Path, scenarios: list[dict[str, object]] | str) -> Non
     script.chmod(0o755)
 
 
+def write_corpus_manifest(root: Path, entries: list[dict[str, object]] | None = None) -> Path:
+    manifest_path = root / "docs" / "reference" / "modernization-corpus-manifest.json"
+    write_file(
+        manifest_path,
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "coverageStatement": (
+                    "Representative corpus evidence only; this is not full historical archive coverage."
+                ),
+                "entries": entries
+                if entries is not None
+                else [
+                    {
+                        "id": "generated-project-xml-fallback",
+                        "path": "generated-fixtures/project-io/generated-project-xml-fallback.a3p",
+                        "description": "Representative generated project archive behavior.",
+                        "generatedFixtureExpectations": [
+                            "Generated fixture includes version.txt and programType.xml entries."
+                        ],
+                        "journeys": ["project-io-corpus"],
+                    }
+                ],
+            },
+            sort_keys=True,
+        ),
+    )
+    return manifest_path
+
+
 def standard_scenarios() -> list[dict[str, object]]:
     return [
         {
@@ -385,7 +415,7 @@ class ModernizationScorecardComponentTest(unittest.TestCase):
             generator.render_scenario_rows(scenarios),
         )
 
-    def test_corpus_manifest_missing_is_a_gap_and_unknown_fields_are_rejected(self) -> None:
+    def test_corpus_manifest_missing_is_a_gap_and_invalid_metadata_is_rejected(self) -> None:
         generator = load_generator()
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -395,26 +425,104 @@ class ModernizationScorecardComponentTest(unittest.TestCase):
             self.assertEqual("missing", missing.state)
             self.assertIn("No checked-in LFS-independent corpus manifest found", missing.message)
 
-            manifest_path = root / "docs" / "reference" / "modernization-corpus-manifest.json"
-            write_file(
-                manifest_path,
-                json.dumps(
+            invalid_entries = (
+                (
+                    r"missing field\(s\): description",
                     {
-                        "schemaVersion": 1,
-                        "entries": [
-                            {
-                                "id": "starter-scene",
-                                "title": "Starter scene project",
-                                "projectPath": "corpus/starter-scene.a3p",
-                                "journeys": ["open-load-save"],
-                                "unexpected": "must fail",
-                            }
-                        ],
-                    }
+                        "id": "starter-scene",
+                        "path": "generated-fixtures/starter-scene.a3p",
+                        "generatedFixtureExpectations": ["Generated fixture exists in tests."],
+                    },
+                ),
+                (
+                    "field path must be a non-empty string",
+                    {
+                        "id": "starter-scene",
+                        "path": " ",
+                        "description": "Starter scene generated archive.",
+                        "generatedFixtureExpectations": ["Generated fixture exists in tests."],
+                    },
+                ),
+                (
+                    "path must be repository-relative",
+                    {
+                        "id": "starter-scene",
+                        "path": "../outside/starter-scene.a3p",
+                        "description": "Starter scene generated archive.",
+                        "generatedFixtureExpectations": ["Generated fixture exists in tests."],
+                    },
+                ),
+                (
+                    "path must be repository-relative",
+                    {
+                        "id": "starter-scene",
+                        "path": ".",
+                        "description": "Starter scene generated archive.",
+                        "generatedFixtureExpectations": ["Generated fixture exists in tests."],
+                    },
+                ),
+                (
+                    "field description must be a non-empty string",
+                    {
+                        "id": "starter-scene",
+                        "path": "generated-fixtures/starter-scene.a3p",
+                        "description": "",
+                        "generatedFixtureExpectations": ["Generated fixture exists in tests."],
+                    },
+                ),
+                (
+                    "generatedFixtureExpectations must be a non-empty list",
+                    {
+                        "id": "starter-scene",
+                        "path": "generated-fixtures/starter-scene.a3p",
+                        "description": "Starter scene generated archive.",
+                        "generatedFixtureExpectations": [],
+                    },
+                ),
+                (
+                    "generatedFixtureExpectations must contain non-empty strings",
+                    {
+                        "id": "starter-scene",
+                        "path": "generated-fixtures/starter-scene.a3p",
+                        "description": "Starter scene generated archive.",
+                        "generatedFixtureExpectations": [" "],
+                    },
+                ),
+                (
+                    "unknown field",
+                    {
+                        "id": "starter-scene",
+                        "path": "generated-fixtures/starter-scene.a3p",
+                        "description": "Starter scene generated archive.",
+                        "generatedFixtureExpectations": ["Generated fixture exists in tests."],
+                        "unexpected": "must fail",
+                    },
                 ),
             )
 
-            with self.assertRaises(ValueError):
+            for expected_error, entry in invalid_entries:
+                with self.subTest(expected_error=expected_error):
+                    write_corpus_manifest(root, [entry])
+                    with self.assertRaisesRegex(ValueError, expected_error):
+                        generator.inspect_corpus_manifest(root)
+
+    def test_corpus_manifest_present_requires_representative_scope_statement(self) -> None:
+        generator = load_generator()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            write_corpus_manifest(root)
+            present = generator.inspect_corpus_manifest(root)
+
+            self.assertEqual("present", present.state)
+            self.assertIn("representative checked-in corpus manifest", present.message)
+
+            manifest_path = root / "docs" / "reference" / "modernization-corpus-manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["coverageStatement"] = "Complete corpus coverage."
+            write_file(manifest_path, json.dumps(manifest))
+
+            with self.assertRaisesRegex(ValueError, "representative"):
                 generator.inspect_corpus_manifest(root)
 
 
@@ -424,6 +532,7 @@ class ModernizationScorecardCliTest(unittest.TestCase):
             root = Path(temp_dir)
             write_workflow(root)
             write_validator(root, standard_scenarios())
+            write_corpus_manifest(root)
             write_java_file(root, "core/app/src/main/java/org/example/Alpha.java", 501)
             write_file(root / "docs" / "index.md", "- [Alice modernization scorecard](./reference/modernization-scorecard.md)\n")
             initialize_git_repo(root)
@@ -463,7 +572,9 @@ class ModernizationScorecardCliTest(unittest.TestCase):
         self.assertIn("| `core/app/src/main/java/org/example/Alpha.java` | 501 |", first_markdown)
         self.assertIn("| `manual-evidence-required` | 1 | Manual evidence gap |", first_markdown)
         self.assertIn("| `alice-desktop-export` | `export` |", first_markdown)
-        self.assertIn("| LFS-independent corpus manifest | Missing |", first_markdown)
+        self.assertIn("| LFS-independent corpus manifest | Present |", first_markdown)
+        self.assertIn("representative checked-in corpus manifest", first_markdown)
+        self.assertIn("not full historical archive coverage", first_markdown)
         self.assertIn("Coverage ratchets are executable CI floors, not the long-term target.", first_markdown)
         assert_scorecard_uses_plain_reviewer_instructions(self, first_markdown)
         self.assertNotIn(str(Path(tempfile.gettempdir())), first_markdown)
@@ -640,6 +751,29 @@ class ModernizationScorecardDocumentationContractTest(unittest.TestCase):
         self.assertIn("## Review workflow", markdown)
         self.assertIn("python3 scripts/generate-modernization-scorecard.py", markdown)
         self.assertIn("`--output` is always constrained to the resolved `--root`.", markdown)
+
+    def test_checked_in_corpus_manifest_is_representative_text_evidence(self) -> None:
+        generator = load_generator()
+        manifest_path = REPO_ROOT / "docs" / "reference" / "modernization-corpus-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        status = generator.inspect_corpus_manifest(REPO_ROOT)
+
+        self.assertEqual("present", status.state)
+        self.assertIn("representative", manifest["coverageStatement"].lower())
+        self.assertIn("not full historical archive coverage", manifest["coverageStatement"].lower())
+        for entry in manifest["entries"]:
+            with self.subTest(entry=entry["id"]):
+                self.assertFalse((REPO_ROOT / entry["path"]).exists())
+                self.assertTrue(entry["description"].strip())
+                self.assertTrue(entry["generatedFixtureExpectations"])
+                for expectation in entry["generatedFixtureExpectations"]:
+                    self.assertTrue(expectation.strip())
+
+    def test_docs_index_links_corpus_manifest_reference(self) -> None:
+        index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+
+        self.assertIn("./reference/modernization-corpus-manifest.md", index)
 
 
 if __name__ == "__main__":

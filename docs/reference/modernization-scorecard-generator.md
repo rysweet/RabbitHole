@@ -23,11 +23,17 @@ optional local evidence reports.
 | `git ls-files '*.java'` | Yes | Supplies tracked Java files for hotspot detection. |
 | `coverage-report/target/site/jacoco-aggregate/jacoco.csv` | No | Supplies current aggregate line coverage when present. |
 | `<module>/target/site/jacoco/jacoco.csv` | No | Supplies current module line coverage when present. |
-| `docs/reference/modernization-corpus-manifest.json` | No | Supplies corpus coverage metadata without requiring Git LFS payloads. |
+| `docs/reference/modernization-corpus-manifest.json` | No | Supplies representative corpus coverage metadata without requiring Git LFS payloads. |
 
 Missing optional evidence is reported as missing or blocked evidence rather
 than converted to false zero coverage. The generator does not run `git lfs
 pull`, inspect binary corpus payloads, or modify production code.
+
+The corpus manifest is representative evidence only. It is not full historical
+archive coverage. Manifest entries must use non-empty repository-relative
+`path` values, non-empty `description` values, and non-empty
+`generatedFixtureExpectations` lists that describe the expected generated
+fixture behavior rather than pointing to checked-in binary payloads.
 
 ## CLI contract
 

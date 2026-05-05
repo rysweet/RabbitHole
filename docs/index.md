@@ -26,6 +26,7 @@ repository.
 - [Coverage reporting reference](./reference/coverage-reporting.md) - aggregate and module JaCoCo reporting, CLI options, CI ratchet gates, configuration, and path toward 70% line coverage.
 - [Alice modernization scorecard](./reference/modernization-scorecard.md) - generated, reproducible scorecard snapshot for modernization evidence.
 - [Modernization scorecard generator reference](./reference/modernization-scorecard-generator.md) - CLI contract, evidence inputs, output-path safety, examples, and review workflow.
+- [Modernization corpus manifest](./reference/modernization-corpus-manifest.md) - representative, LFS-independent corpus evidence manifest and validation contract.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
 

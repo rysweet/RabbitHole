@@ -132,12 +132,12 @@ Current scorecard state for this checkout: 51 production-root Java hotspots over
 | `core/ast/src/main/java/org/lgna/project/ast/AstUtilities.java` | 649 |
 | `core/ast/src/main/java/org/lgna/project/ast/JavaCodeGenerator.java` | 643 |
 | `core/croquet/src/main/java/org/lgna/croquet/views/FolderTabbedPane.java` | 643 |
+| `core/story-api-migration/src/main/java/org/lgna/project/io/JsonProjectIo.java` | 642 |
 | `core/ide/src/main/java/org/alice/ide/clipboard/icons/ClipboardIcon.java` | 619 |
 | `core/ide/src/main/java/org/alice/ide/ast/declaration/DeclarationLikeSubstanceComposite.java` | 617 |
 | `core/story-api/src/main/java/org/lgna/story/resourceutilities/StorytellingResources.java` | 611 |
 | `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/imp/RenderContext.java` | 603 |
 | `core/ast/src/main/java/org/lgna/project/ast/JavaType.java` | 600 |
-| `core/story-api-migration/src/main/java/org/lgna/project/io/JsonProjectIo.java` | 590 |
 | `core/ide/src/main/java/org/alice/stageide/StoryApiConfigurationManager.java` | 587 |
 | `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/imp/RenderTargetImp.java` | 584 |
 | `core/ide/src/main/java/org/alice/ide/croquet/models/html/HtmlEncoder.java` | 580 |
@@ -213,13 +213,10 @@ docs/reference/modernization-corpus-manifest.json
 
 | Corpus signal | State | Meaning |
 | --- | --- | --- |
-| LFS-independent corpus manifest | Missing | No checked-in LFS-independent corpus manifest found. |
+| LFS-independent corpus manifest | Present | Found 3 representative checked-in corpus manifest entries. |
 | Git LFS payloads | Not required | The scorecard does not fetch or inspect large binary project files. |
 
-Until a manifest exists, corpus coverage cannot be scored. The accepted fix is
-a small text manifest that describes the corpus entries, expected metadata,
-and how each entry maps to modernization journeys without embedding large
-project payloads.
+Corpus coverage is representative manifest evidence only; it is not full historical archive coverage and does not depend on local LFS payload availability.
 
 ## Remaining blockers
 
@@ -231,7 +228,7 @@ project payloads.
 | Production hotspots | 51 files over 500 lines | Characterize behavior first; refactor only protected hotspots in focused changes. |
 | Manual QA journeys | 6 scenarios require manual evidence | Add stable automation or collect accepted manual evidence for each workflow. |
 | Gated QA smokes | 8 smokes are gated by local prerequisites | Run with `ALICE_QA_RUN_GATED_SMOKES=1` where prerequisites exist, or attach equivalent CI evidence. |
-| Corpus manifest | Missing LFS-independent manifest | Add a small checked-in manifest before claiming corpus coverage. |
+| Corpus manifest | Present | Keep manifest entries mapped to representative modernization journeys. |
 
 ## Interpretation notes
 

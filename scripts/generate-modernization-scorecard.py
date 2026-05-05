@@ -352,8 +352,15 @@ def classify_journeys(scenarios: Iterable[dict[str, object]]) -> JourneySummary:
 def validate_corpus_entry(entry: object, index: int) -> None:
     if not isinstance(entry, dict):
         raise ValueError(f"corpus manifest entry {index} must be an object")
-    allowed = {"id", "title", "projectPath", "journeys", "notes"}
-    required = {"id", "title", "projectPath", "journeys"}
+    allowed = {
+        "id",
+        "path",
+        "description",
+        "generatedFixtureExpectations",
+        "journeys",
+        "notes",
+    }
+    required = {"id", "path", "description", "generatedFixtureExpectations"}
     unknown = sorted(set(entry) - allowed)
     if unknown:
         raise ValueError(f"corpus manifest entry {index} has unknown field(s): {', '.join(unknown)}")
@@ -363,17 +370,25 @@ def validate_corpus_entry(entry: object, index: int) -> None:
     entry_id = entry["id"]
     if not isinstance(entry_id, str) or not CORPUS_ENTRY_ID_RE.fullmatch(entry_id):
         raise ValueError(f"corpus manifest entry {index} has invalid id")
-    for field in ("title", "projectPath"):
+    for field in ("path", "description"):
         if not isinstance(entry[field], str) or not entry[field].strip():
             raise ValueError(f"corpus manifest entry {index} field {field} must be a non-empty string")
-    project_path = Path(entry["projectPath"])
-    if project_path.is_absolute() or any(part == ".." for part in project_path.parts):
-        raise ValueError(f"corpus manifest entry {index} projectPath must be repository-relative")
-    journeys = entry["journeys"]
-    if not isinstance(journeys, list) or not journeys:
-        raise ValueError(f"corpus manifest entry {index} journeys must be a non-empty list")
-    if not all(isinstance(journey, str) and journey.strip() for journey in journeys):
-        raise ValueError(f"corpus manifest entry {index} journeys must contain non-empty strings")
+    path = Path(entry["path"])
+    if not path.parts or path.is_absolute() or any(part in {"", ".."} for part in path.parts):
+        raise ValueError(f"corpus manifest entry {index} path must be repository-relative")
+    expectations = entry["generatedFixtureExpectations"]
+    if not isinstance(expectations, list) or not expectations:
+        raise ValueError(f"corpus manifest entry {index} generatedFixtureExpectations must be a non-empty list")
+    if not all(isinstance(expectation, str) and expectation.strip() for expectation in expectations):
+        raise ValueError(
+            f"corpus manifest entry {index} generatedFixtureExpectations must contain non-empty strings"
+        )
+    if "journeys" in entry:
+        journeys = entry["journeys"]
+        if not isinstance(journeys, list) or not journeys:
+            raise ValueError(f"corpus manifest entry {index} journeys must be a non-empty list")
+        if not all(isinstance(journey, str) and journey.strip() for journey in journeys):
+            raise ValueError(f"corpus manifest entry {index} journeys must contain non-empty strings")
     if "notes" in entry and not isinstance(entry["notes"], str):
         raise ValueError(f"corpus manifest entry {index} notes must be a string")
 
@@ -391,12 +406,24 @@ def inspect_corpus_manifest(root: Path) -> CorpusManifestStatus:
         raise ValueError(f"corpus manifest JSON is invalid: {exc.msg}") from exc
     if not isinstance(manifest, dict):
         raise ValueError("corpus manifest must be a JSON object")
-    allowed = {"schemaVersion", "entries"}
+    allowed = {"schemaVersion", "coverageStatement", "entries"}
     unknown = sorted(set(manifest) - allowed)
     if unknown:
         raise ValueError(f"corpus manifest has unknown field(s): {', '.join(unknown)}")
     if manifest.get("schemaVersion") != 1:
         raise ValueError("corpus manifest schemaVersion must be 1")
+    coverage_statement = manifest.get("coverageStatement")
+    if not isinstance(coverage_statement, str) or not coverage_statement.strip():
+        raise ValueError("corpus manifest coverageStatement must be a non-empty string")
+    normalized_statement = coverage_statement.lower()
+    if (
+        "representative" not in normalized_statement
+        or "not full historical archive coverage" not in normalized_statement
+    ):
+        raise ValueError(
+            "corpus manifest coverageStatement must state that coverage is representative "
+            "and not full historical archive coverage"
+        )
     entries = manifest.get("entries")
     if not isinstance(entries, list) or not entries:
         raise ValueError("corpus manifest entries must be a non-empty list")
@@ -404,7 +431,10 @@ def inspect_corpus_manifest(root: Path) -> CorpusManifestStatus:
         validate_corpus_entry(entry, index)
     return CorpusManifestStatus(
         state="present",
-        message=f"Found {len(entries)} checked-in corpus manifest entr{'y' if len(entries) == 1 else 'ies'}.",
+        message=(
+            f"Found {len(entries)} representative checked-in corpus manifest "
+            f"entr{'y' if len(entries) == 1 else 'ies'}."
+        ),
     )
 
 
@@ -675,7 +705,10 @@ def render_scorecard(root: Path) -> str:
             ]
         )
     else:
-        lines.append("Corpus coverage is based on the checked-in manifest metadata, not on local LFS payload availability.")
+        lines.append(
+            "Corpus coverage is representative manifest evidence only; it is not full historical archive coverage "
+            "and does not depend on local LFS payload availability."
+        )
     lines.extend(
         [
             "",
