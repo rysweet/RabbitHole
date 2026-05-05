@@ -5,7 +5,26 @@ modernization evidence. It reports what is measured, what is ratcheted, and
 what remains blocked without treating the long-term 70% line coverage target
 as current reality.
 
-## Generation
+## What the scorecard covers
+
+The scorecard is a generated Markdown document for release reviewers,
+maintainers, and modernization contributors. It combines several repository
+signals into one reproducible status page:
+
+| Signal | Source | What it answers |
+| --- | --- | --- |
+| Coverage ratchets | `.github/workflows/alice-coverage-ci.yml` | Which coverage floors CI enforces today. |
+| Aggregate coverage | `coverage-report/target/site/jacoco-aggregate/jacoco.csv` | Whether current measured coverage can support claims about the 70% goal. |
+| Module coverage | `<module>/target/site/jacoco/jacoco.csv` | Whether ratcheted modules still emit measurable JaCoCo data. |
+| Production hotspots | tracked Java files under `src/main/java` | Which production files still need characterization before refactoring. |
+| QA journey gaps | outside-in Alice desktop scenario catalog | Which user journeys are automated, manual, or gated by local prerequisites. |
+| Corpus gaps | `docs/reference/modernization-corpus-manifest.json` | Whether representative project corpus coverage is documented without Git LFS payloads. |
+
+Use the scorecard as an evidence index. It is not a single pass/fail badge, and
+it must not claim that the 70% line coverage target is met unless current
+aggregate JaCoCo data proves it.
+
+## Usage
 
 Refresh this checked-in scorecard from the repository root:
 
@@ -41,6 +60,25 @@ python3 scripts/generate-modernization-scorecard.py \
   --output docs/reference/modernization-scorecard.md
 ```
 
+When `--root` is supplied, the generator reads inputs from that checkout and
+resolves relative `--output` paths inside that same checkout. This lets a
+reviewer stand in one working directory while refreshing a different worktree's
+checked-in scorecard.
+
+## Configuration
+
+The scorecard has no configuration file. Its configuration is the repository
+state it inspects.
+
+| Configuration surface | Required | Effect |
+| --- | --- | --- |
+| `.github/workflows/alice-coverage-ci.yml` | Yes | Supplies aggregate and module CI ratchet thresholds. |
+| `coverage-report/target/site/jacoco-aggregate/jacoco.csv` | No | Supplies current aggregate line coverage when present. |
+| `<module>/target/site/jacoco/jacoco.csv` | No | Supplies current module line coverage when present. |
+| `qa/outside-in/alice-desktop/runners/validate-scenarios.sh --dump-json` | Yes | Supplies desktop QA journey metadata. |
+| `docs/reference/modernization-corpus-manifest.json` | No | Supplies corpus coverage metadata without requiring Git LFS payloads. |
+| `git ls-files '*.java'` | Yes | Supplies tracked Java files for hotspot detection. |
+
 The generator is Python-stdlib-only and reads repository metadata, checked-in
 text contracts, and optional local JaCoCo CSV reports. It does not run `git lfs
 pull`, inspect binary corpora, or modify production code. Output is
@@ -58,7 +96,7 @@ That Node memory setting is only for local automation that already uses Node.
 The scorecard generator itself is invoked with Python and has no Node runtime
 dependency.
 
-### CLI reference
+## CLI reference
 
 ```text
 python3 scripts/generate-modernization-scorecard.py [options]
@@ -74,7 +112,69 @@ output. With `--root`, relative output paths are resolved inside the inspected
 checkout, so reviewers can refresh that checkout's checked-in scorecard without
 changing their shell working directory.
 
-### Examples
+### Output path safety
+
+`--output` is always constrained to the resolved `--root`.
+
+| Output form | Accepted when | Rejected when |
+| --- | --- | --- |
+| Relative path | The resolved path stays inside `--root`. | The path escapes `--root` with traversal such as `../..`. |
+| Absolute path | The absolute path is inside `--root`. | The absolute path points outside `--root`. |
+
+Rejected output paths fail during argument handling before the scorecard is
+rendered or written. This prevents a review command for one checkout from
+overwriting files elsewhere on the machine.
+
+## Automation API
+
+The supported automation interface is the command-line script:
+
+```text
+python3 scripts/generate-modernization-scorecard.py [options]
+```
+
+There is no stable Python package API for downstream callers. Tests may import
+the script internals for characterization, but external automation should invoke
+the CLI and consume the generated Markdown file or standard output.
+
+The CLI contract is stable for:
+
+| Contract | Behavior |
+| --- | --- |
+| Successful generation | Exit `0`; write Markdown to `--output` or standard output. |
+| Invalid arguments | Exit with argparse failure before writing output. |
+| Invalid repository evidence | Exit non-zero with a concise error message and no traceback. |
+| Missing optional evidence | Generate the scorecard and mark the evidence as missing or blocked. |
+
+## Output contract
+
+The generator writes plain Markdown. The scorecard reference page uses this
+section order:
+
+1. `Alice Modernization Scorecard`
+2. `What the scorecard covers`
+3. `Usage`
+4. `Configuration`
+5. `CLI reference`
+6. `Automation API`
+7. `Output contract`
+8. `Examples`
+9. `Tutorial: refresh a scorecard for review`
+10. `Coverage ratchets`
+11. `Aggregate coverage state`
+12. `Module coverage state`
+13. `70% target status`
+14. `Production hotspots over 500 lines`
+15. `QA journey automation gaps`
+16. `Corpus gaps`
+17. `Remaining blockers`
+18. `Interpretation notes`
+
+Generated output ends with one newline, omits timestamps, and omits host-specific
+absolute paths. Missing JaCoCo CSV files are reported as missing measurements,
+not as zero coverage.
+
+## Examples
 
 Refresh the checked-in scorecard for the current branch:
 
@@ -103,6 +203,50 @@ python3 scripts/generate-modernization-scorecard.py \
   --root ../alice-modernization-worktree \
   --output review-artifacts/alice-modernization-scorecard.md
 ```
+
+Attempting to write outside the inspected checkout fails:
+
+```sh
+python3 scripts/generate-modernization-scorecard.py \
+  --root ../alice-modernization-worktree \
+  --output ../../scorecard.md
+```
+
+Use standard output when attaching a scorecard to another local command:
+
+```sh
+python3 scripts/generate-modernization-scorecard.py \
+  --root ../alice-modernization-worktree > /tmp/alice-scorecard-preview.md
+```
+
+## Tutorial: refresh a scorecard for review
+
+Use this workflow when reviewing a branch that changes coverage, QA scenarios,
+corpus evidence, or modernization documentation.
+
+1. Check out the branch under review.
+2. If the checkout is fresh and broad Maven validation is needed, initialize the
+   Tweedle grammar submodule:
+
+   ```sh
+   git submodule update --init tweedle-lang
+   ```
+
+3. Run any coverage or QA commands needed to produce local evidence. The
+   scorecard can run without those reports, but it will mark missing evidence as
+   a blocker.
+4. Regenerate the checked-in scorecard:
+
+   ```sh
+   python3 scripts/generate-modernization-scorecard.py \
+     --output docs/reference/modernization-scorecard.md
+   ```
+
+5. Review the diff. Expected changes are limited to the evidence that changed:
+   ratchet values, measured coverage availability, hotspot counts, QA journey
+   gaps, corpus status, or blocker text.
+6. If the branch does not intentionally change modernization evidence, the
+   regenerated scorecard should match the checked-in file.
 
 ## Coverage ratchets
 
