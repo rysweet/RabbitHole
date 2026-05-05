@@ -3,6 +3,13 @@
 Use this guide to add or review deterministic, LFS-free characterization tests
 for Alice project/archive IO behavior in `core/story-api-migration`.
 
+If the generated fixture shape becomes representative modernization evidence,
+also follow the
+[modernization corpus manifest reference](../reference/modernization-corpus-manifest.md)
+and update `docs/reference/modernization-corpus-manifest.json`.
+The manifest documents expected generated fixture paths only; it does not allow
+checking in `.a3p`, `.a3w`, `.a3c`, or media payloads.
+
 ## Contents
 
 - [Prerequisites](#prerequisites)
@@ -11,6 +18,7 @@ for Alice project/archive IO behavior in `core/story-api-migration`.
 - [Assert archive entries and routing](#assert-archive-entries-and-routing)
 - [Assert production readback](#assert-production-readback)
 - [Characterize fail-fast JSON player reads](#characterize-fail-fast-json-player-reads)
+- [Update representative corpus evidence](#update-representative-corpus-evidence)
 - [Run the focused tests](#run-the-focused-tests)
 
 ## Prerequisites
@@ -173,6 +181,30 @@ program type. Production callers already use the public `IoUtilities.readProject
 contract, which declares `IOException` and `VersionNotSupportedException`, so the
 safe production behavior is to propagate the checked failure rather than return a
 partially decoded `Project`.
+
+## Update representative corpus evidence
+
+When the test adds a new representative generated archive shape, update the
+modernization corpus manifest entry for that shape. The manifest entry should
+name the generated fixture path, describe the Alice archive behavior, and list
+the generated-fixture expectations protected by the test.
+
+Use the dedicated guide for the manifest update:
+
+```text
+docs/howto/maintain-modernization-corpus-manifest.md
+```
+
+Then regenerate the scorecard:
+
+```bash
+python3 scripts/generate-modernization-scorecard.py \
+  --output docs/reference/modernization-scorecard.md
+```
+
+The manifest remains representative evidence only. It is not full historical
+archive coverage, and the fixture paths are not instructions to add checked-in
+binary Alice archives.
 
 ## Run the focused tests
 

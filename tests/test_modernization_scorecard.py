@@ -525,6 +525,55 @@ class ModernizationScorecardComponentTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "representative"):
                 generator.inspect_corpus_manifest(root)
 
+    def test_corpus_manifest_paths_are_generated_alice_archive_fixture_shapes(self) -> None:
+        generator = load_generator()
+        base_entry = {
+            "id": "starter-scene",
+            "path": "generated-fixtures/project-io/starter-scene.a3p",
+            "description": "Starter scene generated archive shape.",
+            "generatedFixtureExpectations": ["Generated fixture exists only as deterministic test output."],
+        }
+        invalid_paths = (
+            ("docs/reference/starter-scene.a3p", "must be under generated-fixtures/"),
+            ("generated-fixtures/project-io/starter-scene.txt", r"must end with \.a3p, \.a3w, or \.a3c"),
+            ("generated-fixtures/project-io/starter-scene.png", r"must end with \.a3p, \.a3w, or \.a3c"),
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            for path, expected_error in invalid_paths:
+                with self.subTest(path=path):
+                    entry = dict(base_entry, path=path)
+                    write_corpus_manifest(root, [entry])
+
+                    with self.assertRaisesRegex(ValueError, expected_error):
+                        generator.inspect_corpus_manifest(root)
+
+    def test_corpus_manifest_rejects_checked_in_payload_at_manifest_path(self) -> None:
+        generator = load_generator()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            payload_path = root / "generated-fixtures" / "project-io" / "starter-scene.a3p"
+            write_file(payload_path, "not a real Alice archive payload\n")
+            write_corpus_manifest(
+                root,
+                [
+                    {
+                        "id": "starter-scene",
+                        "path": "generated-fixtures/project-io/starter-scene.a3p",
+                        "description": "Starter scene generated archive shape.",
+                        "generatedFixtureExpectations": [
+                            "Generated fixture exists only as deterministic test output."
+                        ],
+                    }
+                ],
+            )
+            initialize_git_repo(root)
+
+            with self.assertRaisesRegex(ValueError, "must not point to a checked-in payload"):
+                generator.inspect_corpus_manifest(root)
+
 
 class ModernizationScorecardCliTest(unittest.TestCase):
     def test_cli_generates_deterministic_scorecard_without_lfs_or_jacoco_payloads(self) -> None:

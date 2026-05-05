@@ -12,7 +12,8 @@ characterization test. The same pattern applies to generated `.a3w` player and
 - [3. Write and inspect the archive](#3-write-and-inspect-the-archive)
 - [4. Read through IoUtilities](#4-read-through-ioutilities)
 - [5. Prove the round trip](#5-prove-the-round-trip)
-- [6. Run validation](#6-run-validation)
+- [6. Document representative corpus evidence](#6-document-representative-corpus-evidence)
+- [7. Run validation](#7-run-validation)
 
 ## Goal
 
@@ -27,6 +28,10 @@ metadata, resource bytes, and ResourceExpression bindings.
 
 The test uses generated temporary archives and in-memory resource data. It does
 not commit a binary `.a3p` fixture.
+
+When this generated fixture shape is part of modernization corpus evidence, the
+manifest records only the expected generated path and behavior. The manifest does
+not store the `.a3p` archive itself.
 
 ## 1. Extend the existing suite
 
@@ -155,7 +160,40 @@ The second read proves the generated fixture is not only readable once; it
 preserves the current Alice archive shape across a normal write/read/write/read
 cycle.
 
-## 6. Run validation
+## 6. Document representative corpus evidence
+
+If this fixture shape becomes representative modernization corpus evidence, add
+or update the matching entry in:
+
+```text
+docs/reference/modernization-corpus-manifest.json
+```
+
+The entry should use the expected generated fixture path:
+
+```text
+generated-fixtures/project-io/generated-project-xml-fallback.a3p
+```
+
+It should describe the same behavior protected by the test:
+
+```text
+Editable project archive behavior: manifest metadata, XML fallback project
+payloads, resource entries, and read/write round-trip assertions.
+```
+
+Then regenerate the scorecard:
+
+```bash
+python3 scripts/generate-modernization-scorecard.py \
+  --output docs/reference/modernization-scorecard.md
+```
+
+The scorecard should report the LFS-independent corpus manifest as present. It
+must not require the generated `.a3p` archive to be checked in or fetched from
+Git LFS.
+
+## 7. Run validation
 
 Run the focused test from the repository root:
 

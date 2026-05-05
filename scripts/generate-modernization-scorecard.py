@@ -18,6 +18,8 @@ from typing import Iterable
 
 AGGREGATE_CSV = Path("coverage-report/target/site/jacoco-aggregate/jacoco.csv")
 CORPUS_MANIFEST = Path("docs/reference/modernization-corpus-manifest.json")
+CORPUS_FIXTURE_ROOT = Path("generated-fixtures")
+CORPUS_FIXTURE_EXTENSIONS = {".a3p", ".a3w", ".a3c"}
 QA_VALIDATOR = Path("qa/outside-in/alice-desktop/runners/validate-scenarios.sh")
 WORKFLOW_PATH = Path(".github/workflows/alice-coverage-ci.yml")
 TARGET_LINE_PERCENT = 70.0
@@ -349,7 +351,27 @@ def classify_journeys(scenarios: Iterable[dict[str, object]]) -> JourneySummary:
     )
 
 
-def validate_corpus_entry(entry: object, index: int) -> None:
+def is_git_tracked(root: Path, relative_path: Path) -> bool:
+    result = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "--", relative_path.as_posix()],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    if result.returncode == 128 and "not a git repository" in result.stderr.lower():
+        return False
+    raise ValueError(
+        "git ls-files failed while validating corpus manifest path "
+        f"{relative_path.as_posix()} (exit {result.returncode})"
+    )
+
+
+def validate_corpus_entry(entry: object, index: int, root: Path) -> None:
     if not isinstance(entry, dict):
         raise ValueError(f"corpus manifest entry {index} must be an object")
     allowed = {
@@ -376,6 +398,18 @@ def validate_corpus_entry(entry: object, index: int) -> None:
     path = Path(entry["path"])
     if not path.parts or path.is_absolute() or any(part in {"", ".."} for part in path.parts):
         raise ValueError(f"corpus manifest entry {index} path must be repository-relative")
+    if path.parts[0] != CORPUS_FIXTURE_ROOT.as_posix():
+        raise ValueError(
+            f"corpus manifest entry {index} path must be under {CORPUS_FIXTURE_ROOT.as_posix()}/"
+        )
+    if path.suffix.lower() not in CORPUS_FIXTURE_EXTENSIONS:
+        raise ValueError(
+            f"corpus manifest entry {index} path must end with .a3p, .a3w, or .a3c"
+        )
+    if is_git_tracked(root, path):
+        raise ValueError(
+            f"corpus manifest entry {index} path must not point to a checked-in payload"
+        )
     expectations = entry["generatedFixtureExpectations"]
     if not isinstance(expectations, list) or not expectations:
         raise ValueError(f"corpus manifest entry {index} generatedFixtureExpectations must be a non-empty list")
@@ -428,7 +462,7 @@ def inspect_corpus_manifest(root: Path) -> CorpusManifestStatus:
     if not isinstance(entries, list) or not entries:
         raise ValueError("corpus manifest entries must be a non-empty list")
     for index, entry in enumerate(entries, 1):
-        validate_corpus_entry(entry, index)
+        validate_corpus_entry(entry, index, root)
     return CorpusManifestStatus(
         state="present",
         message=(

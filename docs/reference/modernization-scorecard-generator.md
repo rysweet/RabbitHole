@@ -27,13 +27,17 @@ optional local evidence reports.
 
 Missing optional evidence is reported as missing or blocked evidence rather
 than converted to false zero coverage. The generator does not run `git lfs
-pull`, inspect binary corpus payloads, or modify production code.
+pull`, inspect Alice archive or media payloads, or modify production code.
 
 The corpus manifest is representative evidence only. It is not full historical
 archive coverage. Manifest entries must use non-empty repository-relative
 `path` values, non-empty `description` values, and non-empty
 `generatedFixtureExpectations` lists that describe the expected generated
-fixture behavior rather than pointing to checked-in binary payloads.
+fixture behavior rather than pointing to checked-in Alice archive payloads. The
+generator enforces structural manifest validation; reviewers also enforce the
+policy that `.a3p`, `.a3w`, `.a3c`, media, and Git LFS payloads are not added as
+corpus evidence. The manifest schema and examples are documented in
+[Modernization corpus manifest](./modernization-corpus-manifest.md).
 
 ## CLI contract
 
@@ -173,6 +177,16 @@ corpus evidence, or modernization documentation.
 Review instructions must name the Alice modernization checkout and the
 repository-owned generator command. They must not require any helper command
 outside this repository.
+
+When a branch changes representative corpus evidence, also use
+[Maintain the modernization corpus manifest](../howto/maintain-modernization-corpus-manifest.md)
+and regenerate the scorecard after editing
+`docs/reference/modernization-corpus-manifest.json`. The generated scorecard
+should show the LFS-independent corpus manifest as present with the expected
+representative entry count, and the diff must not include `.a3p`, `.a3w`,
+`.a3c`, media payloads, or Git LFS object additions. `.a3w` is excluded here by
+modernization corpus policy even though repository attributes do not currently
+classify every Alice archive extension identically.
 
 ## Runtime notes
 
