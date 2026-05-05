@@ -70,7 +70,7 @@ runtime configuration expected by exported projects.
 | --- | --- |
 | Main class | Defaults to `AliceJavaFXLauncher`; can be overridden by Ant property for smoke probes. |
 | Assertions | Enabled by `-ea` from `run.jvmargs`. |
-| GlueGen temp cache | Disabled by `-Djogamp.gluegen.UseTempJarCache=false`. |
+| GlueGen temp cache | Disabled by `-Djogamp.gluegen.UseTempJarCache=false` in generated `run.jvmargs`; documented from the generated runtime configuration, not directly asserted by the Ant runtime probe. |
 | Alice root directory | Provided through `-Dorg.alice.ide.rootDirectory="${libs.Alice3Library.src}_root"`. |
 | Java module access | Supplied by the exported template's `--add-opens` arguments; not directly asserted by the probe unless it is expanded to inspect JVM input arguments. |
 | Ant failure handling | Nonzero Java execution is not accepted as success; the log must not contain `Java Result:`. |
