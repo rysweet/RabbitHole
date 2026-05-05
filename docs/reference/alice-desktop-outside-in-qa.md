@@ -40,7 +40,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-exported-project-smoke` | `exported-project-smoke` | `gated-command-smoke` | Covers generated Java project compile/launcher handoff evidence without running by default. |
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
-| `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers synthetic project save/reload evidence at the command seam. |
+| `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -332,7 +332,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Exported project smoke | `status.txt`, `command.log`, generated source or exported project listing, launcher handoff or compile evidence. |
 | NetBeans package smoke | `status.txt`, `command.log`, NetBeans target artifact listing or CI artifact link, representative jar/zip content listing. |
 | Package/install smoke | `status.txt`, `command.log`, package or installer artifact listing, disposable install log or explicit not-produced note. |
-| Project IO smoke | `status.txt`, `command.log`, saved/synthetic project artifact reference, metadata or resource survival notes. |
+| Project save, reopen, edit, save again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for metadata and export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. |
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
 | Wizard/palette/completion smoke | `status.txt`, `command.log`, focused test output for wizard validation, palette wiring, and completion resources; manual screenshot notes when desktop evidence is added. |

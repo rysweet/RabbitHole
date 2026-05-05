@@ -98,7 +98,11 @@ Each registered child menu is also available through the menu bar's controller l
 | Current-file Save failure followed by prompt cancellation | Alice reports the error, hides the wait cursor, cancels the `UserActivity`, and does not finish it. |
 | Prompted Save As or Export-style `IOException` retry | Alice reports the error, hides the wait cursor, and retries through a prompt. When a current project file exists, the retry suggestion uses that current project base name; when no current file exists, the retry prompt has no suggested base name. |
 
-Save and Save As use the Alice project extension. Export uses the export extension and delegates to export behavior. Retry behavior is characterized through the shared flow seam; archive contents remain covered by lower-level project IO tests.
+Save and Save As use the Alice project extension. Export uses the export
+extension and delegates to export behavior. Retry behavior is characterized
+through the shared flow seam; archive contents remain covered by lower-level
+tests that save Alice projects, reopen them, edit them, save again, reopen
+again, and export them.
 
 ## API reference
 

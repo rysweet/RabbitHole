@@ -9,6 +9,7 @@ Use this guide to add or review compatibility tests for Alice project Save, Save
 - [Choose the behavior](#choose-the-behavior)
 - [Add a direct operation test](#add-a-direct-operation-test)
 - [Add a flow-level test through SaveOperationFlow](#add-a-flow-level-test-through-saveoperationflow)
+- [Add a project archive round-trip test](#add-a-project-archive-round-trip-test)
 - [Run the focused tests](#run-the-focused-tests)
 
 ## Prerequisites
@@ -20,6 +21,18 @@ core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
 ```
 
 Use JUnit 4 and existing test fixtures. Do not add a mocking library for this package.
+
+Archive-content regression tests for opening, decoding, editing, saving, and
+exporting projects live in the story API migration module:
+
+```text
+core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java
+```
+
+Use the existing `TemporaryFolder`, synthetic `Project`, synthetic
+`NamedUserType`, and zip-entry inspection patterns in that class. Do not add LFS
+fixtures, bundled media dependencies, JavaFX startup, Swing automation, or IDE
+launches for archive round-trip coverage.
 
 Initialize the grammar submodule before Maven validation from a fresh checkout or worktree:
 
@@ -52,8 +65,14 @@ Start with the highest-value untested behavior in the operation layer:
 | Export always prompts and uses export extension | `ExportProjectOperation` |
 | Shared project extension | `AbstractSaveProjectOperation` as observed through Save and Save As operations |
 | Finish, cancel, wait cursor, and retry flow | `SaveOperationFlow` |
+| Saved Alice project reopens, accepts an edit, saves again, reopens again with the edit, and exports | `IoUtilitiesTest` |
 
-Keep archive-content tests in lower-level project IO test classes. Direct operation tests verify prompt routing and extensions. Flow tests verify activity outcome, wait cursor, retry, and delegation decisions through `SaveOperationFlow`.
+Keep archive-content tests in lower-level classes that save Alice projects,
+reopen them, edit them, save again, reopen again, and export them. Direct
+operation tests verify prompt routing and extensions. Flow tests verify activity
+outcome, wait cursor, retry, and delegation decisions through
+`SaveOperationFlow`. Project archive round-trip tests verify the saved bytes
+remain editable and exportable after reopening.
 
 ## Add a direct operation test
 
@@ -149,6 +168,46 @@ And the user activity is finished after the successful retry
 
 For prompted Save As or Export-style retries, characterize the existing suggestion behavior explicitly: retries use the current project base name when one exists and no suggested base name when no current file exists.
 
+## Add a project archive round-trip test
+
+Use `IoUtilitiesTest` when the behavior is about the actual project archive that
+Alice saves, reopens, edits, saves again, reopens again, or exports. This test
+sits below the UI operation layer and exercises the production archive APIs
+directly:
+
+| API | Role in the journey |
+| --- | --- |
+| `IoUtilities.writeProject(File, Project)` | Writes the original and edited `.a3p` editor archives. |
+| `IoUtilities.readProject(File)` | Reopens the saved archives through the production project reader. |
+| `IoUtilities.exportProject(File, Project)` | Writes a `.a3w` player archive from the edited project. |
+
+Use the regression test
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+for saving, reopening, editing, saving again, reopening again, and exporting
+Alice projects:
+
+```text
+Given a synthetic project whose program type is named OriginalProgram
+When the project is saved to original.a3p
+And original.a3p is reopened through IoUtilities.readProject
+And the reopened project's program type is renamed to EditedProgram with NamedUserType.name.setValue(...)
+And the reopened edited project is saved to edited.a3p
+Then reopening edited.a3p returns a project with program type named EditedProgram
+And exporting the edited project writes a stable .a3w manifest/source archive
+```
+
+Assert the edited state after the second reopen. A file-exists assertion is not
+strong enough because it would miss a stale-save regression where Alice writes
+the pre-edit project state. Export assertions should stay structural and stable:
+check entries such as `manifest.json` and the Tweedle source entry named by the
+manifest type reference rather than UI behavior or broad player runtime behavior.
+For the current edited-name scenario, use `src/EditedProgram.twe` if that is the
+exporter output.
+
+Keep the fixture synthetic. The test should create all `.a3p` and `.a3w` files
+under `TemporaryFolder`, mutate the reopened `Project`, inspect zip entries
+directly when needed, and let `IOException` or version failures fail the test.
+
 ## Run the focused tests
 
 Run the existing module test goal:
@@ -157,5 +216,16 @@ Run the existing module test goal:
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl core/ide -am \
   -DfailIfNoTests=false \
+  test
+```
+
+After adding the archive round-trip regression, run it with the focused story API
+migration gate:
+
+```bash
+mvn -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=IoUtilitiesTest \
   test
 ```

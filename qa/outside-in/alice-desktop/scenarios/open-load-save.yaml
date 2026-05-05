@@ -29,7 +29,7 @@ fallback:
   mode: manual-evidence-required
   notes:
     - If the open dialog cannot access the fixture path, record the dialog error and use the nearest supported recent-project path.
-    - Link project IO smoke evidence when available, but keep manual GUI open/load/save evidence for acceptance.
+    - Link evidence for saving, reopening, editing, saving again, reopening again, and exporting Alice projects when available, but keep manual GUI open/load/save evidence for acceptance.
 supportingEvidence:
   - alice-desktop-launch
   - alice-desktop-project-io-smoke

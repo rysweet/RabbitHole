@@ -90,11 +90,15 @@ sed -n '281,327p' core/ide/src/test/java/org/alice/ide/ProjectFileUtilitiesTest.
 The acceptance scenarios describe the observable archive contract:
 
 - Saved `.a3p` archives reopen as editable projects.
+- A project saved as `.a3p` is covered by a regression that reopens the project,
+  edits it, saves again, reopens again with the edited program metadata still
+  present, and exports the edited project.
 - Saved `.a3p` archives include `version.txt`, `manifest.json`,
   `programType.xml`, optional `resources.xml`, safe resource entries, and
   thumbnail metadata when a thumbnail is available.
 - `IoUtilitiesTest` coverage confirms low-level manifest metadata, thumbnail
-  behavior, XML entries, safe resource entries, and reopen behavior.
+  behavior, XML entries, safe resource entries, saving, reopening, editing,
+  saving again, reopening again, and exporting the edited project.
 - `ProjectFileUtilitiesTest` coverage confirms the IDE save-copy flow writes the
   same user-visible editor archive shape.
 - Exported `.a3w` archives contain manifest metadata and Tweedle source.
@@ -129,6 +133,7 @@ For each behavior change, keep the trace complete:
 | If you change | Then update |
 | --- | --- |
 | User-visible save, load, or export behavior | Gherkin scenario and the matching archive test (`IoUtilitiesTest` or `ProjectFileUtilitiesTest`) |
+| Project archive state after saving, reopening, editing, saving again, reopening again, and exporting | Add/update `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported` |
 | Backup ordering or recovery state | Gherkin scenario, TLA+ model/config, and `core/ide` tests |
 | Reader error handling | Gherkin failure scenario and `IoUtilitiesTest` |
 | Internal structure only | Java tests as needed; leave the formal artifacts unchanged if the contract is unchanged |

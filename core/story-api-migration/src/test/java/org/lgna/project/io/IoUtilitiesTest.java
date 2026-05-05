@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -85,6 +86,45 @@ public class IoUtilitiesTest {
       assertEquals(IoUtilities.PROJECT_EXTENSION, manifest.metadata.fileType);
       assertNotNull(zipFile.getEntry("programType.xml"));
       assertNull(zipFile.getEntry("resources.xml"));
+    }
+  }
+
+  @Test
+  public void savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported() throws Exception {
+    String originalProgramName = "OriginalProgram";
+    String editedProgramName = "EditedProgram";
+    Project project = new Project(programType(originalProgramName), Project.SceneCameraType.WindowCamera);
+    File originalProjectFile = temporaryFolder.newFile("original-program.a3p");
+    File editedProjectFile = temporaryFolder.newFile("edited-program.a3p");
+    File exportFile = temporaryFolder.newFile("edited-program.a3w");
+
+    IoUtilities.writeProject(originalProjectFile, project);
+    Project reopenedProject = IoUtilities.readProject(originalProjectFile);
+    NamedUserType reopenedProgramType = reopenedProject.getProgramType();
+    assertNotNull(reopenedProgramType);
+    assertEquals(originalProgramName, reopenedProgramType.getName());
+
+    reopenedProgramType.name.setValue(editedProgramName);
+    IoUtilities.writeProject(editedProjectFile, reopenedProject);
+
+    Project editedProject = IoUtilities.readProject(editedProjectFile);
+    NamedUserType editedProgramType = editedProject.getProgramType();
+    assertNotNull(editedProgramType);
+    assertEquals(editedProgramName, editedProgramType.getName());
+    try (ZipFile zipFile = new ZipFile(editedProjectFile)) {
+      ProjectManifest saveManifest = readProjectManifest(zipFile);
+      assertEquals(editedProgramName, saveManifest.description.name);
+      assertEquals(IoUtilities.PROJECT_EXTENSION, saveManifest.metadata.fileType);
+      assertNotNull(zipFile.getEntry("programType.xml"));
+    }
+
+    IoUtilities.exportProject(exportFile, editedProject);
+
+    try (ZipFile zipFile = new ZipFile(exportFile)) {
+      ProjectManifest exportManifest = readProjectManifest(zipFile);
+      assertEquals(editedProgramName, exportManifest.description.name);
+      assertEquals(IoUtilities.EXPORT_EXTENSION, exportManifest.metadata.fileType);
+      assertNotNull(zipFile.getEntry("src/" + editedProgramName + ".twe"));
     }
   }
 
@@ -324,9 +364,7 @@ public class IoUtilitiesTest {
     try (ZipFile zipFile = new ZipFile(exportFile)) {
       assertNotNull(zipFile.getEntry("models/SyntheticDynamicProp/SyntheticDynamicProp.json"));
       assertNotNull(zipFile.getEntry("src/SyntheticDynamicPropResource.twe"));
-      ProjectManifest archiveManifest = ManifestEncoderDecoder.fromJson(
-          new String(zipFile.getInputStream(zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME)).readAllBytes(), StandardCharsets.UTF_8),
-          ProjectManifest.class);
+      ProjectManifest archiveManifest = readProjectManifest(zipFile);
       assertEquals(2, archiveManifest.resources.size());
       assertTrue(archiveManifest.resources.get(0) instanceof ModelReference);
       assertTrue(archiveManifest.resources.get(1) instanceof TypeReference);
@@ -1155,10 +1193,8 @@ public class IoUtilitiesTest {
   }
 
   private static ProjectManifest readProjectManifest(ZipFile zipFile) throws IOException {
-    ZipEntry manifestEntry = zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME);
-    assertNotNull(manifestEntry);
     return ManifestEncoderDecoder.fromJson(
-        new String(zipFile.getInputStream(manifestEntry).readAllBytes(), StandardCharsets.UTF_8),
+        readZipEntryText(zipFile, ProjectIo.MANIFEST_ENTRY_NAME),
         ProjectManifest.class);
   }
 
@@ -1191,7 +1227,9 @@ public class IoUtilitiesTest {
   private static String readZipEntryText(ZipFile zipFile, String entryName) throws IOException {
     ZipEntry entry = zipFile.getEntry(entryName);
     assertNotNull(entry);
-    return new String(zipFile.getInputStream(entry).readAllBytes(), StandardCharsets.UTF_8);
+    try (InputStream inputStream = zipFile.getInputStream(entry)) {
+      return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+    }
   }
 
   private static void assertNoLocalPathLeak(String value) {

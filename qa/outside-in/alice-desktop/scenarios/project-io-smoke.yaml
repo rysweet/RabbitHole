@@ -1,43 +1,44 @@
 id: alice-desktop-project-io-smoke
-title: Project IO smoke
+title: Project save, reopen, edit, save again, reopen again, and export smoke
 workflow: project-io-smoke
 automationMode: gated-command-smoke
 preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
-  - Project save and load characterization tests are available in the checkout.
+  - Project archive round-trip characterization tests are available in the checkout.
 userActions:
-  - Run the focused project IO characterization smoke from the command line.
+  - Run the focused project archive round-trip characterization smoke from the command line.
   - Create or use a synthetic Alice project fixture.
-  - Save, reload, and compare observable project metadata or resource survival.
+  - Save, reopen, edit metadata, save again, reopen again, and export a synthetic Alice project.
 expectedOutcomes:
-  - The project IO smoke command exits successfully when the gate is enabled.
-  - Saved project artifacts can be reopened by the current Alice IO path.
-  - Observable project metadata or resource identity survives the round trip.
+  - The project archive round-trip smoke command exits successfully when the gate is enabled.
+  - Saved project artifacts can be reopened by the current Alice project reader.
+  - Observable project metadata and export entries survive saving, reopening, editing, saving again, reopening again, and exporting.
 automation:
   cwd: .
   argv:
     - mvn
     - -DincludeSims=false
     - -Dinstall4j.skip
+    - -Dsurefire.failIfNoSpecifiedTests=false
     - -pl
-    - core/ide
+    - core/story-api-migration
     - -am
-    - -Dtest=org.alice.ide.ProjectSaveTargetPlanTest
+    - -Dtest=org.lgna.project.io.IoUtilitiesTest
     - test
   timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the project IO smoke command.
-    - Saved project or synthetic project artifact reference when available.
-    - Notes identifying the metadata or resource survival assertion reviewed.
+    - command.log from the project archive round-trip smoke command.
+    - Test output or surefire report naming IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported.
+    - Notes identifying the save, reopen, edit, save again, reopen again, export, metadata, and export archive structure assertions reviewed.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If the focused Maven smoke is unavailable, attach the nearest project save/load characterization evidence.
+    - If the focused Maven smoke is unavailable, attach the nearest characterization evidence for the project archive round-trip smoke.
     - Manual GUI save/load evidence remains covered separately by alice-desktop-save-load.
 supportingEvidence:
   - alice-desktop-save-load

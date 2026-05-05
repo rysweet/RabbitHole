@@ -85,15 +85,30 @@ validate_allowed_automation() {
   fi
 
   if [ "$cwd" = . ] &&
-    [ "$#" -eq 8 ] &&
+    [ "$#" -eq 9 ] &&
     [ "$1" = mvn ] &&
     [ "$2" = -DincludeSims=false ] &&
     [ "$3" = -Dinstall4j.skip ] &&
-    [ "$4" = -pl ] &&
-    [ "$5" = core/ide ] &&
-    [ "$6" = -am ] &&
-    { [ "$7" = -Dtest=org.alice.ide.ProjectSaveTargetPlanTest ] || [ "$7" = -Dtest=org.alice.ide.ProjectLoadFailureDispatchPlanTest ]; } &&
-    [ "$8" = test ]; then
+    [ "$4" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$5" = -pl ] &&
+    [ "$6" = core/story-api-migration ] &&
+    [ "$7" = -am ] &&
+    [ "$8" = -Dtest=org.lgna.project.io.IoUtilitiesTest ] &&
+    [ "$9" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
+    [ "$#" -eq 9 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$5" = -pl ] &&
+    [ "$6" = core/ide ] &&
+    [ "$7" = -am ] &&
+    [ "$8" = -Dtest=org.alice.ide.ProjectLoadFailureDispatchPlanTest ] &&
+    [ "$9" = test ]; then
     return 0
   fi
 

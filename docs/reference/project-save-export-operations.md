@@ -28,7 +28,10 @@ Characterization tests for this layer live in the matching test package:
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
 ```
 
-The operation layer routes Croquet actions to `ProjectApplication` save/export behavior. Archive file contents remain owned by lower-level project IO classes.
+The operation layer routes Croquet actions to `ProjectApplication` save/export
+behavior. Archive file contents remain owned by lower-level classes that save
+Alice projects, reopen them, edit them, save again, reopen again, and export
+them.
 
 ## Characterization scope
 
@@ -46,7 +49,7 @@ These areas stay outside direct operation tests:
 
 | Deferred scope | Reason |
 | --- | --- |
-| Archive content verification | Archive bytes and project serialization belong to lower-level project IO tests, not operation-routing tests. |
+| Archive content verification | Archive bytes and project serialization belong to lower-level tests that save Alice projects, reopen them, edit them, save again, reopen again, and export them, not operation-routing tests. |
 | New mocking framework | The intended feature should use existing JUnit 4 patterns and narrow production seams instead of PowerMock-style interception. |
 | Display-backed Swing/JavaFX testing | Desktop launch evidence belongs to the outside-in QA lane and Xvfb-backed scenarios. |
 
@@ -168,7 +171,7 @@ Flow-level tests use the package-private `SaveOperationFlow` seam so they can av
 
 ## Configuration
 
-There is no runtime configuration flag for Save, Save As, or Export routing. The behavior is fixed by the operation classes and the Alice project IO constants.
+There is no runtime configuration flag for Save, Save As, or Export routing. The behavior is fixed by the operation classes and the Alice project save and export constants.
 
 Developer validation uses the existing Maven configuration:
 

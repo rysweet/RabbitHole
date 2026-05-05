@@ -71,6 +71,7 @@ status=$?
 assert_success "$status" "enabled gated command scenario creates one evidence directory"
 assert_file_exists "$enabled_run_dir/command.log" "enabled gated command scenario writes command.log"
 assert_contains "$enabled_run_dir/command.log" 'gated-command-ran' "enabled gated command captures command output"
+assert_contains "$enabled_run_dir/command.log" 'IoUtilitiesTest' "saving, reopening, editing, saving again, reopening again, and exporting smoke passes focused archive test selector as argv"
 assert_contains "$enabled_run_dir/status.txt" '^outcome=passed$' "enabled gated command records pass outcome"
 assert_not_contains "$enabled_run_dir/status.txt" '^outcome=gated-not-run$' "enabled gated command is not reported as a skip"
 assert_contains "$enabled_run_dir/status.txt" '^exitCode=0$' "enabled gated command records exit code"

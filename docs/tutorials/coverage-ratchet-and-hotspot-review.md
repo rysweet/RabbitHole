@@ -26,7 +26,8 @@ git submodule update --init tweedle-lang
 ```
 
 This avoids recreating work that is already merged, including aggregate coverage
-gates and completed project IO refactors.
+gates and completed refactors around saving, reopening, editing, saving again,
+reopening again, and exporting Alice projects.
 
 ## 2. Generate coverage data
 

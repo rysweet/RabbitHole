@@ -38,7 +38,7 @@ Pick a user-observable desktop action journey that is not already covered by mer
 | Does Alice recover from a failed action attempt? | Error reporting, wait cursor cleanup, retry prompt, final finish/cancel outcome. |
 | Does CI fail clearly without a display? | Required startup guard at the JavaFX/Swing desktop boundary. |
 
-Avoid tests that assert private layout details, localized strings unrelated to the contract, object identity of temporary UI widgets, or lower-level archive contents already covered by project IO tests.
+Avoid tests that assert private layout details, localized strings unrelated to the contract, object identity of temporary UI widgets, or lower-level archive contents already covered by tests that save Alice projects, reopen them, edit them, save again, reopen again, and export them.
 
 ## Use the existing seams
 

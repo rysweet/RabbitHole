@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, project IO smoke, failure-path smoke, future UI smoke, menu/action smoke, and wizard/palette/completion smoke.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, and wizard/palette/completion smoke.
 
 ## Contents
 
@@ -213,7 +213,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
   --timeout-seconds 180
 ```
 
-Gated command smokes cover exported-project, NetBeans package, package/install, project IO, failure path, future UI startup, menu/action plumbing, and wizard/palette/completion paths. Without `ALICE_QA_RUN_GATED_SMOKES=1`, those scenarios write `status.txt` with `outcome=gated-not-run` and exit non-zero so they cannot pass by accident. Use `--prepare-only` for intentional preflight/checklist preparation. Enable the gate only in a worktree prepared for the configured Maven, packaging, or display-backed command.
+Gated command smokes cover exported-project, NetBeans package, package/install, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure path, future UI startup, menu/action plumbing, and wizard/palette/completion paths. Without `ALICE_QA_RUN_GATED_SMOKES=1`, those scenarios write `status.txt` with `outcome=gated-not-run` and exit non-zero so they cannot pass by accident. Use `--prepare-only` for intentional preflight/checklist preparation. Enable the gate only in a worktree prepared for the configured Maven, packaging, or display-backed command.
 
 The QA lane itself does not require Node.js. If a surrounding QA orchestrator invokes Node-based tooling around this lane, use:
 

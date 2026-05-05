@@ -236,9 +236,10 @@ The rule is intentionally strict:
 | No duplicate work | Do not repeat refactors already merged to `develop`, including the completed `JsonModelIo` split. |
 | Skip when uncertain | If protection is unclear, document the candidate and skip the production refactor. |
 
-Common candidate areas include project IO, model resource export, and application
-save/load orchestration, but size alone is not enough. The controlling criterion
-is test protection for the exact behavior being moved.
+Common candidate areas include saving, reopening, editing, saving again,
+reopening again, and exporting Alice projects, model resource export, and
+application save/load orchestration, but size alone is not enough. The
+controlling criterion is test protection for the exact behavior being moved.
 
 For the model-loading resource export hotspot, see the
 [Model resource exporter reference](./model-resource-exporter.md) for the

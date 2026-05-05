@@ -2,8 +2,8 @@
 
 Alice decode coverage is the build contract for the decode-coverage expansion
 feature. The feature adds characterization coverage around the current behavior
-of the Tweedle parser, Tweedle AST decoder, player `.a3w` reader, type `.a3c`
-reader, and resource archive readers.
+of the Tweedle parser, Tweedle AST decoder, project `.a3p` archive round trip,
+player `.a3w` reader, type `.a3c` reader, and resource archive readers.
 
 The tests are characterization tests: they preserve the observed Alice 3
 baseline while making decode regressions visible. They do not promise broader
@@ -37,26 +37,31 @@ Build the lane as a compatibility safety net, not as a decoder redesign.
 | --- | --- | --- |
 | Tweedle parser | `TweedleUnlinkedParser.parseType(String)` | `core/tweedle/src/test/java/org/alice/tweedle/unlinked/TweedleParseTest.java` |
 | Tweedle AST decoder | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
+| Project archive round trip | `IoUtilities.writeProject(File, Project)`, `IoUtilities.readProject(File)`, and structural `IoUtilities.exportProject(File, Project)` output | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Player archive decode | `IoUtilities.readProject(File)` for `.a3w` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Type archive decode | `IoUtilities.readType(File)` for `.a3c` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Resource decode | JSON manifest-backed image and audio entries plus XML `resources.xml` archive entries | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 
-The lane covers successful decode behavior and known edge behavior:
+The intended lane covers successful decode behavior and known edge behavior:
 
 - empty and malformed Tweedle source;
 - unsupported Tweedle declarations, members, methods, and superclasses;
 - missing or malformed Tweedle entries in player archives;
 - JSON player archives that decode a simple Tweedle program;
 - JSON player and type archives whose unsupported Tweedle remains undecoded;
+- synthetic `.a3p` archives that are saved, reopened, edited, saved again, and
+  reopened with the edited program metadata preserved;
+- exported `.a3w` archives produced from the edited project, checked at stable
+  archive-entry and manifest boundaries;
 - JSON manifest-backed and XML resource reads;
 - missing resource entries, missing resource UUIDs, unknown resource reference
   types, traversal references, and safe distinct resource-entry naming.
 
 ## Usage
 
-Use this documentation when changing any code that reads Tweedle source, JSON
-project manifests, JSON type manifests, manifest-backed resources, or XML
-resource entries.
+Use this documentation when changing any code that reads or writes Alice project
+archives, reads Tweedle source, reads JSON project manifests, reads JSON type
+manifests, handles manifest-backed resources, or handles XML resource entries.
 
 1. Identify the public decode boundary that the change affects.
 2. Add or update a characterization test in the owning module.
@@ -189,6 +194,44 @@ Documented behavior:
 | Missing entries or missing UUIDs | Fail explicitly with `IOException`. |
 | Unknown resource classes in XML resource manifests | Fail with contextual `IOException`. |
 
+### Project `.a3p` archive round trip
+
+`IoUtilities.writeProject(File file, Project project)` writes Alice editor
+project archives. `IoUtilities.readProject(File file)` reopens those archives
+through the same reader selection, version metadata, manifest, XML program type,
+resource, and migration-compatible decode path used by project loading.
+
+Use the round-trip regression test
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+to document saving, reopening, editing, saving again, reopening again, and
+exporting Alice projects:
+
+1. Alice has a synthetic editable project with a deterministic program type name.
+2. The project is saved to a temporary `.a3p` archive.
+3. The saved archive is reopened through `IoUtilities.readProject(File)`.
+4. The reopened project is edited by changing observable program metadata.
+5. The edited project is saved to a second `.a3p` archive.
+6. The second archive is reopened through `IoUtilities.readProject(File)`.
+7. The edited program metadata is still present after the second reopen.
+8. The edited project can be exported to `.a3w`, and the export contains the
+   stable player archive structure Alice relies on.
+
+Documented behavior:
+
+| Journey step | Required characterization result |
+| --- | --- |
+| Initial `.a3p` save | Archive includes Alice version metadata, `manifest.json`, and `programType.xml`. |
+| First reopen/decode | `readProject(File)` returns a project with the original `NamedUserType` program name and scene-camera metadata. |
+| Edit after reopen | The edit is applied to the reopened `Project`, not the original in-memory project, so stale-save regressions are visible. Use the existing `NamedUserType.name.setValue("EditedProgram")` pattern. |
+| Second `.a3p` save | The archive is written from the edited reopened project. |
+| Second reopen/decode | `readProject(File)` returns the edited program name, proving saving after reopening uses current state. |
+| `.a3w` export | `exportProject(File, Project)` writes a player archive with stable manifest/source structure for the edited project. Assert `manifest.json` and the Tweedle source entry named by the manifest type reference; for the current edited-name scenario this should be `src/EditedProgram.twe` if that is the exporter output. |
+
+The target test should use only `TemporaryFolder`, synthetic `Project` and
+`NamedUserType` instances, direct zip-entry inspection, and public `IoUtilities`
+methods. It must not start JavaFX, launch the IDE, automate Swing dialogs, read
+user projects, or depend on LFS-backed fixtures.
+
 ## Configuration
 
 Decode coverage has no Alice runtime configuration. It uses the repository's
@@ -236,6 +279,16 @@ mvn -pl core/tweedle,core/ast,core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.tweedle.unlinked.TweedleParseTest,org.alice.serialization.tweedle.TweedleEncoderDecoderTest,org.lgna.project.io.IoUtilitiesTest \
+  test
+```
+
+Focused story API migration gate for project archive round-trip work:
+
+```bash
+mvn -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=IoUtilitiesTest \
   test
 ```
 
@@ -287,6 +340,29 @@ public void jsonPlayerReaderReportsMissingTweedleTypeEntry() throws Exception {
 The archive is synthetic, but the decode path is real because the assertion is
 made after `IoUtilities.readProject(File)` selects and runs the production
 reader.
+
+## Example: verify saving after reopening writes current state
+
+Use this pattern when a change touches project archive read/write, migration, or
+export code and the risk is losing edits made after a project has been reopened.
+
+1. Add the test to `IoUtilitiesTest`.
+2. Create a synthetic `Project` with a program type named `OriginalProgram`.
+3. Write it to a temporary `.a3p` file with `IoUtilities.writeProject(File, Project)`.
+4. Reopen that archive with `IoUtilities.readProject(File)`.
+5. Change the reopened project's program type name to `EditedProgram` with
+   `reopenedProject.getProgramType().name.setValue("EditedProgram")` or the
+   equivalent existing local variable.
+6. Write the reopened edited project to a second temporary `.a3p` file.
+7. Reopen the second archive and assert the program type name is `EditedProgram`.
+8. Export the edited project to a temporary `.a3w` file and assert stable archive
+   structure such as `manifest.json` and the Tweedle source entry named by the
+   manifest type reference. For this scenario, prefer `src/EditedProgram.twe`
+   when it matches the exporter output.
+
+This scenario proves the archive seam preserves user-visible edits across
+saving, reopening, editing, saving again, reopening again, and exporting, and
+that export runs from the edited project state rather than stale pre-open state.
 
 ## Tutorial: characterize a new decode edge
 
@@ -356,6 +432,7 @@ or pull request.
 | Tweedle members and methods report unsupported decode context. | `TweedleEncoderDecoderTest.decodeClassWithFieldReportsUnsupportedMembers`; `TweedleEncoderDecoderTest.decodeClassWithMethodReportsUnsupportedMembers` |
 | Non-class and empty Tweedle source are rejected by the AST decoder. | `TweedleEncoderDecoderTest.decodeEnumReportsOnlyClassDeclarationsSupported`; `TweedleEncoderDecoderTest.decodeEmptySourceReportsOnlyClassDeclarationsSupported` |
 | Player archives with supported Tweedle decode program types through `IoUtilities.readProject(File)`. | `IoUtilitiesTest.readsSimpleJsonPlayerArchiveTweedleProgram`; `IoUtilitiesTest.jsonPlayerReaderDecodesProgramTypeWhenManifestReferencesSimpleTweedleSource` |
+| Saved `.a3p` archives reopen, accept edits on the reopened project, save again, reopen again with edited program metadata, and export with stable player archive structure. | `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported` |
 | Player archive scene-camera metadata is preserved, and missing project-structure metadata defaults to window camera. | `IoUtilitiesTest.jsonPlayerReaderPreservesSceneCameraTypeFromManifestWithSimpleTweedleDecoding`; `IoUtilitiesTest.jsonPlayerReaderDefaultsMissingProjectStructureToWindowCamera` |
 | Player archive missing Tweedle entries fail with entry context. | `IoUtilitiesTest.jsonPlayerReaderReportsMissingTweedleTypeEntry` |
 | Player archive malformed Tweedle entries are wrapped as archive decode failures. | `IoUtilitiesTest.jsonPlayerReaderWrapsMalformedTweedleTypeEntry` |
