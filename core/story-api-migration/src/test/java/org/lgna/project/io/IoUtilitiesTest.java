@@ -717,6 +717,44 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonPlayerManifestTypeBoundaryKeepsResourcesReadableWhenTweedleTypeIsUnsupported() throws Exception {
+    String programName = "ProgramWithUnsupportedType";
+    TypeReference typeReference = new TypeReference(programName, "src/" + programName + ".twe", "tweedle");
+    UUID imageId = UUID.randomUUID();
+    ImageReference imageReference = imageReference(imageId, "boundary-picture.png", "png");
+    byte[] imageData = new byte[] {1, 2, 3};
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = programName;
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    manifest.resources.add(typeReference);
+    manifest.resources.add(imageReference);
+    File exportFile = temporaryFolder.newFile("manifest-type-boundary-resource.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class " + programName + " { WholeNumber count; }");
+      writeZipEntry(zipOutputStream, imageReference.file, imageData);
+    }
+
+    Project readProject = IoUtilities.readProject(exportFile);
+
+    assertNotNull(readProject);
+    assertNull("Unsupported manifest-declared Tweedle type should not be reported as a decoded program type.",
+        readProject.getProgramType());
+    Resource readResource = onlyResource(readProject);
+    assertEquals(ImageResource.class, readResource.getClass());
+    assertEquals(imageId, readResource.getId());
+    assertEquals("boundary-picture.png", readResource.getOriginalFileName());
+    assertEquals("boundary-picture.png", readResource.getName());
+    assertEquals("png", readResource.getContentType());
+    assertArrayEquals(imageData, readResource.getData());
+  }
+
+  @Test
   public void unsupportedJsonTypeTweedleConstructsRemainUndecoded() throws Exception {
     File typeFile = temporaryFolder.newFile("json-unsupported-type.a3c");
     writeJsonTypeArchive(typeFile, "SyntheticType", "class SyntheticType { WholeNumber count; }");
