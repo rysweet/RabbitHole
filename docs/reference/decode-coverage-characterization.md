@@ -513,7 +513,7 @@ or pull request.
 | Non-`tweedle` player type references fail with type-reference context. | `IoUtilitiesTest.jsonProjectReaderReportsUnsupportedTypeReferenceFormat` |
 | Unsupported JSON manifest references are ignored without becoming binary project resources. | `IoUtilitiesTest.ignoresUnsupportedJsonResourceReferencesWithoutCrashing`; `IoUtilitiesTest.readsExportedPlayerArchiveModelAndGeneratedTypeReferencesWithoutBinaryResources` |
 | Unsupported player Tweedle members remain undecoded. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleConstructsRemainUndecoded` |
-| JSON player archive with `class Program extends MissingSuper {}` returns a project with no decoded program type. | `IoUtilitiesTest.jsonPlayerReaderLeavesUnsupportedSuperclassProgramUndecoded` |
+| JSON player archive with `class Program extends MissingSuper {}` returns a project with no decoded program type. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleSuperclassRemainsUndecoded` |
 | Type archives with supported Tweedle decode types through `IoUtilities.readType(File)`. | `IoUtilitiesTest.readsSimpleJsonTypeArchiveTweedleClass` |
 | JSON type manifest mismatches and missing type references fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsManifestNameMismatchInsteadOfFallback`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTypeReferenceInsteadOfReturningNull` |
 | JSON type archives with non-`tweedle`, missing, or malformed type entries fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsUnsupportedTypeReferenceFormat`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTweedleTypeEntry`; `IoUtilitiesTest.jsonTypeReaderWrapsMalformedTweedleTypeEntry` |
