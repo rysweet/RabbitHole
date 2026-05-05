@@ -67,6 +67,7 @@ behavior:
 | Editable `.a3p` archives include `manifest.json`. | XML project writing emits save manifest metadata when callers do not supply it; `IoUtilitiesTest` validates the low-level archive entry and `ProjectFileUtilitiesTest` validates IDE save-copy output. |
 | Editable `.a3p` archives include thumbnail metadata when thumbnail creation succeeds. | Thumbnail data sources are preserved and the saved archive remains readable without a thumbnail entry; `IoUtilitiesTest` validates both cases. |
 | Backup recovery cannot follow traversal or out-of-directory backup candidates. | `ProjectBackupSelector` skips missing and symlink candidates; `ProjectBackupSelectorTest` validates candidate and backup-directory symlink rejection. |
+| Backup recovery handles corrupt project files and corrupt backup files through real IO. | `ProjectBackupRecoveryIoTest` creates temporary corrupt `.a3p` files and generated readable backups to validate readable-backup recovery and all-backups-fail dispatch without Git LFS or Sims assets. |
 
 ## What remains outside the lane
 

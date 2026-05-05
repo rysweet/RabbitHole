@@ -10,11 +10,12 @@ backup recovery behavior.
 2. For backup recovery behavior, read the TLA+ model in
    [`../../eatme/formal/backup-load-recovery/BackupLoadRecovery.tla`](../../eatme/formal/backup-load-recovery/BackupLoadRecovery.tla).
 3. Find the executable boundary:
-   - Low-level archive I/O behavior: `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java`
-   - IDE save/export copy behavior: `core/ide/src/test/java/org/alice/ide/ProjectFileUtilitiesTest.java`
-   - Backup candidate selection: `core/ide/src/test/java/org/alice/ide/ProjectBackupSelectorTest.java`
-   - Backup failure decisions: `core/ide/src/test/java/org/alice/ide/ProjectLoadFailurePlanTest.java`
-   - User-choice dispatch decisions: `core/ide/src/test/java/org/alice/ide/ProjectLoadFailureDispatchPlanTest.java`
+    - Low-level archive I/O behavior: `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java`
+    - IDE save/export copy behavior: `core/ide/src/test/java/org/alice/ide/ProjectFileUtilitiesTest.java`
+    - Backup candidate selection: `core/ide/src/test/java/org/alice/ide/ProjectBackupSelectorTest.java`
+    - Backup recovery with real temporary project files: `core/ide/src/test/java/org/alice/ide/ProjectBackupRecoveryIoTest.java`
+    - Backup failure decisions: `core/ide/src/test/java/org/alice/ide/ProjectLoadFailurePlanTest.java`
+    - User-choice dispatch decisions: `core/ide/src/test/java/org/alice/ide/ProjectLoadFailureDispatchPlanTest.java`
 4. Check the implemented coverage map in
    [`../reference/formal-spec-contracts.md`](../reference/formal-spec-contracts.md)
    before claiming a behavior is enforced.
@@ -56,14 +57,17 @@ failing the run.
 
 ## Update backup recovery behavior
 
-Use this workflow for corrupt primary loads, backup candidate ordering, and
-new-project fallback decisions.
+Use this workflow for corrupt primary loads, backup candidate ordering, readable
+backup recovery, and new-project fallback decisions.
 
 1. Update the backup recovery scenarios in `project-archive.feature`.
 2. Update `BackupLoadRecovery.tla` when the recovery state machine changes.
 3. Update `BackupLoadRecovery.cfg` when the model constants or checked
    invariants change.
 4. Add or update the focused `core/ide` tests that match the changed rule.
+   Use `ProjectBackupRecoveryIoTest` when the rule depends on real temporary
+   `.a3p` inputs, corrupt archive contents, backup load failure, readable backup
+   readback, or all-backups-fail dispatch.
 
 Backup candidate selection must not follow traversal or out-of-directory paths.
 Keep that rule covered with a focused selector safety test when recovery logic
@@ -75,10 +79,15 @@ The recovery model describes backup candidates as a newest-first sequence. A
 candidate that cannot be loaded is added to `unloadable`, and the next candidate
 is selected from the remaining backups.
 
-The matching Java validation belongs in `ProjectBackupSelectorTest`:
+The matching Java validation belongs in `ProjectBackupSelectorTest` for pure
+candidate selection and `ProjectBackupRecoveryIoTest` when the path should load
+or fail real temporary project archives:
 
 ```shell
-mvn -pl core/ide -am -Dtest=ProjectBackupSelectorTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
+  -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
 ```
 
 The Surefire flag is required when running with `-am` and a specific `-Dtest`

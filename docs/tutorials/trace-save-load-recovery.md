@@ -49,10 +49,11 @@ selection.
 
 ## Match the model to Java tests
 
-Open the backup selector tests:
+Open the backup selector and recovery IO tests:
 
 ```shell
 sed -n '23,172p' core/ide/src/test/java/org/alice/ide/ProjectBackupSelectorTest.java
+sed -n '28,153p' core/ide/src/test/java/org/alice/ide/ProjectBackupRecoveryIoTest.java
 ```
 
 These tests characterize the same rules:
@@ -63,11 +64,16 @@ These tests characterize the same rules:
 | Known unloadable backups are skipped | `SkipUnreadableBackup` |
 | Missing candidates are ignored by recovery selection | Unloadable candidates do not become final loaded projects |
 | No remaining candidates returns `null` | `NoBackupRemaining` |
+| Corrupt primary plus corrupt newest backup loads the next readable temporary `.a3p` backup | `SkipUnreadableBackup`, `OfferReadableBackup`, and `BackupLoadSucceeds` |
+| Corrupt primary plus all corrupt backups dispatches the new-project failure path | `NoBackupRemaining` and final-state invariants |
 
 Run the focused validation:
 
 ```shell
-mvn -pl core/ide -am -Dtest=ProjectBackupSelectorTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
+  -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
 ```
 
 ## Trace archive behavior
