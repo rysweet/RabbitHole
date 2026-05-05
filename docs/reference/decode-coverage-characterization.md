@@ -145,7 +145,7 @@ Documented behavior:
 | Manifest references a missing Tweedle entry | Throws `IOException` that includes the missing entry path. |
 | Tweedle entry is malformed at the parser boundary | Throws `IOException` that includes `Unable to decode Tweedle type entry` and the entry path. |
 | Tweedle entry contains unsupported members | Returns a project with a `null` program type for the unsupported decode, preserving current player-reader behavior. |
-| Manifest declares both an unsupported Tweedle `TypeReference` and valid image/audio resources | Returns a project with a `null` program type while preserving resource identity, name, content type, and bytes. |
+| Manifest declares both an unsupported Tweedle `TypeReference` and a valid image resource | Returns a project with a `null` program type while preserving resource identity, name, original file name, content type, and bytes. |
 | Manifest references a non-`tweedle` type format | Throws `IOException` with type reference context. |
 | Manifest has no Tweedle type reference | Returns a project with a `null` program type and default scene-camera handling. |
 | Manifest references image or audio resources with valid archive entries | Returns resources with identity, name, content type, and bytes preserved. |

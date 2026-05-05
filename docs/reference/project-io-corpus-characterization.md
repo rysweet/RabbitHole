@@ -169,7 +169,7 @@ boundaries:
 | --- | --- |
 | `TypeReference` with format `tweedle` and supported `src/<Program>.twe` source | `IoUtilities.readProject(File)` returns a project with a decoded program type. |
 | `TypeReference` with format `tweedle` and unsupported Tweedle members in `src/<Program>.twe` | `IoUtilities.readProject(File)` returns a project whose program type is `null`; this is the documented incomplete Tweedle decode boundary, not a successful full program decode. |
-| Valid image or audio resource reference with matching archive data | Resource identity, name, original file name, content type, and bytes remain readable even when the Tweedle program type is not decoded. |
+| Valid image resource reference with matching archive data | Resource identity, name, original file name, content type, and bytes remain readable even when the Tweedle program type is not decoded. |
 
 This boundary keeps player/export resource compatibility honest. Tests may
 assert resource readback for manifest-declared resources, but they must not infer

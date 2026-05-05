@@ -135,8 +135,8 @@ resources/<resource-name>
 Use a `manifest.json` that includes both a Tweedle `TypeReference` and a valid
 resource reference. If the Tweedle source contains an unsupported member, assert
 that `IoUtilities.readProject` returns no decoded program type while the resource
-identity, name, content type, and bytes are still readable. Do not describe that
-case as a full player archive program/type decode.
+identity, name, original file name, content type, and bytes are still readable.
+Do not describe that case as a full player archive program/type decode.
 
 For resource-bearing `.a3c` type archives:
 
