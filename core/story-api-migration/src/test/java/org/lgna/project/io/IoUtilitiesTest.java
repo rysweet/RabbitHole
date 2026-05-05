@@ -751,6 +751,8 @@ public class IoUtilitiesTest {
     assertEquals("boundary-picture.png", readResource.getOriginalFileName());
     assertEquals("boundary-picture.png", readResource.getName());
     assertEquals("png", readResource.getContentType());
+    assertEquals(1, ((ImageResource) readResource).getWidth());
+    assertEquals(1, ((ImageResource) readResource).getHeight());
     assertArrayEquals(imageData, readResource.getData());
   }
 
