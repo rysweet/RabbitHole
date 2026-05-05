@@ -8,6 +8,11 @@ The ratchets are deliberately lower than the long-term 70% coverage mission
 target. Each floor represents coverage that already exists with a safety margin,
 so CI fails only when coverage regresses below a known-supported level.
 
+For the broader modernization scorecard that combines these ratchets with
+current measurement availability, production hotspots, QA journey gaps, corpus
+gaps, and remaining blockers, see the
+[Alice modernization scorecard](./modernization-scorecard.md).
+
 ## Commands
 
 Run the same coverage command used by CI from the repository root:

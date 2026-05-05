@@ -1,0 +1,78 @@
+import json
+import subprocess
+import sys
+import tempfile
+import textwrap
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+WRAPPER_PATH = REPO_ROOT / "alice_qa_amplihack.py"
+
+
+def write_file(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def write_wrapper_repo(root: Path) -> None:
+    write_file(root / "qa/outside-in/alice-desktop/runners/validate-scenarios.sh", "#!/usr/bin/env bash\n")
+    write_file(root / "qa/outside-in/alice-desktop/runners/run-scenario.sh", "#!/usr/bin/env bash\n")
+    write_file(
+        root / "scripts/generate-modernization-scorecard.py",
+        textwrap.dedent(
+            """\
+            import json
+            import os
+            import sys
+
+            print(json.dumps({"cwd": os.getcwd(), "argv": sys.argv[1:]}))
+            """
+        ),
+    )
+
+
+class AmplihackWrapperTest(unittest.TestCase):
+    def test_help_lists_scorecard_command_without_requiring_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                [sys.executable, str(WRAPPER_PATH), "--help"],
+                cwd=temp_dir,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
+
+    def test_scorecard_command_delegates_to_generator_from_repo_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            child = root / "docs" / "reference"
+            child.mkdir(parents=True)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "alice-scorecard",
+                    "--output",
+                    "scorecard.md",
+                ],
+                cwd=child,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(str(root), payload["cwd"])
+        self.assertEqual(["--output", "scorecard.md"], payload["argv"])
+
+
+if __name__ == "__main__":
+    unittest.main()

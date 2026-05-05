@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 USAGE = """usage:
+  amplihack alice-scorecard [--root <dir>] [--output <path>]
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
@@ -42,6 +43,16 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args[0] == "alice-scorecard":
+        return run_from_repo(
+            root,
+            [
+                sys.executable,
+                str(root / "scripts" / "generate-modernization-scorecard.py"),
+                *args[1:],
+            ],
+        )
 
     if args[0] != "alice-qa":
         print(f"unknown command: {args[0]}", file=sys.stderr)
