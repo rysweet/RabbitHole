@@ -1,6 +1,10 @@
 package org.alice.ide.uricontent;
 
 import org.lgna.project.Project;
+import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.io.IoUtilities;
+import org.lgna.story.SProgram;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -8,6 +12,8 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 import static org.junit.Assert.*;
 
@@ -16,9 +22,33 @@ public class FileProjectLoaderTest {
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
+  public void aliceProjectLoadingReadsGeneratedArchiveFromRealTemporaryFile() throws Exception {
+    File projectFile = temporaryFolder.newFile("generated-world.a3p");
+    Project project = new Project(programType("GeneratedProgram"), Project.SceneCameraType.WindowCamera);
+    IoUtilities.writeProject(projectFile, project);
+    FileProjectLoader loader = new FileProjectLoader(projectFile);
+
+    Project loadedProject = loader.load();
+
+    assertNotNull(loadedProject);
+    assertEquals("GeneratedProgram", loadedProject.getProgramType().getName());
+    assertEquals(Project.SceneCameraType.WindowCamera, loadedProject.createSaveManifest().projectStructure.sceneCameraType);
+  }
+
+  @Test
+  public void aliceProjectLoadingReturnsNullForCorruptRealTemporaryArchive() throws IOException {
+    File corruptProject = temporaryFolder.newFile("corrupt-world.a3p");
+    Files.writeString(corruptProject.toPath(), "not an Alice project archive", StandardCharsets.UTF_8);
+    FileProjectLoader loader = new FileProjectLoader(corruptProject);
+
+    Project project = loader.load();
+
+    assertNull(project);
+  }
+
+  @Test
   public void loadDelegatesIoFailureToHookAndReturnsNull() throws IOException {
-    File corruptProject = File.createTempFile("corrupt-project", ".a3p");
-    corruptProject.deleteOnExit();
+    File corruptProject = temporaryFolder.newFile("corrupt-project.a3p");
     CapturingFileProjectLoader loader = new CapturingFileProjectLoader(corruptProject);
 
     Project project = loader.load();
@@ -30,8 +60,7 @@ public class FileProjectLoaderTest {
 
   @Test
   public void nonVrLoaderUsesOriginalProjectUriAndDoesNotRequireSaveWhenFileExists() throws IOException {
-    File project = File.createTempFile("saved-project", ".a3p");
-    project.deleteOnExit();
+    File project = temporaryFolder.newFile("saved-project.a3p");
     FileProjectLoader loader = new FileProjectLoader(project);
 
     assertEquals(project.toURI(), loader.getUri());
@@ -40,11 +69,9 @@ public class FileProjectLoaderTest {
 
   @Test
   public void vrReadyLoaderUsesRenamedProjectUriAndRequiresSaveWhenVrCopyDoesNotExist() throws IOException {
-    File project = File.createTempFile("saved-project", ".a3p");
-    project.deleteOnExit();
+    File project = temporaryFolder.newFile("saved-project.a3p");
     File vrProject = vrProjectFor(project);
     vrProject.delete();
-    vrProject.deleteOnExit();
     FileProjectLoader loader = new FileProjectLoader(project, true);
 
     assertEquals(vrProject.toURI(), loader.getUri());
@@ -53,11 +80,9 @@ public class FileProjectLoaderTest {
 
   @Test
   public void vrReadyLoaderDoesNotRequireSaveWhenVrCopyAlreadyExists() throws IOException {
-    File project = File.createTempFile("saved-project", ".a3p");
-    project.deleteOnExit();
+    File project = temporaryFolder.newFile("saved-project.a3p");
     File vrProject = vrProjectFor(project);
     assertTrue(vrProject.createNewFile());
-    vrProject.deleteOnExit();
     FileProjectLoader loader = new FileProjectLoader(project, true);
 
     assertEquals(vrProject.toURI(), loader.getUri());
@@ -110,6 +135,13 @@ public class FileProjectLoaderTest {
   private static File vrProjectFor(File project) {
     String source = project.getAbsolutePath();
     return new File(source.substring(0, source.length() - 4) + " VR" + source.substring(source.length() - 4));
+  }
+
+  private static NamedUserType programType(String name) {
+    NamedUserType type = new NamedUserType();
+    type.name.setValue(name);
+    type.superType.setValue(JavaType.getInstance(SProgram.class));
+    return type;
   }
 
   private static class NewProjectLoader extends UriProjectLoader {

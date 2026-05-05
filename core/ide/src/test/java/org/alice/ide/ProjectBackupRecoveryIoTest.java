@@ -56,11 +56,16 @@ public class ProjectBackupRecoveryIoTest {
         false,
         backup,
         corruptMainProject);
+    ProjectLoadFailureDispatchPlan dispatch = ProjectLoadFailureDispatchPlan.afterUserChoice(
+        plan.getAction(),
+        true);
     Project recoveredProject = new TestFileProjectLoader(plan.getBackupToLoad()).loadNow();
 
     assertNull(mainProject);
     assertEquals(ProjectLoadFailurePlan.Action.PROMPT_LOAD_BACKUP, plan.getAction());
     assertEquals(validBackup, plan.getBackupToLoad());
+    assertEquals(ProjectLoadFailureDispatchPlan.LoadTarget.BACKUP, dispatch.getLoadTarget());
+    assertFalse(dispatch.shouldShowNewProject());
     assertEquals("RecoveredProgram", recoveredProject.getProgramType().getName());
     assertEquals(1, recoveredProject.getResources().size());
     Resource readResource = recoveredProject.getResources().iterator().next();
