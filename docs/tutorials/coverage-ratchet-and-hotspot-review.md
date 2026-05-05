@@ -53,8 +53,8 @@ python3 scripts/summarize-jacoco-coverage.py \
 
 The summary lists aggregate line coverage and per-module line coverage. The
 manifest lists the same measured JaCoCo state plus sorted report, `jacoco.exec`,
-and Surefire diagnostic paths. Use these files as the measurement source for
-ratchet decisions.
+and Surefire diagnostic paths. Treat the JaCoCo CSVs as authoritative; use the
+summary and manifest as review aids for ratchet decisions.
 
 ## 3. Select module floors
 

@@ -13,8 +13,9 @@ proves it.
 
 ## Evidence sources
 
-The generator has no configuration file. Its inputs are repository state and
-optional local evidence reports.
+The generator has no dedicated configuration file and does not read the coverage
+evidence manifest. Its inputs are repository-owned state and optional local
+JaCoCo CSV reports.
 
 | Evidence source | Required to generate | Effect |
 | --- | --- | --- |
@@ -32,8 +33,8 @@ pull`, inspect binary corpus payloads, or modify production code.
 JaCoCo CSV files remain the authoritative source for coverage percentages. The
 scorecard generator does not read `coverage-evidence-manifest.json`; that
 manifest is review evidence produced by `scripts/summarize-jacoco-coverage.py`.
-Use it alongside the generated scorecard to trace measured reports, the generated
-summary, raw execution data, Surefire diagnostics, and gate states in CI
+Use it alongside the generated scorecard and `coverage-summary.md` to trace
+measured reports, raw execution data, Surefire diagnostics, and gate states in CI
 artifacts or local review bundles.
 
 ## CLI contract
