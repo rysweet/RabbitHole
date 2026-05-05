@@ -1,26 +1,30 @@
 # Decode Coverage Characterization
 
-Alice decode coverage is the build contract for the decode-coverage expansion
-feature. The feature adds characterization coverage around the current behavior
-of the Tweedle parser, Tweedle AST decoder, project `.a3p` archive round trip,
-player `.a3w` reader, type `.a3c` reader, and resource archive readers.
+Alice decode coverage is the build contract for decode behavior expansion. It
+characterizes the current behavior of the Tweedle parser, Tweedle AST decoder,
+project `.a3p` archive round trip, player `.a3w` reader, type `.a3c` reader,
+and resource archive readers.
 
 The tests are characterization tests: they preserve the observed Alice 3
 baseline while making decode regressions visible. They do not promise broader
 Tweedle language support or a new archive format.
 
-This lane intentionally exercises production decode paths instead of isolated
+This work intentionally exercises production decode paths instead of isolated
 mocks. Test archives may be constructed in memory, but they must flow through
 the same public readers and parsers used by Alice project loading.
 
 ## Build contract and non-goals
 
-Build the lane as a compatibility safety net, not as a decoder redesign.
+Build the coverage as a compatibility safety net, not as a decoder redesign.
 
 - Keep unsupported Tweedle AST constructs explicit: direct decoder calls throw
   `UnsupportedTweedleDecodeException`, while the current JSON archive readers
   preserve their documented `null` program/type behavior for unsupported
   Tweedle.
+- Treat unsupported player-program superclass decoding as a characterized
+  incomplete boundary. A JSON player archive with `class Program extends
+  MissingSuper {}` opens as a `Project`, but the program type remains `null`
+  because that Tweedle shape is not decoded yet.
 - Treat `version.txt` as part of Alice's normal written archive shape and the
   explicit version-check boundary. Do not require every `readProject(File)` or
   `readType(File)` characterization to exercise version checking.
@@ -30,6 +34,9 @@ Build the lane as a compatibility safety net, not as a decoder redesign.
   resources where resource decode behavior is in scope.
 - Do not test private helpers, use mocks for decode collaborators, or add
   assertions for implementation details that callers cannot observe.
+- Do not require LFS payloads, historical binary fixtures, user projects, or
+  broad archive rewrites for decode characterization. Prefer small synthetic
+  archives written under the JUnit temporary directory.
 
 ## Coverage scope
 
@@ -42,7 +49,7 @@ Build the lane as a compatibility safety net, not as a decoder redesign.
 | Type archive decode | `IoUtilities.readType(File)` for `.a3c` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Resource decode | JSON manifest-backed image and audio entries plus XML `resources.xml` archive entries | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 
-The intended lane covers successful decode behavior and known edge behavior:
+The intended coverage covers successful decode behavior and known edge behavior:
 
 - empty and malformed Tweedle source;
 - unsupported Tweedle declarations, members, methods, and superclasses;
@@ -145,6 +152,7 @@ Documented behavior:
 | Manifest references a missing Tweedle entry | Throws `IOException` that includes the missing entry path. |
 | Tweedle entry is malformed at the parser boundary | Throws `IOException` that includes `Unable to decode Tweedle type entry` and the entry path. |
 | Tweedle entry contains unsupported members or an unsupported superclass | Returns a project with a `null` program type for the unsupported decode, preserving current player-reader behavior. |
+| Tweedle entry is `class Program extends MissingSuper {}` | Returns a non-null `Project`; `Project.getProgramType()` is `null` because the program source is present but remains undecoded. |
 | Manifest declares both an unsupported Tweedle `TypeReference` and a valid image resource | Returns a project with a `null` program type while preserving resource identity, name, original file name, content type, and bytes. |
 | Manifest references a non-`tweedle` type format | Throws `IOException` with type reference context. |
 | Manifest has no Tweedle type reference | Returns a project with a `null` program type and default scene-camera handling. |
@@ -152,6 +160,44 @@ Documented behavior:
 | Manifest references missing resource data or missing UUIDs | Throws `IOException` with resource context. |
 | Manifest contains unsupported resource reference types | Ignores the unsupported references without crashing. |
 | Manifest references traversal paths | Rejects the unsafe resource reference. |
+
+#### Unsupported-superclass player program boundary
+
+The focused player-program boundary is a synthetic JSON `.a3w` archive with a
+single Tweedle program source:
+
+```java
+class Program extends MissingSuper {}
+```
+
+The archive uses the normal player-reader shape:
+
+```text
+version.txt
+manifest.json
+src/Program.twe
+```
+
+The manifest identifies the archive as `fileType: "a3w"`, names `Program` as
+the description, includes deterministic project and world identifiers, records
+scene-camera metadata such as `WindowCamera`, and points one `tweedle`
+`TypeReference` at `src/Program.twe`.
+
+Current behavior is intentionally incomplete:
+
+1. `IoUtilities.readProject(exportFile)` returns a non-null `Project`.
+2. The archive does not require image, audio, or historical Alice payloads.
+3. `project.getProgramType()` is `null` because the unsupported superclass
+   prevents Tweedle program decoding.
+4. The result is not treated as completed Tweedle support and does not imply
+   that unknown superclasses are resolved.
+
+This boundary is different from malformed Tweedle syntax. Malformed syntax, for
+example `class Program extends {}`, stays at the parser failure boundary and is
+reported as an archive decode `IOException`. An unresolved superclass is valid
+enough to reach the Tweedle AST decoder, where the decoder cannot create a
+program type and the JSON player reader preserves its current `null` program
+behavior.
 
 ### Type `.a3c` archive decode
 
@@ -283,13 +329,13 @@ mvn -pl core/tweedle,core/ast,core/story-api-migration -am \
   test
 ```
 
-Focused story API migration gate for project archive round-trip work:
+Focused story API migration gate for player-program and project archive work:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=IoUtilitiesTest \
+  -Dtest=org.lgna.project.io.IoUtilitiesTest \
   test
 ```
 
@@ -341,6 +387,33 @@ public void jsonPlayerReaderReportsMissingTweedleTypeEntry() throws Exception {
 The archive is synthetic, but the decode path is real because the assertion is
 made after `IoUtilities.readProject(File)` selects and runs the production
 reader.
+
+## Example: characterize unsupported player-program superclass decode
+
+Use this pattern for the player `.a3w` unsupported-superclass boundary. The test
+archive is synthetic and contains only manifest metadata plus Tweedle source; it
+does not use LFS-backed Alice payloads or rewrite a historical archive.
+
+1. Add the test to `IoUtilitiesTest`.
+2. Create a temporary file named like `unsupported-superclass-program.a3w`.
+3. Write `version.txt`, `manifest.json`, and `src/Program.twe`.
+4. In `manifest.json`, set `fileType` to `a3w`, describe the program as
+   `Program`, include stable project/world identifiers, record scene-camera
+   metadata such as `WindowCamera`, and add a `tweedle` type reference for
+   `src/Program.twe`.
+5. Write this Tweedle source:
+
+   ```java
+   class Program extends MissingSuper {}
+   ```
+
+6. Read the archive with `IoUtilities.readProject(exportFile)`.
+7. Assert the returned `Project` is not `null`.
+8. Assert `project.getProgramType()` is `null`.
+
+The assertion documents the current incomplete decode behavior: Alice recognizes
+the JSON player archive and returns a project shell, but it does not decode a
+program type when the Tweedle program extends an unresolved superclass.
 
 ## Example: verify saving after reopening writes current state
 
@@ -416,7 +489,7 @@ entry order unless the archive format contract requires them.
 ### 4. Run the focused gate
 
 Run the focused decode command first. If it passes, run the touched module's full
-test command. Use the coverage gate when the change is part of a coverage lane
+test command. Use the coverage gate when the change is part of a coverage update
 or pull request.
 
 ## Contract-to-test map
@@ -439,7 +512,8 @@ or pull request.
 | Player archive malformed Tweedle entries are wrapped as archive decode failures. | `IoUtilitiesTest.jsonPlayerReaderWrapsMalformedTweedleTypeEntry` |
 | Non-`tweedle` player type references fail with type-reference context. | `IoUtilitiesTest.jsonProjectReaderReportsUnsupportedTypeReferenceFormat` |
 | Unsupported JSON manifest references are ignored without becoming binary project resources. | `IoUtilitiesTest.ignoresUnsupportedJsonResourceReferencesWithoutCrashing`; `IoUtilitiesTest.readsExportedPlayerArchiveModelAndGeneratedTypeReferencesWithoutBinaryResources` |
-| Unsupported player Tweedle members and superclasses remain undecoded. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleConstructsRemainUndecoded`; `IoUtilitiesTest.unsupportedJsonPlayerTweedleSuperclassRemainsUndecoded` |
+| Unsupported player Tweedle members remain undecoded. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleConstructsRemainUndecoded` |
+| JSON player archive with `class Program extends MissingSuper {}` returns a project with no decoded program type. | `IoUtilitiesTest.jsonPlayerReaderLeavesUnsupportedSuperclassProgramUndecoded` |
 | Type archives with supported Tweedle decode types through `IoUtilities.readType(File)`. | `IoUtilitiesTest.readsSimpleJsonTypeArchiveTweedleClass` |
 | JSON type manifest mismatches and missing type references fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsManifestNameMismatchInsteadOfFallback`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTypeReferenceInsteadOfReturningNull` |
 | JSON type archives with non-`tweedle`, missing, or malformed type entries fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsUnsupportedTypeReferenceFormat`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTweedleTypeEntry`; `IoUtilitiesTest.jsonTypeReaderWrapsMalformedTweedleTypeEntry` |
