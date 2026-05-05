@@ -53,6 +53,15 @@ FORBIDDEN_REVIEWER_INSTRUCTION_PHRASES = (
     "branch-installable wrapper",
 )
 
+GENERATED_SCORECARD_REFERENCE_PHRASES = (
+    "### CLI reference",
+    "### Examples",
+    "Preview the scorecard without modifying files",
+    "Compare the current branch with another worktree",
+    "Generate a review artifact under the inspected checkout",
+    "export NODE_OPTIONS",
+)
+
 
 @lru_cache(maxsize=1)
 def load_generator():
@@ -66,7 +75,7 @@ def load_generator():
     return module
 
 
-def assert_scorecard_uses_public_reviewer_instructions(
+def assert_scorecard_uses_plain_reviewer_instructions(
     test_case: unittest.TestCase,
     markdown: str,
 ) -> None:
@@ -76,13 +85,15 @@ def assert_scorecard_uses_public_reviewer_instructions(
         markdown,
     )
     test_case.assertIn(
-        "The scorecard generator itself is invoked with Python",
+        "Modernization scorecard generator reference",
         markdown,
     )
     test_case.assertIn(
-        "With `--root`, relative output paths are resolved inside the inspected",
+        "./modernization-scorecard-generator.md",
         markdown,
     )
+    for phrase in GENERATED_SCORECARD_REFERENCE_PHRASES:
+        test_case.assertNotIn(phrase, markdown)
     lower_markdown = markdown.lower()
     for phrase in FORBIDDEN_REVIEWER_INSTRUCTION_PHRASES:
         test_case.assertNotIn(phrase, lower_markdown)
@@ -454,7 +465,7 @@ class ModernizationScorecardCliTest(unittest.TestCase):
         self.assertIn("| `alice-desktop-export` | `export` |", first_markdown)
         self.assertIn("| LFS-independent corpus manifest | Missing |", first_markdown)
         self.assertIn("Coverage ratchets are executable CI floors, not the long-term target.", first_markdown)
-        assert_scorecard_uses_public_reviewer_instructions(self, first_markdown)
+        assert_scorecard_uses_plain_reviewer_instructions(self, first_markdown)
         self.assertNotIn(str(Path(tempfile.gettempdir())), first_markdown)
 
     def test_cli_rejects_output_traversal_outside_root_before_writing(self) -> None:
@@ -609,15 +620,26 @@ class ModernizationScorecardCliTest(unittest.TestCase):
 
 
 class ModernizationScorecardDocumentationContractTest(unittest.TestCase):
-    def test_docs_index_links_the_scorecard_reference(self) -> None:
+    def test_docs_index_links_the_generated_scorecard_and_generator_reference(self) -> None:
         index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
 
         self.assertIn("./reference/modernization-scorecard.md", index)
+        self.assertIn("./reference/modernization-scorecard-generator.md", index)
 
-    def test_checked_in_scorecard_uses_repository_script_instructions(self) -> None:
+    def test_checked_in_scorecard_is_plain_generated_snapshot(self) -> None:
         markdown = (REPO_ROOT / "docs" / "reference" / "modernization-scorecard.md").read_text(encoding="utf-8")
 
-        assert_scorecard_uses_public_reviewer_instructions(self, markdown)
+        assert_scorecard_uses_plain_reviewer_instructions(self, markdown)
+
+    def test_generator_reference_owns_cli_safety_and_review_workflow_docs(self) -> None:
+        markdown = (REPO_ROOT / "docs" / "reference" / "modernization-scorecard-generator.md").read_text(encoding="utf-8")
+
+        self.assertIn("# Modernization scorecard generator reference", markdown)
+        self.assertIn("## CLI contract", markdown)
+        self.assertIn("## Output-path safety", markdown)
+        self.assertIn("## Review workflow", markdown)
+        self.assertIn("python3 scripts/generate-modernization-scorecard.py", markdown)
+        self.assertIn("`--output` is always constrained to the resolved `--root`.", markdown)
 
 
 if __name__ == "__main__":
