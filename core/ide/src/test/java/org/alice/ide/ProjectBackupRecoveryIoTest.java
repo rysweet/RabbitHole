@@ -157,6 +157,45 @@ public class ProjectBackupRecoveryIoTest {
     assertTrue(dispatch.shouldShowNewProject());
   }
 
+  @Test
+  public void corruptDefaultBackupWithNoOtherBackupsPlansUnsavedBackupsFailure() throws Exception {
+    File defaultBackupDirectory = temporaryFolder.newFolder(".defaultbak");
+    File corruptDefaultBackup = new File(defaultBackupDirectory, "auto20240102_140000.a3p");
+    Files.writeString(corruptDefaultBackup.toPath(), "not an unsaved project archive", StandardCharsets.UTF_8);
+    FileProjectLoader loader = new FileProjectLoader(corruptDefaultBackup);
+    ProjectBackupSelector selector = new ProjectBackupSelector(file -> {
+      throw new AssertionError("corrupted unsaved project recovery should not compare backup times");
+    });
+    Set<String> unloadableFiles = Set.of(corruptDefaultBackup.getName());
+
+    Project project = new TestFileProjectLoader(corruptDefaultBackup).loadNow();
+    File backup = selector.getNextBackup(
+        LocalDateTime.MIN,
+        defaultBackupDirectory,
+        new File[] {corruptDefaultBackup},
+        true,
+        unloadableFiles);
+    ProjectLoadFailurePlan plan = ProjectLoadFailurePlan.choose(
+        loader.isBackup(),
+        true,
+        true,
+        loader.isDefaultBackup(),
+        backup,
+        corruptDefaultBackup);
+    ProjectLoadFailureDispatchPlan dispatch = ProjectLoadFailureDispatchPlan.afterUserChoice(
+        plan.getAction(),
+        false);
+
+    assertNull(project);
+    assertTrue(loader.isDefaultBackup());
+    assertNull(loader.getMainProjectFile());
+    assertNull(backup);
+    assertEquals(ProjectLoadFailurePlan.Action.SHOW_UNSAVED_BACKUPS_LOAD_ERROR, plan.getAction());
+    assertNull(plan.getBackupToLoad());
+    assertEquals(ProjectLoadFailureDispatchPlan.LoadTarget.NONE, dispatch.getLoadTarget());
+    assertTrue(dispatch.shouldShowNewProject());
+  }
+
   private static NamedUserType programType(String name) {
     NamedUserType type = new NamedUserType();
     type.name.setValue(name);
