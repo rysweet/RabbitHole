@@ -43,8 +43,18 @@ Then summarize the generated JaCoCo CSV files:
 python3 scripts/summarize-jacoco-coverage.py --output coverage-summary.md
 ```
 
-The summary lists aggregate line coverage and per-module line coverage. Use this
-file as the measurement source for ratchet decisions.
+For a reviewable evidence inventory, generate the deterministic manifest too:
+
+```sh
+python3 scripts/summarize-jacoco-coverage.py \
+  --output coverage-summary.md \
+  --evidence-manifest coverage-evidence-manifest.json
+```
+
+The summary lists aggregate line coverage and per-module line coverage. The
+manifest lists the same measured JaCoCo state plus sorted report, `jacoco.exec`,
+and Surefire diagnostic paths. Use these files as the measurement source for
+ratchet decisions.
 
 ## 3. Select module floors
 
@@ -81,6 +91,7 @@ Run the summary script with the proposed floors:
 ```sh
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
+  --evidence-manifest coverage-evidence-manifest.json \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -93,6 +104,11 @@ The command passes only when every configured module report exists, every module
 appears at most once, and every configured line coverage floor is met. Keep the
 aggregate floor within `0` through `100` by CI policy; module floors are also
 validated by the summary script.
+
+If the aggregate JaCoCo CSV is missing, empty, or below `70.0%`, record the
+70% target as not claimable or not met. A high module floor such as
+`core/story-api-migration=75.0` is module evidence only; it does not prove
+aggregate 70% coverage.
 
 ## 5. Review one hotspot candidate
 
@@ -123,6 +139,7 @@ A cohesive ratchet-only pull request includes:
 
 - the CI ratchet command update;
 - coverage documentation updates;
+- `coverage-summary.md` and `coverage-evidence-manifest.json` review artifacts;
 - coverage validation results;
 - no production refactor when no protected hotspot qualifies.
 
@@ -140,6 +157,9 @@ Measured no-Sims aggregate line coverage at 10.24%.
 Kept aggregate floor at 8.0% because a 10.0% floor has insufficient margin.
 Added module floors: core/ast 18.0%, core/model-loading 10.0%,
 core/story-api-migration 75.0%, core/tweedle 50.0%, netbeans 25.0%.
+Attached coverage-summary.md and coverage-evidence-manifest.json from the
+alice-coverage-evidence-no-sims CI artifact.
+Did not claim the 70% target; aggregate JaCoCo is below 70.0%.
 Reviewed `ModelResourceExporter` as the protected hotspot and performed one
 small behavior-preserving subresource tag helper extraction covered by existing
 XML characterization tests.

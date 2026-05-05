@@ -23,11 +23,17 @@ optional local evidence reports.
 | `git ls-files '*.java'` | Yes | Supplies tracked Java files for hotspot detection. |
 | `coverage-report/target/site/jacoco-aggregate/jacoco.csv` | No | Supplies current aggregate line coverage when present. |
 | `<module>/target/site/jacoco/jacoco.csv` | No | Supplies current module line coverage when present. |
+| `coverage-evidence-manifest.json` | No | Supplies the deterministic CI/local evidence inventory reviewers use to trace measured JaCoCo reports and diagnostic artifacts. |
 | `docs/reference/modernization-corpus-manifest.json` | No | Supplies corpus coverage metadata without requiring Git LFS payloads. |
 
 Missing optional evidence is reported as missing or blocked evidence rather
 than converted to false zero coverage. The generator does not run `git lfs
 pull`, inspect binary corpus payloads, or modify production code.
+
+JaCoCo CSV files remain the authoritative source for coverage percentages. The
+manifest is evidence wiring: it makes the measured reports, generated summary,
+raw execution data, Surefire diagnostics, and gate states discoverable from CI
+artifacts and local review bundles.
 
 ## CLI contract
 

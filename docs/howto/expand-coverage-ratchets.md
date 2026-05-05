@@ -26,6 +26,7 @@ Run the CI-equivalent no-Sims coverage command:
 mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
+  --evidence-manifest coverage-evidence-manifest.json \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -70,6 +71,7 @@ Example:
 ```yaml
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
+  --evidence-manifest coverage-evidence-manifest.json \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -90,6 +92,7 @@ floors:
 ```sh
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
+  --evidence-manifest coverage-evidence-manifest.json \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -101,6 +104,14 @@ python3 scripts/summarize-jacoco-coverage.py \
 The command must pass without malformed threshold, duplicate module, or
 missing-module failures. If a module report is missing, either fix the coverage
 generation for that module or do not configure a floor for it.
+
+Open `coverage-summary.md` for the human-readable result and
+`coverage-evidence-manifest.json` for the deterministic inventory of aggregate
+JaCoCo state, module JaCoCo state, diagnostic artifact paths, and configured
+gate results. Do not describe the 70% target as met unless the aggregate
+JaCoCo CSV exists and reports aggregate line coverage of at least `70.0%`.
+Module-level reports can justify module ratchets, but they cannot substitute for
+aggregate target evidence.
 
 ## 5. Review protected hotspots
 
@@ -133,6 +144,8 @@ investigation artifact with:
 
 - measured aggregate coverage;
 - measured coverage for each ratcheted module;
+- the `coverage-summary.md` and `coverage-evidence-manifest.json` artifact paths
+  reviewers should inspect;
 - the floor chosen for each module;
 - the safety margin rationale;
 - the hotspot candidate reviewed;

@@ -129,6 +129,37 @@ measured zero coverage. Module entries are sorted by module path, artifact
 entries are sorted by kind and path, and gate states are `pass`, `fail`, or
 `not-configured`.
 
+### Evidence manifest schema
+
+The manifest is a repository-relative JSON contract for CI artifacts and local
+review tooling:
+
+| Field | Type | Contents |
+| --- | --- | --- |
+| `schemaVersion` | number | Manifest schema version. Current value is `1`. |
+| `coverageModel` | string | Coverage model name. Current value is `no-sims`. |
+| `source` | string | Coverage source. Current value is `jacoco`. |
+| `mavenCommand` | string | Reproducible Maven command that produced the expected JaCoCo reports. |
+| `aggregate` | object | Aggregate report state and line metrics when measured. |
+| `modules` | array | Sorted module report states and line metrics when measured. |
+| `artifacts` | array | Sorted diagnostic artifact inventory. |
+| `gates` | object | Aggregate and module gate states for the configured floors. |
+
+An aggregate entry always includes `expectedCsv`. It includes
+`lineCoveragePercent`, `covered`, `missed`, and `total` only when measured
+aggregate JaCoCo line totals exist. Module entries follow the same rule: an
+`empty` module report stays inventoried, but it does not receive a false
+coverage percentage.
+
+Artifact entries use these `kind` values:
+
+| Kind | Path pattern |
+| --- | --- |
+| `aggregate-report` | `coverage-report/target/site/jacoco-aggregate/**` |
+| `module-report` | `<module>/target/site/jacoco/**` |
+| `exec-data` | `<module>/target/jacoco.exec` |
+| `surefire-report` | `<module>/target/surefire-reports/**` |
+
 Exit status is part of the contract:
 
 | Exit status | Meaning |
