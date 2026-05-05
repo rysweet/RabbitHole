@@ -138,6 +138,9 @@
                   "const": "-Dinstall4j.skip"
                 },
                 {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
                   "const": "-pl"
                 },
                 {
@@ -154,8 +157,8 @@
                 }
               ],
               "items": false,
-              "minItems": 8,
-              "maxItems": 8
+              "minItems": 9,
+              "maxItems": 9
             },
             {
               "prefixItems": [
@@ -167,6 +170,9 @@
                 },
                 {
                   "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
                 },
                 {
                   "const": "-pl"
@@ -185,8 +191,8 @@
                 }
               ],
               "items": false,
-              "minItems": 8,
-              "maxItems": 8
+              "minItems": 9,
+              "maxItems": 9
             },
             {
               "prefixItems": [

@@ -94,9 +94,12 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     public Project readProject(boolean makeVrReady) throws IOException {
       ProjectManifest manifest = readManifest(ProjectManifest.class);
       Set<Resource> resources = readResources(manifest);
-      Set<NamedUserType> decodedTypes = readTypes(manifest);
-      NamedUserType programType = findTypeByName(decodedTypes, manifestName(manifest));
-      Set<NamedUserType> namedUserTypes = new HashSet<>(decodedTypes);
+      TypeReadResult decodedTypes = readTypes(manifest);
+      NamedUserType programType = decodedTypes.findByName(manifestName(manifest));
+      if (programType == null) {
+        verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
+      }
+      Set<NamedUserType> namedUserTypes = new HashSet<>(decodedTypes.types);
       namedUserTypes.remove(programType);
       return new Project(programType, namedUserTypes, resources, sceneCameraType(manifest));
     }
@@ -105,8 +108,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     public TypeResourcesPair readType() throws IOException {
       TypeManifest manifest = readManifest(TypeManifest.class);
       Set<Resource> resources = readResources(manifest);
-      Set<NamedUserType> decodedTypes = readTypes(manifest);
-      NamedUserType type = findTypeByName(decodedTypes, manifestName(manifest));
+      TypeReadResult decodedTypes = readTypes(manifest);
+      NamedUserType type = decodedTypes.findByName(manifestName(manifest));
       if (type == null) {
         type = fallbackTypeForUnnamedManifest(manifest, decodedTypes);
       }
@@ -212,20 +215,21 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       return null;
     }
 
-    private Set<NamedUserType> readTypes(Manifest manifest) throws IOException {
-      Set<NamedUserType> types = new LinkedHashSet<>();
+    private TypeReadResult readTypes(Manifest manifest) throws IOException {
+      TypeReadResult result = new TypeReadResult();
       if (manifest == null) {
-        return types;
+        return result;
       }
       for (ResourceReference resourceReference : manifest.resources) {
         if (resourceReference instanceof TypeReference typeReference) {
+          result.hasTypeReferences = true;
           NamedUserType type = readTweedleType(typeReference);
           if (type != null) {
-            types.add(type);
+            result.add(type);
           }
         }
       }
-      return types;
+      return result;
     }
 
     private NamedUserType readTweedleType(TypeReference typeReference) throws IOException {
@@ -260,33 +264,56 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
     }
 
-
-    private static NamedUserType fallbackTypeForUnnamedManifest(Manifest manifest, Set<NamedUserType> decodedTypes) {
-      if (((manifestName(manifest) == null) || manifestName(manifest).isEmpty()) && !decodedTypes.isEmpty()) {
-        return decodedTypes.iterator().next();
+    private static NamedUserType fallbackTypeForUnnamedManifest(Manifest manifest, TypeReadResult decodedTypes) {
+      if (hasNoManifestName(manifest) && !decodedTypes.types.isEmpty()) {
+        return decodedTypes.types.iterator().next();
       }
       return null;
     }
 
-    private static void verifyTypeArchiveHasExpectedType(Manifest manifest, Set<NamedUserType> decodedTypes) throws IOException {
-      String expectedName = manifestName(manifest);
-      if ((manifest != null) && hasTypeReferences(manifest)) {
-        if (decodedTypes.isEmpty()) {
-          return;
-        }
-        throw new IOException(
-            "Type archive manifest names '" + expectedName + "' but decoded type names are " + decodedTypeNames(decodedTypes));
-      }
-      throw new IOException("Type archive manifest for '" + expectedName + "' does not contain a type reference");
+    private static void verifyTypeArchiveHasExpectedType(Manifest manifest, TypeReadResult decodedTypes) throws IOException {
+      verifyArchiveHasExpectedType(
+          "Type archive",
+          "",
+          "a type reference",
+          manifest,
+          decodedTypes);
     }
 
-    private static boolean hasTypeReferences(Manifest manifest) {
-      for (ResourceReference resourceReference : manifest.resources) {
-        if (resourceReference instanceof TypeReference) {
-          return true;
-        }
+    private static void verifyProjectArchiveHasExpectedProgramType(Manifest manifest, TypeReadResult decodedTypes) throws IOException {
+      if (hasNoManifestName(manifest)) {
+        return;
       }
-      return false;
+      verifyArchiveHasExpectedType(
+          "Project archive",
+          "program type ",
+          "a type reference for the program type",
+          manifest,
+          decodedTypes);
+    }
+
+    private static void verifyArchiveHasExpectedType(
+        String archiveKind,
+        String expectedNameRole,
+        String missingReferenceDescription,
+        Manifest manifest,
+        TypeReadResult decodedTypes) throws IOException {
+      String expectedName = manifestName(manifest);
+      if (decodedTypes.hasTypeReferences && decodedTypes.types.isEmpty()) {
+        return;
+      }
+      if (decodedTypes.hasTypeReferences) {
+        throw new IOException(
+            archiveKind + " manifest names " + expectedNameRole + "'" + expectedName
+                + "' but decoded type names are " + decodedTypeNames(decodedTypes.types));
+      }
+      throw new IOException(
+          archiveKind + " manifest for '" + expectedName + "' does not contain " + missingReferenceDescription);
+    }
+
+    private static boolean hasNoManifestName(Manifest manifest) {
+      String name = manifestName(manifest);
+      return (name == null) || name.isEmpty();
     }
 
     private static String decodedTypeNames(Set<NamedUserType> decodedTypes) {
@@ -307,20 +334,25 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       return sb.toString();
     }
 
-    private static NamedUserType findTypeByName(Set<NamedUserType> types, String name) {
-      if (name == null) {
-        return null;
-      }
-      for (NamedUserType type : types) {
-        if (name.equals(type.getName())) {
-          return type;
-        }
-      }
-      return null;
-    }
-
     private static String manifestName(Manifest manifest) {
       return (manifest == null) ? null : manifest.getName();
+    }
+
+    private static class TypeReadResult {
+      private final Set<NamedUserType> types = new LinkedHashSet<>();
+      private final Map<String, NamedUserType> typesByName = new HashMap<>();
+      private boolean hasTypeReferences;
+
+      private void add(NamedUserType type) {
+        types.add(type);
+        if (type.getName() != null) {
+          typesByName.putIfAbsent(type.getName(), type);
+        }
+      }
+
+      private NamedUserType findByName(String name) {
+        return (name == null) ? null : typesByName.get(name);
+      }
     }
 
     private static UUID requireUuid(
@@ -375,9 +407,10 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       compareResources(project.getResources(), resources);
 
       List<DataSource> entries = collectEntries(manifest, resources, dataSources);
+      Set<String> manifestResourceNames = manifestResourceNames(manifest);
       ModelResourceCrawler crawler = new ModelResourceCrawler();
       project.getProgramType().crawl(crawler, CrawlPolicy.COMPLETE);
-      entries.addAll(createEntriesForTypes(manifest, crawler.activeUserTypes));
+      entries.addAll(createEntriesForTypes(manifest, crawler.activeUserTypes, manifestResourceNames));
       Map<String, Set<JointedModelResource>> modelResources = crawler.modelResources;
       for (Set<JointedModelResource> resourceSet : modelResources.values()) {
         JsonModelIo modelIo = new JsonModelIo(resourceSet, format);
@@ -401,20 +434,27 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       writeDataSources(os, entries);
     }
 
-    private Collection<? extends DataSource> createEntriesForTypes(Manifest manifest, Set<NamedUserType> userTypes) {
+    private Collection<? extends DataSource> createEntriesForTypes(
+        Manifest manifest,
+        Set<NamedUserType> userTypes,
+        Set<String> manifestResourceNames) {
       return userTypes.stream()
           .sorted(Comparator.comparingInt(AbstractType::hierarchyDepth))
-          .map(ut -> dataSourceForType(manifest, ut))
+          .map(ut -> dataSourceForType(manifest, ut, manifestResourceNames))
           .filter(Objects::nonNull)
           .collect(Collectors.toList());
     }
 
     private DataSource dataSourceForType(Manifest manifest, NamedUserType ut) {
+      return dataSourceForType(manifest, ut, manifestResourceNames(manifest));
+    }
+
+    private DataSource dataSourceForType(Manifest manifest, NamedUserType ut, Set<String> manifestResourceNames) {
       // Special case to catch older models from starter worlds
       String likelyTypeName = ut.getName();
       String typeName = "SandDunes".equals(likelyTypeName) ? "Terrain" : likelyTypeName;
 
-      if (manifest.resources.stream().noneMatch(x -> x.name.equals(typeName))) {
+      if (manifestResourceNames.add(typeName)) {
         final String fileName = "src/" + typeName + '.' + TWEEDLE_EXTENSION;
         manifest.resources.add(new TypeReference(typeName, fileName, TWEEDLE_FORMAT));
         return new ByteArrayDataSource(fileName, serializedClass(ut));
@@ -480,11 +520,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private Collection<? extends DataSource> createEntriesForResourceTypes(Manifest manifest, Set<JointedModelResource> resources) {
       Set<Class<?>> distinctResources = new HashSet<>();
       return resources.stream()
-                      .filter(resource -> !distinctResources.contains(resource.getClass()))
-                      .map(resource -> {
-                        distinctResources.add(resource.getClass());
-                        return dataSourceForResource(manifest, resource);
-                      })
+                      .filter(resource -> distinctResources.add(resource.getClass()))
+                      .map(resource -> dataSourceForResource(manifest, resource))
                       .collect(Collectors.toList());
     }
 
@@ -544,8 +581,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
     private static void addResources(Manifest manifest, List<DataSource> dataSources, Set<Resource> resources) {
       Set<String> usedEntryNames = new HashSet<>();
+      Map<String, Integer> nextDirectorySuffixByFileName = new HashMap<>();
       for (Resource resource : resources) {
-        String entryName = generateEntryName(resource, usedEntryNames);
+        String entryName = generateEntryName(resource, usedEntryNames, nextDirectorySuffixByFileName);
         usedEntryNames.add(entryName);
         addResourceReference(manifest, resource, entryName);
         // TODO Expand to cover arbitrary data files
@@ -572,19 +610,33 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       throw new RuntimeException("Resource of unexpected type " + resource);
     }
 
-    private static String generateEntryName(Resource resource, Set<String> usedEntryNames) {
+    private static String generateEntryName(
+        Resource resource,
+        Set<String> usedEntryNames,
+        Map<String, Integer> nextDirectorySuffixByFileName) {
       String fileName = ResourceExportNames.entryFileName(resource);
-      String entryName = potentialEntryName(fileName, "");
-      int i = 1;
+      int i = nextDirectorySuffixByFileName.getOrDefault(fileName, 1);
+      String entryName = potentialEntryName(fileName, i);
       while (usedEntryNames.contains(entryName)) {
         i++;
-        entryName = potentialEntryName(fileName, String.valueOf(i));
+        entryName = potentialEntryName(fileName, i);
       }
+      nextDirectorySuffixByFileName.put(fileName, i + 1);
       return entryName;
     }
 
-    private static String potentialEntryName(String validFilename, String i) {
-      return "resources" + i + "/" + validFilename;
+    private static String potentialEntryName(String validFilename, int i) {
+      return "resources" + ((i == 1) ? "" : String.valueOf(i)) + "/" + validFilename;
+    }
+
+    private static Set<String> manifestResourceNames(Manifest manifest) {
+      Set<String> resourceNames = new HashSet<>();
+      for (ResourceReference resourceReference : manifest.resources) {
+        if (resourceReference.name != null) {
+          resourceNames.add(resourceReference.name);
+        }
+      }
+      return resourceNames;
     }
   }
 }

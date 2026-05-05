@@ -1,0 +1,207 @@
+# Characterize Project IO Corpus Behavior
+
+Use this guide to add or review deterministic, LFS-free characterization tests
+for Alice project/archive IO behavior in `core/story-api-migration`.
+
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Choose the archive seam](#choose-the-archive-seam)
+- [Build a deterministic fixture](#build-a-deterministic-fixture)
+- [Assert archive entries and routing](#assert-archive-entries-and-routing)
+- [Assert production readback](#assert-production-readback)
+- [Characterize fail-fast JSON player reads](#characterize-fail-fast-json-player-reads)
+- [Run the focused tests](#run-the-focused-tests)
+
+## Prerequisites
+
+Work in the project IO test package:
+
+```text
+core/story-api-migration/src/test/java/org/lgna/project/io/
+```
+
+Prefer extending:
+
+```text
+HistoricalArchiveRoundTripCharacterizationTest.java
+IoUtilitiesTest.java
+```
+
+Use JUnit 4 and `TemporaryFolder`. Do not commit `.a3p`, `.a3w`, `.a3c`, image,
+or audio binaries for this collection of test archives unless a reviewed binary
+corpus policy explicitly allows them.
+
+Initialize the Tweedle grammar submodule before broad Maven validation from a
+fresh checkout or worktree:
+
+```bash
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+```
+
+## Choose the archive seam
+
+Start with the production boundary the change affects:
+
+| Behavior | Test target |
+| --- | --- |
+| Generated editable project archive shape | `HistoricalArchiveRoundTripCharacterizationTest` with `IoUtilities.writeProject` and `IoUtilities.readProject`. |
+| Generated player export archive shape | `HistoricalArchiveRoundTripCharacterizationTest` with `IoUtilities.exportProject` and `IoUtilities.readProject`. |
+| Generated type archive shape | `HistoricalArchiveRoundTripCharacterizationTest` with `IoUtilities.writeType` and `IoUtilities.readType`. |
+| Reader selection, corrupt manifests, missing entries, version checks, unsafe resources | `IoUtilitiesTest`. |
+| New migration behavior | Add IO seam characterization first; do not start with a broad `ProjectMigrationManager` refactor. |
+
+Use generated fixture names that describe the protected scenario:
+
+```text
+generated-historical-project.a3p
+generated-historical-project-roundtrip.a3p
+generated-historical-world.a3w
+generated-historical-type.a3c
+```
+
+## Build a deterministic fixture
+
+Use small in-memory project objects and tiny generated resource bytes.
+
+For image-resource coverage, generate a one-pixel image in memory and construct
+an `ImageResource` from it:
+
+```java
+BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+image.setRGB(0, 0, 0xFF996633);
+ImageResource resource = new ImageResource(image, "historical-project-texture.png", "png");
+```
+
+Use a generated `NamedUserType` with `SProgram` as its supertype when the archive
+should behave like a world/program fixture. Add a `ResourceExpression` when the
+test needs to prove resource rebinding after readback.
+
+## Assert archive entries and routing
+
+Open the generated archive with `ZipFile` and assert the entries that define the
+current contract.
+
+For resource-bearing `.a3p` project archives:
+
+```text
+version.txt
+manifest.json
+programType.xml
+resources.xml
+resources/<resource-name>
+```
+
+Also assert that `src/<ProgramType>.twe` is absent. That absence documents the
+current XML fallback boundary for editable project archives.
+
+Generated `.a3p` archives without resources should omit `resources.xml` and
+resource data entries.
+
+For `.a3w` player archives:
+
+```text
+version.txt
+manifest.json
+src/<ProgramType>.twe
+```
+
+Assert manifest metadata, scene-camera type, the `SceneGraphLibrary`
+prerequisite, and the Tweedle type reference.
+
+When a `.a3w` fixture includes resource-expression constructs, document the
+current decode boundary explicitly: simple program source can round trip, while
+unsupported resource-expression source currently leaves the program type
+undecoded even though binary resource data reads back.
+
+For resource-bearing `.a3c` type archives:
+
+```text
+version.txt
+type.xml
+resources.xml
+resources/<resource-name>
+```
+
+For `.a3c` fixtures without `ResourceExpression`-backed resources, assert that
+resource metadata and data entries are absent.
+
+Assert that generated XML fallback type fixtures do not contain `manifest.json`.
+
+## Assert production readback
+
+After inspecting archive entries, read through the public production API:
+
+```java
+Project project = IoUtilities.readProject(projectArchive);
+TypeResourcesPair pair = IoUtilities.readType(typeArchive);
+```
+
+Do not instantiate `JsonProjectIo` or `XmlProjectIo` directly unless the test is
+explicitly about those lower-level boundaries. `IoUtilities` reader selection is
+part of the behavior being characterized.
+
+For resource-bearing fixtures, assert:
+
+- resource UUID;
+- resource name;
+- original file name;
+- content type;
+- bytes;
+- AST `ResourceExpression` binding to the decoded resource object when the
+  archive contains a resource expression.
+
+For round-trip coverage, write the decoded object to a second archive and repeat
+the same archive-entry and readback assertions.
+
+## Characterize fail-fast JSON player reads
+
+When a `.a3w` player archive has a JSON manifest with a program name, read it as
+a named program archive. The archive must either decode that named program type
+or fail fast with `IOException`.
+
+Use `IoUtilitiesTest` for this project archive reading behavior:
+
+| Scenario | Expected behavior |
+| --- | --- |
+| Manifest has `description.name`, but no matching Tweedle type reference | `IoUtilities.readProject` throws `IOException` that names the manifest program and the missing type reference. |
+| Manifest has `description.name`, but the referenced Tweedle source decodes to a different program type | `IoUtilities.readProject` throws `IOException` that names both the manifest program and decoded type. |
+
+Do not characterize these cases as successful reads with a missing or null
+program type. Production callers already use the public `IoUtilities.readProject`
+contract, which declares `IOException` and `VersionNotSupportedException`, so the
+safe production behavior is to propagate the checked failure rather than return a
+partially decoded `Project`.
+
+## Run the focused tests
+
+Run the focused historical archive suite first:
+
+```bash
+mvn -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  test
+```
+
+If the change touches `IoUtilitiesTest`, include it explicitly:
+
+```bash
+mvn -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest,org.lgna.project.io.IoUtilitiesTest \
+  test
+```
+
+Before handing off a code change that touches the module, run:
+
+```bash
+mvn -pl core/story-api-migration -am -DfailIfNoTests=false test
+```
+
+The characterization is complete when the test uses generated fixtures, reaches
+the production IO API, and asserts the observable archive contract rather than
+only proving that helper methods can run.

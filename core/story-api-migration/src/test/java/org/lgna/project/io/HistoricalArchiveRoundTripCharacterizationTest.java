@@ -38,6 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class HistoricalArchiveRoundTripCharacterizationTest {
@@ -108,6 +109,45 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertArrayEquals(imageResource.getData(), readResource.getData());
   }
 
+  @Test
+  public void generatedProjectArchiveCharacterizesXmlFallbackProjectRoundTripWithoutExternalFixture() throws Exception {
+    ImageResource imageResource = generatedImageResource("historical-project-texture.png", 0xFF996633);
+    Project project = new Project(
+        typeReferencingImageResource("GeneratedHistoricalProject", imageResource),
+        Project.SceneCameraType.VRHeadset);
+    project.addResource(imageResource);
+    File projectArchive = temporaryFolder.newFile("generated-historical-project.a3p");
+
+    IoUtilities.writeProject(projectArchive, project);
+
+    assertXmlProjectArchiveFacts(
+        projectArchive,
+        "GeneratedHistoricalProject",
+        Project.SceneCameraType.VRHeadset,
+        imageResource);
+    Project firstRead = IoUtilities.readProject(projectArchive);
+    assertProjectResourceFacts(
+        firstRead,
+        "GeneratedHistoricalProject",
+        Project.SceneCameraType.VRHeadset,
+        imageResource);
+
+    File roundTripArchive = temporaryFolder.newFile("generated-historical-project-roundtrip.a3p");
+    IoUtilities.writeProject(roundTripArchive, firstRead);
+
+    assertXmlProjectArchiveFacts(
+        roundTripArchive,
+        "GeneratedHistoricalProject",
+        Project.SceneCameraType.VRHeadset,
+        imageResource);
+    Project secondRead = IoUtilities.readProject(roundTripArchive);
+    assertProjectResourceFacts(
+        secondRead,
+        "GeneratedHistoricalProject",
+        Project.SceneCameraType.VRHeadset,
+        imageResource);
+  }
+
   private static void assertXmlTypeArchiveFacts(File archive) throws Exception {
     try (ZipFile zipFile = new ZipFile(archive)) {
       ZipEntry versionEntry = zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME);
@@ -119,6 +159,34 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           zipFile.getEntry("resources/historical-type-texture.png"));
       assertNull("Generated .a3c fixtures intentionally exercise XML fallback rather than JSON manifest loading",
           zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
+    }
+  }
+
+  private static void assertXmlProjectArchiveFacts(
+      File archive,
+      String expectedProgramName,
+      Project.SceneCameraType expectedSceneCameraType,
+      ImageResource expectedResource) throws Exception {
+    try (ZipFile zipFile = new ZipFile(archive)) {
+      ZipEntry versionEntry = zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME);
+      assertNotNull("Generated .a3p archives should declare a version", versionEntry);
+      assertEquals(ProjectVersion.getCurrentVersion().toString(), readEntry(zipFile, versionEntry).trim());
+      assertNotNull("Generated .a3p archives should contain a manifest",
+          zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
+      assertNotNull("Generated .a3p archives should contain the XML program payload",
+          zipFile.getEntry("programType.xml"));
+      assertNotNull("Generated .a3p archives should contain resource metadata",
+          zipFile.getEntry("resources.xml"));
+      assertNotNull("Generated .a3p archives should contain generated image data",
+          zipFile.getEntry("resources/" + expectedResource.getName()));
+      assertNull("Generated .a3p fixtures intentionally exercise XML fallback despite manifest.json",
+          zipFile.getEntry("src/" + expectedProgramName + ".twe"));
+
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertEquals(expectedProgramName, manifest.description.name);
+      assertEquals(IoUtilities.PROJECT_EXTENSION, manifest.metadata.fileType);
+      assertEquals(Manifest.ProjectType.World, manifest.metadata.identifier.type);
+      assertEquals(expectedSceneCameraType, manifest.projectStructure.sceneCameraType);
     }
   }
 
@@ -136,6 +204,29 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(expectedResource.getContentType(), readResource.getContentType());
     assertArrayEquals(expectedResource.getData(), readResource.getData());
     assertEquals(readResource, firstResourceExpressionResource(readType));
+  }
+
+  private static void assertProjectResourceFacts(
+      Project project,
+      String expectedProgramName,
+      Project.SceneCameraType expectedSceneCameraType,
+      ImageResource expectedResource) throws Exception {
+    assertNotNull("Generated .a3p archive should reopen as a project", project);
+    NamedUserType readType = project.getProgramType();
+    assertNotNull("Generated .a3p XML fallback should rehydrate the program type", readType);
+    assertEquals(expectedProgramName, readType.getName());
+    assertEquals("SProgram", readType.getSuperType().getName());
+    assertEquals(expectedSceneCameraType, sceneCameraType(project));
+
+    Resource readResource = onlyResource(project.getResources());
+    assertEquals(expectedResource.getId(), readResource.getId());
+    assertEquals(expectedResource.getName(), readResource.getName());
+    assertEquals(expectedResource.getOriginalFileName(), readResource.getOriginalFileName());
+    assertEquals(expectedResource.getContentType(), readResource.getContentType());
+    assertArrayEquals(expectedResource.getData(), readResource.getData());
+    assertSame("Resource expressions should be rebound to the resource decoded from the archive",
+        readResource,
+        firstResourceExpressionResource(readType));
   }
 
   private static void assertWorldManifestFacts(

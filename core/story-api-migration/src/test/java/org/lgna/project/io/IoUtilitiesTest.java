@@ -404,6 +404,55 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonPlayerReaderReportsMissingProgramTypeReferenceForNamedManifest() throws Exception {
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "ProgramWithoutTypeReference";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    File exportFile = temporaryFolder.newFile("manifest-without-program-type-reference.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue("Missing program type errors should name the manifest program.",
+        thrown.getMessage().contains("ProgramWithoutTypeReference"));
+    assertTrue("Missing program type errors should point at the absent type reference.",
+        thrown.getMessage().contains("type reference"));
+  }
+
+  @Test
+  public void jsonPlayerReaderReportsManifestProgramNameMismatchInsteadOfReturningNullProgram() throws Exception {
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "ExpectedProgram";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    TypeReference typeReference = new TypeReference("OtherProgram", "src/OtherProgram.twe", "tweedle");
+    manifest.resources.add(typeReference);
+    File exportFile = temporaryFolder.newFile("manifest-program-name-mismatch.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class OtherProgram {}");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue("Program mismatch errors should name the manifest program.",
+        thrown.getMessage().contains("ExpectedProgram"));
+    assertTrue("Program mismatch errors should name the decoded type.",
+        thrown.getMessage().contains("OtherProgram"));
+  }
+
+  @Test
   public void jsonPlayerReaderDefaultsMissingProjectStructureToWindowCamera() throws Exception {
     ProjectManifest manifest = new ProjectManifest();
     manifest.description.name = "ProgramWithoutStructure";
@@ -411,16 +460,19 @@ public class IoUtilitiesTest {
     manifest.metadata.identifier.name = UUID.randomUUID().toString();
     manifest.metadata.identifier.type = Manifest.ProjectType.World;
     manifest.projectStructure = null;
+    TypeReference typeReference = new TypeReference("ProgramWithoutStructure", "src/ProgramWithoutStructure.twe", "tweedle");
+    manifest.resources.add(typeReference);
     File exportFile = temporaryFolder.newFile("missing-project-structure.a3w");
 
     try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
       writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
       writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class ProgramWithoutStructure {}");
     }
 
     Project readProject = IoUtilities.readProject(exportFile);
     assertNotNull(readProject);
-    assertNull("Archives without Tweedle type references still have no decoded program type.", readProject.getProgramType());
+    assertEquals("ProgramWithoutStructure", readProject.getProgramType().getName());
     assertEquals(Project.SceneCameraType.WindowCamera, sceneCameraType(readProject));
   }
 
@@ -1351,10 +1403,13 @@ public class IoUtilitiesTest {
   private static void writePlayerArchive(File file, ResourceReference resourceReference, byte[] data) throws Exception {
     Project project = new Project(programType("Program"), Project.SceneCameraType.WindowCamera);
     Manifest manifest = project.createExportManifest();
+    TypeReference typeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
+    manifest.resources.add(typeReference);
     manifest.resources.add(resourceReference);
     try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(file))) {
       writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
       writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class Program {}");
       writeZipEntry(zipOutputStream, resourceReference.file, data);
     }
   }

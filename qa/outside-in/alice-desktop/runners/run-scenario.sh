@@ -107,7 +107,7 @@ validate_allowed_automation() {
     [ "$5" = -pl ] &&
     [ "$6" = core/ide ] &&
     [ "$7" = -am ] &&
-    [ "$8" = -Dtest=org.alice.ide.ProjectLoadFailureDispatchPlanTest ] &&
+    { [ "$8" = -Dtest=org.alice.ide.ProjectSaveTargetPlanTest ] || [ "$8" = -Dtest=org.alice.ide.ProjectLoadFailureDispatchPlanTest ]; } &&
     [ "$9" = test ]; then
     return 0
   fi
