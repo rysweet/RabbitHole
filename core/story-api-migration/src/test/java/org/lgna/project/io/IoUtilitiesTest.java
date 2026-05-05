@@ -717,6 +717,17 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void unsupportedJsonPlayerTweedleSuperclassRemainsUndecoded() throws Exception {
+    File exportFile = temporaryFolder.newFile("json-unsupported-super-program.a3w");
+    writeJsonPlayerArchive(exportFile, "Program", "class Program extends MissingSuper {}");
+
+    Project readProject = IoUtilities.readProject(exportFile);
+
+    assertNull("Unsupported Tweedle superclasses remain documented null program type behavior for now.",
+        readProject.getProgramType());
+  }
+
+  @Test
   public void jsonPlayerManifestTypeBoundaryKeepsResourcesReadableWhenTweedleTypeIsUnsupported() throws Exception {
     String programName = "ProgramWithUnsupportedType";
     TypeReference typeReference = new TypeReference(programName, "src/" + programName + ".twe", "tweedle");

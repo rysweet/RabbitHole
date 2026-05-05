@@ -144,7 +144,7 @@ Documented behavior:
 | Exported or hand-built JSON player archive includes scene-camera metadata | Returns the decoded project with the manifest scene-camera type. |
 | Manifest references a missing Tweedle entry | Throws `IOException` that includes the missing entry path. |
 | Tweedle entry is malformed at the parser boundary | Throws `IOException` that includes `Unable to decode Tweedle type entry` and the entry path. |
-| Tweedle entry contains unsupported members | Returns a project with a `null` program type for the unsupported decode, preserving current player-reader behavior. |
+| Tweedle entry contains unsupported members or an unsupported superclass | Returns a project with a `null` program type for the unsupported decode, preserving current player-reader behavior. |
 | Manifest declares both an unsupported Tweedle `TypeReference` and a valid image resource | Returns a project with a `null` program type while preserving resource identity, name, original file name, content type, and bytes. |
 | Manifest references a non-`tweedle` type format | Throws `IOException` with type reference context. |
 | Manifest has no Tweedle type reference | Returns a project with a `null` program type and default scene-camera handling. |
@@ -439,7 +439,7 @@ or pull request.
 | Player archive malformed Tweedle entries are wrapped as archive decode failures. | `IoUtilitiesTest.jsonPlayerReaderWrapsMalformedTweedleTypeEntry` |
 | Non-`tweedle` player type references fail with type-reference context. | `IoUtilitiesTest.jsonProjectReaderReportsUnsupportedTypeReferenceFormat` |
 | Unsupported JSON manifest references are ignored without becoming binary project resources. | `IoUtilitiesTest.ignoresUnsupportedJsonResourceReferencesWithoutCrashing`; `IoUtilitiesTest.readsExportedPlayerArchiveModelAndGeneratedTypeReferencesWithoutBinaryResources` |
-| Unsupported player Tweedle members remain undecoded. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleConstructsRemainUndecoded` |
+| Unsupported player Tweedle members and superclasses remain undecoded. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleConstructsRemainUndecoded`; `IoUtilitiesTest.unsupportedJsonPlayerTweedleSuperclassRemainsUndecoded` |
 | Type archives with supported Tweedle decode types through `IoUtilities.readType(File)`. | `IoUtilitiesTest.readsSimpleJsonTypeArchiveTweedleClass` |
 | JSON type manifest mismatches and missing type references fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsManifestNameMismatchInsteadOfFallback`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTypeReferenceInsteadOfReturningNull` |
 | JSON type archives with non-`tweedle`, missing, or malformed type entries fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsUnsupportedTypeReferenceFormat`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTweedleTypeEntry`; `IoUtilitiesTest.jsonTypeReaderWrapsMalformedTweedleTypeEntry` |
