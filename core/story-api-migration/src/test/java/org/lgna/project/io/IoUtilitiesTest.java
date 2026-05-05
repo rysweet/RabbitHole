@@ -129,6 +129,49 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void savedProjectReloadExportsPlayerArchiveAndReadsBackProgramContent() throws Exception {
+    String programName = "ArchiveRoundTripProgram";
+    Project project = new Project(programType(programName), Project.SceneCameraType.VRHeadset);
+    File projectFile = temporaryFolder.newFile("archive-round-trip.a3p");
+    File exportFile = temporaryFolder.newFile("archive-round-trip.a3w");
+
+    IoUtilities.writeProject(projectFile, project);
+    Project reloadedProject = IoUtilities.readProject(projectFile);
+    assertEquals(programName, reloadedProject.getProgramType().getName());
+    assertEquals(Project.SceneCameraType.VRHeadset, sceneCameraType(reloadedProject));
+
+    IoUtilities.exportProject(exportFile, reloadedProject);
+
+    assertTrue(exportFile.isFile());
+    assertTrue(exportFile.length() > 0);
+    try (ZipFile zipFile = new ZipFile(exportFile)) {
+      ProjectManifest exportManifest = readProjectManifest(zipFile);
+      assertEquals(programName, exportManifest.description.name);
+      assertEquals(IoUtilities.EXPORT_EXTENSION, exportManifest.metadata.fileType);
+      assertEquals(Project.SceneCameraType.VRHeadset, exportManifest.projectStructure.sceneCameraType);
+      assertNotNull(zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
+      assertNull(zipFile.getEntry("programType.xml"));
+
+      TypeReference programReference = null;
+      for (ResourceReference resourceReference : exportManifest.resources) {
+        if (resourceReference instanceof TypeReference typeReference && programName.equals(typeReference.name)) {
+          programReference = typeReference;
+        }
+      }
+      assertNotNull(programReference);
+      assertEquals("src/" + programName + ".twe", programReference.file);
+      assertNotNull(zipFile.getEntry(programReference.file));
+      assertTrue(readZipEntryText(zipFile, programReference.file).contains("class " + programName));
+    }
+
+    Project readExportedProject = IoUtilities.readProject(exportFile);
+    assertNotNull(readExportedProject.getProgramType());
+    assertEquals(programName, readExportedProject.getProgramType().getName());
+    assertEquals(Project.SceneCameraType.VRHeadset, sceneCameraType(readExportedProject));
+    assertTrue(readExportedProject.getResources().isEmpty());
+  }
+
+  @Test
   public void writesAndReadsSyntheticProjectResource() throws Exception {
     Project project = new Project(programType("Program"), Project.SceneCameraType.WindowCamera);
     TestResource resource = new TestResource("note.txt", "text/plain", "hello alice".getBytes(StandardCharsets.UTF_8));
