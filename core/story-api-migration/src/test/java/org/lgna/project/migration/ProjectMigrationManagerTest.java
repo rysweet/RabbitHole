@@ -77,12 +77,71 @@ public class ProjectMigrationManagerTest {
   }
 
   @Test
+  public void textMigrationCascadesLegacyDresserThroughIntermediateResourceNames() {
+    String source = String.join("\n",
+        "<type name=\"org.lgna.story.resources.dresser.DresserCentralAsian\"/>",
+        "<declaringClass name=\"org.lgna.story.resources.dresser.DresserCentralAsian\"/>"
+    );
+
+    String migrated = migrateWithoutTestLogNoise(source, "3.1.19.0.0");
+
+    assertEquals(String.join("\n",
+        "<type name=\"org.lgna.story.resources.prop.DresserResource\"/>",
+        "<declaringClass name=\"org.lgna.story.resources.prop.DresserResource\"/>"
+    ), migrated);
+    assertFalse(migrated.contains("org.lgna.story.resources.dresser.DresserCentralAsian"));
+    assertFalse(migrated.contains("org.lgna.story.resources.prop.DresserCentralAsian"));
+    assertFalse(migrated.contains("org.lgna.story.resources.prop.Dresser\""));
+  }
+
+  @Test
+  public void textMigrationCascadesLegacyDresserFieldThroughIntermediateResourceNames() {
+    String source = String.join("\n",
+        "name=\"DRESSER_CENTRAL_ASIAN_GREEN\">",
+        "<declaringClass name=\"org.lgna.story.resources.dresser.DresserCentralAsian\""
+    );
+
+    String migrated = migrateWithoutTestLogNoise(source, "3.1.19.0.0");
+
+    assertEquals("name=\"CENTRAL_ASIAN_GREEN\"> <declaringClass name=\"org.lgna.story.resources.prop.DresserResource\"", migrated);
+    assertFalse(migrated.contains("CENTRAL_ASIAN_DRESSER_CENTRAL_ASIAN_GREEN"));
+    assertFalse(migrated.contains("org.lgna.story.resources.dresser.DresserCentralAsian"));
+    assertFalse(migrated.contains("org.lgna.story.resources.prop.DresserCentralAsian"));
+    assertFalse(migrated.contains("org.lgna.story.resources.prop.Dresser\""));
+  }
+
+  @Test
+  public void textMigrationStartingAfterDresserPackageMoveStillAppliesLaterConsolidations() {
+    String source = String.join("\n",
+        "<type name=\"org.lgna.story.resources.prop.DresserCentralAsian\"/>",
+        "<declaringClass name=\"org.lgna.story.resources.prop.DresserCentralAsian\"/>"
+    );
+
+    String migrated = migrateWithoutTestLogNoise(source, "3.1.20.0.0");
+
+    assertEquals(String.join("\n",
+        "<type name=\"org.lgna.story.resources.prop.DresserResource\"/>",
+        "<declaringClass name=\"org.lgna.story.resources.prop.DresserResource\"/>"
+    ), migrated);
+    assertFalse(migrated.contains("org.lgna.story.resources.prop.DresserCentralAsian"));
+    assertFalse(migrated.contains("org.lgna.story.resources.prop.Dresser\""));
+  }
+
+  @Test
   public void textMigrationDoesNotRewriteWhenVersionIsAlreadyAtThreshold() {
     String source = "org.lgna.story.resources.dresser.DresserCentralAsian";
 
     String migrated = migrateWithoutTestLogNoise(source, "3.1.20.0.0");
 
     assertEquals(source, migrated);
+  }
+
+  @Test
+  public void managerReportsNoPendingMigrationsAtCurrentVersion() {
+    Version currentVersion = manager.getCurrentVersion();
+
+    assertFalse(manager.hasTextMigrationsFor(currentVersion));
+    assertFalse(manager.hasAstMigrationsFor(currentVersion));
   }
 
   private TextMigration textMigrationFor(String versionText) {
