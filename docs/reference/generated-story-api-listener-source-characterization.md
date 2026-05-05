@@ -32,8 +32,8 @@ It covers one narrow behavior slice:
 1. Build a deterministic synthetic `Program` and `Scene` AST in memory.
 2. Write the project to a temporary `.a3p` archive with `IoUtilities.writeProject`.
 3. Generate Java source with `ProjectCodeGenerator.generateCode(..., false)`.
-4. Assert that generated `Scene.java` preserves Story API listener registration
-   calls.
+4. Assert that generated `Scene.java` preserves the listener-only activation
+   method body.
 5. Compile all generated Java source files with the JDK compiler.
 
 This is generated-source characterization, not runtime event dispatch coverage.
@@ -51,8 +51,11 @@ registration calls on `SScene`.
 | `SScene.addSceneActivationListener(SceneActivationListener)` with a `null` listener | `this.addSceneActivationListener(null);` |
 
 The calls are placed in a synthetic `Scene` user type assignable to
-`org.lgna.story.SScene`. The scene type is reachable through a `Program` field
-so `ProjectCodeGenerator` emits both `Program.java` and `Scene.java`.
+`org.lgna.story.SScene`. The fixture method is named `handleActiveChanged`,
+accepts `Boolean isActive` and `Integer activationCount`, and its body contains
+only the two listener registration calls. The scene type is reachable through a
+`Program` field so `ProjectCodeGenerator` emits both `Program.java` and
+`Scene.java`.
 
 The accepted output is both textually recognizable and Java-compiler valid. A
 test failure means the generated Story API listener source changed, stopped
@@ -85,7 +88,7 @@ behavior of existing Alice APIs and test helpers.
 
 | Surface | Contract |
 | --- | --- |
-| `ProjectCodeGenerator.generateCode(File, File, ..., false)` | Generates Java source for the synthetic Alice project without taking the desktop launch path. |
+| `ProjectCodeGenerator.generateCode(File, File, ..., false)` | Generates Java source for the synthetic Alice project while skipping NetBeans formatting in the test helper. |
 | `IoUtilities.writeProject(File, Project)` | Writes the deterministic synthetic AST fixture to a temporary `.a3p` input. |
 | `AstUtilities.lookupMethod(...)` | Resolves the Story API methods used by the fixture instead of hard-coding generated Java text as input. |
 | `SScene.addTimeListener(TimeListener, Number, AddTimeListener.Detail...)` | Remains source-generatable as a scene instance call with listener, interval, and optional detail arguments. |
@@ -106,7 +109,8 @@ test -d tweedle-lang/Grammar
 ```
 
 If a surrounding Node-based orchestrator runs the lane, keep the saved memory
-setting:
+setting. Maven does not consume this setting directly, but the automation wrapper
+does:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
