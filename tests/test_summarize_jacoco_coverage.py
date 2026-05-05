@@ -1,4 +1,5 @@
 import importlib.util
+import inspect
 import json
 import subprocess
 import sys
@@ -161,6 +162,76 @@ class CoverageSummaryComponentTest(unittest.TestCase):
         self.assertEqual("empty", empty_manifest["aggregate"]["state"])
         self.assertNotIn("lineCoveragePercent", empty_manifest["aggregate"])
         self.assertEqual({"state": "not-configured"}, empty_manifest["gates"]["aggregate"])
+
+    def test_render_manifest_reports_long_term_aggregate_target_separately_from_ci_gate(self) -> None:
+        self.assertIn(
+            "aggregate_target_percent",
+            inspect.signature(coverage_script.render_manifest).parameters,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            missing_manifest = coverage_script.render_manifest(
+                root,
+                None,
+                [],
+                8.0,
+                [],
+                aggregate_target_percent=70.0,
+            )
+            low_aggregate = coverage_script.Coverage(
+                name="no-Sims reactor",
+                covered=65,
+                missed=35,
+                source=root / "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+            )
+            low_manifest = coverage_script.render_manifest(
+                root,
+                low_aggregate,
+                [],
+                8.0,
+                [],
+                aggregate_target_percent=70.0,
+            )
+            met_aggregate = coverage_script.Coverage(
+                name="no-Sims reactor",
+                covered=70,
+                missed=30,
+                source=root / "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+            )
+            met_manifest = coverage_script.render_manifest(
+                root,
+                met_aggregate,
+                [],
+                8.0,
+                [],
+                aggregate_target_percent=70.0,
+            )
+
+        self.assertEqual(
+            {
+                "minimumPercent": 70.0,
+                "state": "not-claimable",
+                "reason": "aggregate JaCoCo CSV is missing",
+            },
+            missing_manifest["coverageTarget"]["aggregate"],
+        )
+        self.assertEqual(
+            {
+                "minimumPercent": 70.0,
+                "state": "not-met",
+                "lineCoveragePercent": 65.0,
+            },
+            low_manifest["coverageTarget"]["aggregate"],
+        )
+        self.assertEqual("pass", low_manifest["gates"]["aggregate"]["state"])
+        self.assertEqual(
+            {
+                "minimumPercent": 70.0,
+                "state": "met",
+                "lineCoveragePercent": 70.0,
+            },
+            met_manifest["coverageTarget"]["aggregate"],
+        )
 
     def test_append_module_gates_renders_pass_fail_and_missing_rows(self) -> None:
         markdown, passed = coverage_script.append_module_gates(
@@ -329,6 +400,50 @@ class CoverageSummaryCliTest(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertIn("Result: FAIL - aggregate report was not found.", result.stdout)
         self.assertIn("Result: FAIL - aggregate report was not found.", summary)
+
+    def test_cli_marks_long_term_target_not_claimable_when_only_module_reports_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            summary_path = root / "coverage-summary.md"
+            manifest_path = root / "coverage-evidence-manifest.json"
+            write_jacoco_csv(root, "core/ast/target/site/jacoco/jacoco.csv", [(20, 80)])
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--root",
+                    str(root),
+                    "--output",
+                    str(summary_path),
+                    "--evidence-manifest",
+                    str(manifest_path),
+                    "--target-aggregate-line-percent",
+                    "70.0",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            summary = summary_path.read_text(encoding="utf-8") if summary_path.exists() else ""
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("## Long-term aggregate coverage target", summary)
+        self.assertIn("Required aggregate line coverage: 70.00%", summary)
+        self.assertIn("Result: NOT CLAIMABLE - aggregate report was not found.", summary)
+        self.assertIn(
+            "Module-level JaCoCo reports cannot prove aggregate coverage without the aggregate CSV.",
+            summary,
+        )
+        self.assertEqual(
+            {
+                "minimumPercent": 70.0,
+                "state": "not-claimable",
+                "reason": "aggregate JaCoCo CSV is missing",
+            },
+            manifest["coverageTarget"]["aggregate"],
+        )
 
     def test_cli_rejects_out_of_range_aggregate_thresholds_before_writing_summary(self) -> None:
         for threshold in ("-0.1", "100.1"):

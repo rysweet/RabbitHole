@@ -67,6 +67,22 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         )
         self.assertIn("if: always()", workflow[summary_step.end() :])
 
+    def test_coverage_workflow_records_long_term_target_without_raising_ci_floor(self) -> None:
+        workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
+        summary_step = re.search(
+            r"name: Summarize and gate line coverage(?P<body>.*?)- name: Upload coverage reports",
+            workflow,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(summary_step)
+        assert summary_step is not None
+        body = summary_step.group("body")
+
+        self.assertIn("--target-aggregate-line-percent 70.0", body)
+        self.assertEqual(1, body.count("--target-aggregate-line-percent"))
+        self.assertIn("--min-aggregate-line-percent 8.0", body)
+        self.assertNotIn("--min-aggregate-line-percent 70.0", body)
+
     def test_coverage_workflow_uploads_summary_and_diagnostics_without_requiring_success(self) -> None:
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
         upload_step = re.search(

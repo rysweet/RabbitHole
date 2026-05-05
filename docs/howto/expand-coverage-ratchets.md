@@ -27,6 +27,7 @@ mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -72,6 +73,7 @@ Example:
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -93,6 +95,7 @@ floors:
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -107,11 +110,11 @@ generation for that module or do not configure a floor for it.
 
 Open `coverage-summary.md` for the human-readable result and
 `coverage-evidence-manifest.json` for the deterministic inventory of aggregate
-JaCoCo state, module JaCoCo state, diagnostic artifact paths, and configured
-gate results. Do not describe the 70% target as met unless the aggregate
-JaCoCo CSV exists and reports aggregate line coverage of at least `70.0%`.
-Module-level reports can justify module ratchets, but they cannot substitute for
-aggregate target evidence.
+JaCoCo state, module JaCoCo state, diagnostic artifact paths, configured gate
+results, and the non-gating 70% aggregate target status. Do not describe the
+70% target as met unless the aggregate JaCoCo CSV exists and reports aggregate
+line coverage of at least `70.0%`. Module-level reports can justify module
+ratchets, but they cannot substitute for aggregate target evidence.
 
 ## 5. Review protected hotspots
 

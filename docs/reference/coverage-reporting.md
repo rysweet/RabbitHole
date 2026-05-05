@@ -22,6 +22,7 @@ mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
@@ -55,8 +56,9 @@ output. With `--output coverage-summary.md`, it also writes the same Markdown to
 `coverage-summary.md`. With
 `--evidence-manifest coverage-evidence-manifest.json`, it writes a deterministic
 JSON inventory of aggregate coverage state, module coverage state, diagnostic
-artifact paths, and gate results. In GitHub Actions, the workflow appends the
-summary to the job summary and uploads the reports as the
+artifact paths, gate results, and the non-gating long-term aggregate target
+status. In GitHub Actions, the workflow appends the summary to the job summary
+and uploads the reports as the
 `alice-coverage-evidence-no-sims` artifact.
 
 ## CLI reference
@@ -71,6 +73,7 @@ python3 scripts/summarize-jacoco-coverage.py [options]
 | `--output PATH` | No | Writes the Markdown coverage summary to `PATH` in addition to standard output. |
 | `--evidence-manifest PATH` | No | Writes a deterministic JSON evidence inventory to `PATH`. Paths inside the manifest are repository-relative and sorted. |
 | `--min-aggregate-line-percent PERCENT` | No | Fails the command when aggregate line coverage is below `PERCENT` or when the aggregate JaCoCo CSV is missing. `PERCENT` must be a number from `0` through `100`. |
+| `--target-aggregate-line-percent PERCENT` | No | Records the long-term aggregate line coverage target in the Markdown summary and evidence manifest without affecting the command exit status. Missing aggregate data is reported as `not-claimable`; measured aggregate data below `PERCENT` is `not-met`; measured aggregate data at or above `PERCENT` is `met`. |
 | `--min-module-line-percent MODULE=PERCENT` | No | Adds a module-level line coverage floor. May be repeated for different modules. The command fails when `MODULE` has no JaCoCo CSV or when its line coverage is below `PERCENT`. |
 
 `MODULE` is the repository-relative module path used in the generated coverage
@@ -93,6 +96,7 @@ python3 scripts/summarize-jacoco-coverage.py \
 ```sh
 python3 scripts/summarize-jacoco-coverage.py \
   --min-aggregate-line-percent 8.0 \
+  --target-aggregate-line-percent 70.0 \
   --min-module-line-percent core/tweedle=50.0
 ```
 
@@ -120,6 +124,7 @@ The summary has these sections:
 | `Per-module reports with JaCoCo CSV output` | Always | One row for each module JaCoCo CSV with non-empty line data. |
 | `Evidence inventory` | Always | Pointer to the optional deterministic JSON manifest. |
 | `Aggregate coverage gate` | When `--min-aggregate-line-percent` is provided | Required percent, actual percent when available, and `PASS` or `FAIL`. |
+| `Long-term aggregate coverage target` | When `--target-aggregate-line-percent` is provided | Required target percent, actual aggregate percent when available, and `MET`, `NOT MET`, or `NOT CLAIMABLE`. This section never changes the command exit status. |
 | `Module coverage gates` | When at least one `--min-module-line-percent` is provided | Required percent, actual percent or `missing`, and `PASS` or `FAIL` for each configured module. |
 
 The manifest records aggregate state as `present`, `missing`, or `empty`.
@@ -127,7 +132,8 @@ The manifest records aggregate state as `present`, `missing`, or `empty`.
 `lineCoveragePercent`, so reviewers cannot mistake absent or empty reports for
 measured zero coverage. Module entries are sorted by module path, artifact
 entries are sorted by kind and path, and gate states are `pass`, `fail`, or
-`not-configured`.
+`not-configured`. The long-term aggregate target state is separate from gates:
+`met`, `not-met`, `not-claimable`, or `not-configured`.
 
 ### Evidence manifest schema
 
@@ -144,6 +150,7 @@ review tooling:
 | `modules` | array | Sorted module report states and line metrics when measured. |
 | `artifacts` | array | Sorted diagnostic artifact inventory. |
 | `gates` | object | Aggregate and module gate states for the configured floors. |
+| `coverageTarget` | object | Non-gating long-term target status. `coverageTarget.aggregate` records the configured target and whether aggregate JaCoCo data proves it. |
 
 An aggregate entry always includes `expectedCsv`. It includes
 `lineCoveragePercent`, `covered`, `missed`, and `total` only when measured
@@ -203,9 +210,9 @@ The workflow has three ordered coverage steps:
 
 1. Generate no-Sims aggregate and module reports with
    `mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify`.
-2. Run `scripts/summarize-jacoco-coverage.py` with the aggregate floor and every
-   configured module floor, writing both `coverage-summary.md` and
-   `coverage-evidence-manifest.json`.
+2. Run `scripts/summarize-jacoco-coverage.py` with the aggregate floor, the
+   non-gating 70% aggregate target, and every configured module floor, writing
+   both `coverage-summary.md` and `coverage-evidence-manifest.json`.
 3. Upload `coverage-summary.md`, `coverage-evidence-manifest.json`, the
    aggregate report, module reports, `jacoco.exec` files, and Surefire reports
    as the `alice-coverage-evidence-no-sims` artifact.
@@ -222,8 +229,8 @@ Open the coverage workflow run, download the
 
 | Evidence | Review purpose |
 | --- | --- |
-| `coverage-summary.md` | Human-readable aggregate/module coverage and gate results. |
-| `coverage-evidence-manifest.json` | Deterministic inventory of measured JaCoCo evidence, diagnostic artifact paths, and gate states. |
+| `coverage-summary.md` | Human-readable aggregate/module coverage, gate results, and non-gating 70% target status. |
+| `coverage-evidence-manifest.json` | Deterministic inventory of measured JaCoCo evidence, diagnostic artifact paths, gate states, and non-gating 70% target status. |
 | `coverage-report/target/site/jacoco-aggregate/index.html` and `jacoco.csv` | Authoritative aggregate no-Sims JaCoCo report. |
 | `<module>/target/site/jacoco/index.html` and `jacoco.csv` | Module-level JaCoCo evidence. |
 | `**/target/jacoco.exec` and `**/target/surefire-reports/**` | Raw execution and test diagnostics for failed or suspicious runs. |
@@ -281,6 +288,7 @@ python3 scripts/summarize-jacoco-coverage.py \
   --root /tmp/alice-coverage-worktree \
   --output /tmp/alice-coverage-worktree/coverage-summary.md \
   --evidence-manifest /tmp/alice-coverage-worktree/coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0
 ```
 
@@ -291,6 +299,7 @@ with durable measured coverage above the chosen floor:
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \

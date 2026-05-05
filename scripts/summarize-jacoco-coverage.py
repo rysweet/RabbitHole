@@ -219,12 +219,39 @@ def gate_manifest(
     return {"aggregate": aggregate_entry, "modules": module_entries}
 
 
+def aggregate_target_manifest(
+    root: Path,
+    aggregate: Optional[Coverage],
+    target_percent: Optional[float],
+) -> dict[str, Any]:
+    if target_percent is None:
+        return {"state": "not-configured"}
+
+    entry: dict[str, Any] = {
+        "minimumPercent": target_percent,
+        "state": "not-claimable",
+    }
+    if aggregate is None:
+        aggregate_path = root / AGGREGATE_CSV
+        if aggregate_path.exists():
+            entry["reason"] = "aggregate JaCoCo CSV has no measured line data"
+        else:
+            entry["reason"] = "aggregate JaCoCo CSV is missing"
+        return entry
+
+    entry["lineCoveragePercent"] = round(aggregate.percent, 2)
+    entry["state"] = "met" if aggregate.percent >= target_percent else "not-met"
+    return entry
+
+
 def render_manifest(
     root: Path,
     aggregate: Optional[Coverage],
     module_reports: List[Coverage],
     aggregate_threshold: Optional[float],
     module_thresholds: List[ModuleThreshold],
+    *,
+    aggregate_target_percent: Optional[float] = None,
 ) -> dict[str, Any]:
     return {
         "schemaVersion": 1,
@@ -240,6 +267,9 @@ def render_manifest(
             aggregate_threshold,
             module_thresholds,
         ),
+        "coverageTarget": {
+            "aggregate": aggregate_target_manifest(root, aggregate, aggregate_target_percent),
+        },
     }
 
 
@@ -280,7 +310,7 @@ def render_markdown(aggregate: Optional[Coverage], module_reports: List[Coverage
     lines.extend([
         "## Evidence inventory",
         "",
-        "Run with `--evidence-manifest coverage-evidence-manifest.json` to write a deterministic JSON inventory of JaCoCo reports, diagnostic artifacts, and gate results.",
+        "Run with `--evidence-manifest coverage-evidence-manifest.json` to write a deterministic JSON inventory of JaCoCo reports, diagnostic artifacts, gate results, and target status.",
         "",
     ])
     lines.append("Coverage gate details appear below when a threshold is requested.")
@@ -309,6 +339,33 @@ def append_gate(markdown: str, aggregate: Optional[Coverage], minimum: float) ->
         "",
     ])
     return "\n".join(lines), passed
+
+
+def append_aggregate_target(
+    markdown: str,
+    aggregate: Optional[Coverage],
+    target_percent: float,
+) -> str:
+    lines = [markdown.rstrip(), "", "## Long-term aggregate coverage target", ""]
+    lines.append(f"Required aggregate line coverage: {target_percent:.2f}%")
+
+    if aggregate is None:
+        lines.extend([
+            "",
+            "Result: NOT CLAIMABLE - aggregate report was not found.",
+            "Module-level JaCoCo reports cannot prove aggregate coverage without the aggregate CSV.",
+            "",
+        ])
+        return "\n".join(lines)
+
+    result = "MET" if aggregate.percent >= target_percent else "NOT MET"
+    lines.extend([
+        f"Actual aggregate line coverage: {aggregate.percent:.2f}%",
+        "",
+        f"Result: {result}",
+        "",
+    ])
+    return "\n".join(lines)
 
 
 def append_module_gates(
@@ -360,6 +417,11 @@ def main() -> int:
         help="fail when aggregate line coverage is missing or below this percentage",
     )
     parser.add_argument(
+        "--target-aggregate-line-percent",
+        type=parse_aggregate_threshold,
+        help="record the long-term aggregate line coverage target without failing the CI gate",
+    )
+    parser.add_argument(
         "--min-module-line-percent",
         action="append",
         default=[],
@@ -380,6 +442,8 @@ def main() -> int:
     passed = True
     if args.min_aggregate_line_percent is not None:
         markdown, passed = append_gate(markdown, aggregate, args.min_aggregate_line_percent)
+    if args.target_aggregate_line_percent is not None:
+        markdown = append_aggregate_target(markdown, aggregate, args.target_aggregate_line_percent)
     if args.min_module_line_percent:
         markdown, module_passed = append_module_gates(
             markdown,
@@ -398,6 +462,7 @@ def main() -> int:
             module_reports,
             args.min_aggregate_line_percent,
             args.min_module_line_percent,
+            aggregate_target_percent=args.target_aggregate_line_percent,
         )
         args.evidence_manifest.write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n",

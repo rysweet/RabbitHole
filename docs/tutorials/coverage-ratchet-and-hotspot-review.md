@@ -92,6 +92,7 @@ Run the summary script with the proposed floors:
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
+  --target-aggregate-line-percent 70.0 \
   --min-aggregate-line-percent 8.0 \
   --min-module-line-percent core/ast=18.0 \
   --min-module-line-percent core/model-loading=10.0 \
