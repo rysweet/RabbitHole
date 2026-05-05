@@ -4,6 +4,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.lgna.common.Resource;
+import org.lgna.common.resources.ImageResource;
 import org.lgna.project.Project;
 import org.lgna.project.Version;
 import org.lgna.project.ast.NamedUserConstructor;
@@ -118,6 +119,25 @@ public class StarterProjectXmlFallbackReadabilityTest {
 
     assertTrue("Representative fixtures should include at least one resource-bearing XML fallback archive",
         foundResourceBearingFixture);
+  }
+
+  @Test
+  public void lagoonMinimumFixtureRestoresCommittedGroundTextureResourceMetadata() throws Exception {
+    Project project = IoUtilities.readProject(starterProjectsDirectory().resolve("lagoonMinimum.a3p").toFile());
+    Collection<Resource> resources = project.getResources();
+
+    assertEquals("lagoonMinimum.a3p should restore its single committed texture resource",
+        1, resources.size());
+    Resource resource = resources.iterator().next();
+    assertTrue("lagoonMinimum.a3p should restore the texture as an image resource",
+        resource instanceof ImageResource);
+    ImageResource imageResource = (ImageResource) resource;
+    assertEquals("sandDunesLight_diffuse.png", imageResource.getName());
+    assertEquals("sandDunesLight_diffuse.png", imageResource.getOriginalFileName());
+    assertEquals("image/png", imageResource.getContentType());
+    assertEquals(256, imageResource.getWidth());
+    assertEquals(256, imageResource.getHeight());
+    assertEquals(79305, imageResource.getData().length);
   }
 
   @Test
