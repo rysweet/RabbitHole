@@ -6,15 +6,18 @@ import org.junit.rules.TemporaryFolder;
 import org.lgna.project.Project;
 import org.lgna.project.ast.AstUtilities;
 import org.lgna.project.ast.BlockStatement;
+import org.lgna.project.ast.Comment;
 import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaMethod;
 import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.LambdaExpression;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
+import org.lgna.project.ast.UserLambda;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.project.io.IoUtilities;
@@ -35,6 +38,8 @@ import org.lgna.story.event.TimeListener;
 
 import java.io.File;
 import java.io.StringWriter;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -114,6 +119,34 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     assertTrue(sceneSource, sceneSource.contains("this.addTimeListener(null,2);"));
     assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener(null);"));
     compileAllGeneratedSources("generated-scene-listener-registration-call-classes", sourceDirectory);
+  }
+
+  @Test
+  public void generatedSyntheticSceneActivationListenerRunsHeadless() throws Exception {
+    Path sourceDirectory = generateProgramSource(
+        "synthetic-scene-activation-listener-runtime.a3p",
+        programTypeWithExecutableSceneActivationListenerRegistration(),
+        "generated-scene-activation-listener-runtime-src");
+
+    Path scenePath = sourceDirectory.resolve("Scene.java");
+    String sceneSource = Files.readString(scenePath);
+    assertTrue(sceneSource, sceneSource.contains("public void handleActiveChanged(Boolean isActive,Integer activationCount)"));
+    assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener((SceneActivationEvent p0) ->"));
+
+    Path classesDirectory = compileAllGeneratedSources(
+        "generated-scene-activation-listener-runtime-classes",
+        sourceDirectory);
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()},
+        Thread.currentThread().getContextClassLoader())) {
+      Class<?> sceneClass = Class.forName("Scene", true, classLoader);
+      var constructor = sceneClass.getDeclaredConstructor();
+      constructor.setAccessible(true);
+      Object scene = constructor.newInstance();
+      var handleActiveChanged = sceneClass.getDeclaredMethod("handleActiveChanged", Boolean.class, Integer.class);
+      handleActiveChanged.setAccessible(true);
+      handleActiveChanged.invoke(scene, Boolean.TRUE, 1);
+    }
   }
 
   private Path generateProgramSource(String projectFileName, NamedUserType programType, String sourceDirectoryName)
@@ -216,6 +249,13 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return type;
   }
 
+  private static NamedUserType programTypeWithExecutableSceneActivationListenerRegistration() {
+    NamedUserType type = programType("Program");
+    NamedUserType sceneType = sceneTypeWithExecutableSceneActivationListenerRegistration();
+    type.fields.add(new UserField("scene", sceneType));
+    return type;
+  }
+
   private static NamedUserType sceneTypeWithListenerRegistrationCalls() {
     NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
     JavaMethod addTimeListener = AstUtilities.lookupMethod(
@@ -247,6 +287,34 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
                 new NullLiteral())));
     type.methods.add(handleActiveChanged);
     return type;
+  }
+
+  private static NamedUserType sceneTypeWithExecutableSceneActivationListenerRegistration() {
+    NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
+    JavaMethod addSceneActivationListener = AstUtilities.lookupMethod(
+        SScene.class,
+        "addSceneActivationListener",
+        SceneActivationListener.class);
+    UserMethod handleActiveChanged = new UserMethod(
+        "handleActiveChanged",
+        Void.TYPE,
+        new UserParameter[] {
+            new UserParameter("isActive", Boolean.class),
+            new UserParameter("activationCount", Integer.class)
+        },
+        new BlockStatement(AstUtilities.createMethodInvocationStatement(
+            new ThisExpression(),
+            addSceneActivationListener,
+            listenerLambda(SceneActivationListener.class, "scene activation listener registered"))));
+    type.methods.add(handleActiveChanged);
+    return type;
+  }
+
+  private static LambdaExpression listenerLambda(Class<?> listenerClass, String commentText) {
+    LambdaExpression expression = AstUtilities.createLambdaExpression(listenerClass);
+    UserLambda lambda = (UserLambda) expression.value.getValue();
+    lambda.body.getValue().statements.add(new Comment(commentText));
+    return expression;
   }
 
   private static NamedUserType sceneTypeWithEventAndRenderingCalls() {
@@ -336,7 +404,7 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     }
   }
 
-  private void compileAllGeneratedSources(String classesDirectoryName, Path sourceDirectory) throws Exception {
+  private Path compileAllGeneratedSources(String classesDirectoryName, Path sourceDirectory) throws Exception {
     List<Path> sources;
     try (var stream = Files.list(sourceDirectory)) {
       sources = stream
@@ -344,6 +412,8 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
           .sorted()
           .toList();
     }
-    compileJavaSources(temporaryFolder.newFolder(classesDirectoryName).toPath(), sources.toArray(Path[]::new));
+    Path classesDirectory = temporaryFolder.newFolder(classesDirectoryName).toPath();
+    compileJavaSources(classesDirectory, sources.toArray(Path[]::new));
+    return classesDirectory;
   }
 }
