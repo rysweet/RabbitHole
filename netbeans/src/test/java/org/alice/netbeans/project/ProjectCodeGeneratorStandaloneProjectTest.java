@@ -279,7 +279,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
   }
 
   @Test
-  public void generatedLauncherRejectsNullPrimaryStageBeforeProgramMain() throws Exception {
+  public void generatedLauncherNullStageGuardPreventsProgramMain() throws Exception {
     Path projectDirectory = temporaryFolder.newFolder("launcher-stage-precondition-project").toPath();
     Path sourceDirectory = projectDirectory.resolve("src");
     Files.createDirectories(sourceDirectory);
@@ -301,7 +301,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
 
       try {
         launcherClass.getMethod("start", stageClass).invoke(launcher, new Object[] {null});
-        fail("Generated launcher should reject a missing JavaFX primary Stage before Program.main");
+        fail("Generated launcher should reject a null JavaFX primary Stage before Program.main");
       } catch (InvocationTargetException ite) {
         Throwable cause = ite.getCause();
         assertTrue(cause instanceof IllegalStateException);
@@ -317,7 +317,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       }
     }
     assertFalse(
-        "Program.main must not run when the JavaFX primary Stage is absent",
+        "Program.main must not run when the generated launcher's null Stage guard fails",
         Files.exists(programMarker));
   }
 
