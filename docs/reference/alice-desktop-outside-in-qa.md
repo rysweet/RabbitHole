@@ -321,21 +321,18 @@ Manual scenarios are complete only after a human performs the workflow and place
 
 ## Desktop Run execution and render-affordance evidence
 
-This section describes the planned implementation for the opt-in desktop Run
-evidence lane. Until the Java implementation lands on the branch being used,
-these fixed artifacts will not be produced.
-
-The planned lane will support the `run-debug` workflow. It will use one artifact
-to record VM statement execution and a sibling artifact to record that the actual
-onscreen render target AWT component was attached into the Run view hierarchy.
-Together, those artifacts will support only the conservative claim that desktop
-Run reached VM execution and attached the onscreen render target into the Run
-view hierarchy. They will not prove screenshot, pixel, color, coordinate, bounds,
-frame timing, animation, or rendering-engine correctness.
+This section describes the opt-in desktop Run evidence lane for the `run-debug`
+workflow. It uses one artifact to record VM statement execution and a sibling
+artifact to record that the actual onscreen render target AWT component was
+attached into the Run view hierarchy. Together, those artifacts support only the
+conservative claim that desktop Run reached VM execution and attached the
+onscreen render target into the Run view hierarchy. They do not prove screenshot,
+pixel, color, coordinate, bounds, frame timing, animation, or rendering-engine
+correctness.
 
 ### Configuration
 
-Once implemented, enable the lane by setting the JVM system property
+Enable the lane by setting the JVM system property
 `org.alice.eatme.desktopRunExecutionEvidenceDir` to a writable evidence
 directory before launching Alice:
 
@@ -347,17 +344,17 @@ mvn exec:java -Dalice-ide \
 
 The property is intentionally separate from the QA runner `--evidence-dir`
 option. The QA runner creates checklist and launch artifacts; the JVM property
-will select where the desktop Run instrumentation writes its fixed-name runtime
-artifacts. When the property is unset or blank, the instrumentation will be
-disabled and no Run execution or render-affordance artifact will be written.
+selects where the desktop Run instrumentation writes its fixed-name runtime
+artifacts. When the property is unset or blank, the instrumentation is disabled
+and no Run execution or render-affordance artifact is written.
 
-The evidence directory may be empty before launch. Runtime artifacts will be
+The evidence directory may be empty before launch. Runtime artifacts are
 generated files and must not be committed.
 
 ### Runtime artifacts
 
-When implemented and enabled, the desktop Run evidence lane will write these
-fixed filenames under the configured directory:
+When enabled, the desktop Run evidence lane writes these fixed filenames under
+the configured directory:
 
 | Artifact | Purpose |
 | --- | --- |
@@ -365,15 +362,14 @@ fixed filenames under the configured directory:
 | `desktop-run-runtime.log` | Records the bounded Run lifecycle and VM event log that supports `desktop-run-execution.json`. |
 | `desktop-run-render-affordance.json` | Records that the onscreen render target AWT component was structurally attached into the Run view hierarchy. |
 
-`desktop-run-render-affordance.json` will be emitted from
+`desktop-run-render-affordance.json` is emitted from
 `RunComposite.RunAwtContainerInitializer.addComponents(...)` after the render
 target component is wrapped, added to the `FixedAspectRatioPanel`, attached to
 the `RunView`, and the view has been revalidated and repainted.
 
 ### Render-affordance artifact schema
 
-`desktop-run-render-affordance.json` will be a JSON object with this public
-contract:
+`desktop-run-render-affordance.json` is a JSON object with this public contract:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -403,7 +399,7 @@ Example artifact:
 
 ```json
 {
-  "evidenceKind": "desktop-run-render-affordance",
+  "evidenceKind": "desktop_run_render_affordance",
   "renderTargetAttachedToRunView": true,
   "renderTargetComponentClass": "java.awt.Canvas",
   "renderTargetComponentName": "Alice \"Run\" Target",
@@ -413,7 +409,7 @@ Example artifact:
   "runViewComponentClass": "javax.swing.JPanel",
   "runViewComponentCountAfterAttach": 2,
   "controlPanelAttached": true,
-  "claim": "Desktop Run attached the onscreen render target into the Run view hierarchy.",
+  "claim": "desktop Run reached VM execution and attached the onscreen render target AWT component into the Run view hierarchy",
   "doesNotClaim": [
     "pixel rendering correctness",
     "screenshot validation",
@@ -425,7 +421,7 @@ Example artifact:
 
 ### Recorder API
 
-The planned render-affordance recorder API is:
+The render-affordance recorder API is:
 
 ```java
 EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
@@ -435,21 +431,21 @@ EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
     boolean controlPanelAttached);
 ```
 
-`renderTargetComponent`, `renderPanelComponent`, and `runViewComponent` will be
-required and must be non-null. The method will read
-`org.alice.eatme.desktopRunExecutionEvidenceDir`, write the fixed artifact name
-only when the property is configured, and use the same JSON escaping and
+`renderTargetComponent`, `renderPanelComponent`, and `runViewComponent` are
+required and must be non-null. The method reads
+`org.alice.eatme.desktopRunExecutionEvidenceDir`, writes the fixed artifact name
+only when the property is configured, and uses the same JSON escaping and
 single-file artifact path guard as the existing desktop Run evidence writer.
 
 Callers should invoke the method only after the Run view hierarchy has been
-updated. It will be evidence instrumentation, not a behavior hook: it must not
+updated. It is evidence instrumentation, not a behavior hook: it must not
 move, resize, replace, repaint beyond the existing Run path, or otherwise alter
 Alice desktop Run behavior.
 
 ### Reviewer checklist
 
-After the planned lane is implemented, treat the desktop Run artifact set as
-accepted for a Run/debug evidence review only when:
+Treat the desktop Run artifact set as accepted for a Run/debug evidence review
+only when:
 
 1. `desktop-run-execution.json` reports statement execution observed.
 2. `desktop-run-runtime.log` contains the supporting bounded VM event trace.
@@ -460,8 +456,8 @@ accepted for a Run/debug evidence review only when:
 5. `doesNotClaim` excludes pixel rendering correctness, screenshot validation,
    coordinate-based visual validation, and rendering-engine correctness.
 
-The artifact set will support the Run/debug scenario, but it will not complete
-the manual desktop workflow by itself. Manual review remains responsible for any
+The artifact set supports the Run/debug scenario, but it does not complete the
+manual desktop workflow by itself. Manual review remains responsible for any
 user-visible claims outside the structural evidence boundary.
 
 ## Workflow evidence requirements
@@ -471,7 +467,7 @@ user-visible claims outside the structural evidence boundary.
 | Launch | Launch log, desktop screenshot, exit/status/timeout record, Java/Maven/display environment summary. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
-| Run/debug | `desktop-run-execution.json`, `desktop-run-runtime.log`, and `desktop-run-render-affordance.json` when planned opt-in desktop Run evidence collection is implemented and enabled; screenshot or screen capture for manual workflow context; notes naming run/debug-like controls in `review-notes.txt`; launch or run log; saved `.a3p`. Screenshots support manual review only and are not required for the non-coordinate render-affordance claim or accepted as pixel-correctness evidence. |
+| Run/debug | `desktop-run-execution.json`, `desktop-run-runtime.log`, and `desktop-run-render-affordance.json` when opt-in desktop Run evidence collection is enabled; screenshot or screen capture for manual workflow context; notes naming run/debug-like controls in `review-notes.txt`; launch or run log; saved `.a3p`. Screenshots support manual review only and are not required for the non-coordinate render-affordance claim or accepted as pixel-correctness evidence. |
 | Save/load | Save log or notes, saved `.a3p`, screenshot before saving, screenshot after reopening, comparison notes in `review-notes.txt`. |
 | Open/load/save | Open log or notes identifying the source `.a3p`, screenshot after first open, saved copy `.a3p`, screenshot after reopening the copy, comparison decision in `review-notes.txt`. |
 | Export | Export log or notes, screenshot before export, screenshot after export completion, exported artifact, file listing or checksum, `review-notes.txt`. |

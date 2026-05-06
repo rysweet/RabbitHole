@@ -11,6 +11,7 @@ import org.lgna.project.virtualmachine.events.StatementExecutionEvent;
 import org.lgna.project.virtualmachine.events.VirtualMachineListener;
 import org.lgna.project.virtualmachine.events.WhileLoopIterationEvent;
 
+import java.awt.Component;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -20,17 +21,22 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public final class EatmeDesktopRunExecutionEvidence {
+  public static final String EVIDENCE_DIR_PROPERTY = "org.alice.eatme.desktopRunExecutionEvidenceDir";
   public static final String DESKTOP_RUN_EXECUTION_ARTIFACT = "desktop-run-execution.json";
   public static final String DESKTOP_RUN_RUNTIME_LOG = "desktop-run-runtime.log";
+  public static final String DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT = "desktop-run-render-affordance.json";
   private static final int MAX_RECORDED_EVENTS = 200;
+  private static final String RENDER_AFFORDANCE_CLAIM =
+      "desktop Run reached VM execution and attached the onscreen render target AWT component into the Run view hierarchy";
 
   private EatmeDesktopRunExecutionEvidence() {
   }
 
   public static Recorder install(RunProgramContext context, NamedUserType programType) {
-    String evidenceDir = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
     if (evidenceDir == null || evidenceDir.isBlank() || context == null) {
       return Recorder.disabled();
     }
@@ -42,6 +48,31 @@ public final class EatmeDesktopRunExecutionEvidence {
     } catch (InvalidPathException | SecurityException ex) {
       Logger.throwable(ex, "eatme desktop Run execution evidence setup failed: " + evidenceDir);
       return Recorder.disabled();
+    }
+  }
+
+  public static void recordRenderTargetAttached(
+      Component renderTargetComponent,
+      Component renderPanelComponent,
+      Component runViewComponent,
+      boolean controlPanelAttached) {
+    Objects.requireNonNull(renderTargetComponent, "renderTargetComponent");
+    Objects.requireNonNull(renderPanelComponent, "renderPanelComponent");
+    Objects.requireNonNull(runViewComponent, "runViewComponent");
+
+    String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
+    if (evidenceDir == null || evidenceDir.isBlank()) {
+      return;
+    }
+    try {
+      writeRenderTargetAttached(
+          Path.of(evidenceDir),
+          renderTargetComponent,
+          renderPanelComponent,
+          runViewComponent,
+          controlPanelAttached);
+    } catch (IOException | InvalidPathException | SecurityException ex) {
+      Logger.throwable(ex, "eatme desktop Run render-affordance evidence write failed: " + evidenceDir);
     }
   }
 
@@ -212,6 +243,43 @@ public final class EatmeDesktopRunExecutionEvidence {
     return artifact;
   }
 
+  static Path writeRenderTargetAttached(
+      Path evidenceDir,
+      Component renderTargetComponent,
+      Component renderPanelComponent,
+      Component runViewComponent,
+      boolean controlPanelAttached) throws IOException {
+    Objects.requireNonNull(renderTargetComponent, "renderTargetComponent");
+    Objects.requireNonNull(renderPanelComponent, "renderPanelComponent");
+    Objects.requireNonNull(runViewComponent, "runViewComponent");
+
+    Files.createDirectories(evidenceDir);
+    Path artifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT);
+    writeStringAtomically(
+        artifact,
+        "{\n"
+            + "  \"evidenceKind\": \"desktop_run_render_affordance\",\n"
+            + "  \"renderTargetAttachedToRunView\": true,\n"
+            + "  \"renderTargetComponentClass\": \"" + componentClassName(renderTargetComponent) + "\",\n"
+            + "  \"renderTargetComponentName\": \"" + EatmeRunWindowEvidence.escapeJson(componentName(renderTargetComponent)) + "\",\n"
+            + "  \"renderTargetDisplayable\": " + renderTargetComponent.isDisplayable() + ",\n"
+            + "  \"renderTargetShowing\": " + renderTargetComponent.isShowing() + ",\n"
+            + "  \"renderPanelComponentClass\": \"" + componentClassName(renderPanelComponent) + "\",\n"
+            + "  \"runViewComponentClass\": \"" + componentClassName(runViewComponent) + "\",\n"
+            + "  \"runViewComponentCountAfterAttach\": " + childComponentCount(runViewComponent) + ",\n"
+            + "  \"controlPanelAttached\": " + controlPanelAttached + ",\n"
+            + "  \"claim\": \"" + RENDER_AFFORDANCE_CLAIM + "\",\n"
+            + "  \"doesNotClaim\": [\n"
+            + "    \"pixel rendering correctness\",\n"
+            + "    \"screenshot validation\",\n"
+            + "    \"coordinate-based visual validation\",\n"
+            + "    \"rendering-engine correctness\"\n"
+            + "  ]\n"
+            + "}\n");
+    requireNonEmptyArtifact(artifact, "desktop Run render-affordance artifact");
+    return artifact;
+  }
+
   private static void writeStringAtomically(Path target, String content) throws IOException {
     Path temp = target.resolveSibling(target.getFileName() + ".tmp");
     Files.writeString(temp, content, StandardCharsets.UTF_8);
@@ -233,5 +301,21 @@ public final class EatmeDesktopRunExecutionEvidence {
       builder.append(event).append('\n');
     }
     return builder.toString();
+  }
+
+  private static String componentClassName(Component component) {
+    return EatmeRunWindowEvidence.escapeJson(component.getClass().getName());
+  }
+
+  private static String componentName(Component component) {
+    String name = component.getName();
+    return name != null ? name : "";
+  }
+
+  private static int childComponentCount(Component component) {
+    if (component instanceof java.awt.Container container) {
+      return container.getComponentCount();
+    }
+    return 0;
   }
 }

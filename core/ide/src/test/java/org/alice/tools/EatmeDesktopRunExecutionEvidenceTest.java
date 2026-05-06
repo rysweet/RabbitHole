@@ -1,14 +1,20 @@
 package org.alice.tools;
 
+import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Component;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Level;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class EatmeDesktopRunExecutionEvidenceTest {
@@ -46,5 +52,142 @@ public class EatmeDesktopRunExecutionEvidenceTest {
   @Test(expected = IllegalArgumentException.class)
   public void rejectsParentArtifactPathThroughSharedGuard() {
     EatmeRunWindowEvidence.artifactPath(temporaryFolder.getRoot().toPath(), "../desktop-run-execution.json");
+  }
+
+  @Test
+  public void renderTargetAffordanceRecorderIsOptIn() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("disabled-evidence").toPath();
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    System.clearProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    try {
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          new JPanel(),
+          new JPanel(),
+          new JPanel(),
+          false);
+
+      assertFalse(Files.exists(evidenceDir.resolve("desktop-run-render-affordance.json")));
+    } finally {
+      restoreEvidenceDirProperty(previousEvidenceDir);
+    }
+  }
+
+  @Test
+  public void writesConservativeRenderTargetAffordanceArtifact() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("render-affordance").toPath();
+    JPanel renderTargetComponent = namedPanel("render \"target\"\ncomponent");
+    JPanel renderPanelComponent = new JPanel(new BorderLayout());
+    JPanel runViewComponent = new JPanel(new BorderLayout());
+    runViewComponent.add(renderPanelComponent, BorderLayout.CENTER);
+
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    System.setProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY, evidenceDir.toString());
+    try {
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          renderTargetComponent,
+          renderPanelComponent,
+          runViewComponent,
+          true);
+    } finally {
+      restoreEvidenceDirProperty(previousEvidenceDir);
+    }
+
+    Path artifact = evidenceDir.resolve("desktop-run-render-affordance.json");
+    assertTrue(Files.size(artifact) > 0);
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"evidenceKind\": \"desktop_run_render_affordance\""));
+    assertTrue(json, json.contains("\"renderTargetAttachedToRunView\": true"));
+    assertTrue(json, json.contains("\"renderTargetComponentClass\": \"javax.swing.JPanel\""));
+    assertTrue(json, json.contains("\"renderTargetComponentName\": \"render \\\"target\\\"\\ncomponent\""));
+    assertTrue(json, json.contains("\"renderTargetDisplayable\": false"));
+    assertTrue(json, json.contains("\"renderTargetShowing\": false"));
+    assertTrue(json, json.contains("\"renderPanelComponentClass\": \"javax.swing.JPanel\""));
+    assertTrue(json, json.contains("\"runViewComponentClass\": \"javax.swing.JPanel\""));
+    assertTrue(json, json.contains("\"runViewComponentCountAfterAttach\": 1"));
+    assertTrue(json, json.contains("\"controlPanelAttached\": true"));
+    assertTrue(json, json.contains("\"claim\": \"desktop Run reached VM execution and attached the onscreen render target AWT component into the Run view hierarchy\""));
+    assertTrue(json, json.contains("\"doesNotClaim\""));
+    assertTrue(json, json.contains("pixel rendering correctness"));
+    assertTrue(json, json.contains("screenshot validation"));
+    assertTrue(json, json.contains("coordinate-based visual validation"));
+    assertNoField(json, "x");
+    assertNoField(json, "y");
+    assertNoField(json, "width");
+    assertNoField(json, "height");
+    assertNoField(json, "bounds");
+    assertNoField(json, "color");
+    assertNoField(json, "pixel");
+    assertNoField(json, "pixels");
+    assertNoField(json, "screenshot");
+    assertNoField(json, "screenLocation");
+    assertNoField(json, "mousePosition");
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void renderTargetAffordanceRecorderRequiresRenderTargetComponent() {
+    expectNullPointerForRenderAffordance(null, new JPanel(), new JPanel());
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void renderTargetAffordanceRecorderRequiresRenderPanelComponent() {
+    expectNullPointerForRenderAffordance(new JPanel(), null, new JPanel());
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void renderTargetAffordanceRecorderRequiresRunViewComponent() {
+    expectNullPointerForRenderAffordance(new JPanel(), new JPanel(), null);
+  }
+
+  @Test
+  public void renderTargetAffordanceRecorderKeepsRunBehaviorWhenEvidenceDirectoryCannotBeWritten() throws Exception {
+    Path evidenceDirFile = temporaryFolder.newFile("not-a-directory").toPath();
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    Level previousLogLevel = Logger.getLevel();
+    System.setProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY, evidenceDirFile.toString());
+    try {
+      Logger.setLevel(Level.OFF);
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          new JPanel(),
+          new JPanel(),
+          new JPanel(),
+          false);
+    } finally {
+      Logger.setLevel(previousLogLevel);
+      restoreEvidenceDirProperty(previousEvidenceDir);
+    }
+
+    assertTrue(Files.isRegularFile(evidenceDirFile));
+  }
+
+  private static JPanel namedPanel(String name) {
+    JPanel panel = new JPanel();
+    panel.setName(name);
+    return panel;
+  }
+
+  private static void expectNullPointerForRenderAffordance(Component renderTargetComponent, Component renderPanelComponent, Component runViewComponent) {
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    System.clearProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    try {
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          renderTargetComponent,
+          renderPanelComponent,
+          runViewComponent,
+          false);
+    } finally {
+      restoreEvidenceDirProperty(previousEvidenceDir);
+    }
+  }
+
+  private static void restoreEvidenceDirProperty(String previousEvidenceDir) {
+    if (previousEvidenceDir == null) {
+      System.clearProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    } else {
+      System.setProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY, previousEvidenceDir);
+    }
+  }
+
+  private static void assertNoField(String json, String fieldName) {
+    assertFalse(json, json.contains("\"" + fieldName + "\":"));
   }
 }

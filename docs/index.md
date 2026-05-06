@@ -22,7 +22,7 @@ repository.
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
-- [Desktop Run execution and render-affordance evidence](./reference/alice-desktop-outside-in-qa.md#desktop-run-execution-and-render-affordance-evidence) - planned opt-in VM execution and non-coordinate render-target attachment evidence for Run.
+- [Desktop Run execution and render-affordance evidence](./reference/alice-desktop-outside-in-qa.md#desktop-run-execution-and-render-affordance-evidence) - opt-in VM execution and non-coordinate render-target attachment evidence for Run.
 - [Headless-safe desktop action characterization](./reference/headless-safe-desktop-action-characterization.md) - JavaFX/Swing headless startup contract, Croquet action-flow seams, validation commands, and compatibility rules.
 - [Characterize headless-safe desktop actions](./howto/characterize-headless-safe-desktop-actions.md) - how to add or review desktop action characterization without display-dependent tests.
 - [Tutorial: Trace a Desktop Action Journey](./tutorials/desktop-action-journey-characterization.md) - guided walkthrough from outside-in menu/action smoke evidence to headless-safe Save action tests.

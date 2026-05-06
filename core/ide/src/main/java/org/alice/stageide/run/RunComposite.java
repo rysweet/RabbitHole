@@ -145,7 +145,8 @@ public class RunComposite extends SimpleModalFrameComposite<RunView> {
       RunView runView = RunComposite.this.getView();
       runView.forgetAndRemoveAllComponents();
 
-      AwtComponentView<?> lookingGlassContainer = new AwtAdapter(onscreenRenderTarget.getAwtComponent());
+      Component renderTargetComponent = onscreenRenderTarget.getAwtComponent();
+      AwtComponentView<?> lookingGlassContainer = new AwtAdapter(renderTargetComponent);
       FixedAspectRatioPanel fixedAspectRatioPanel = new FixedAspectRatioPanel(lookingGlassContainer, SymmetricPerspectiveCamera.DEFAULT_WIDTH_TO_HEIGHT_RATIO);
       fixedAspectRatioPanel.setBackgroundColor(Color.BLACK);
       if (controlPanel != null) {
@@ -153,6 +154,11 @@ public class RunComposite extends SimpleModalFrameComposite<RunView> {
       }
       runView.addCenterComponent(fixedAspectRatioPanel);
       runView.revalidateAndRepaint();
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          renderTargetComponent,
+          fixedAspectRatioPanel.getAwtComponent(),
+          runView.getAwtComponent(),
+          controlPanel != null);
     }
   }
 
