@@ -31,6 +31,7 @@ public final class EatmePlaceObject {
   private static final String PLACEMENT_ARTIFACT = "placement.json";
   private static final String DIFF_ARTIFACT = "scene.diff.json";
   private static final String PLACED_PROJECT = "placed-project.a3p";
+  private static final int MAX_FIELD_NAME_SUFFIX = 10_000;
 
   private EatmePlaceObject() {
   }
@@ -73,7 +74,7 @@ public final class EatmePlaceObject {
     sceneType.fields.add(field);
     List<String> afterFields = fieldNames(sceneType);
 
-    Path placedProject = arguments.evidenceDir().resolve(PLACED_PROJECT);
+    Path placedProject = artifactPath(arguments.evidenceDir(), PLACED_PROJECT);
     IoUtilities.writeProject(placedProject.toFile(), project);
     if (!Files.isRegularFile(placedProject) || Files.size(placedProject) == 0) {
       throw new IOException("modified project was not written: " + placedProject);
@@ -88,14 +89,26 @@ public final class EatmePlaceObject {
         beforeFields,
         afterFields);
     Files.writeString(
-        arguments.evidenceDir().resolve(PLACEMENT_ARTIFACT),
+        artifactPath(arguments.evidenceDir(), PLACEMENT_ARTIFACT),
         placementArtifactJson(placement),
         StandardCharsets.UTF_8);
     Files.writeString(
-        arguments.evidenceDir().resolve(DIFF_ARTIFACT),
+        artifactPath(arguments.evidenceDir(), DIFF_ARTIFACT),
         diffArtifactJson(placement),
         StandardCharsets.UTF_8);
     return placement;
+  }
+
+  private static Path artifactPath(Path evidenceDir, String relativePath) {
+    Path path = Path.of(relativePath);
+    if (path.isAbsolute() || path.normalize().getNameCount() != 1 || path.startsWith("..")) {
+      throw new IllegalArgumentException("artifact path must be a single relative file name: " + relativePath);
+    }
+    Path resolved = evidenceDir.resolve(path).normalize();
+    if (!resolved.startsWith(evidenceDir)) {
+      throw new IllegalArgumentException("artifact path escapes evidence dir: " + relativePath);
+    }
+    return resolved;
   }
 
   private static NamedUserType findSceneType(Project project) {
@@ -127,6 +140,9 @@ public final class EatmePlaceObject {
     }
     int suffix = 2;
     while (names.contains(preferredName + suffix)) {
+      if (suffix == MAX_FIELD_NAME_SUFFIX) {
+        throw new IllegalArgumentException("could not choose a unique field name for " + preferredName);
+      }
       suffix++;
     }
     return preferredName + suffix;
@@ -144,7 +160,7 @@ public final class EatmePlaceObject {
     return "{"
         + "\"schema_version\":\"eatme.alice-object-placement-result/v1\","
         + "\"status\":\"placed\","
-        + "\"object_identifier\":\"" + json(objectIdentifier) + "\","
+        + "\"object_identifier\":\"" + escapeJson(objectIdentifier) + "\","
         + "\"placement_artifact\":\"" + PLACEMENT_ARTIFACT + "\","
         + "\"scene_or_project_diff\":\"" + DIFF_ARTIFACT + "\""
         + "}";
@@ -153,23 +169,23 @@ public final class EatmePlaceObject {
   private static String placementArtifactJson(Placement placement) {
     return "{\n"
         + "  \"schema_version\": \"eatme.alice-object-placement-artifact/v1\",\n"
-        + "  \"object_identifier\": \"" + json(placement.objectIdentifier()) + "\",\n"
-        + "  \"scene_type\": \"" + json(placement.sceneType()) + "\",\n"
-        + "  \"field_name\": \"" + json(placement.fieldName()) + "\",\n"
-        + "  \"field_type\": \"" + json(placement.fieldType()) + "\",\n"
+        + "  \"object_identifier\": \"" + escapeJson(placement.objectIdentifier()) + "\",\n"
+        + "  \"scene_type\": \"" + escapeJson(placement.sceneType()) + "\",\n"
+        + "  \"field_name\": \"" + escapeJson(placement.fieldName()) + "\",\n"
+        + "  \"field_type\": \"" + escapeJson(placement.fieldType()) + "\",\n"
         + "  \"resource\": \"org.lgna.story.resources.biped.BunnyResource.DEFAULT\",\n"
-        + "  \"placed_project\": \"" + json(placement.placedProject()) + "\"\n"
+        + "  \"placed_project\": \"" + escapeJson(placement.placedProject()) + "\"\n"
         + "}\n";
   }
 
   private static String diffArtifactJson(Placement placement) {
     return "{\n"
         + "  \"schema_version\": \"eatme.alice-object-placement-diff/v1\",\n"
-        + "  \"scene_type\": \"" + json(placement.sceneType()) + "\",\n"
-        + "  \"added_field\": \"" + json(placement.fieldName()) + "\",\n"
+        + "  \"scene_type\": \"" + escapeJson(placement.sceneType()) + "\",\n"
+        + "  \"added_field\": \"" + escapeJson(placement.fieldName()) + "\",\n"
         + "  \"before_fields\": " + jsonArray(placement.beforeFields()) + ",\n"
         + "  \"after_fields\": " + jsonArray(placement.afterFields()) + ",\n"
-        + "  \"placed_project\": \"" + json(placement.placedProject()) + "\"\n"
+        + "  \"placed_project\": \"" + escapeJson(placement.placedProject()) + "\"\n"
         + "}\n";
   }
 
@@ -179,18 +195,33 @@ public final class EatmePlaceObject {
       if (i > 0) {
         builder.append(", ");
       }
-      builder.append('"').append(json(values.get(i))).append('"');
+      builder.append('"').append(escapeJson(values.get(i))).append('"');
     }
     return builder.append(']').toString();
   }
 
-  private static String json(String value) {
-    return value
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t");
+  static String escapeJson(String value) {
+    StringBuilder escaped = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      char ch = value.charAt(i);
+      switch (ch) {
+        case '\\' -> escaped.append("\\\\");
+        case '"' -> escaped.append("\\\"");
+        case '\b' -> escaped.append("\\b");
+        case '\f' -> escaped.append("\\f");
+        case '\n' -> escaped.append("\\n");
+        case '\r' -> escaped.append("\\r");
+        case '\t' -> escaped.append("\\t");
+        default -> {
+          if (ch < 0x20) {
+            escaped.append(String.format("\\u%04x", (int) ch));
+          } else {
+            escaped.append(ch);
+          }
+        }
+      }
+    }
+    return escaped.toString();
   }
 
   record Arguments(Path project, String objectIdentifier, Path evidenceDir) {

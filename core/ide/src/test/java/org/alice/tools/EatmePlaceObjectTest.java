@@ -68,6 +68,13 @@ public class EatmePlaceObjectTest {
   }
 
   @Test
+  public void escapesJsonControlCharacters() {
+    assertEquals(
+        "quote\\\" slash\\\\ backspace\\b formfeed\\f newline\\n return\\r tab\\t low\\u0001",
+        EatmePlaceObject.escapeJson("quote\" slash\\ backspace\b formfeed\f newline\n return\r tab\t low\u0001"));
+  }
+
+  @Test
   public void rejectsUnsupportedObjectIdentifierWithoutProofArtifacts() throws Exception {
     File starterProject = temporaryFolder.newFile("starter.a3p");
     IoUtilities.writeProject(starterProject, projectWithScene());
