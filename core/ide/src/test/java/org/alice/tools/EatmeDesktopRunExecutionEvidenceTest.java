@@ -139,6 +139,17 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("visible rendering"));
     assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("pixel output validation"));
     assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("grading"));
+    assertNoField(pixelBoundaryJson, "x");
+    assertNoField(pixelBoundaryJson, "y");
+    assertNoField(pixelBoundaryJson, "width");
+    assertNoField(pixelBoundaryJson, "height");
+    assertNoField(pixelBoundaryJson, "bounds");
+    assertNoField(pixelBoundaryJson, "color");
+    assertNoField(pixelBoundaryJson, "pixel");
+    assertNoField(pixelBoundaryJson, "pixels");
+    assertNoField(pixelBoundaryJson, "screenshot");
+    assertNoField(pixelBoundaryJson, "screenLocation");
+    assertNoField(pixelBoundaryJson, "mousePosition");
   }
 
   @Test
