@@ -91,7 +91,7 @@ public final class EatmeRunWindowEvidence {
     return frame != null ? frame.getTitle() : "";
   }
 
-  private static String typeName(NamedUserType programType) {
+  static String typeName(NamedUserType programType) {
     return programType != null ? programType.getName() : "";
   }
 }

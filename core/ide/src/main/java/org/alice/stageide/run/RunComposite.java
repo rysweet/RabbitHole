@@ -51,6 +51,7 @@ import org.alice.stageide.StageIDE;
 import org.alice.stageide.program.RunProgramContext;
 import org.alice.stageide.run.views.RunView;
 import org.alice.stageide.run.views.icons.RunIcon;
+import org.alice.tools.EatmeDesktopRunExecutionEvidence;
 import org.alice.tools.EatmeRunWindowEvidence;
 import org.lgna.common.ComponentExecutor;
 import org.lgna.croquet.PlainStringValue;
@@ -115,16 +116,26 @@ public class RunComposite extends SimpleModalFrameComposite<RunView> {
   }
 
   private class ProgramRunnable implements Runnable {
+    private final EatmeDesktopRunExecutionEvidence.Recorder desktopRunExecutionEvidence;
+
     public ProgramRunnable(ProgramImp.AwtContainerInitializer awtContainerInitializer) {
       RunComposite.this.programContext = new RunProgramContext(programType);
       RunComposite.this.programContext.getProgramImp().setRestartAction(RunComposite.this.restartAction);
       RunComposite.this.programContext.getProgramImp().setSpeedFormat(RunComposite.this.speedFormat.getText());
       RunComposite.this.programContext.initializeInContainer(awtContainerInitializer);
+      this.desktopRunExecutionEvidence = EatmeDesktopRunExecutionEvidence.install(RunComposite.this.programContext, programType);
     }
 
     @Override
     public void run() {
-      RunComposite.this.programContext.setActiveScene();
+      this.desktopRunExecutionEvidence.recordActiveSceneInvokeStarted();
+      try {
+        RunComposite.this.programContext.setActiveScene();
+        this.desktopRunExecutionEvidence.recordActiveSceneInvokeReturned();
+      } catch (RuntimeException | Error ex) {
+        this.desktopRunExecutionEvidence.recordActiveSceneInvokeFailed(ex);
+        throw ex;
+      }
     }
   }
 
