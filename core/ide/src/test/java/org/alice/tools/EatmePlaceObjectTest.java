@@ -1,0 +1,98 @@
+package org.alice.tools;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.lgna.project.Project;
+import org.lgna.project.ast.AstUtilities;
+import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.UserField;
+import org.lgna.project.io.IoUtilities;
+import org.lgna.story.SProgram;
+import org.lgna.story.SScene;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+public class EatmePlaceObjectTest {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Test
+  public void placesBunnyInSceneAndWritesEatmeProofArtifacts() throws Exception {
+    File starterProject = temporaryFolder.newFile("starter.a3p");
+    IoUtilities.writeProject(starterProject, projectWithScene());
+    Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmePlaceObject.run(
+        new String[] {
+            "--project", starterProject.getAbsolutePath(),
+            "--object", "alice-gallery://animals/bunny",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(stdout),
+        new PrintStream(stderr));
+
+    assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    String result = stdout.toString(StandardCharsets.UTF_8);
+    assertTrue(result, result.contains("\"schema_version\":\"eatme.alice-object-placement-result/v1\""));
+    assertTrue(result, result.contains("\"status\":\"placed\""));
+    assertTrue(result, result.contains("\"placement_artifact\":\"placement.json\""));
+    assertTrue(result, result.contains("\"scene_or_project_diff\":\"scene.diff.json\""));
+    assertTrue(Files.size(evidenceDir.resolve("placement.json")) > 0);
+    assertTrue(Files.size(evidenceDir.resolve("scene.diff.json")) > 0);
+
+    Project placedProject = IoUtilities.readProject(evidenceDir.resolve("placed-project.a3p").toFile());
+    NamedUserType sceneType = (NamedUserType) placedProject.getProgramType()
+        .getDeclaredFields()
+        .get(0)
+        .getValueType();
+    UserField bunny = sceneType.getDeclaredFields().stream()
+        .filter(field -> "bunny".equals(field.getName()))
+        .findFirst()
+        .orElse(null);
+    assertNotNull("placed project should contain the bunny field", bunny);
+    assertEquals("SBiped", bunny.getValueType().getName());
+  }
+
+  @Test
+  public void rejectsUnsupportedObjectIdentifierWithoutProofArtifacts() throws Exception {
+    File starterProject = temporaryFolder.newFile("starter.a3p");
+    IoUtilities.writeProject(starterProject, projectWithScene());
+    Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmePlaceObject.run(
+        new String[] {
+            "--project", starterProject.getAbsolutePath(),
+            "--object", "alice-gallery://animals/dragon",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(stderr));
+
+    assertEquals(2, status);
+    assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("unsupported object identifier"));
+    assertTrue(Files.notExists(evidenceDir.resolve("placement.json")));
+  }
+
+  private static Project projectWithScene() {
+    NamedUserType sceneType = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
+    NamedUserType programType = AstUtilities.createType("Program", JavaType.getInstance(SProgram.class));
+    programType.fields.add(new UserField("myScene", sceneType));
+    return new Project(programType, Project.SceneCameraType.WindowCamera);
+  }
+}
