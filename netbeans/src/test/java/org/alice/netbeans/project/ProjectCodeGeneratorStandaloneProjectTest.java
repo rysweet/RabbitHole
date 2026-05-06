@@ -306,7 +306,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         Throwable cause = ite.getCause();
         assertTrue(cause instanceof IllegalStateException);
         assertEquals(
-            "JavaFX Application.start requires a primary Stage before Program.main can run.",
+            "Generated launcher requires a non-null primary Stage before Program.main can run.",
             cause.getMessage());
       }
     } finally {
