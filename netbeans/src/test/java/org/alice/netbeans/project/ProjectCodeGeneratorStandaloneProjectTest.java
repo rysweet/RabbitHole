@@ -20,6 +20,7 @@ import org.lgna.story.SProgram;
 import java.io.File;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -277,6 +278,49 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     assertProgramMarker(programMarker, "real-javafx", "xvfb-display");
   }
 
+  @Test
+  public void generatedLauncherRejectsNullPrimaryStageBeforeProgramMain() throws Exception {
+    Path projectDirectory = temporaryFolder.newFolder("launcher-stage-precondition-project").toPath();
+    Path sourceDirectory = projectDirectory.resolve("src");
+    Files.createDirectories(sourceDirectory);
+
+    ProjectCodeGenerator.generateLauncher(sourceDirectory.toFile());
+    writeProgramUnexpectedRunMarkerSource(sourceDirectory);
+
+    Path classesDirectory = projectDirectory.resolve("build").resolve("classes");
+    compileJavaSources(classesDirectory, pathList(javaFxRuntimeModulePath()), javaSourcesUnder(sourceDirectory));
+
+    Path programMarker = projectDirectory.resolve("program-main-marker.txt");
+    String previousMarker = System.getProperty("alice.test.program.marker");
+    System.setProperty("alice.test.program.marker", programMarker.toAbsolutePath().normalize().toString());
+    try (GeneratedProjectClassLoader classLoader = new GeneratedProjectClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()})) {
+      Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
+      Class<?> stageClass = Class.forName("javafx.stage.Stage", true, classLoader);
+      Object launcher = launcherClass.getDeclaredConstructor().newInstance();
+
+      try {
+        launcherClass.getMethod("start", stageClass).invoke(launcher, new Object[] {null});
+        fail("Generated launcher should reject a missing JavaFX primary Stage before Program.main");
+      } catch (InvocationTargetException ite) {
+        Throwable cause = ite.getCause();
+        assertTrue(cause instanceof IllegalStateException);
+        assertEquals(
+            "JavaFX Application.start requires a primary Stage before Program.main can run.",
+            cause.getMessage());
+      }
+    } finally {
+      if (previousMarker == null) {
+        System.clearProperty("alice.test.program.marker");
+      } else {
+        System.setProperty("alice.test.program.marker", previousMarker);
+      }
+    }
+    assertFalse(
+        "Program.main must not run when the JavaFX primary Stage is absent",
+        Files.exists(programMarker));
+  }
+
   private static NamedUserType programType(String name) {
     NamedUserType type = new NamedUserType();
     type.name.setValue(name);
@@ -420,6 +464,27 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
               throw new RuntimeException(e);
             } finally {
               javafx.application.Platform.exit();
+            }
+          }
+        }
+        """);
+  }
+
+  private static void writeProgramUnexpectedRunMarkerSource(Path sourceDirectory) throws Exception {
+    writeJavaSource(
+        sourceDirectory.resolve("Program.java"),
+        """
+        public class Program {
+          public static void main(String[] args) {
+            try {
+              String marker = System.getProperty("alice.test.program.marker");
+              if (marker != null) {
+                java.nio.file.Files.writeString(
+                    java.nio.file.Path.of(marker),
+                    "Program.main ran before the JavaFX primary Stage precondition");
+              }
+            } catch (java.io.IOException e) {
+              throw new RuntimeException(e);
             }
           }
         }

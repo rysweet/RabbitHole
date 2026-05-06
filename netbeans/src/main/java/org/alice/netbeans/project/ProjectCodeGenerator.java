@@ -324,8 +324,16 @@ public class AliceJavaFXLauncher extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+        requirePrimaryStage(primaryStage);
         Thread thread = new Thread(() -> Program.main(startingArgs));
         thread.start();
+    }
+
+    private static void requirePrimaryStage(Stage primaryStage) {
+        if (primaryStage == null) {
+            throw new IllegalStateException(
+                "JavaFX Application.start requires a primary Stage before Program.main can run.");
+        }
     }
 
     public static void main(final String[] args) {
