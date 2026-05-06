@@ -19,6 +19,8 @@ import org.lgna.story.SProgram;
 import org.openide.filesystems.FileObject;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
@@ -71,7 +73,37 @@ public class ProjectCodeGeneratorTest {
     assertEquals(launcherClassName, projectProperties.getProperty("main.class"));
     assertTrue(launcherSource.contains("public class " + launcherClassName + " extends Application"));
     assertTrue(launcherSource.contains("Program.main(startingArgs)"));
-    assertTrue(launcherSource.contains("launch(args)"));
+    assertTrue(launcherSource.contains("Application.launch(args)"));
+  }
+
+  @Test
+  public void generatedLauncherDefinesJavaFxHandoffAndSceneSetupEvidenceWithoutRenderingClaims() throws Exception {
+    File sourceDirectory = temporaryFolder.newFolder("launcher-evidence-src");
+    FileObject launcherFileObject = ProjectCodeGenerator.generateLauncher(sourceDirectory);
+    Path launcherPath = sourceDirectory.toPath().resolve(launcherFileObject.getNameExt());
+
+    String launcherSource = Files.readString(launcherPath);
+
+    assertTrue(launcherSource.contains("import javafx.scene.Group;"));
+    assertTrue(launcherSource.contains("import javafx.scene.Scene;"));
+    assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_EVIDENCE\""));
+    assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_NO_GO\""));
+    assertTrue(launcherSource.contains("evidence(\"main-entered\")"));
+    assertTrue(launcherSource.contains("evidence(\"javafx-launch-attempted\")"));
+    assertTrue(launcherSource.contains("Application.launch(args)"));
+    assertTrue(launcherSource.contains("evidence(\"javafx-application-started\")"));
+    assertTrue(launcherSource.contains("noGo(\"primary-stage-unavailable\")"));
+    assertTrue(launcherSource.contains("primaryStage.setScene(new Scene(new Group()))"));
+    assertTrue(launcherSource.contains("evidence(\"scene-configured rendering-not-asserted\")"));
+    assertTrue(launcherSource.contains("evidence(\"program-main-delegated rendering-not-asserted\")"));
+    assertTrue(launcherSource.contains("Program.main(startingArgs)"));
+    assertTrue(launcherSource.contains("isDisplayUnavailableFailure"));
+    assertTrue(launcherSource.contains("noGo(\"display-unavailable\")"));
+    assertFalse(launcherSource.contains("primaryStage.show"));
+    assertFalse(launcherSource.contains(".show()"));
+    assertFalse(launcherSource.toLowerCase().contains("visible"));
+    assertFalse(launcherSource.toLowerCase().contains("rendered"));
+    assertFalse(launcherSource.toLowerCase().contains("shown"));
   }
 
   @Test
@@ -134,6 +166,26 @@ public class ProjectCodeGeneratorTest {
         package javafx.stage;
 
         public class Stage {
+          public void setScene(javafx.scene.Scene scene) {
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        """
+        package javafx.scene;
+
+        public class Group {
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        """
+        package javafx.scene;
+
+        public class Scene {
+          public Scene(Group root) {
+          }
         }
         """);
     Path classesDirectory = temporaryFolder.newFolder(folderName + "-classes").toPath();
@@ -142,7 +194,9 @@ public class ProjectCodeGeneratorTest {
         sourceDirectory.resolve("AliceJavaFXLauncher.java"),
         sourceDirectory.resolve("Program.java"),
         sourceDirectory.resolve("javafx/application/Application.java"),
-        sourceDirectory.resolve("javafx/stage/Stage.java"));
+        sourceDirectory.resolve("javafx/stage/Stage.java"),
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        sourceDirectory.resolve("javafx/scene/Scene.java"));
 
     try (URLClassLoader classLoader = new URLClassLoader(
         new URL[] {classesDirectory.toUri().toURL()},
@@ -150,11 +204,15 @@ public class ProjectCodeGeneratorTest {
       Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
       Class<?> programClass = Class.forName("Program", true, classLoader);
 
-      launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
-
-      String[] receivedArgs = waitForStringArray(programClass.getField("receivedArgs"));
-      assertArrayEquals(args, receivedArgs);
-      return receivedArgs;
+      final String[][] receivedArgs = new String[1][];
+      String output = captureSystemOut(() -> {
+        launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
+        receivedArgs[0] = waitForStringArray(programClass.getField("receivedArgs"));
+      });
+      assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE javafx-application-started"));
+      assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
+      assertArrayEquals(args, receivedArgs[0]);
+      return receivedArgs[0];
     }
   }
 
@@ -587,6 +645,24 @@ public class ProjectCodeGeneratorTest {
       Thread.sleep(10L);
     }
     return (String[]) field.get(null);
+  }
+
+  private static String captureSystemOut(ThrowingRunnable runnable) throws Exception {
+    PrintStream previousOut = System.out;
+    ByteArrayOutputStream capturedOutput = new ByteArrayOutputStream();
+    try (PrintStream capture = new PrintStream(capturedOutput, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      runnable.run();
+      capture.flush();
+    } finally {
+      System.setOut(previousOut);
+    }
+    return capturedOutput.toString(StandardCharsets.UTF_8);
+  }
+
+  @FunctionalInterface
+  private interface ThrowingRunnable {
+    void run() throws Exception;
   }
 
   private void assertGeneratedResourceLoads(Path sourceDirectory, byte[] expectedData) throws Exception {

@@ -315,30 +315,78 @@ public class ProjectCodeGenerator {
   private static final String LAUNCHER_FILE =
 """
 import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 // If this project will not build and run make sure it is using
 // a JDK that includes JavaFX, such as Bellsoft's Liberica JDK.
 public class AliceJavaFXLauncher extends Application {
+    private static final String EVIDENCE_PREFIX = "ALICE_LAUNCHER_EVIDENCE";
+    private static final String NO_GO_PREFIX = "ALICE_LAUNCHER_NO_GO";
     private static String[] startingArgs;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        requirePrimaryStage(primaryStage);
-        Thread thread = new Thread(() -> Program.main(startingArgs));
+        evidence("javafx-application-started");
+        if (primaryStage == null) {
+            noGo("primary-stage-unavailable");
+            return;
+        }
+        evidence("stage-received");
+        primaryStage.setScene(new Scene(new Group()));
+        evidence("scene-configured rendering-not-asserted");
+        Thread thread = new Thread(() -> {
+            evidence("program-main-delegated rendering-not-asserted");
+            Program.main(startingArgs);
+        });
         thread.start();
     }
 
-    private static void requirePrimaryStage(Stage primaryStage) {
-        if (primaryStage == null) {
-            throw new IllegalStateException(
-                "Generated launcher requires a non-null primary Stage before Program.main can run.");
+    private static void evidence(String marker) {
+        System.out.println(EVIDENCE_PREFIX + " " + marker);
+    }
+
+    private static void noGo(String marker) {
+        System.out.println(NO_GO_PREFIX + " " + marker);
+    }
+
+    private static boolean isDisplayUnavailableFailure(Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (current instanceof UnsupportedOperationException
+                    && isDisplayUnavailableMessage(current.getMessage())) {
+                return true;
+            }
+            if ("java.awt.HeadlessException".equals(current.getClass().getName())) {
+                return true;
+            }
         }
+        return false;
+    }
+
+    private static boolean isDisplayUnavailableMessage(String message) {
+        if (message == null) {
+            return false;
+        }
+        String normalized = message.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("unable to open display")
+            || normalized.contains("no display")
+            || normalized.contains("headless");
     }
 
     public static void main(final String[] args) {
         startingArgs = args;
-        launch(args);
+        evidence("main-entered");
+        try {
+            evidence("javafx-launch-attempted");
+            Application.launch(args);
+        } catch (RuntimeException | Error launchFailure) {
+            if (isDisplayUnavailableFailure(launchFailure)) {
+                noGo("display-unavailable");
+                return;
+            }
+            throw launchFailure;
+        }
     }
 }""";
 }

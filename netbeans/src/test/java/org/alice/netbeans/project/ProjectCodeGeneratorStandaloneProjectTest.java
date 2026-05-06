@@ -18,9 +18,10 @@ import org.lgna.project.io.IoUtilities;
 import org.lgna.story.SProgram;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -76,12 +77,27 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         new URL[] {classesDirectory.toUri().toURL()})) {
       Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
       Class<?> applicationClass = Class.forName("javafx.application.Application", true, classLoader);
+      Class<?> stageClass = Class.forName("javafx.stage.Stage", true, classLoader);
       String[] args = {"--project", "standalone-smoke.a3p"};
 
-      launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
+      String output = captureSystemOut(() -> {
+        launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
+        Thread.sleep(100L);
+      });
 
       assertArrayEquals(args, (String[]) applicationClass.getField("launchedArgs").get(null));
       assertTrue((Boolean) applicationClass.getField("startInvoked").get(null));
+      assertTrue((Boolean) stageClass.getField("sceneConfigured").get(null));
+      assertOutputContainsInOrder(
+          output,
+          "ALICE_LAUNCHER_EVIDENCE main-entered",
+          "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+          "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
+          "ALICE_LAUNCHER_EVIDENCE stage-received",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted");
+      assertFalse(output.contains("visible"));
+      assertFalse(output.contains("rendered"));
+      assertFalse(output.contains("shown"));
     }
   }
 
@@ -111,12 +127,17 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
       String[] args = {"--project", "launcher-runtime.a3p"};
 
-      launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
-
-      assertTrue(
-          "Stubbed JavaFX launch path should reach the generated Program.main probe",
-          latch.await(5, TimeUnit.SECONDS));
+      String output = captureSystemOut(() -> {
+        launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
+        assertTrue(
+            "Stubbed JavaFX launch path should reach the generated Program.main probe",
+            latch.await(5, TimeUnit.SECONDS));
+      });
       assertArrayEquals(args, generatedProgramMainArgs);
+      assertOutputContainsInOrder(
+          output,
+          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
     } finally {
       synchronized (GENERATED_PROGRAM_PROBE_LOCK) {
         generatedProgramMainArgs = null;
@@ -230,8 +251,28 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         programMarker,
         "real-javafx", "display-boundary");
 
+    if (launchResult.output.contains("ALICE_LAUNCHER_NO_GO display-unavailable")) {
+      assertFalse(
+          "Program.main must not run after a deterministic display-unavailable no-go",
+          Files.exists(programMarker));
+      assertOutputContainsInOrder(
+          launchResult.output,
+          "ALICE_LAUNCHER_EVIDENCE main-entered",
+          "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+          "ALICE_LAUNCHER_NO_GO display-unavailable");
+      return;
+    }
+
     if ((launchResult.exitCode == 0) || Files.exists(programMarker)) {
       assertProgramMarker(programMarker, "real-javafx", "display-boundary");
+      assertOutputContainsInOrder(
+          launchResult.output,
+          "ALICE_LAUNCHER_EVIDENCE main-entered",
+          "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+          "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
+          "ALICE_LAUNCHER_EVIDENCE stage-received",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
       return;
     }
 
@@ -276,6 +317,14 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     assertFalse(launchResult.output, launchResult.timedOut);
     assertEquals(launchResult.output, 0, launchResult.exitCode);
     assertProgramMarker(programMarker, "real-javafx", "xvfb-display");
+    assertOutputContainsInOrder(
+        launchResult.output,
+        "ALICE_LAUNCHER_EVIDENCE main-entered",
+        "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+        "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
+        "ALICE_LAUNCHER_EVIDENCE stage-received",
+        "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+        "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
   }
 
   @Test
@@ -299,16 +348,14 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       Class<?> stageClass = Class.forName("javafx.stage.Stage", true, classLoader);
       Object launcher = launcherClass.getDeclaredConstructor().newInstance();
 
-      try {
-        launcherClass.getMethod("start", stageClass).invoke(launcher, new Object[] {null});
-        fail("Generated launcher should reject a null JavaFX primary Stage before Program.main");
-      } catch (InvocationTargetException ite) {
-        Throwable cause = ite.getCause();
-        assertTrue(cause instanceof IllegalStateException);
-        assertEquals(
-            "Generated launcher requires a non-null primary Stage before Program.main can run.",
-            cause.getMessage());
-      }
+      String output = captureSystemOut(() ->
+          launcherClass.getMethod("start", stageClass).invoke(launcher, new Object[] {null}));
+      assertOutputContainsInOrder(
+          output,
+          "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
+          "ALICE_LAUNCHER_NO_GO primary-stage-unavailable");
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE stage-received"));
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated"));
     } finally {
       if (previousMarker == null) {
         System.clearProperty("alice.test.program.marker");
@@ -420,6 +467,29 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         package javafx.stage;
 
         public class Stage {
+          public static volatile boolean sceneConfigured;
+
+          public void setScene(javafx.scene.Scene scene) {
+            sceneConfigured = scene != null;
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        """
+        package javafx.scene;
+
+        public class Group {
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        """
+        package javafx.scene;
+
+        public class Scene {
+          public Scene(Group root) {
+          }
         }
         """);
   }
@@ -536,6 +606,26 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         package javafx.stage;
 
         public class Stage {
+          public void setScene(javafx.scene.Scene scene) {
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        """
+        package javafx.scene;
+
+        public class Group {
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        """
+        package javafx.scene;
+
+        public class Scene {
+          public Scene(Group root) {
+          }
         }
         """);
   }
@@ -821,6 +911,33 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
   private static void writeJavaSource(Path sourcePath, String source) throws Exception {
     Files.createDirectories(sourcePath.getParent());
     Files.writeString(sourcePath, source);
+  }
+
+  private static String captureSystemOut(ThrowingRunnable runnable) throws Exception {
+    PrintStream previousOut = System.out;
+    ByteArrayOutputStream capturedOutput = new ByteArrayOutputStream();
+    try (PrintStream capture = new PrintStream(capturedOutput, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      runnable.run();
+      capture.flush();
+    } finally {
+      System.setOut(previousOut);
+    }
+    return capturedOutput.toString(StandardCharsets.UTF_8);
+  }
+
+  private static void assertOutputContainsInOrder(String output, String... expectedLines) {
+    int cursor = -1;
+    for (String expectedLine : expectedLines) {
+      int next = output.indexOf(expectedLine, cursor + 1);
+      assertTrue("Expected output to contain in order: " + expectedLine + "\nActual output:\n" + output, next >= 0);
+      cursor = next;
+    }
+  }
+
+  @FunctionalInterface
+  private interface ThrowingRunnable {
+    void run() throws Exception;
   }
 
   private static class GeneratedProjectClassLoader extends URLClassLoader {
