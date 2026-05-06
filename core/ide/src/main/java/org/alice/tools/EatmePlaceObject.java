@@ -16,6 +16,7 @@ import org.lgna.story.SScene;
 import org.lgna.story.resources.BipedResource;
 import org.lgna.story.resources.biped.BunnyResource;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -44,6 +45,9 @@ public final class EatmePlaceObject {
   }
 
   static int run(String[] args, PrintStream out, PrintStream err) {
+    PrintStream originalSystemOut = System.out;
+    PrintStream silentSystemOut = new PrintStream(new ByteArrayOutputStream());
+    System.setOut(silentSystemOut);
     try {
       Arguments arguments = Arguments.parse(args);
       Placement placement = placeObject(arguments);
@@ -55,6 +59,9 @@ public final class EatmePlaceObject {
     } catch (RuntimeException ex) {
       err.println("object placement failed: " + ex.getMessage());
       return 3;
+    } finally {
+      System.setOut(originalSystemOut);
+      silentSystemOut.close();
     }
   }
 

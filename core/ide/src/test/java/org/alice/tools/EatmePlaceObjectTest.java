@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class EatmePlaceObjectTest {
   @Rule
@@ -72,6 +73,39 @@ public class EatmePlaceObjectTest {
     assertEquals(
         "quote\\\" slash\\\\ backspace\\b formfeed\\f newline\\n return\\r tab\\t low\\u0001",
         EatmePlaceObject.escapeJson("quote\" slash\\ backspace\b formfeed\f newline\n return\r tab\t low\u0001"));
+  }
+
+  @Test
+  public void writesOnlyResultJsonToStdoutForMigratedStarterProject() throws Exception {
+    File starterProject = new File("../resources/src/application/resources/starter-projects/magicMinimum.a3p");
+    assumeTrue("starter project fixture is not available in this checkout", starterProject.isFile());
+    Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+
+    try (PrintStream processStdout = new PrintStream(stdout)) {
+      System.setOut(processStdout);
+      int status = EatmePlaceObject.run(
+          new String[] {
+              "--project", starterProject.getAbsolutePath(),
+              "--object", "alice-gallery://animals/bunny",
+              "--evidence-dir", evidenceDir.toString(),
+              "--json"
+          },
+          System.out,
+          new PrintStream(stderr));
+
+      assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    } finally {
+      System.setOut(originalOut);
+    }
+
+    String result = stdout.toString(StandardCharsets.UTF_8);
+    assertTrue(result, result.startsWith("{\"schema_version\":\"eatme.alice-object-placement-result/v1\""));
+    assertTrue(result, result.endsWith("}\n"));
+    assertTrue(Files.size(evidenceDir.resolve("placement.json")) > 0);
+    assertTrue(Files.size(evidenceDir.resolve("scene.diff.json")) > 0);
   }
 
   @Test
