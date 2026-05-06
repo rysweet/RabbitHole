@@ -481,7 +481,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
               if (marker != null) {
                 java.nio.file.Files.writeString(
                     java.nio.file.Path.of(marker),
-                    "Program.main ran before the JavaFX primary Stage precondition");
+                    "Program.main ran despite the generated launcher's null Stage guard");
               }
             } catch (java.io.IOException e) {
               throw new RuntimeException(e);
