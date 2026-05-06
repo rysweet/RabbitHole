@@ -51,6 +51,7 @@ import org.alice.stageide.StageIDE;
 import org.alice.stageide.program.RunProgramContext;
 import org.alice.stageide.run.views.RunView;
 import org.alice.stageide.run.views.icons.RunIcon;
+import org.alice.tools.EatmeRunWindowEvidence;
 import org.lgna.common.ComponentExecutor;
 import org.lgna.croquet.PlainStringValue;
 import org.lgna.croquet.SimpleModalFrameComposite;
@@ -200,6 +201,7 @@ public class RunComposite extends SimpleModalFrameComposite<RunView> {
     } else {
       frame.setLocationRelativeTo(parentFrame);
     }
+    EatmeRunWindowEvidence.recordRunWindowCreated(frame, programType);
   }
 
   private static NamedUserType getUpToDateProgramTypeFromActiveIde() {
