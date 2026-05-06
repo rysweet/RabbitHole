@@ -318,9 +318,6 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         Manifest manifest,
         TypeReadResult decodedTypes) throws IOException {
       String expectedName = manifestName(manifest);
-      if (decodedTypes.hasTypeReferences && decodedTypes.types.isEmpty()) {
-        return;
-      }
       if (decodedTypes.hasTypeReferences) {
         throw new IOException(
             archiveKind + " manifest names " + expectedNameRole + "'" + expectedName

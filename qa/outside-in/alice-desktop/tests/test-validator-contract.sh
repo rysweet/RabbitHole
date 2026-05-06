@@ -31,13 +31,15 @@ assert_success "$status" "current scenario catalog validates"
 "$VALIDATOR" --dump-json >"$tmp_root/catalog.json" 2>"$tmp_root/catalog.err"
 status=$?
 assert_success "$status" "validator dumps normalized scenario catalog JSON"
-python3 - "$tmp_root/catalog.json" >"$tmp_root/catalog-check.out" 2>"$tmp_root/catalog-check.err" <<'PY'
+python3 - "$tmp_root/catalog.json" "$BASE_DIR/scenarios" >"$tmp_root/catalog-check.out" 2>"$tmp_root/catalog-check.err" <<'PY'
 import json
 import sys
+from pathlib import Path
 
 catalog = json.load(open(sys.argv[1], encoding="utf-8"))
-if len(catalog) != 15:
-    raise AssertionError(f"expected 15 scenarios, found {len(catalog)}")
+expected_count = len(list(Path(sys.argv[2]).glob("*.yaml")))
+if len(catalog) != expected_count:
+    raise AssertionError(f"expected {expected_count} scenarios, found {len(catalog)}")
 if not all("id" in scenario for scenario in catalog):
     raise AssertionError("every dumped scenario must include an id")
 PY

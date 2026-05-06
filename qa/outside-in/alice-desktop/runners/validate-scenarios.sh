@@ -31,6 +31,7 @@ required_top = [
 ]
 allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags"}
 workflow_values = {
+    "archive-fixture-smoke",
     "exported-project-smoke",
     "failure-path-smoke",
     "future-ui-smoke",
@@ -64,6 +65,21 @@ allowed_automation = {
             "netbeans",
             "-am",
             "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest",
+            "test",
+        ),
+    ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
+            "core/story-api-migration",
+            "-am",
+            "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest",
             "test",
         ),
     ),

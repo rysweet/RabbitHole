@@ -1,0 +1,48 @@
+id: alice-desktop-archive-fixture-smoke
+title: LFS-independent historical archive fixture boundary smoke
+workflow: archive-fixture-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Historical archive round-trip characterization tests are available in the checkout.
+userActions:
+  - Run the focused historical archive fixture boundary characterization smoke from the command line.
+  - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries.
+  - Confirm unsupported Tweedle method, constructor, complex value, and unresolved parent cases fail explicitly.
+expectedOutcomes:
+  - The historical archive fixture boundary smoke command exits successfully when the gate is enabled.
+  - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
+  - Generated XML fallback .a3p fixtures still save, reopen, and preserve resources through project I/O.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/story-api-migration
+    - -am
+    - -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the historical archive fixture boundary smoke command.
+    - Test output or surefire report naming HistoricalArchiveRoundTripCharacterizationTest.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the focused Maven smoke is unavailable, attach the nearest archive fixture characterization evidence.
+    - Manual GUI save/load evidence remains covered separately by alice-desktop-save-load.
+supportingEvidence:
+  - alice-desktop-project-io-smoke
+tags:
+  - archive-fixture
+  - command-smoke
+  - project-io

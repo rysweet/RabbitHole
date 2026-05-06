@@ -279,7 +279,7 @@ public class IoUtilitiesTest {
   }
 
   @Test
-  public void readsExportedPlayerArchiveImageResource() throws Exception {
+  public void exportedPlayerArchiveImageResourceRemainsManifestedWhenUnsupportedProgramTypeFailsClosed() throws Exception {
     ImageResource imageResource = new ImageResource(
         new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
         "picture.png",
@@ -290,20 +290,16 @@ public class IoUtilitiesTest {
 
     IoUtilities.exportProject(exportFile, project);
 
-    Project readProject = IoUtilities.readProject(exportFile);
-    assertNull("Archives with unsupported Tweedle members remain undecoded.", readProject.getProgramType());
-    assertEquals(1, readProject.getResources().size());
-    Resource readResource = readProject.getResources().iterator().next();
-    assertEquals(ImageResource.class, readResource.getClass());
-    assertEquals(imageResource.getId(), readResource.getId());
-    assertEquals("picture.png", readResource.getOriginalFileName());
-    assertEquals("picture.png", readResource.getName());
-    assertEquals("png", readResource.getContentType());
-    assertArrayEquals(imageResource.getData(), readResource.getData());
+    try (ZipFile zipFile = new ZipFile(exportFile)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertImageReference(manifest, imageResource.getId(), "picture.png", "resources/picture.png");
+      assertArrayEquals(imageResource.getData(), readZipEntryBytes(zipFile, "resources/picture.png"));
+    }
+    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
   }
 
   @Test
-  public void readsExportedPlayerArchiveAudioResource() throws Exception {
+  public void exportedPlayerArchiveAudioResourceRemainsManifestedWhenUnsupportedProgramTypeFailsClosed() throws Exception {
     byte[] audioBytes = new byte[] {0, 1, 2, 3};
     File audioFile = temporaryFolder.newFile("sound.wav");
     Files.write(audioFile.toPath(), audioBytes);
@@ -314,17 +310,12 @@ public class IoUtilitiesTest {
 
     IoUtilities.exportProject(exportFile, project);
 
-    Project readProject = IoUtilities.readProject(exportFile);
-    assertNull("Archives with unsupported Tweedle members remain undecoded.", readProject.getProgramType());
-    assertEquals(1, readProject.getResources().size());
-    Resource readResource = readProject.getResources().iterator().next();
-    assertEquals(AudioResource.class, readResource.getClass());
-    assertEquals(audioResource.getId(), readResource.getId());
-    assertEquals("sound.wav", readResource.getOriginalFileName());
-    assertEquals("sound.wav", readResource.getName());
-    assertEquals("audio.x_wav", readResource.getContentType());
-    assertArrayEquals(audioBytes, readResource.getData());
-    assertEquals(0.0, ((AudioResource) readResource).getDuration(), 0.0);
+    try (ZipFile zipFile = new ZipFile(exportFile)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertAudioReference(manifest, audioResource.getId(), "sound.wav", "resources/sound.wav");
+      assertArrayEquals(audioBytes, readZipEntryBytes(zipFile, "resources/sound.wav"));
+    }
+    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
   }
 
   @Test
@@ -773,14 +764,11 @@ public class IoUtilitiesTest {
   }
 
   @Test
-  public void unsupportedJsonPlayerTweedleSuperclassRemainsUndecoded() throws Exception {
+  public void unsupportedJsonPlayerTweedleSuperclassFailsClosed() throws Exception {
     File exportFile = temporaryFolder.newFile("json-unsupported-super-program.a3w");
     writeJsonPlayerArchive(exportFile, "Program", "class Program extends MissingSuper {}");
 
-    Project readProject = IoUtilities.readProject(exportFile);
-
-    assertNull("Unsupported Tweedle superclasses remain documented null program type behavior for now.",
-        readProject.getProgramType());
+    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
   }
 
   @Test
@@ -843,17 +831,15 @@ public class IoUtilitiesTest {
   }
 
   @Test
-  public void unsupportedJsonTypeTweedleSuperclassRemainsUndecoded() throws Exception {
+  public void unsupportedJsonTypeTweedleSuperclassFailsClosed() throws Exception {
     File typeFile = temporaryFolder.newFile("json-unsupported-super-type.a3c");
     writeJsonTypeArchive(typeFile, "SyntheticType", "class SyntheticType extends MissingSuper {}");
 
-    TypeResourcesPair readType = IoUtilities.readType(typeFile);
-
-    assertNull("Unsupported Tweedle superclasses remain documented null behavior for now.", readType.getType());
+    assertUnsupportedTypeArchiveFailsClosed(typeFile, "SyntheticType");
   }
 
   @Test
-  public void readsJsonTypeArchiveResourcesWhenUnsupportedTweedleRemainsUndecoded() throws Exception {
+  public void jsonTypeArchiveResourceRemainsManifestedWhenUnsupportedTypeFailsClosed() throws Exception {
     ImageResource imageResource = imageResource("type-picture.png", 0xFFFF0000);
     NamedUserType type = programTypeReferencingImageResource("Prop", imageResource);
     File typeFile = temporaryFolder.newFile("json-type.a3c");
@@ -862,16 +848,12 @@ public class IoUtilitiesTest {
       ((ProjectIo.ProjectWriter) JsonProjectIo.writer()).writeType(outputStream, type, new DataSource[0]);
     }
 
-    TypeResourcesPair readType = IoUtilities.readType(typeFile);
-    assertNull("Archives with unsupported Tweedle members remain undecoded.", readType.getType());
-    assertEquals(1, readType.getResources().size());
-    Resource readResource = readType.getResources().iterator().next();
-    assertEquals(ImageResource.class, readResource.getClass());
-    assertEquals(imageResource.getId(), readResource.getId());
-    assertEquals("type-picture.png", readResource.getOriginalFileName());
-    assertEquals("type-picture.png", readResource.getName());
-    assertEquals("png", readResource.getContentType());
-    assertArrayEquals(imageResource.getData(), readResource.getData());
+    try (ZipFile zipFile = new ZipFile(typeFile)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      assertImageReference(manifest, imageResource.getId(), "type-picture.png", "resources/type-picture.png");
+      assertArrayEquals(imageResource.getData(), readZipEntryBytes(zipFile, "resources/type-picture.png"));
+    }
+    assertUnsupportedTypeArchiveFailsClosed(typeFile, "Prop");
   }
 
   @Test
@@ -1020,11 +1002,7 @@ public class IoUtilitiesTest {
       assertNotNull(zipFile.getEntry("resources/.._folder_picture.png"));
       assertNull(zipFile.getEntry("resources/../folder/picture.png"));
     }
-    Project readProject = IoUtilities.readProject(exportFile);
-    Map<UUID, Resource> resourcesById = resourcesById(readProject);
-    assertArrayEquals(first.getData(), resourcesById.get(first.getId()).getData());
-    assertArrayEquals(duplicate.getData(), resourcesById.get(duplicate.getId()).getData());
-    assertArrayEquals(pathLike.getData(), resourcesById.get(pathLike.getId()).getData());
+    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
   }
 
   @Test
@@ -1049,10 +1027,7 @@ public class IoUtilitiesTest {
       assertImageReference(manifest, unixPath.getId(), "unix-picture.png", "resources/unix-picture.png");
       assertImageReference(manifest, windowsPath.getId(), "windows-picture.png", "resources/windows-picture.png");
     }
-    Project readProject = IoUtilities.readProject(exportFile);
-    Map<UUID, Resource> resourcesById = resourcesById(readProject);
-    assertSafeReadbackResource(resourcesById.get(unixPath.getId()), "unix-picture.png", unixPath.getData());
-    assertSafeReadbackResource(resourcesById.get(windowsPath.getId()), "windows-picture.png", windowsPath.getData());
+    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
   }
 
   @Test
@@ -1366,7 +1341,28 @@ public class IoUtilitiesTest {
         ProjectManifest.class);
   }
 
-  private static void assertImageReference(ProjectManifest manifest, UUID uuid, String name, String file) {
+  private static TypeManifest readTypeManifest(ZipFile zipFile) throws IOException {
+    return ManifestEncoderDecoder.fromJson(
+        readZipEntryText(zipFile, ProjectIo.MANIFEST_ENTRY_NAME),
+        TypeManifest.class);
+  }
+
+  private static IOException assertUnsupportedProjectArchiveFailsClosed(File exportFile, String expectedProgramName) {
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+    assertTrue(thrown.getMessage().contains(
+        "Project archive manifest names program type '" + expectedProgramName + "'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+    return thrown;
+  }
+
+  private static IOException assertUnsupportedTypeArchiveFailsClosed(File typeFile, String expectedTypeName) {
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeFile));
+    assertTrue(thrown.getMessage().contains("Type archive manifest names '" + expectedTypeName + "'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+    return thrown;
+  }
+
+  private static void assertImageReference(Manifest manifest, UUID uuid, String name, String file) {
     for (ResourceReference resourceReference : manifest.resources) {
       if ((resourceReference instanceof ImageReference imageReference) && uuid.equals(imageReference.uuid)) {
         assertEquals(name, imageReference.name);
@@ -1377,6 +1373,19 @@ public class IoUtilitiesTest {
       }
     }
     fail("Missing image reference for " + uuid);
+  }
+
+  private static void assertAudioReference(Manifest manifest, UUID uuid, String name, String file) {
+    for (ResourceReference resourceReference : manifest.resources) {
+      if ((resourceReference instanceof AudioReference audioReference) && uuid.equals(audioReference.uuid)) {
+        assertEquals(name, audioReference.name);
+        assertEquals(file, audioReference.file);
+        assertNoLocalPathLeak(audioReference.name);
+        assertNoLocalPathLeak(audioReference.file);
+        return;
+      }
+    }
+    fail("Missing audio reference for " + uuid);
   }
 
   private static void assertSafeReadbackResource(Resource resource, String expectedName, byte[] expectedData) {
@@ -1393,10 +1402,14 @@ public class IoUtilitiesTest {
   }
 
   private static String readZipEntryText(ZipFile zipFile, String entryName) throws IOException {
+    return new String(readZipEntryBytes(zipFile, entryName), StandardCharsets.UTF_8);
+  }
+
+  private static byte[] readZipEntryBytes(ZipFile zipFile, String entryName) throws IOException {
     ZipEntry entry = zipFile.getEntry(entryName);
     assertNotNull(entry);
     try (InputStream inputStream = zipFile.getInputStream(entry)) {
-      return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+      return inputStream.readAllBytes();
     }
   }
 

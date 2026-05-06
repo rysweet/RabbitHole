@@ -185,6 +185,59 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void constructorBearingJsonA3wProgramTypeIsRejected() throws Exception {
+    File projectArchive = temporaryFolder.newFile("constructor-bearing-json-a3w-program-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithConstructorBoundary",
+        "class GeneratedProgramWithConstructorBoundary extends SProgram { GeneratedProgramWithConstructorBoundary() { } }",
+        "GeneratedConstructorBoundaryScene",
+        "class GeneratedConstructorBoundaryScene extends SScene {}");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      ZipEntry programTypeEntry = zipFile.getEntry("src/GeneratedProgramWithConstructorBoundary.twe");
+      assertNotNull(
+          "Constructor-bearing JSON .a3w fixture should contain the manifest-declared program type source",
+          programTypeEntry);
+      assertTrue(
+          readEntry(zipFile, programTypeEntry).contains("GeneratedProgramWithConstructorBoundary()"));
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithConstructorBoundary",
+          "src/GeneratedProgramWithConstructorBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedConstructorBoundaryScene",
+          "src/GeneratedConstructorBoundaryScene.twe");
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Project archive manifest names program type 'GeneratedProgramWithConstructorBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedConstructorBoundaryScene]"));
+  }
+
+  @Test
+  public void jsonProjectArchiveWithOnlyUnsupportedManifestTypesIsRejected() throws Exception {
+    File projectArchive = temporaryFolder.newFile("all-unsupported-json-a3w-types-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramAllUnsupportedBoundary",
+        "class GeneratedProgramAllUnsupportedBoundary extends SProgram { GeneratedProgramAllUnsupportedBoundary() { } }",
+        "GeneratedSceneAllUnsupportedBoundary",
+        "class GeneratedSceneAllUnsupportedBoundary extends SScene { GeneratedSceneAllUnsupportedBoundary() { } }");
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Project archive manifest names program type 'GeneratedProgramAllUnsupportedBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+  }
+
+  @Test
   public void generatedJsonPlayerArchiveWithComplexProgramInitializerIsRejectedWithoutPartialProgramDecode() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-complex-initializer-boundary.a3w");
 
@@ -232,7 +285,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedWorldArchiveCharacterizesManifestResourceReadbackLimitWithoutExternalFixture() throws Exception {
+  public void generatedWorldArchiveWithUnsupportedResourceExpressionIsRejectedWithoutPartialProgramDecode() throws Exception {
     ImageResource imageResource = generatedImageResource("historical-world-texture.png", 0xFF663399);
     Project project = new Project(
         typeReferencingImageResource("GeneratedResourceWorld", imageResource),
@@ -243,17 +296,11 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     IoUtilities.exportProject(exportArchive, project);
 
     assertWorldResourceManifestFacts(exportArchive, "GeneratedResourceWorld", imageResource);
-    Project readProject = IoUtilities.readProject(exportArchive);
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportArchive));
 
-    // This deliberately documents the current readback limit; the simple .a3w program test covers re-export roundtrip.
-    assertNull("Resource expressions currently exceed supported Tweedle rehydration for .a3w program types.",
-        readProject.getProgramType());
-    Resource readResource = onlyResource(readProject.getResources());
-    assertEquals(imageResource.getId(), readResource.getId());
-    assertEquals(imageResource.getName(), readResource.getName());
-    assertEquals(imageResource.getOriginalFileName(), readResource.getOriginalFileName());
-    assertEquals(imageResource.getContentType(), readResource.getContentType());
-    assertArrayEquals(imageResource.getData(), readResource.getData());
+    assertTrue(thrown.getMessage().contains(
+        "Project archive manifest names program type 'GeneratedResourceWorld'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
   }
 
   @Test
@@ -284,6 +331,138 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(imageResource.getOriginalFileName(), readResource.getOriginalFileName());
     assertEquals(imageResource.getContentType(), readResource.getContentType());
     assertArrayEquals(imageResource.getData(), readResource.getData());
+  }
+
+  @Test
+  public void methodBearingJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
+    ImageResource imageResource = generatedImageResource("json-type-method-boundary-texture.png", 0xFF663366);
+    File typeArchive = temporaryFolder.newFile("method-bearing-json-a3c-boundary.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonTypeWithMethodBoundary",
+        "class GeneratedJsonTypeWithMethodBoundary extends SProgram { WholeNumber count() { return 1; } }",
+        imageResource);
+
+    try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithMethodBoundary.twe");
+      assertNotNull("Method-bearing JSON .a3c fixture should contain the manifest-declared type source", typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("WholeNumber count()"));
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithMethodBoundary",
+          "src/GeneratedJsonTypeWithMethodBoundary.twe");
+      assertImageReference(
+          manifest,
+          imageResource.getId(),
+          imageResource.getName(),
+          "resources/" + imageResource.getName());
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Type archive manifest names 'GeneratedJsonTypeWithMethodBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+  }
+
+  @Test
+  public void constructorBearingJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
+    ImageResource imageResource = generatedImageResource("json-type-constructor-boundary-texture.png", 0xFF336666);
+    File typeArchive = temporaryFolder.newFile("constructor-bearing-json-a3c-boundary.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonTypeWithConstructorBoundary",
+        "class GeneratedJsonTypeWithConstructorBoundary extends SProgram { GeneratedJsonTypeWithConstructorBoundary() { } }",
+        imageResource);
+
+    try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithConstructorBoundary.twe");
+      assertNotNull("Constructor-bearing JSON .a3c fixture should contain the manifest-declared type source", typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("GeneratedJsonTypeWithConstructorBoundary()"));
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithConstructorBoundary",
+          "src/GeneratedJsonTypeWithConstructorBoundary.twe");
+      assertImageReference(
+          manifest,
+          imageResource.getId(),
+          imageResource.getName(),
+          "resources/" + imageResource.getName());
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Type archive manifest names 'GeneratedJsonTypeWithConstructorBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+  }
+
+  @Test
+  public void complexInitializerJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
+    ImageResource imageResource = generatedImageResource("json-type-complex-initializer-boundary-texture.png", 0xFF666633);
+    File typeArchive = temporaryFolder.newFile("complex-initializer-json-a3c-boundary.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonTypeWithComplexInitializerBoundary",
+        "class GeneratedJsonTypeWithComplexInitializerBoundary extends SProgram { WholeNumber count <- 1 + 2; }",
+        imageResource);
+
+    try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithComplexInitializerBoundary.twe");
+      assertNotNull("Complex-initializer JSON .a3c fixture should contain the manifest-declared type source", typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("WholeNumber count <- 1 + 2"));
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithComplexInitializerBoundary",
+          "src/GeneratedJsonTypeWithComplexInitializerBoundary.twe");
+      assertImageReference(
+          manifest,
+          imageResource.getId(),
+          imageResource.getName(),
+          "resources/" + imageResource.getName());
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Type archive manifest names 'GeneratedJsonTypeWithComplexInitializerBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+  }
+
+  @Test
+  public void unresolvedParentJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
+    ImageResource imageResource = generatedImageResource("json-type-unresolved-parent-boundary-texture.png", 0xFF336699);
+    File typeArchive = temporaryFolder.newFile("unresolved-parent-json-a3c-boundary.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonTypeWithUnresolvedParentBoundary",
+        "class GeneratedJsonTypeWithUnresolvedParentBoundary extends MissingLegacyParentType { WholeNumber count; }",
+        imageResource);
+
+    try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithUnresolvedParentBoundary.twe");
+      assertNotNull("Unresolved-parent JSON .a3c fixture should contain the manifest-declared type source", typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("extends MissingLegacyParentType"));
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithUnresolvedParentBoundary",
+          "src/GeneratedJsonTypeWithUnresolvedParentBoundary.twe");
+      assertImageReference(
+          manifest,
+          imageResource.getId(),
+          imageResource.getName(),
+          "resources/" + imageResource.getName());
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Type archive manifest names 'GeneratedJsonTypeWithUnresolvedParentBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are []"));
   }
 
   @Test
@@ -459,7 +638,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertTrue(project.getResources().isEmpty());
   }
 
-  private static void assertTypeReference(ProjectManifest manifest, String expectedName, String expectedFile) {
+  private static void assertTypeReference(Manifest manifest, String expectedName, String expectedFile) {
     for (ResourceReference resourceReference : manifest.resources) {
       if (resourceReference instanceof TypeReference typeReference && expectedName.equals(typeReference.name)) {
         assertEquals(expectedFile, typeReference.file);
@@ -470,7 +649,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     throw new AssertionError("Missing type reference for " + expectedName);
   }
 
-  private static void assertImageReference(ProjectManifest manifest, UUID expectedId, String expectedName, String expectedFile) {
+  private static void assertImageReference(Manifest manifest, UUID expectedId, String expectedName, String expectedFile) {
     for (ResourceReference resourceReference : manifest.resources) {
       if (resourceReference instanceof ImageReference imageReference && expectedId.equals(imageReference.uuid)) {
         assertEquals(expectedName, imageReference.name);
@@ -488,6 +667,12 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     return ManifestEncoderDecoder.fromJson(
         readEntry(zipFile, zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME)),
         ProjectManifest.class);
+  }
+
+  private static TypeManifest readTypeManifest(ZipFile zipFile) throws Exception {
+    return ManifestEncoderDecoder.fromJson(
+        readEntry(zipFile, zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME)),
+        TypeManifest.class);
   }
 
   private static void writeJsonTypeArchive(
