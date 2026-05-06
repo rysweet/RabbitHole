@@ -73,6 +73,7 @@ import java.util.stream.Collectors;
 public class JsonProjectIo extends DataSourceIo implements ProjectIo {
   private static final String TWEEDLE_EXTENSION = "twe";
   private static final String TWEEDLE_FORMAT = "tweedle";
+  private static final String LEGACY_PROGRAM_TYPE_NAME = "Program";
 
   public static JsonProjectReader reader(ZipEntryContainer container) {
     return new JsonProjectReader(container);
@@ -97,6 +98,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       TypeReadResult decodedTypes = readTypes(manifest);
       NamedUserType programType = decodedTypes.findByName(manifestName(manifest));
       if (programType == null) {
+        if (canRecoverLegacyProjectResources(manifest, decodedTypes, resources)) {
+          return new Project(null, new HashSet<>(decodedTypes.types), resources, sceneCameraType(manifest));
+        }
         verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
       }
       Set<NamedUserType> namedUserTypes = new HashSet<>(decodedTypes.types);
@@ -224,9 +228,13 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       for (ResourceReference resourceReference : manifest.resources) {
         if (resourceReference instanceof TypeReference typeReference) {
           result.hasTypeReferences = true;
-          NamedUserType type = readTweedleType(typeReference, typeTerminals);
-          if (type != null) {
-            result.add(type);
+          try {
+            NamedUserType type = readTweedleType(typeReference, typeTerminals);
+            if (type != null) {
+              result.add(type);
+            }
+          } catch (UnsupportedTweedleDecodeException e) {
+            result.addUnsupportedTweedleType(typeReference);
           }
         }
       }
@@ -274,8 +282,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         }
         throw new IOException("Tweedle type entry " + typeReference.file + " did not decode to a user type");
       } catch (UnsupportedTweedleDecodeException e) {
-        // Unsupported Tweedle AST features stay as the existing null type behavior.
-        return null;
+        throw e;
       } catch (RuntimeException e) {
         throw new IOException("Unable to decode Tweedle type entry " + typeReference.file, e);
       } catch (VersionNotSupportedException e) {
@@ -309,6 +316,23 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
           "a type reference for the program type",
           manifest,
           decodedTypes);
+    }
+
+    private static boolean canRecoverLegacyProjectResources(
+        ProjectManifest manifest,
+        TypeReadResult decodedTypes,
+        Set<Resource> resources) {
+      String expectedProgramName = manifestName(manifest);
+      return (manifest != null)
+          && (manifest.metadata != null)
+          && LEGACY_PROGRAM_TYPE_NAME.equals(expectedProgramName)
+          && IoUtilities.EXPORT_EXTENSION.equals(manifest.metadata.fileType)
+          && decodedTypes.hasUnsupportedTweedleDecodeFor(expectedProgramName)
+          && hasExactlyOneRecoveredImageResource(resources);
+    }
+
+    private static boolean hasExactlyOneRecoveredImageResource(Set<Resource> resources) {
+      return (resources.size() == 1) && resources.stream().allMatch(ImageResource.class::isInstance);
     }
 
     private static void verifyArchiveHasExpectedType(
@@ -357,6 +381,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private static class TypeReadResult {
       private final Set<NamedUserType> types = new LinkedHashSet<>();
       private final Map<String, NamedUserType> typesByName = new HashMap<>();
+      private final Set<String> unsupportedTweedleTypeNames = new HashSet<>();
       private boolean hasTypeReferences;
 
       private void add(NamedUserType type) {
@@ -368,6 +393,16 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
       private NamedUserType findByName(String name) {
         return (name == null) ? null : typesByName.get(name);
+      }
+
+      private void addUnsupportedTweedleType(TypeReference typeReference) {
+        if (typeReference.name != null) {
+          unsupportedTweedleTypeNames.add(typeReference.name);
+        }
+      }
+
+      private boolean hasUnsupportedTweedleDecodeFor(String name) {
+        return (name != null) && unsupportedTweedleTypeNames.contains(name);
       }
     }
 

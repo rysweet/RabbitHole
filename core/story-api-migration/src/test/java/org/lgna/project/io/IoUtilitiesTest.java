@@ -279,7 +279,7 @@ public class IoUtilitiesTest {
   }
 
   @Test
-  public void exportedPlayerArchiveImageResourceRemainsManifestedWhenUnsupportedProgramTypeFailsClosed() throws Exception {
+  public void exportedPlayerArchiveImageResourceRemainsRecoverableWhenProgramTypeIsUnsupported() throws Exception {
     ImageResource imageResource = new ImageResource(
         new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
         "picture.png",
@@ -295,7 +295,15 @@ public class IoUtilitiesTest {
       assertImageReference(manifest, imageResource.getId(), "picture.png", "resources/picture.png");
       assertArrayEquals(imageResource.getData(), readZipEntryBytes(zipFile, "resources/picture.png"));
     }
-    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
+    Project readProject = IoUtilities.readProject(exportFile);
+    assertNull("Unsupported program type should not be treated as a complete project", readProject.getProgramType());
+    Resource readResource = onlyResource(readProject);
+    assertEquals(ImageResource.class, readResource.getClass());
+    assertEquals(imageResource.getId(), readResource.getId());
+    assertEquals("picture.png", readResource.getOriginalFileName());
+    assertEquals("picture.png", readResource.getName());
+    assertEquals("png", readResource.getContentType());
+    assertArrayEquals(imageResource.getData(), readResource.getData());
   }
 
   @Test

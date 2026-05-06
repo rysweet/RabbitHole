@@ -664,14 +664,18 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   private static ProjectManifest readProjectManifest(ZipFile zipFile) throws Exception {
+    ZipEntry manifestEntry = zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME);
+    assertNotNull("Generated project archive should contain " + ProjectIo.MANIFEST_ENTRY_NAME, manifestEntry);
     return ManifestEncoderDecoder.fromJson(
-        readEntry(zipFile, zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME)),
+        readEntry(zipFile, manifestEntry),
         ProjectManifest.class);
   }
 
   private static TypeManifest readTypeManifest(ZipFile zipFile) throws Exception {
+    ZipEntry manifestEntry = zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME);
+    assertNotNull("Generated type archive should contain " + ProjectIo.MANIFEST_ENTRY_NAME, manifestEntry);
     return ManifestEncoderDecoder.fromJson(
-        readEntry(zipFile, zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME)),
+        readEntry(zipFile, manifestEntry),
         TypeManifest.class);
   }
 
