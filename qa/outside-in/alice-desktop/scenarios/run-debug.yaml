@@ -15,14 +15,14 @@ userActions:
   - Stop or close the running program.
 expectedOutcomes:
   - The program starts from the Alice run controls.
-  - Desktop Run reaches VM statement execution when opt-in execution evidence is enabled.
-  - Desktop Run attaches the onscreen render target into the Run view hierarchy when opt-in render-affordance evidence is enabled.
+  - Desktop Run reaches VM statement execution when planned opt-in execution evidence is implemented and enabled.
+  - Desktop Run attaches the onscreen render target into the Run view hierarchy when planned opt-in render-affordance evidence is implemented and enabled.
   - The closest available debug-like control behaves consistently with the current Alice baseline.
   - The user can stop or return from execution without uncaught application errors.
 evidence:
   required:
-    - desktop-run-execution.json and desktop-run-runtime.log when opt-in desktop Run execution evidence is enabled.
-    - desktop-run-render-affordance.json when opt-in desktop Run render-affordance evidence is enabled.
+    - desktop-run-execution.json and desktop-run-runtime.log when planned opt-in desktop Run execution evidence is implemented and enabled.
+    - desktop-run-render-affordance.json when planned opt-in desktop Run render-affordance evidence is implemented and enabled.
     - Screenshot or screen capture for manual workflow context, not pixel-correctness evidence.
     - Notes naming the run and debug-like controls exercised and whether any manual visual evidence was collected.
     - Launch or run log.

@@ -186,14 +186,15 @@ Manual evidence gaps:
 | `alice-desktop-save-load` | `save-load` |
 | `alice-desktop-scene-creation` | `scene-creation` |
 
-The Run/debug journey has a narrower executable evidence slice even while the
-scenario remains `manual-evidence-required` in the catalog. The desktop Run
-evidence lane writes `desktop-run-execution.json`, `desktop-run-runtime.log`,
-and `desktop-run-render-affordance.json` to show that VM statement execution was
+The Run/debug journey has a planned narrower executable evidence slice even
+while the scenario remains `manual-evidence-required` in the catalog. Once the
+desktop Run evidence lane is implemented and enabled, it will write
+`desktop-run-execution.json`, `desktop-run-runtime.log`, and
+`desktop-run-render-affordance.json` as evidence that VM statement execution was
 observed and the onscreen render target was structurally attached into the Run
-view hierarchy. That evidence reduces the Run-progress ambiguity, but it does
-not claim screenshot validation, pixel rendering correctness,
-coordinate-based visual validation, or rendering-engine correctness.
+view hierarchy. That evidence will reduce Run-progress ambiguity, but it will
+not claim screenshot validation, pixel rendering correctness, coordinate-based
+visual validation, or rendering-engine correctness.
 
 Gated command smoke gaps:
 
@@ -235,7 +236,7 @@ Corpus coverage is representative manifest evidence only; it is not full histori
 | Ratcheted module measurements | Missing module JaCoCo CSVs for 5 ratcheted modules in this checkout | Run the no-Sims coverage lane and confirm each ratcheted module still emits a report. |
 | 70% target evidence | Not claimable | Produce aggregate measured coverage at or above 70.0% before marking the target met. |
 | Production hotspots | 51 files over 500 lines | Characterize behavior first; refactor only protected hotspots in focused changes. |
-| Manual QA journeys | 6 scenarios require manual evidence | Add stable automation or collect accepted manual evidence for each workflow. Run/debug already has a non-coordinate execution/render-affordance artifact boundary, but it remains manual for claims beyond VM execution and structural render-target attachment. |
+| Manual QA journeys | 6 scenarios require manual evidence | Add stable automation or collect accepted manual evidence for each workflow. Run/debug has a planned non-coordinate execution/render-affordance artifact boundary, but it remains manual for claims beyond VM execution and structural render-target attachment. |
 | Gated QA smokes | 8 smokes are gated by local prerequisites | Run with `ALICE_QA_RUN_GATED_SMOKES=1` where prerequisites exist, or attach equivalent CI evidence. |
 | Corpus manifest | Present | Keep manifest entries mapped to representative modernization journeys. |
 
