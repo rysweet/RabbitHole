@@ -96,7 +96,9 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     }
 
     Path artifact = evidenceDir.resolve("desktop-run-render-affordance.json");
+    Path pixelBoundaryArtifact = evidenceDir.resolve("desktop-run-pixel-boundary.json");
     assertTrue(Files.size(artifact) > 0);
+    assertTrue(Files.size(pixelBoundaryArtifact) > 0);
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"evidenceKind\": \"desktop_run_render_affordance\""));
     assertTrue(json, json.contains("\"renderTargetAttachedToRunView\": true"));
@@ -127,6 +129,16 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertNoField(json, "screenshot");
     assertNoField(json, "screenLocation");
     assertNoField(json, "mousePosition");
+
+    String pixelBoundaryJson = Files.readString(pixelBoundaryArtifact);
+    assertTrue(pixelBoundaryJson,
+        pixelBoundaryJson.contains("\"schema_version\": \"eatme.alice-desktop-run-pixel-boundary/v1\""));
+    assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("\"status\": \"not_observed\""));
+    assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("does not inspect screenshots or pixel output"));
+    assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("requiresSeparateEvidence"));
+    assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("visible rendering"));
+    assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("pixel output validation"));
+    assertTrue(pixelBoundaryJson, pixelBoundaryJson.contains("grading"));
   }
 
   @Test

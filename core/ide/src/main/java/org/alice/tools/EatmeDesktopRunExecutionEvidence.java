@@ -28,6 +28,7 @@ public final class EatmeDesktopRunExecutionEvidence {
   public static final String DESKTOP_RUN_EXECUTION_ARTIFACT = "desktop-run-execution.json";
   public static final String DESKTOP_RUN_RUNTIME_LOG = "desktop-run-runtime.log";
   public static final String DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT = "desktop-run-render-affordance.json";
+  public static final String DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT = "desktop-run-pixel-boundary.json";
   private static final int MAX_RECORDED_EVENTS = 200;
   private static final String RENDER_AFFORDANCE_CLAIM =
       "A Run view attachment signal was observed.";
@@ -263,6 +264,7 @@ public final class EatmeDesktopRunExecutionEvidence {
 
     Files.createDirectories(evidenceDir);
     Path artifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT);
+    Path pixelBoundaryArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT);
     writeStringAtomically(
         artifact,
         "{\n"
@@ -287,6 +289,25 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "  ]\n"
             + "}\n");
     requireNonEmptyArtifact(artifact, "desktop Run render-affordance artifact");
+    writeStringAtomically(
+        pixelBoundaryArtifact,
+        "{\n"
+            + "  \"schema_version\": \"eatme.alice-desktop-run-pixel-boundary/v1\",\n"
+            + "  \"status\": \"not_observed\",\n"
+            + "  \"reason\": \"Run view attachment was observed, but this Alice-side signal does not inspect screenshots or pixel output.\",\n"
+            + "  \"requiresSeparateEvidence\": [\n"
+            + "    \"non-empty desktop screenshot captured after Run-window attachment\",\n"
+            + "    \"pixel or image validation performed by an outside-in harness\"\n"
+            + "  ],\n"
+            + "  \"doesNotClaim\": [\n"
+            + "    \"visible rendering\",\n"
+            + "    \"pixel output validation\",\n"
+            + "    \"screenshot validation\",\n"
+            + "    \"lesson completion\",\n"
+            + "    \"grading\"\n"
+            + "  ]\n"
+            + "}\n");
+    requireNonEmptyArtifact(pixelBoundaryArtifact, "desktop Run pixel boundary artifact");
     return artifact;
   }
 
