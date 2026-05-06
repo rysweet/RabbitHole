@@ -15,14 +15,16 @@ userActions:
   - Stop or close the running program.
 expectedOutcomes:
   - The program starts from the Alice run controls.
-  - The user can observe visible program execution.
+  - Desktop Run reaches VM statement execution when opt-in execution evidence is enabled.
+  - Desktop Run attaches the onscreen render target into the Run view hierarchy when opt-in render-affordance evidence is enabled.
   - The closest available debug-like control behaves consistently with the current Alice baseline.
   - The user can stop or return from execution without uncaught application errors.
 evidence:
   required:
-    - Screenshot before running the program.
-    - Screenshot or screen capture during program execution.
-    - Notes naming the run and debug-like controls exercised.
+    - desktop-run-execution.json and desktop-run-runtime.log when opt-in desktop Run execution evidence is enabled.
+    - desktop-run-render-affordance.json when opt-in desktop Run render-affordance evidence is enabled.
+    - Screenshot or screen capture for manual workflow context, not pixel-correctness evidence.
+    - Notes naming the run and debug-like controls exercised and whether any manual visual evidence was collected.
     - Launch or run log.
     - Saved a3p project used for the run.
     - review-notes.txt summarizing reviewed artifacts and the acceptance decision.
@@ -31,5 +33,6 @@ fallback:
   notes:
     - Do not invent a conventional debugger requirement if Alice does not expose one.
     - Treat fast-forward or statement execution as debug-like coverage only when it is visible in the baseline UI.
+    - Treat render-affordance evidence as structural Run-view attachment evidence only; do not use it as screenshot, pixel, coordinate, or rendering-engine correctness evidence.
 supportingEvidence:
   - alice-desktop-launch
