@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! -d "alice-ide/target/lib" ]; then
+  echo "alice-ide/target/lib is missing; run the Alice package step before tools/eatme-edit-procedure" >&2
+  exit 2
+fi
+
+exec java \
+  -ea \
+  -Dorg.alice.ide.rootDirectory=./core/resources/target/distribution \
+  -Dedu.cmu.cs.dennisc.java.util.logging.Logger.Level=WARNING \
+  -cp "alice-ide/target/*:alice-ide/target/lib/*" \
+  org.alice.tools.EatmeEditProcedure \
+  "$@"
