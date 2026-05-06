@@ -21,6 +21,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | --- | --- |
 | `qa/outside-in/alice-desktop/README.md` | Local entry point for the QA lane. |
 | `qa/outside-in/alice-desktop/scenarios/` | User-like acceptance scenario YAML files. |
+| `qa/outside-in/alice-desktop/gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools. |
 | `qa/outside-in/alice-desktop/schema/scenario.schema.json` | Published JSON Schema contract for the scenario model. |
 | `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` | Catalog validator and scenario JSON dumper. |
 | `qa/outside-in/alice-desktop/runners/run-scenario.sh` | Scenario listing, validation, real launch execution, and manual checklist generation. |
@@ -59,6 +60,8 @@ Run commands from the repository root.
 | `run-scenario.sh list` | List runnable scenarios. | Prints the same user-facing list as the validator. |
 | `run-scenario.sh validate` | Validate the active catalog through the runner. | Delegates to `validate-scenarios.sh`. |
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
+| `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
+| `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa list` | Install the QA wrapper from a branch and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa run <scenario-id-or-path>` | Install the QA wrapper from a branch and create evidence in the current checkout. | Delegates to `run-scenario.sh run`. |
 
@@ -136,6 +139,30 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
 ```
 
 `--prepare-only` is the intentional preflight mode for gated command smokes. It writes `outcome=gated-not-run` evidence and returns success without executing the configured command.
+
+### Run the Gadugi exported launcher evidence scenario
+
+The Gadugi scenario is stored outside the custom Alice scenario catalog because
+it uses the Gadugi CLI schema. Prerequisite: `gadugi-test` must be installed and
+available on `PATH`.
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s exported-launcher-evidence \
+  --timeout 300000
+```
+
+The scenario prepares the `alice-desktop-exported-project-smoke` evidence lane
+through the existing outside-in runner. It validates launcher evidence wiring
+and JavaFX handoff/no-go checks only. It does not prove visible rendering, save
+behavior, grading, creative assessment, or full lesson completion. The default
+Gadugi path uses the underlying runner's `--prepare-only` mode;
+`ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
+invoked without `--prepare-only`.
 
 ### Exit behavior
 

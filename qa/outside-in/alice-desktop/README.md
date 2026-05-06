@@ -9,6 +9,7 @@ For user-facing instructions, see [Run Alice desktop outside-in QA](../../../doc
 | Area | Owns | Does not own |
 | --- | --- | --- |
 | `scenarios/` | User-like workflows, expected outcomes, evidence requirements, automation mode | Java implementation details or brittle internal UI assumptions |
+| `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence contract checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `schema/` | Scenario structure and allowed field values | Business logic |
 | `runners/` | Thin wrappers around existing Maven/Alice commands | New build systems, hidden dependencies, or product behavior changes |
 | `evidence/` | Local run artifacts produced by the runner | Source-controlled product assets |
@@ -55,6 +56,29 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desk
 ```
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
+
+The Gadugi exported launcher evidence scenario is a separate CLI scenario under
+`gadugi/`, not a custom Alice scenario under `scenarios/`. Validate and run it
+with `gadugi-test` installed on `PATH`:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s exported-launcher-evidence \
+  --timeout 300000
+```
+
+That Gadugi scenario delegates to the exported-project smoke runner in
+prepare-only mode by default and writes evidence under
+`qa/outside-in/alice-desktop/evidence/gadugi-exported-launcher`.
+`ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
+invoked without `--prepare-only`. The Gadugi lane validates launcher evidence
+wiring and JavaFX handoff/no-go checks only; it does not prove visible
+rendering, save behavior, grading, creative assessment, or full lesson
+completion.
 
 For branch-installable outside-in checks, run the thin `amplihack` wrapper from a checkout of the branch:
 
