@@ -30,7 +30,7 @@ public final class EatmeDesktopRunExecutionEvidence {
   public static final String DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT = "desktop-run-render-affordance.json";
   private static final int MAX_RECORDED_EVENTS = 200;
   private static final String RENDER_AFFORDANCE_CLAIM =
-      "desktop Run attached the onscreen render target AWT component into the Run view hierarchy";
+      "A Run view attachment signal was observed.";
 
   private EatmeDesktopRunExecutionEvidence() {
   }
@@ -76,7 +76,7 @@ public final class EatmeDesktopRunExecutionEvidence {
     }
   }
 
-  private static String evidenceDirProperty() {
+  static String evidenceDirProperty() {
     String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
     if (evidenceDir == null || evidenceDir.isBlank()) {
       return System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
@@ -278,10 +278,12 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "  \"controlPanelAttached\": " + controlPanelAttached + ",\n"
             + "  \"claim\": \"" + RENDER_AFFORDANCE_CLAIM + "\",\n"
             + "  \"doesNotClaim\": [\n"
-            + "    \"pixel rendering correctness\",\n"
+            + "    \"visible rendering\",\n"
+            + "    \"graphics or OpenGL rendering success\",\n"
+            + "    \"pixel output validation\",\n"
             + "    \"screenshot validation\",\n"
-            + "    \"coordinate-based visual validation\",\n"
-            + "    \"rendering-engine correctness\"\n"
+            + "    \"end-to-end UI correctness\",\n"
+            + "    \"lesson completion\"\n"
             + "  ]\n"
             + "}\n");
     requireNonEmptyArtifact(artifact, "desktop Run render-affordance artifact");
