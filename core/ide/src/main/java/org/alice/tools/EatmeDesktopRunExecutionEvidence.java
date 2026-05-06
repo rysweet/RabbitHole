@@ -30,13 +30,13 @@ public final class EatmeDesktopRunExecutionEvidence {
   public static final String DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT = "desktop-run-render-affordance.json";
   private static final int MAX_RECORDED_EVENTS = 200;
   private static final String RENDER_AFFORDANCE_CLAIM =
-      "desktop Run reached VM execution and attached the onscreen render target AWT component into the Run view hierarchy";
+      "desktop Run attached the onscreen render target AWT component into the Run view hierarchy";
 
   private EatmeDesktopRunExecutionEvidence() {
   }
 
   public static Recorder install(RunProgramContext context, NamedUserType programType) {
-    String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
+    String evidenceDir = evidenceDirProperty();
     if (evidenceDir == null || evidenceDir.isBlank() || context == null) {
       return Recorder.disabled();
     }
@@ -60,7 +60,7 @@ public final class EatmeDesktopRunExecutionEvidence {
     Objects.requireNonNull(renderPanelComponent, "renderPanelComponent");
     Objects.requireNonNull(runViewComponent, "runViewComponent");
 
-    String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
+    String evidenceDir = evidenceDirProperty();
     if (evidenceDir == null || evidenceDir.isBlank()) {
       return;
     }
@@ -74,6 +74,14 @@ public final class EatmeDesktopRunExecutionEvidence {
     } catch (IOException | InvalidPathException | SecurityException ex) {
       Logger.throwable(ex, "eatme desktop Run render-affordance evidence write failed: " + evidenceDir);
     }
+  }
+
+  private static String evidenceDirProperty() {
+    String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
+    if (evidenceDir == null || evidenceDir.isBlank()) {
+      return System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    }
+    return evidenceDir;
   }
 
   public static final class Recorder implements VirtualMachineListener {

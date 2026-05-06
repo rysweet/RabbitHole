@@ -58,7 +58,9 @@ public class EatmeDesktopRunExecutionEvidenceTest {
   public void renderTargetAffordanceRecorderIsOptIn() throws Exception {
     Path evidenceDir = temporaryFolder.newFolder("disabled-evidence").toPath();
     String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    String previousRunWindowEvidenceDir = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
     System.clearProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
     try {
       EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
           new JPanel(),
@@ -69,6 +71,7 @@ public class EatmeDesktopRunExecutionEvidenceTest {
       assertFalse(Files.exists(evidenceDir.resolve("desktop-run-render-affordance.json")));
     } finally {
       restoreEvidenceDirProperty(previousEvidenceDir);
+      restoreRunWindowEvidenceDirProperty(previousRunWindowEvidenceDir);
     }
   }
 
@@ -105,7 +108,7 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(json, json.contains("\"runViewComponentClass\": \"javax.swing.JPanel\""));
     assertTrue(json, json.contains("\"runViewComponentCountAfterAttach\": 1"));
     assertTrue(json, json.contains("\"controlPanelAttached\": true"));
-    assertTrue(json, json.contains("\"claim\": \"desktop Run reached VM execution and attached the onscreen render target AWT component into the Run view hierarchy\""));
+    assertTrue(json, json.contains("\"claim\": \"desktop Run attached the onscreen render target AWT component into the Run view hierarchy\""));
     assertTrue(json, json.contains("\"doesNotClaim\""));
     assertTrue(json, json.contains("pixel rendering correctness"));
     assertTrue(json, json.contains("screenshot validation"));
@@ -121,6 +124,51 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertNoField(json, "screenshot");
     assertNoField(json, "screenLocation");
     assertNoField(json, "mousePosition");
+  }
+
+  @Test
+  public void renderTargetAffordanceRecorderFallsBackToExistingRunWindowEvidenceProperty() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("legacy-run-window-evidence").toPath();
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    String previousRunWindowEvidenceDir = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    System.clearProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, evidenceDir.toString());
+    try {
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          new JPanel(),
+          new JPanel(),
+          new JPanel(),
+          true);
+    } finally {
+      restoreEvidenceDirProperty(previousEvidenceDir);
+      restoreRunWindowEvidenceDirProperty(previousRunWindowEvidenceDir);
+    }
+
+    Path artifact = evidenceDir.resolve("desktop-run-render-affordance.json");
+    assertTrue(Files.size(artifact) > 0);
+  }
+
+  @Test
+  public void renderTargetAffordanceRecorderPrefersDedicatedDesktopRunEvidenceProperty() throws Exception {
+    Path legacyEvidenceDir = temporaryFolder.newFolder("legacy-run-window-evidence").toPath();
+    Path dedicatedEvidenceDir = temporaryFolder.newFolder("desktop-run-evidence").toPath();
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    String previousRunWindowEvidenceDir = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    System.setProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY, dedicatedEvidenceDir.toString());
+    System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, legacyEvidenceDir.toString());
+    try {
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          new JPanel(),
+          new JPanel(),
+          new JPanel(),
+          true);
+    } finally {
+      restoreEvidenceDirProperty(previousEvidenceDir);
+      restoreRunWindowEvidenceDirProperty(previousRunWindowEvidenceDir);
+    }
+
+    assertFalse(Files.exists(legacyEvidenceDir.resolve("desktop-run-render-affordance.json")));
+    assertTrue(Files.size(dedicatedEvidenceDir.resolve("desktop-run-render-affordance.json")) > 0);
   }
 
   @Test(expected = NullPointerException.class)
@@ -184,6 +232,14 @@ public class EatmeDesktopRunExecutionEvidenceTest {
       System.clearProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
     } else {
       System.setProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY, previousEvidenceDir);
+    }
+  }
+
+  private static void restoreRunWindowEvidenceDirProperty(String previousEvidenceDir) {
+    if (previousEvidenceDir == null) {
+      System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    } else {
+      System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, previousEvidenceDir);
     }
   }
 

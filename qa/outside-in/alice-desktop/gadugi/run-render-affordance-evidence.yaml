@@ -1,0 +1,42 @@
+name: run-render-affordance-evidence
+description: "Validates PR #154 desktop Run view attachment signal wiring through existing QA entry points only; it does not validate visible rendering, pixel-level rendering correctness, OpenGL, graphics pipeline behavior, or lesson completion."
+config:
+  timeout: 180000
+environment:
+  requires: []
+agents:
+  - id: alice-desktop-qa-cli
+    type: cli
+    config:
+      workingDirectory: .
+metadata:
+  priority: medium
+  tags:
+    - cli
+    - gadugi
+    - pr-154
+    - desktop-run-debug
+    - render-affordance-evidence
+steps:
+  - name: validate-desktop-outside-in-catalog
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+    timeout: 60000
+  - name: prepare-run-debug-render-affordance-evidence
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/run-scenario.sh
+      args:
+        - run
+        - alice-desktop-run-debug
+        - --prepare-only
+        - --evidence-dir
+        - qa/outside-in/alice-desktop/evidence/gadugi-run-render-affordance
+    timeout: 60000
+  - name: run-desktop-outside-in-contract-tests
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/tests/run-tests.sh
+    timeout: 120000
+assertions: []
