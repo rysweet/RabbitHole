@@ -332,7 +332,7 @@ public class AliceJavaFXLauncher extends Application {
     private static void requirePrimaryStage(Stage primaryStage) {
         if (primaryStage == null) {
             throw new IllegalStateException(
-                "JavaFX Application.start requires a primary Stage before Program.main can run.");
+                "Generated launcher requires a non-null primary Stage before Program.main can run.");
         }
     }
 
