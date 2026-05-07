@@ -322,6 +322,39 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithComplexInitializerSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-complex-initializer-sibling-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithComplexInitializerSiblingBoundary",
+        "class GeneratedProgramWithComplexInitializerSiblingBoundary extends SProgram { WholeNumber count; }",
+        "GeneratedComplexInitializerSiblingBoundaryScene",
+        "class GeneratedComplexInitializerSiblingBoundaryScene extends SScene { WholeNumber count <- 1 + 2; }");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithComplexInitializerSiblingBoundary",
+          "src/GeneratedProgramWithComplexInitializerSiblingBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedComplexInitializerSiblingBoundaryScene",
+          "src/GeneratedComplexInitializerSiblingBoundaryScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedComplexInitializerSiblingBoundaryScene.twe");
+      assertNotNull(
+          "Generated JSON .a3w fixture should contain the complex-initializer sibling type source",
+          siblingTypeEntry);
+      assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count <- 1 + 2"));
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedComplexInitializerSiblingBoundaryScene]"));
+  }
+
+  @Test
   public void generatedJsonPlayerArchiveWithUnresolvedProgramParentIsRejectedWithoutPartialProgramDecode() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-unresolved-parent-boundary.a3w");
 
