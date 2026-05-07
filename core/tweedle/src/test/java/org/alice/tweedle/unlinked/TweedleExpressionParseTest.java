@@ -142,6 +142,30 @@ public class TweedleExpressionParseTest {
   }
 
   @Test
+  public void moduloExpressionShouldEvaluateRemainder() {
+    TweedleExpression tested = parseExpression("5 % 2");
+
+    assertEquals("The modulo expression should evaluate to the remainder.", 1, ((TweedlePrimitiveValue) tested.evaluate(null)).getPrimitiveValue());
+    assertEquals("The modulo expression should be a WholeNumber.", TweedleTypes.WHOLE_NUMBER, tested.getType());
+  }
+
+  @Test
+  public void comparisonExpressionShouldEvaluateBoolean() {
+    TweedleExpression tested = parseExpression("3 < 4");
+
+    assertEquals("The less-than expression should evaluate to true.", true, ((TweedlePrimitiveValue) tested.evaluate(null)).getPrimitiveValue());
+    assertEquals("The less-than expression should be Boolean.", TweedleTypes.BOOLEAN, tested.getType());
+  }
+
+  @Test
+  public void logicalNotExpressionShouldEvaluateBoolean() {
+    TweedleExpression tested = parseExpression("!false");
+
+    assertEquals("The logical not expression should evaluate to true.", true, ((TweedlePrimitiveValue) tested.evaluate(null)).getPrimitiveValue());
+    assertEquals("The logical not expression should be Boolean.", TweedleTypes.BOOLEAN, tested.getType());
+  }
+
+  @Test
   public void decimalAdditionExpressionShouldEvaluateToAPrimitiveValue() {
     AdditionExpression tested = (AdditionExpression) parseExpression("2.1 + 4.9");
     assertTrue("The AdditionExpression should evaluate to a tweedle value.", tested.evaluate(null) instanceof TweedlePrimitiveValue);

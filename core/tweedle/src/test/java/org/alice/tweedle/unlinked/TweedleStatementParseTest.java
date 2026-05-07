@@ -392,6 +392,24 @@ public class TweedleStatementParseTest {
   }
 
   @Test
+  public void aVariableDeclarationWithoutInitializerShouldPreserveNameAndType() {
+    LocalVariableDeclaration tested = (LocalVariableDeclaration) parseStatement("TextString label;");
+
+    assertEquals("The LocalVariableDeclaration should be named label.", "label", tested.getDeclaration().getName());
+    assertEquals("The LocalVariableDeclaration should be TextString.", TweedleTypes.TEXT_STRING, tested.getDeclaration().getType());
+    assertNull("The LocalVariableDeclaration should not invent an initializer.", tested.getDeclaration().getInitializer());
+  }
+
+  @Test
+  public void aConstantVariableDeclarationWithoutInitializerShouldRemainConstant() {
+    LocalVariableDeclaration tested = (LocalVariableDeclaration) parseStatement("constant SModel target;");
+
+    assertTrue("The LocalVariableDeclaration should be constant.", tested.isConstant());
+    assertEquals("The LocalVariableDeclaration should be named target.", "target", tested.getDeclaration().getName());
+    assertEquals("The LocalVariableDeclaration should be typed by reference.", "SModel", tested.getDeclaration().getType().getName());
+  }
+
+  @Test
   public void nestedDoInOrdersOuterOneShouldBeEnabled() {
     DoInOrder tested = (DoInOrder) parseStatement("doInOrder { doInOrder {} }");
     assertTrue("The outer doInOrder should be enabled.", tested.isEnabled());

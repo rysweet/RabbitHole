@@ -1,0 +1,4 @@
+Selected increment: core/tweedle TweedleUnlinkedParser characterization coverage.
+Reason: current scorecard lists TweedleUnlinkedParser as a >500-line production hotspot and core/tweedle has an existing CI module ratchet. This avoids save-menu/live UI, procedure, archive, decoder, model-resource-array, IssueReportWorker, SourceCodeGenerator/core/ast, Jama/story-api, scenegraph, and Color4f/core-util scopes.
+Change type: behavior tests only; no production refactor.
+Coverage evidence: baseline module-only core/tweedle coverage 54.63% (1852/3390 lines); final module-only core/tweedle coverage 56.25% (1907/3390 lines). Aggregate 70% target remains unmet/not claimable from this module-only run.

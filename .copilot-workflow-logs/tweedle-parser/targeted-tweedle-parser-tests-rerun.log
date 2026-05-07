@@ -1,0 +1,70 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< org.alice:tweedle >--------------------------
+[INFO] Building Tweedle Language 9.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] Could not transfer metadata org.alice:util:9.1.0-SNAPSHOT/maven-metadata.xml from/to maven-default-http-blocker (http://0.0.0.0/): Blocked mirror for repositories: [netbeans (http://netbeans.apidesign.org/maven2/, default, releases+snapshots)]
+[WARNING] org.alice:util:9.1.0-SNAPSHOT/maven-metadata.xml failed to transfer from http://0.0.0.0/ during a previous attempt. This failure was cached in the local repository and resolution will not be reattempted until the update interval of maven-default-http-blocker has elapsed or updates are forced. Original error: Could not transfer metadata org.alice:util:9.1.0-SNAPSHOT/maven-metadata.xml from/to maven-default-http-blocker (http://0.0.0.0/): Blocked mirror for repositories: [netbeans (http://netbeans.apidesign.org/maven2/, default, releases+snapshots)]
+[WARNING] Could not transfer metadata org.alice:parent:9.1.0-SNAPSHOT/maven-metadata.xml from/to maven-default-http-blocker (http://0.0.0.0/): Blocked mirror for repositories: [netbeans (http://netbeans.apidesign.org/maven2/, default, releases+snapshots)]
+[INFO] 
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ tweedle ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireMavenVersion passed
+[INFO] 
+[INFO] --- enforcer:3.5.0:enforce (require-tweedle-lang-submodule) @ tweedle ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.files.RequireFilesExist passed
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ tweedle ---
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- antlr4:4.9.3:antlr4 (default) @ tweedle ---
+[INFO] No grammars to process
+[INFO] ANTLR 4: Processing source directory /home/azureuser/src/alice/RabbitHole-tweedle-parser-coverage-20260507143707/tweedle-lang/Grammar
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ tweedle ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-tweedle-parser-coverage-20260507143707/core/tweedle/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-tweedle-parser-coverage-20260507143707/core/tweedle/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-tweedle-parser-coverage-20260507143707/core/tweedle/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-tweedle-parser-coverage-20260507143707/core/tweedle/src/l10n-alice/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ tweedle ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 88 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ tweedle ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-tweedle-parser-coverage-20260507143707/core/tweedle/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ tweedle ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 6 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO] 
+[INFO] --- surefire:3.5.3:test (default-test) @ tweedle ---
+[INFO] Using configured provider org.apache.maven.surefire.junitcore.JUnitCoreProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running org.alice.tweedle.unlinked.TweedleStatementParseTest
+[INFO] Tests run: 76, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.100 s -- in org.alice.tweedle.unlinked.TweedleStatementParseTest
+[INFO] Running org.alice.tweedle.unlinked.TweedleParseTest
+line 1:5 mismatched input 'Boolean' expecting IDENTIFIER
+line 1:21 mismatched input '{' expecting {'Boolean', 'DecimalNumber', 'Number', 'TextString', 'WholeNumber', '<', IDENTIFIER}
+line 1:0 mismatched input '<EOF>' expecting {'class', 'enum', ';', '@'}
+line 1:6 mismatched input 'Boolean' expecting IDENTIFIER
+[INFO] Tests run: 48, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.028 s -- in org.alice.tweedle.unlinked.TweedleParseTest
+[INFO] Running org.alice.tweedle.unlinked.TweedleExpressionParseTest
+[INFO] Tests run: 52, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in org.alice.tweedle.unlinked.TweedleExpressionParseTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 176, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  4.787 s
+[INFO] Finished at: 2026-05-07T14:51:52Z
+[INFO] ------------------------------------------------------------------------

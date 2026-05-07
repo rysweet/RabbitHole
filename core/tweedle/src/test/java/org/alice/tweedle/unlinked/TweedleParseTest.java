@@ -2,6 +2,7 @@ package org.alice.tweedle.unlinked;
 
 import org.alice.tweedle.*;
 import org.alice.tweedle.ast.AdditionExpression;
+import org.alice.tweedle.ast.ExpressionStatement;
 import org.alice.tweedle.ast.ReturnStatement;
 import org.junit.Test;
 
@@ -242,6 +243,41 @@ public class TweedleParseTest {
     TweedleMethod sumThing = tested.getMethods().getFirst();
 
     assertTrue("The method should have no params.", sumThing.getOptionalParameters().isEmpty());
+  }
+
+  @Test
+  public void classMethodShouldPreserveRequiredParameterNameAndType() {
+    String scene = "class Scene extends SScene {\n" + "  void sayCount(WholeNumber count, TextString label <- \"times\") {\n" + "    return;\n" + "  }\n" + "}";
+    TweedleClass tested = (TweedleClass) parseType(scene);
+    TweedleMethod sayCount = tested.getMethods().getFirst();
+    TweedleRequiredParameter count = sayCount.getRequiredParameters().getFirst();
+
+    assertEquals("The required parameter should be named count.", "count", count.getName());
+    assertEquals("The required parameter should be a WholeNumber.", TweedleTypes.WHOLE_NUMBER, count.getType());
+  }
+
+  @Test
+  public void classMethodShouldPreserveOptionalParameterNameAndType() {
+    String scene = "class Scene extends SScene {\n" + "  void sayCount(WholeNumber count, TextString label <- \"times\") {\n" + "    return;\n" + "  }\n" + "}";
+    TweedleClass tested = (TweedleClass) parseType(scene);
+    TweedleMethod sayCount = tested.getMethods().getFirst();
+    TweedleOptionalParameter label = sayCount.getOptionalParameters().getFirst();
+
+    assertEquals("The optional parameter should be named label.", "label", label.getName());
+    assertEquals("The optional parameter should be TextString.", TweedleTypes.TEXT_STRING, label.getType());
+  }
+
+  @Test
+  public void classConstructorShouldPreserveRequiredParameterAndBody() {
+    String scene = "class Scene extends SScene {\n" + "  Scene(TextString name) {\n" + "    super();\n" + "  }\n" + "}";
+    TweedleClass tested = (TweedleClass) parseType(scene);
+    TweedleConstructor constructor = tested.getConstructors().getFirst();
+    TweedleRequiredParameter name = constructor.getRequiredParameters().getFirst();
+
+    assertEquals("The constructor parameter should be named name.", "name", name.getName());
+    assertEquals("The constructor parameter should be TextString.", TweedleTypes.TEXT_STRING, name.getType());
+    assertEquals("The constructor should keep the super call statement.", 1, constructor.getBody().size());
+    assertTrue("The constructor body should hold an expression statement.", constructor.getBody().getFirst() instanceof ExpressionStatement);
   }
 
   @Test

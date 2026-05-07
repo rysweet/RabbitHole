@@ -1,0 +1,1197 @@
+{
+  "aggregate": {
+    "expectedCsv": "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
+    "state": "missing"
+  },
+  "artifacts": [
+    {
+      "kind": "exec-data",
+      "path": "core/tweedle/target/jacoco.exec"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/index.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/branchfc.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/branchnc.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/branchpc.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/bundle.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/class.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/down.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/greenbar.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/group.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/method.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/package.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/prettify.css"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/prettify.js"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/redbar.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/report.css"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/report.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/session.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/sort.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/sort.js"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/source.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-resources/up.gif"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco-sessions.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco.csv"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/jacoco.xml"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/AdditionExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/AdditionExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ArrayIndexExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ArrayIndexExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/AssignmentExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/AssignmentExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/BinaryExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/BinaryExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/BinaryNumericExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/BinaryNumericExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ConditionalStatement.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ConditionalStatement.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/CountUpLoop.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/CountUpLoop.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/DivisionExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/DivisionExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/DoInOrder.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/DoInOrder.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/DoTogether.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/DoTogether.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/EqualToExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/EqualToExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ExpressionStatement.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ExpressionStatement.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/FieldAccess.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/FieldAccess.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ForEachLoop.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ForEachLoop.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ForEachTogether.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ForEachTogether.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/GreaterThanExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/GreaterThanExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/GreaterThanOrEqualExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/GreaterThanOrEqualExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/IdentifierReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/IdentifierReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/Instantiation.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/Instantiation.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LambdaEvaluation.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LambdaEvaluation.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LambdaExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LambdaExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LessThanExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LessThanExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LessThanOrEqualExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LessThanOrEqualExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LocalVariableDeclaration.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LocalVariableDeclaration.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LogicalAndExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LogicalAndExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LogicalNotExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LogicalNotExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LogicalOrExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/LogicalOrExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/MemberAccessExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/MemberAccessExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/MethodCallExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/MethodCallExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ModuloExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ModuloExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/MultiplicationExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/MultiplicationExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/NegativeExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/NegativeExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/NotEqualToExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/NotEqualToExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ReturnStatement.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ReturnStatement.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/StringConcatenationExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/StringConcatenationExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/SubtractionExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/SubtractionExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/SuperExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/SuperExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ThisExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/ThisExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/TweedleArrayInitializer.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/TweedleArrayInitializer.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/TweedleExpression.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/TweedleExpression.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/TweedleLocalVariable.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/TweedleLocalVariable.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/WhileLoop.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/WhileLoop.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/index.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.ast/index.source.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/AliceTextureReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/AliceTextureReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/AudioReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/AudioReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ImageReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ImageReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/LibraryManifest.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/LibraryManifest.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest$Description.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest$MetaData.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest$ProjectIdentifier.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest$ProjectType.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest$Provenance.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/Manifest.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ManifestEncoderDecoder$ProgressiveTemporalDeserializer.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ManifestEncoderDecoder$ProgressiveTemporalSerializer.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ManifestEncoderDecoder.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ManifestEncoderDecoder.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$BoundingBox.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$Joint.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$JointArray.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$JointArrayId.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$JointBounds.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$JointTransform.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$ModelVariant.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$Pose.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest$TextureSet.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelManifest.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ModelReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ResourceReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/ResourceReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/StructureReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/StructureReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/TypeManifest.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/TypeManifest.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/TypeReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/TypeReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/index.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.file/index.source.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/Frame.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/Frame.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/TweedleObject.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/TweedleObject.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/VirtualMachine.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/VirtualMachine.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/index.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.run/index.source.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser$ClassBody.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser$ClassBodyDeclarationVisitor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser$ExpressionVisitor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser$MemberDeclarationVisitor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser$StatementVisitor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser$TypeVisitor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/TweedleUnlinkedParser.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/index.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle.unlinked/index.source.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleArray.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleArray.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleArrayType.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleArrayType.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleClass.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleClass.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleConstructor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleConstructor.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleEnum.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleEnum.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleEnumValue.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleEnumValue.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleField.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleField.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleLexer.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleLibrary.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleLibrary.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleLinkException.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleLinkException.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleMethod.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleMethod.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleNull.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleNull.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleOptionalParameter.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleOptionalParameter.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ArgumentsContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ArrayCreatorRestContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ArrayInitializerContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$BlockContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$BlockStatementContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ClassBodyContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ClassBodyDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ClassCreatorRestContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ClassDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ClassModifierContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ClassTypeContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ConstructorDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$CreatedNameContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$CreatorContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$EnumBodyDeclarationsContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$EnumConstantContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$EnumConstantsContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$EnumDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ExpressionContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$FieldDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ForControlContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$FormalParameterListContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$FormalParametersContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$IdentifierContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LabeledExpressionContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LabeledExpressionListContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LambdaCallContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LambdaExpressionContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LambdaParametersContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LambdaTypeSignatureContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LastFormalParameterContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LiteralContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$LocalVariableDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$MemberDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$MethodBodyContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$MethodCallContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$MethodDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$OptionalParameterContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$ParExpressionContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$PrimaryContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$PrimitiveTypeContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$RequiredParameterContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$StatementContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$SuperSuffixContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$TypeDeclarationContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$TypeListContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$TypeTypeContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$TypeTypeOrVoidContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$UnlabeledExpressionListContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$VariableDeclaratorContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$VariableDeclaratorIdContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$VariableInitializerContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$VisibilityContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser$VisibilityLevelContext.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParser.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParserBaseListener.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleParserBaseVisitor.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedlePrimitiveType.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedlePrimitiveType.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedlePrimitiveValue.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedlePrimitiveValue.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleRequiredParameter.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleRequiredParameter.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleResource.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleResource.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleStatement.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleStatement.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleType.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleType.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleTypeReference.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleTypeReference.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleTypes.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleTypes.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleValue.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleValue.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleValueHolderDeclaration.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleValueHolderDeclaration.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleVoidType.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/TweedleVoidType.java.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/index.html"
+    },
+    {
+      "kind": "module-report",
+      "path": "core/tweedle/target/site/jacoco/org.alice.tweedle/index.source.html"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/TEST-org.alice.tweedle.file.ManifestEncoderTest.xml"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/TEST-org.alice.tweedle.unlinked.TweedleExpressionParseTest.xml"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/TEST-org.alice.tweedle.unlinked.TweedleLambdaTest.xml"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/TEST-org.alice.tweedle.unlinked.TweedleLiteralsParseTest.xml"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/TEST-org.alice.tweedle.unlinked.TweedleParseTest.xml"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/TEST-org.alice.tweedle.unlinked.TweedleStatementParseTest.xml"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/org.alice.tweedle.file.ManifestEncoderTest.txt"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/org.alice.tweedle.unlinked.TweedleExpressionParseTest.txt"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/org.alice.tweedle.unlinked.TweedleLambdaTest.txt"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/org.alice.tweedle.unlinked.TweedleLiteralsParseTest.txt"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/org.alice.tweedle.unlinked.TweedleParseTest.txt"
+    },
+    {
+      "kind": "surefire-report",
+      "path": "core/tweedle/target/surefire-reports/org.alice.tweedle.unlinked.TweedleStatementParseTest.txt"
+    }
+  ],
+  "coverageModel": "no-sims",
+  "coverageTarget": {
+    "aggregate": {
+      "state": "not-configured"
+    }
+  },
+  "gates": {
+    "aggregate": {
+      "state": "not-configured"
+    },
+    "modules": [
+      {
+        "lineCoveragePercent": 56.25,
+        "minimumPercent": 50.0,
+        "module": "core/tweedle",
+        "state": "pass"
+      }
+    ]
+  },
+  "mavenCommand": "mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify",
+  "modules": [
+    {
+      "covered": 1907,
+      "csv": "core/tweedle/target/site/jacoco/jacoco.csv",
+      "lineCoveragePercent": 56.25,
+      "missed": 1483,
+      "module": "core/tweedle",
+      "state": "present",
+      "total": 3390
+    }
+  ],
+  "schemaVersion": 1,
+  "source": "jacoco"
+}
