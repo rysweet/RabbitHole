@@ -740,6 +740,38 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void nullInitializerJsonTypeArchiveFailsWithArchiveEntryPath() throws Exception {
+    ImageResource imageResource = generatedImageResource("json-type-null-initializer-boundary-texture.png", 0xFF663333);
+    File typeArchive = temporaryFolder.newFile("null-initializer-json-a3c-boundary.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonTypeWithNullInitializerBoundary",
+        "class GeneratedJsonTypeWithNullInitializerBoundary extends SProgram { TextString label <- null; }",
+        imageResource);
+
+    try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithNullInitializerBoundary.twe");
+      assertNotNull("Null-initializer JSON .a3c fixture should contain the manifest-declared type source", typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("TextString label <- null"));
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithNullInitializerBoundary",
+          "src/GeneratedJsonTypeWithNullInitializerBoundary.twe");
+      assertImageReference(
+          manifest,
+          imageResource.getId(),
+          imageResource.getName(),
+          "resources/" + imageResource.getName());
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Unable to decode Tweedle type entry src/GeneratedJsonTypeWithNullInitializerBoundary.twe"));
+  }
+
+  @Test
   public void unresolvedParentJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
     ImageResource imageResource = generatedImageResource("json-type-unresolved-parent-boundary-texture.png", 0xFF336699);
     File typeArchive = temporaryFolder.newFile("unresolved-parent-json-a3c-boundary.a3c");

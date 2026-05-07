@@ -95,6 +95,15 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithNullInitializedFieldReportsMalformedTweedle() {
+    IllegalArgumentException thrown = assertThrows(
+        IllegalArgumentException.class,
+        () -> coder.decode("class SyntheticType { TextString label <- null; }"));
+
+    assertTrue(thrown.getMessage().contains("Unable to parse Tweedle type"));
+  }
+
+  @Test
   public void decodeClassWithMethodReportsUnsupportedMembers() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
