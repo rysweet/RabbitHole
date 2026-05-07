@@ -17,12 +17,14 @@ import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.CrawlPolicy;
+import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ResourceExpression;
+import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
@@ -200,7 +202,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithMethodBearingProgramTypeIsRejectedWithoutPartialProgramDecode() throws Exception {
+  public void generatedJsonPlayerArchiveDecodesProgramMethodWithPrimitiveReturn() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-method-boundary.a3w");
 
     writeJsonProjectArchive(
@@ -210,15 +212,19 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
         "GeneratedMethodBoundaryScene",
         "class GeneratedMethodBoundaryScene extends SScene {}");
 
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    Project readProject = IoUtilities.readProject(projectArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Project archive manifest names program type 'GeneratedProgramWithMethodBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedMethodBoundaryScene]"));
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with a primitive return method should decode", readProgramType);
+    assertEquals("GeneratedProgramWithMethodBoundary", readProgramType.getName());
+    assertPrimitiveReturnMethod(readProgramType, "count", 1);
+    assertEquals(
+        "GeneratedMethodBoundaryScene",
+        namedUserTypeNamed(readProject, "GeneratedMethodBoundaryScene").getName());
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithMethodBearingSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+  public void generatedJsonPlayerArchiveDecodesSiblingMethodWithPrimitiveReturn() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-method-sibling-boundary.a3w");
 
     writeJsonProjectArchive(
@@ -244,10 +250,13 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           siblingTypeEntry);
       assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count()"));
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    Project readProject = IoUtilities.readProject(projectArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedMethodSiblingBoundaryScene]"));
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with a method-bearing sibling type should decode", readProgramType);
+    assertEquals("GeneratedProgramWithMethodSiblingBoundary", readProgramType.getName());
+    NamedUserType readSceneType = namedUserTypeNamed(readProject, "GeneratedMethodSiblingBoundaryScene");
+    assertPrimitiveReturnMethod(readSceneType, "count", 1);
   }
 
   @Test
@@ -516,7 +525,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithUnnamedUnsupportedSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+  public void generatedJsonPlayerArchiveDecodesUnnamedSiblingTypeWithPrimitiveReturnMethod() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-unnamed-unsupported-sibling-boundary.a3w");
 
     writeJsonProjectArchiveWithUnnamedSiblingTypeReference(
@@ -539,10 +548,13 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           siblingTypeEntry);
       assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count()"));
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    Project readProject = IoUtilities.readProject(projectArchive);
 
-    assertTrue(thrown.getMessage(), thrown.getMessage().contains(
-        "Project archive contains unsupported manifest-declared Tweedle type names [src/GeneratedUnnamedUnsupportedSiblingScene.twe]"));
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with an unnamed method-bearing sibling should decode", readProgramType);
+    assertEquals("GeneratedProgramWithUnnamedUnsupportedSiblingBoundary", readProgramType.getName());
+    NamedUserType readSceneType = namedUserTypeNamed(readProject, "GeneratedUnnamedUnsupportedSiblingScene");
+    assertPrimitiveReturnMethod(readSceneType, "count", 1);
   }
 
   @Test
@@ -681,7 +693,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void methodBearingJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
+  public void methodBearingJsonTypeArchiveDecodesPrimitiveReturnMethod() throws Exception {
     ImageResource imageResource = generatedImageResource("json-type-method-boundary-texture.png", 0xFF663366);
     File typeArchive = temporaryFolder.newFile("method-bearing-json-a3c-boundary.a3c");
 
@@ -706,11 +718,16 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           imageResource.getName(),
           "resources/" + imageResource.getName());
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+    TypeResourcesPair readType = IoUtilities.readType(typeArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Type archive manifest names 'GeneratedJsonTypeWithMethodBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+    NamedUserType readUserType = readType.getType();
+    assertNotNull("Method-bearing JSON .a3c fixture should decode the type", readUserType);
+    assertEquals("GeneratedJsonTypeWithMethodBoundary", readUserType.getName());
+    assertPrimitiveReturnMethod(readUserType, "count", 1);
+    Resource readResource = onlyResource(readType.getResources());
+    assertEquals(imageResource.getId(), readResource.getId());
+    assertEquals(imageResource.getName(), readResource.getName());
+    assertArrayEquals(imageResource.getData(), readResource.getData());
   }
 
   @Test
@@ -1317,6 +1334,22 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
     assertTrue(constructor.getRequiredParameters().isEmpty());
     assertTrue(constructor.body.getValue().statements.isEmpty());
+  }
+
+  private static void assertPrimitiveReturnMethod(NamedUserType type, String expectedName, int expectedValue) {
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals(expectedName, method.getName());
+    assertSame(JavaType.getInstance(Integer.class), method.getReturnType());
+    assertTrue(method.getRequiredParameters().isEmpty());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertTrue(returnStatement.expression.getValue() instanceof IntegerLiteral);
+    assertEquals(
+        expectedValue,
+        ((IntegerLiteral) returnStatement.expression.getValue()).value.getValue().intValue());
   }
 
   private static NamedUserType namedUserTypeNamed(Project project, String name) {

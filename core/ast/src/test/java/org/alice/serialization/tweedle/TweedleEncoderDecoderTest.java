@@ -12,6 +12,7 @@ import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
+import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserArrayType;
 import org.lgna.project.ast.UserField;
@@ -252,9 +253,35 @@ public class TweedleEncoderDecoderTest {
   public void decodeClassWithNonEmptyMethodReportsUnsupportedMethodBody() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("class SyntheticType { WholeNumber count() { return 1; } }"));
+        () -> coder.decode("class SyntheticType { WholeNumber count() { WholeNumber local <- 1; } }"));
 
     assertTrue(thrown.getMessage().contains("method bodies"));
+  }
+
+  @Test
+  public void decodeClassWithPrimitiveReturnMethodBodyCreatesReturnStatement() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { WholeNumber count() { return 1; } }");
+
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("count", method.getName());
+    assertSame(JavaType.getInstance(Integer.class), method.getReturnType());
+    assertTrue(method.getRequiredParameters().isEmpty());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertIntegerLiteral(returnStatement.expression.getValue(), 1);
+  }
+
+  @Test
+  public void decodeClassWithNonLiteralReturnMethodBodyReportsUnsupportedReturnExpression() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber count() { return 1 + 2; } }"));
+
+    assertTrue(thrown.getMessage().contains("method return expressions"));
+    assertTrue(thrown.getMessage().contains("count"));
   }
 
   @Test

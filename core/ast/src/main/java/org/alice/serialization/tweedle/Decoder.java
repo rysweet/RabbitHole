@@ -134,19 +134,51 @@ public class Decoder {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle optional method parameters are not yet supported by the AST decoder: " + method.getName());
     }
-    if (!method.getBody().isEmpty()) {
-      throw new UnsupportedTweedleDecodeException(
-          "Tweedle method bodies are not yet supported by the AST decoder: " + method.getName());
-    }
-    if (method.getType() != TweedleVoidType.VOID) {
-      throw new UnsupportedTweedleDecodeException(
-          "Tweedle method return values are not yet supported by the AST decoder: " + method.getName());
-    }
+    AbstractType<?, ?, ?> returnType = resolveReturnType(method.getType());
     return new UserMethod(
         method.getName(),
-        resolveReturnType(method.getType()),
+        returnType,
         decodeRequiredParameters(method.getRequiredParameters(), "method parameter"),
-        new BlockStatement());
+        decodeMethodBody(method, returnType));
+  }
+
+  private BlockStatement decodeMethodBody(TweedleMethod method, AbstractType<?, ?, ?> returnType) {
+    if (method.getBody().isEmpty()) {
+      if (returnType != JavaType.VOID_TYPE) {
+        throw new UnsupportedTweedleDecodeException(
+            "Tweedle method return values require a supported return statement: " + method.getName());
+      }
+      return new BlockStatement();
+    }
+    if (method.getBody().size() == 1
+        && method.getBody().get(0) instanceof org.alice.tweedle.ast.ReturnStatement returnStatement) {
+      return new BlockStatement(decodeReturnStatement(method, returnType, returnStatement));
+    }
+    throw unsupportedMethodBody(method);
+  }
+
+  private org.lgna.project.ast.ReturnStatement decodeReturnStatement(
+      TweedleMethod method,
+      AbstractType<?, ?, ?> returnType,
+      org.alice.tweedle.ast.ReturnStatement returnStatement) {
+    Expression expression = decodeMethodReturnExpression(method, returnType, returnStatement.getExpression());
+    return new org.lgna.project.ast.ReturnStatement(returnType, expression);
+  }
+
+  private Expression decodeMethodReturnExpression(
+      TweedleMethod method,
+      AbstractType<?, ?, ?> returnType,
+      TweedleExpression returnExpression) {
+    if (returnExpression instanceof TweedlePrimitiveValue<?> primitiveValue) {
+      Expression expression = primitiveLiteral(primitiveValue.getPrimitiveValue());
+      if (returnType.isAssignableFrom(expression.getType())) {
+        return expression;
+      }
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle method return expression type is not assignable to "
+              + returnType.getName() + ": " + method.getName());
+    }
+    throw unsupportedMethodReturnExpression(method);
   }
 
   private AbstractType<?, ?, ?> resolveReturnType(TweedleType tweedleType) {
@@ -271,6 +303,16 @@ public class Decoder {
       return new BooleanLiteral(booleanValue);
     }
     throw new UnsupportedTweedleDecodeException("Unsupported Tweedle primitive initializer value: " + value);
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedMethodBody(TweedleMethod method) {
+    return new UnsupportedTweedleDecodeException(
+        "Tweedle method bodies are not yet supported by the AST decoder: " + method.getName());
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedMethodReturnExpression(TweedleMethod method) {
+    return new UnsupportedTweedleDecodeException(
+        "Non-literal Tweedle method return expressions are not yet supported by the AST decoder: " + method.getName());
   }
 
   private UnsupportedTweedleDecodeException unsupportedFieldInitializer(TweedleField property) {
