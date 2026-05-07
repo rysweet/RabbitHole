@@ -269,9 +269,15 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact_statuses\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"evidence_present\": true"));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-run-render-affordance.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-run-pixel-boundary.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-run-pixel-observation.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-first-lesson-next-action.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-save-menu-action-target.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"missing_evidence\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"procedure-ui-action-no-go.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"source_tool\": \"tools/eatme-edit-procedure\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"evidence_present\": false"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("SaveProjectOperation invocation result"));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"reporting_note\""));
     assertTrue(statusSummaryJson,
         statusSummaryJson.contains("Report desktop-run-pixel-observation.json as blocked until its blocker details are resolved or separate manual evidence is supplied."));
