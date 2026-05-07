@@ -72,6 +72,15 @@ assert_contains "$observation" '"blocker": "x-server-unavailable"' "xvfb fallbac
 assert_contains "$observation" '"missingExecutable": "Xvfb"' "xvfb fallback names exact missing executable"
 assert_contains "$observation" '"pixelsObserved": false' "xvfb fallback does not claim pixel observation"
 assert_contains "$observation" '"claim": "no-visible-pixel-proof"' "xvfb fallback avoids visible rendering claims"
+assert_contains "$observation" '"lifecyclePoint": "before-x-server-start"' "xvfb fallback records the lifecycle point before window probing"
+assert_contains "$observation" '"windowInventoryFile": "x-window-inventory.json"' "xvfb fallback points to window inventory artifact"
+assert_contains "$observation" '"windowInventoryStatus": "not-attempted"' "xvfb fallback records window inventory was not attempted"
+window_inventory="$no_xvfb_run_dir/x-window-inventory.json"
+assert_file_exists "$window_inventory" "xvfb fallback writes a window inventory artifact"
+assert_contains "$window_inventory" '"status": "not-attempted"' "window inventory unsupported case is explicit"
+assert_contains "$window_inventory" '"blocker": "x-server-unavailable"' "window inventory unsupported case names missing X server"
+assert_contains "$window_inventory" '"lifecyclePoint": "before-x-server-start"' "window inventory unsupported case records lifecycle point"
+assert_contains "$window_inventory" '"windows": \[\]' "window inventory unsupported case does not invent windows"
 assert_contains "$tmp_root/no-xvfb.err" 'Xvfb is not available' "xvfb fallback stderr names missing Xvfb"
 
 finish

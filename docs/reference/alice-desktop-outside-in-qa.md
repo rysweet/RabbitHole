@@ -177,6 +177,7 @@ Runner and validator commands return a non-zero exit status when the catalog is 
 | `ALICE_QA_SCREEN` | Xvfb runs | `1280x900x24` | Sets Xvfb screen geometry. |
 | `ALICE_QA_READY_WAIT_SECONDS` | Xvfb runs | Scenario `automation.readyWaitSeconds` | Overrides the scenario readiness wait before screenshot capture. |
 | `ALICE_QA_RUN_GATED_SMOKES` | Gated command smokes | unset | Set to `1` to execute configured command smokes. When unset, the runner writes `outcome=gated-not-run` status and a checklist, then exits non-zero unless `--prepare-only` was requested. |
+| `ALICE_QA_DISABLE_WINDOW_DETECTOR` | Xvfb runs | unset | Set to `1` only for contract tests to force a plain `window-detector-unavailable` inventory record. |
 | `NODE_OPTIONS` | Surrounding Node tooling | unset | Use `--max-old-space-size=32768` when a larger QA orchestrator invokes Node-based helpers around this lane. The lane itself does not require Node. |
 
 Example:
@@ -335,11 +336,12 @@ Successful `xvfb-real-alice` evidence capture includes:
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
 | `launch.log` | Alice Maven launch output. |
 | `xvfb.log` | Xvfb output. |
-| `status.txt` | Scenario ID, automation mode, display, readiness status, process status, screenshot status, and timeout. |
+| `status.txt` | Scenario ID, automation mode, display, readiness status, process status, screenshot status, window inventory status, Alice candidate count, and timeout. |
+| `x-window-inventory.json` | Visible X window title, class, process, and geometry after launch readiness wait, or an explicit unsupported/blocker record. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
-For launch runs, `status.txt` records whether the process stayed alive, whether a visible window was detected when a detector is available, and whether screenshot capture succeeded. Acceptance still requires reviewing the generated evidence, especially `launch.log`; the runner does not currently scan the log for every possible uncaught application exception.
+For launch runs, `status.txt` records whether the process stayed alive, whether a visible window was detected when a detector is available, whether window inventory was captured, and whether screenshot capture succeeded. Acceptance still requires reviewing the generated evidence, especially `x-window-inventory.json` and `launch.log`; the runner does not currently scan the log for every possible uncaught application exception.
 
 Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, `status.txt` is not written because the launch did not reach the evidence-capture phase.
 
@@ -349,7 +351,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 
 | Workflow | Required evidence |
 | --- | --- |
-| Launch | Launch log, desktop screenshot, exit/status/timeout record, Java/Maven/display environment summary. |
+| Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
 | Run/debug | Screenshot before run, screenshot or screen capture during execution, notes naming run/debug-like controls in `review-notes.txt`, launch or run log, saved `.a3p`. |

@@ -128,7 +128,7 @@ The runner writes evidence to:
 qa/outside-in/alice-desktop/evidence/alice-desktop-launch/<timestamp>/
 ```
 
-A successful launch evidence capture includes an environment summary, Xvfb log, Alice launch log, status file, and screenshot. The runner checks process, window-readiness, and screenshot-capture status; it does not deeply classify every line in `launch.log` as a semantic pass/fail oracle. Review `status.txt`, `launch.log`, and the screenshot before treating the launch evidence as accepted.
+A successful launch evidence capture includes an environment summary, Xvfb log, Alice launch log, status file, screenshot, and `x-window-inventory.json`. The window inventory records visible X window title, class, process, and geometry after the readiness wait so a blocked run names the exact window signal that was or was not present. The runner checks process, window-readiness, and screenshot-capture status; it does not deeply classify every line in `launch.log` as a semantic pass/fail oracle. Review `status.txt`, `x-window-inventory.json`, `launch.log`, and the screenshot before treating the launch evidence as accepted.
 
 If Xvfb is unavailable, no display can be selected, or Xvfb exits before Alice starts, the runner exits non-zero and writes a manual fallback checklist with whichever early diagnostics are available. These early fallback directories may not contain `status.txt` because the launch did not reach the evidence-capture phase.
 
@@ -237,6 +237,7 @@ Every run directory is timestamped and self-contained. Review these files first:
 | `status.txt` | Run status. Real launch runs record display, readiness, process status, screenshot status, and timeout; manual runs record that human evidence is still required; gated smokes record whether the command was skipped, passed, or failed. |
 | `launch.log` | Maven/Alice startup output for real launch scenarios. |
 | `xvfb.log` | Xvfb startup and display output. |
+| `x-window-inventory.json` | Visible X window title, class, process, and geometry captured after launch readiness wait, or an explicit unsupported/blocker record. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop state. |
 | `manual-evidence-checklist.txt` | Repeatable checklist for manual scenarios. |
 | `command.log` | Captured stdout/stderr for gated command smokes when `ALICE_QA_RUN_GATED_SMOKES=1` is set. |
@@ -268,6 +269,7 @@ Check the run directory:
 
 ```bash
 sed -n '1,120p' qa/outside-in/alice-desktop/evidence/alice-desktop-launch/*/status.txt
+python3 -m json.tool qa/outside-in/alice-desktop/evidence/alice-desktop-launch/*/x-window-inventory.json
 sed -n '1,160p' qa/outside-in/alice-desktop/evidence/alice-desktop-launch/*/launch.log
 ```
 

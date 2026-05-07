@@ -410,6 +410,10 @@ write_controlled_display_pixel_observation() {
   local screenshot_tool=${14:-}
   local screenshot_pixel_status=${15:-not-attempted}
   local screenshot_pixel_detail=${16:-}
+  local lifecycle_point=${17:-unknown}
+  local window_inventory_status=${18:-not-attempted}
+  local window_inventory_file=${19:-x-window-inventory.json}
+  local alice_window_candidate_count=${20:-0}
 
   CONTROLLED_DISPLAY_STATUS="$status" \
   CONTROLLED_DISPLAY_BLOCKER="$blocker" \
@@ -426,6 +430,10 @@ write_controlled_display_pixel_observation() {
   CONTROLLED_DISPLAY_SCREENSHOT_TOOL="$screenshot_tool" \
   CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS="$screenshot_pixel_status" \
   CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL="$screenshot_pixel_detail" \
+  CONTROLLED_DISPLAY_LIFECYCLE_POINT="$lifecycle_point" \
+  CONTROLLED_DISPLAY_WINDOW_INVENTORY_STATUS="$window_inventory_status" \
+  CONTROLLED_DISPLAY_WINDOW_INVENTORY_FILE="$window_inventory_file" \
+  CONTROLLED_DISPLAY_ALICE_WINDOW_CANDIDATE_COUNT="$alice_window_candidate_count" \
   python3 - "$run_dir/controlled-display-pixel-observation.json" <<'PY'
 import json
 import os
@@ -451,6 +459,10 @@ payload = {
     "screenshotTool": value("CONTROLLED_DISPLAY_SCREENSHOT_TOOL"),
     "screenshotPixelStatus": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS"),
     "screenshotPixelDetail": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL"),
+    "lifecyclePoint": value("CONTROLLED_DISPLAY_LIFECYCLE_POINT"),
+    "windowInventoryStatus": value("CONTROLLED_DISPLAY_WINDOW_INVENTORY_STATUS"),
+    "windowInventoryFile": value("CONTROLLED_DISPLAY_WINDOW_INVENTORY_FILE"),
+    "aliceWindowCandidateCount": int(value("CONTROLLED_DISPLAY_ALICE_WINDOW_CANDIDATE_COUNT") or "0"),
 }
 missing_executable = value("CONTROLLED_DISPLAY_MISSING_EXECUTABLE")
 if missing_executable:
@@ -459,6 +471,229 @@ if missing_executable:
 with open(path, "w", encoding="utf-8") as stream:
     json.dump(payload, stream, indent=2, sort_keys=True)
     stream.write("\n")
+PY
+}
+
+write_x_window_inventory() {
+  local run_dir=$1
+  local status=$2
+  local blocker=$3
+  local blocker_detail=$4
+  local display=${5:-}
+  local lifecycle_point=${6:-unknown}
+  local alice_launch_pid=${7:-}
+  local missing_executable=${8:-}
+  local detector_status=${9:-not-started}
+
+  WINDOW_INVENTORY_STATUS="$status" \
+  WINDOW_INVENTORY_BLOCKER="$blocker" \
+  WINDOW_INVENTORY_BLOCKER_DETAIL="$blocker_detail" \
+  WINDOW_INVENTORY_DISPLAY="$display" \
+  WINDOW_INVENTORY_LIFECYCLE_POINT="$lifecycle_point" \
+  WINDOW_INVENTORY_ALICE_LAUNCH_PID="$alice_launch_pid" \
+  WINDOW_INVENTORY_MISSING_EXECUTABLE="$missing_executable" \
+  WINDOW_INVENTORY_DETECTOR_STATUS="$detector_status" \
+  python3 - "$run_dir/x-window-inventory.json" <<'PY'
+import json
+import os
+import sys
+
+payload = {
+    "status": os.environ.get("WINDOW_INVENTORY_STATUS", ""),
+    "blocker": os.environ.get("WINDOW_INVENTORY_BLOCKER", ""),
+    "blockerDetail": os.environ.get("WINDOW_INVENTORY_BLOCKER_DETAIL", ""),
+    "display": os.environ.get("WINDOW_INVENTORY_DISPLAY", ""),
+    "lifecyclePoint": os.environ.get("WINDOW_INVENTORY_LIFECYCLE_POINT", ""),
+    "aliceLaunchPid": os.environ.get("WINDOW_INVENTORY_ALICE_LAUNCH_PID", ""),
+    "detectorStatus": os.environ.get("WINDOW_INVENTORY_DETECTOR_STATUS", ""),
+    "aliceWindowCandidateCount": 0,
+    "javaWindowCount": 0,
+    "windows": [],
+}
+missing = os.environ.get("WINDOW_INVENTORY_MISSING_EXECUTABLE", "")
+if missing:
+    payload["missingExecutable"] = missing
+
+with open(sys.argv[1], "w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
+collect_x_window_inventory() {
+  local run_dir=$1
+  local display=$2
+  local lifecycle_point=$3
+  local alice_launch_pid=${4:-}
+
+  if [ "${ALICE_QA_DISABLE_WINDOW_DETECTOR:-}" = "1" ] || ! command -v xdotool >/dev/null 2>&1; then
+    write_x_window_inventory \
+      "$run_dir" \
+      blocked \
+      window-detector-unavailable \
+      "xdotool is not available, so visible X windows cannot be enumerated safely." \
+      "$display" \
+      "$lifecycle_point" \
+      "$alice_launch_pid" \
+      xdotool \
+      unavailable
+    return 0
+  fi
+
+  DISPLAY="$display" WINDOW_INVENTORY_LIFECYCLE_POINT="$lifecycle_point" WINDOW_INVENTORY_ALICE_LAUNCH_PID="$alice_launch_pid" \
+  python3 - "$run_dir/x-window-inventory.json" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+output_path = Path(sys.argv[1])
+display = os.environ.get("DISPLAY", "")
+lifecycle_point = os.environ.get("WINDOW_INVENTORY_LIFECYCLE_POINT", "")
+alice_launch_pid = os.environ.get("WINDOW_INVENTORY_ALICE_LAUNCH_PID", "")
+
+
+def run(args):
+    try:
+        completed = subprocess.run(
+            args,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5,
+            env=os.environ.copy(),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return 127, "", str(exc)
+    return completed.returncode, completed.stdout.strip(), completed.stderr.strip()
+
+
+def command_output(args):
+    code, stdout, _ = run(args)
+    return stdout if code == 0 else ""
+
+
+def process_name(pid):
+    if not pid:
+        return ""
+    comm = Path("/proc") / str(pid) / "comm"
+    try:
+        return comm.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def geometry_for(window_id):
+    stdout = command_output(["xdotool", "getwindowgeometry", "--shell", window_id])
+    values = {}
+    for line in stdout.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key] = value
+    return {
+        "x": int(values["X"]) if values.get("X", "").lstrip("-").isdigit() else None,
+        "y": int(values["Y"]) if values.get("Y", "").lstrip("-").isdigit() else None,
+        "width": int(values["WIDTH"]) if values.get("WIDTH", "").isdigit() else None,
+        "height": int(values["HEIGHT"]) if values.get("HEIGHT", "").isdigit() else None,
+        "screen": int(values["SCREEN"]) if values.get("SCREEN", "").isdigit() else None,
+    }
+
+
+search_code, search_stdout, search_stderr = run(["xdotool", "search", "--onlyvisible", "--class", ".*"])
+window_ids = []
+if search_code == 0:
+    seen = set()
+    for line in search_stdout.splitlines():
+        window_id = line.strip()
+        if not window_id or window_id in seen:
+            continue
+        seen.add(window_id)
+        window_ids.append(window_id)
+
+windows = []
+alice_candidate_count = 0
+java_window_count = 0
+for window_id in window_ids:
+    title = command_output(["xdotool", "getwindowname", window_id])
+    window_class = command_output(["xdotool", "getwindowclassname", window_id])
+    pid = command_output(["xdotool", "getwindowpid", window_id])
+    proc_name = process_name(pid)
+    reasons = []
+    if "alice" in title.lower():
+        reasons.append("title-contains-alice")
+    if "alice" in window_class.lower():
+        reasons.append("class-contains-alice")
+    if "alice" in proc_name.lower():
+        reasons.append("process-name-contains-alice")
+    if reasons:
+        alice_candidate_count += 1
+    java_process = proc_name == "java"
+    java_reasons = []
+    if java_process:
+        java_window_count += 1
+        java_reasons.append("process-name-java")
+    windows.append(
+        {
+            "id": window_id,
+            "title": title,
+            "class": window_class,
+            "pid": int(pid) if re.fullmatch(r"[0-9]+", pid or "") else None,
+            "processName": proc_name,
+            "geometry": geometry_for(window_id),
+            "aliceCandidate": bool(reasons),
+            "javaWindow": java_process,
+            "candidateReasons": reasons,
+            "javaWindowReasons": java_reasons,
+        }
+    )
+
+if windows:
+    status = "observed"
+    blocker = "none"
+    detail = f"Enumerated {len(windows)} visible X window(s) on {display}; inspect windows[] for exact title/class/process/geometry."
+else:
+    status = "blocked"
+    blocker = "no-visible-x-windows"
+    detail = "xdotool could not enumerate any visible X windows after the launch readiness wait."
+    if search_stderr:
+        detail = f"{detail} xdotool stderr: {search_stderr}"
+
+payload = {
+    "status": status,
+    "blocker": blocker,
+    "blockerDetail": detail,
+    "display": display,
+    "lifecyclePoint": lifecycle_point,
+    "aliceLaunchPid": alice_launch_pid,
+    "detectorStatus": "available",
+    "detector": "xdotool",
+    "aliceWindowCandidateCount": alice_candidate_count,
+    "javaWindowCount": java_window_count,
+    "windows": windows,
+}
+
+with output_path.open("w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
+inventory_json_field() {
+  local inventory_path=$1
+  local field=$2
+  python3 - "$inventory_path" "$field" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+for part in sys.argv[2].split("."):
+    value = value.get(part, "") if isinstance(value, dict) else ""
+print(value)
 PY
 }
 
@@ -582,6 +817,16 @@ run_xvfb_real_alice() {
   if [ -z "$xvfb_executable" ]; then
     write_environment "$run_dir"
     write_checklist "$scenario_json" "$run_dir" >/dev/null
+    write_x_window_inventory \
+      "$run_dir" \
+      not-attempted \
+      x-server-unavailable \
+      "Xvfb executable is not available on PATH; no X server exists for window enumeration." \
+      "" \
+      before-x-server-start \
+      "" \
+      Xvfb \
+      not-started
     write_controlled_display_pixel_observation \
       "$run_dir" \
       blocked \
@@ -590,7 +835,19 @@ run_xvfb_real_alice() {
       "" \
       false \
       no-visible-pixel-proof \
-      Xvfb
+      Xvfb \
+      not-attempted \
+      not-started \
+      not-attempted \
+      "" \
+      "" \
+      "" \
+      not-attempted \
+      "" \
+      before-x-server-start \
+      not-attempted \
+      x-window-inventory.json \
+      0
     printf 'Xvfb is not available; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -598,6 +855,16 @@ run_xvfb_real_alice() {
   if ! display=$(select_display); then
     write_environment "$run_dir"
     write_checklist "$scenario_json" "$run_dir" >/dev/null
+    write_x_window_inventory \
+      "$run_dir" \
+      not-attempted \
+      display-allocation-unavailable \
+      "No free X display could be selected; no display exists for window enumeration." \
+      "" \
+      before-x-server-start \
+      "" \
+      "" \
+      not-started
     write_controlled_display_pixel_observation \
       "$run_dir" \
       blocked \
@@ -611,7 +878,14 @@ run_xvfb_real_alice() {
       not-started \
       not-attempted \
       "" \
-      "$xvfb_executable"
+      "$xvfb_executable" \
+      "" \
+      not-attempted \
+      "" \
+      before-x-server-start \
+      not-attempted \
+      x-window-inventory.json \
+      0
     printf 'No free X display found; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -643,6 +917,16 @@ run_xvfb_real_alice() {
   sleep 2
   if ! kill -0 "$xvfb_pid" >/dev/null 2>&1; then
     write_checklist "$scenario_json" "$run_dir" >/dev/null
+    write_x_window_inventory \
+      "$run_dir" \
+      not-attempted \
+      x-server-start-failed \
+      "Xvfb exited before Alice launch; no running X server exists for window enumeration." \
+      "$display" \
+      before-alice-launch \
+      "" \
+      "" \
+      not-started
     write_controlled_display_pixel_observation \
       "$run_dir" \
       blocked \
@@ -656,7 +940,14 @@ run_xvfb_real_alice() {
       not-started \
       not-attempted \
       "" \
-      "$xvfb_executable"
+      "$xvfb_executable" \
+      "" \
+      not-attempted \
+      "" \
+      before-alice-launch \
+      not-attempted \
+      x-window-inventory.json \
+      0
     printf 'Xvfb exited before Alice launch; see %s/xvfb.log\n' "$run_dir" >&2
     return 2
   fi
@@ -672,7 +963,7 @@ run_xvfb_real_alice() {
 
   local ready_status=not-checked
   local waited=0
-  if command -v xdotool >/dev/null 2>&1; then
+  if [ "${ALICE_QA_DISABLE_WINDOW_DETECTOR:-}" != "1" ] && command -v xdotool >/dev/null 2>&1; then
     ready_status=not-found
     while [ "$waited" -lt "$ready_wait" ]; do
       if ! kill -0 "$alice_pid" >/dev/null 2>&1; then
@@ -695,8 +986,13 @@ run_xvfb_real_alice() {
     fi
   else
     sleep "$ready_wait"
-    ready_status=waited-without-window-detector
+    ready_status=window-detector-unavailable
   fi
+
+  collect_x_window_inventory "$run_dir" "$display" after-readiness-wait "$alice_pid"
+  local window_inventory_status alice_window_candidate_count
+  window_inventory_status=$(inventory_json_field "$run_dir/x-window-inventory.json" status)
+  alice_window_candidate_count=$(inventory_json_field "$run_dir/x-window-inventory.json" aliceWindowCandidateCount)
 
   local screenshot_tool screenshot_status
   screenshot_tool=$(screenshot_tool_name)
@@ -718,6 +1014,9 @@ run_xvfb_real_alice() {
     printf 'readyStatus=%s\n' "$ready_status"
     printf 'processStatus=%s\n' "$process_status"
     printf 'screenshotStatus=%s\n' "$screenshot_status"
+    printf 'windowInventory=%s\n' x-window-inventory.json
+    printf 'windowInventoryStatus=%s\n' "$window_inventory_status"
+    printf 'aliceWindowCandidateCount=%s\n' "$alice_window_candidate_count"
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
@@ -763,7 +1062,7 @@ run_xvfb_real_alice() {
   elif [ "$ready_status" != alice-window-found ]; then
     observation_status=blocked
     observation_blocker=alice-window-not-found
-    observation_detail="Xvfb was reachable, but xdotool did not find a visible Alice window before screenshot capture; readyStatus=$ready_status."
+    observation_detail="Xvfb was reachable, but xdotool did not find a visible Alice window before screenshot capture; readyStatus=$ready_status. Inspect x-window-inventory.json for exact visible X window title/class/process/geometry."
     pixels_observed=false
     observation_claim=no-visible-pixel-proof
   elif [ "$screenshot_pixel_status" = uniform-black ]; then
@@ -795,7 +1094,11 @@ run_xvfb_real_alice() {
     "$xvfb_executable" \
     "$screenshot_tool" \
     "$screenshot_pixel_status" \
-    "$screenshot_pixel_detail"
+    "$screenshot_pixel_detail" \
+    after-readiness-wait \
+    "$window_inventory_status" \
+    x-window-inventory.json \
+    "$alice_window_candidate_count"
 
   if [ "$screenshot_status" != screenshot-captured ]; then
     printf 'Screenshot capture failed; see %s/screenshot.log\n' "$run_dir" >&2
