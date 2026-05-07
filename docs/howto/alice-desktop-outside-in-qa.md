@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, and wizard/palette/completion smoke.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, and wizard/palette/completion smoke.
 
 ## Contents
 
@@ -44,7 +44,7 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 Expected output:
 
 ```text
-Validated 15 scenario(s) in .../qa/outside-in/alice-desktop/scenarios
+Validated 17 scenario(s) in .../qa/outside-in/alice-desktop/scenarios
 ```
 
 ## Validate a custom scenario catalog
@@ -160,6 +160,18 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
   --timeout-seconds 180
 ```
 
+### Run the Select Project inventory proof
+
+After license opt-in, the Select Project proof waits for the real chooser window and records its title, class, process, and geometry without selecting or opening a project:
+
+```bash
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-select-project-inventory \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-proof
+```
+
+Review `select-project-window.json` with `status=observed`, `interactionProof=select-project-window-visible`, and `projectWorldInteraction=not-observed`. The widget labels are resource-contract evidence only until live Swing widget introspection exists; the artifact names `swing-widget-inventory-not-collected` rather than claiming widget observation.
+
 ## Prepare evidence for manual workflows
 
 Manual workflows are still executable: the runner creates a checklist with preconditions, user actions, expected outcomes, evidence requirements, and fallback notes.
@@ -259,6 +271,7 @@ Every run directory is timestamped and self-contained. Review these files first:
 | `launch.log` | Maven/Alice startup output for real launch scenarios. |
 | `xvfb.log` | Xvfb startup and display output. |
 | `x-window-inventory.json` | Visible X window title, class, process, and geometry captured after launch readiness wait, or an explicit unsupported/blocker record. |
+| `select-project-window.json` | Select Project proof artifact recording exact title/class/process/geometry when observed, or an exact missing-window/widget-introspection blocker. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop state. |
 | `manual-evidence-checklist.txt` | Repeatable checklist for manual scenarios. |
 | `command.log` | Captured stdout/stderr for gated command smokes when `ALICE_QA_RUN_GATED_SMOKES=1` is set. |

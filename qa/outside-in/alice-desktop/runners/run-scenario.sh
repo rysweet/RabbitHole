@@ -8,6 +8,7 @@ VALIDATOR="$SCRIPT_DIR/validate-scenarios.sh"
 ROOT_DIRECTORY_PREP="$SCRIPT_DIR/prepare-root-directory.py"
 LICENSE_ACCEPTANCE_PREP="$SCRIPT_DIR/prepare-license-acceptance.py"
 LICENSE_DIALOG_PROBE="$SCRIPT_DIR/license-dialog-probe.py"
+SELECT_PROJECT_PROBE="$SCRIPT_DIR/select-project-probe.py"
 
 usage() {
   cat <<'EOF'
@@ -592,6 +593,19 @@ def process_name(pid):
         return ""
 
 
+def window_class_for(window_id):
+    window_class = command_output(["xdotool", "getwindowclassname", window_id])
+    if window_class:
+        return window_class
+    code, stdout, _ = run(["xprop", "-id", window_id, "WM_CLASS"])
+    if code != 0:
+        return ""
+    values = re.findall(r'"([^"]*)"', stdout)
+    if values:
+        return values[-1]
+    return ""
+
+
 def geometry_for(window_id):
     stdout = command_output(["xdotool", "getwindowgeometry", "--shell", window_id])
     values = {}
@@ -625,7 +639,7 @@ alice_candidate_count = 0
 java_window_count = 0
 for window_id in window_ids:
     title = command_output(["xdotool", "getwindowname", window_id])
-    window_class = command_output(["xdotool", "getwindowclassname", window_id])
+    window_class = window_class_for(window_id)
     pid = command_output(["xdotool", "getwindowpid", window_id])
     proc_name = process_name(pid)
     reasons = []
@@ -715,6 +729,13 @@ write_license_dialog_probe() {
   local output_path=$2
 
   python3 "$LICENSE_DIALOG_PROBE" "$inventory_path" "$output_path"
+}
+
+write_select_project_probe() {
+  local inventory_path=$1
+  local output_path=$2
+
+  python3 "$SELECT_PROJECT_PROBE" "$inventory_path" "$output_path"
 }
 
 select_display() {
@@ -1155,16 +1176,42 @@ JSON
     ready_status=window-detector-unavailable
   fi
 
+  local select_project_wait_status=not-requested
+  if [ "$scenario_id" = alice-desktop-select-project-inventory ]; then
+    if [ "${ALICE_QA_DISABLE_WINDOW_DETECTOR:-}" != "1" ] && command -v xdotool >/dev/null 2>&1; then
+      select_project_wait_status=not-found
+      local select_waited=0
+      while [ "$select_waited" -lt "$ready_wait" ]; do
+        if ! kill -0 "$alice_pid" >/dev/null 2>&1; then
+          select_project_wait_status=process-exited
+          break
+        fi
+        if xdotool search --onlyvisible --name '^Select Project$' >/dev/null 2>&1; then
+          select_project_wait_status=select-project-window-found
+          break
+        fi
+        sleep 1
+        select_waited=$((select_waited + 1))
+      done
+    else
+      select_project_wait_status=window-detector-unavailable
+    fi
+  fi
+
   collect_x_window_inventory "$run_dir" "$display" after-readiness-wait "$alice_pid"
   write_application_root_error_probe "$run_dir/x-window-inventory.json" "$run_dir/application-root-error.json"
   write_license_dialog_probe "$run_dir/x-window-inventory.json" "$run_dir/license-dialog.json"
-  local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker license_dialog_status license_dialog_blocker
+  write_select_project_probe "$run_dir/x-window-inventory.json" "$run_dir/select-project-window.json"
+  local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker license_dialog_status license_dialog_blocker select_project_status select_project_blocker select_project_interaction
   window_inventory_status=$(inventory_json_field "$run_dir/x-window-inventory.json" status)
   alice_window_candidate_count=$(inventory_json_field "$run_dir/x-window-inventory.json" aliceWindowCandidateCount)
   application_root_error_status=$(inventory_json_field "$run_dir/application-root-error.json" status)
   application_root_error_blocker=$(inventory_json_field "$run_dir/application-root-error.json" blocker)
   license_dialog_status=$(inventory_json_field "$run_dir/license-dialog.json" status)
   license_dialog_blocker=$(inventory_json_field "$run_dir/license-dialog.json" blocker)
+  select_project_status=$(inventory_json_field "$run_dir/select-project-window.json" status)
+  select_project_blocker=$(inventory_json_field "$run_dir/select-project-window.json" blocker)
+  select_project_interaction=$(inventory_json_field "$run_dir/select-project-window.json" interactionProof)
 
   local screenshot_tool screenshot_status
   screenshot_tool=$(screenshot_tool_name)
@@ -1201,6 +1248,11 @@ JSON
     printf 'licenseDialog=%s\n' license-dialog.json
     printf 'licenseDialogStatus=%s\n' "$license_dialog_status"
     printf 'licenseDialogBlocker=%s\n' "$license_dialog_blocker"
+    printf 'selectProjectWindow=%s\n' select-project-window.json
+    printf 'selectProjectStatus=%s\n' "$select_project_status"
+    printf 'selectProjectBlocker=%s\n' "$select_project_blocker"
+    printf 'selectProjectInteraction=%s\n' "$select_project_interaction"
+    printf 'selectProjectWaitStatus=%s\n' "$select_project_wait_status"
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 

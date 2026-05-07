@@ -45,6 +45,7 @@ workflow_values = {
     "scene-creation",
     "run-debug",
     "save-load",
+    "select-project-interaction-smoke",
     "export",
     "wizard-palette-completion-smoke",
 }

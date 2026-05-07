@@ -38,6 +38,7 @@
         "scene-creation",
         "run-debug",
         "save-load",
+        "select-project-interaction-smoke",
         "export",
         "open-load-save",
         "package-install-smoke",

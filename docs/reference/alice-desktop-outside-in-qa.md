@@ -32,6 +32,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | Scenario ID | Workflow | Automation mode | Purpose |
 | --- | --- | --- | --- |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
+| `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
 | `alice-desktop-scene-creation` | `scene-creation` | `manual-evidence-required` | Covers creating or selecting a starter scene and saving it as an Alice project. |
 | `alice-desktop-run-debug` | `run-debug` | `manual-evidence-required` | Covers program run controls plus the closest baseline debug-like control, such as fast-forward or statement execution. |
@@ -279,6 +280,7 @@ project-io-smoke
 scene-creation
 run-debug
 save-load
+select-project-interaction-smoke
 export
 wizard-palette-completion-smoke
 ```
@@ -337,8 +339,9 @@ Successful `xvfb-real-alice` evidence capture includes:
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
 | `launch.log` | Alice Maven launch output. |
 | `xvfb.log` | Xvfb output. |
-| `status.txt` | Scenario ID, automation mode, display, readiness status, process status, screenshot status, window inventory status, Alice candidate count, and timeout. |
+| `status.txt` | Scenario ID, automation mode, display, readiness status, process status, screenshot status, window inventory status, Select Project status when applicable, Alice candidate count, and timeout. |
 | `x-window-inventory.json` | Visible X window title, class, process, and geometry after launch readiness wait, or an explicit unsupported/blocker record. |
+| `select-project-window.json` | Select Project title/class/process/geometry proof when the exact chooser window is observed; otherwise records the exact missing-window blocker. Widget labels are resource-contract evidence only and name `swing-widget-inventory-not-collected` until live Swing widget introspection exists. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
@@ -353,6 +356,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Workflow | Required evidence |
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
+| Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
 | Run/debug | Screenshot before run, screenshot or screen capture during execution, notes naming run/debug-like controls in `review-notes.txt`, launch or run log, saved `.a3p`. |

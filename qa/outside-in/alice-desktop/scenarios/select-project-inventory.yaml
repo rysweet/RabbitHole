@@ -1,0 +1,51 @@
+id: alice-desktop-select-project-inventory
+title: Select Project window inventory proof
+workflow: select-project-interaction-smoke
+automationMode: xvfb-real-alice
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Controlled QA license acceptance is explicitly enabled with an isolated java.util.prefs.userRoot.
+userActions:
+  - Prepare core/resources/target/distribution, then start Alice using the Maven launch path that compiles alice-ide classes before exec:java.
+  - Launch with ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 so first-run license dialogs are bypassed only inside the evidence directory.
+  - Wait for the Select Project chooser to become visible.
+  - Record its X window title, class, process, and geometry without selecting a project.
+expectedOutcomes:
+  - The first-run license dialog is not observed after isolated test opt-in.
+  - A Java window titled Select Project is visible after launch readiness.
+  - The captured evidence distinguishes Select Project chooser visibility from project/world execution.
+  - The proof does not claim starter selection, project opening, world execution, grading, or full lesson completion.
+automation:
+  cwd: alice-ide
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -Dcheckstyle.skip
+    - -DskipTests
+    - compile
+    - exec:java
+    - -Dalice-ide
+  timeoutSeconds: 180
+  readyWaitSeconds: 60
+evidence:
+  required:
+    - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution, or naming the exact missing distribution/Maven phase blocker.
+    - license-acceptance.json recording the isolated java.util.prefs.userRoot state used only when ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 is set.
+    - license-dialog.json recording not-observed; if observed, it names the exact first-run License Agreement blocker.
+    - x-window-inventory.json naming visible X window title, class, process, and geometry after launch readiness wait.
+    - select-project-window.json recording observed Select Project title/class/process/geometry, or the exact missing-window/widget-introspection blocker.
+    - Screenshot of the Alice desktop and Select Project chooser state.
+    - controlled-display-pixel-observation.json naming observed controlled-display pixels or the exact display/Xvfb blocker.
+    - Exit, status, or timeout record naming selectProjectWaitStatus.
+    - Environment summary with Java version, Maven version, and DISPLAY value.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the Select Project window is not visible, preserve x-window-inventory.json and select-project-window.json; do not substitute generic launch or pixel status.
+    - If live Swing widget labels cannot be enumerated, record the resource-backed widget contract and the exact swing-widget-inventory-not-collected blocker.
+    - Do not claim starter selection, project opening, or world execution unless separate evidence observes those actions.
+supportingEvidence:
+  - alice-desktop-launch
