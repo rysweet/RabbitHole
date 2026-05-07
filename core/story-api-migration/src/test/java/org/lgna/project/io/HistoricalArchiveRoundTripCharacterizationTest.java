@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -475,6 +476,36 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithUnnamedUnsupportedSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-unnamed-unsupported-sibling-boundary.a3w");
+
+    writeJsonProjectArchiveWithUnnamedSiblingTypeReference(
+        projectArchive,
+        "GeneratedProgramWithUnnamedUnsupportedSiblingBoundary",
+        "class GeneratedProgramWithUnnamedUnsupportedSiblingBoundary extends SProgram { WholeNumber count; }",
+        "GeneratedUnnamedUnsupportedSiblingScene",
+        "class GeneratedUnnamedUnsupportedSiblingScene extends SScene { WholeNumber count() { return 1; } }");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithUnnamedUnsupportedSiblingBoundary",
+          "src/GeneratedProgramWithUnnamedUnsupportedSiblingBoundary.twe");
+      assertUnnamedTypeReference(manifest, "src/GeneratedUnnamedUnsupportedSiblingScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedUnnamedUnsupportedSiblingScene.twe");
+      assertNotNull(
+          "Generated JSON .a3w fixture should contain the unnamed unsupported sibling type source",
+          siblingTypeEntry);
+      assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count()"));
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains(
+        "Project archive contains unsupported manifest-declared Tweedle type names [src/GeneratedUnnamedUnsupportedSiblingScene.twe]"));
+  }
+
+  @Test
   public void generatedWorldArchiveWithUnsupportedResourceExpressionIsRejectedWithoutPartialProgramDecode() throws Exception {
     ImageResource imageResource = generatedImageResource("historical-world-texture.png", 0xFF663399);
     Project project = new Project(
@@ -872,13 +903,25 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
 
   private static void assertTypeReference(Manifest manifest, String expectedName, String expectedFile) {
     for (ResourceReference resourceReference : manifest.resources) {
-      if (resourceReference instanceof TypeReference typeReference && expectedName.equals(typeReference.name)) {
+      if (resourceReference instanceof TypeReference typeReference
+          && Objects.equals(expectedName, typeReference.name)) {
         assertEquals(expectedFile, typeReference.file);
         assertEquals("tweedle", typeReference.format);
         return;
       }
     }
     throw new AssertionError("Missing type reference for " + expectedName);
+  }
+
+  private static void assertUnnamedTypeReference(Manifest manifest, String expectedFile) {
+    for (ResourceReference resourceReference : manifest.resources) {
+      if (resourceReference instanceof TypeReference typeReference && typeReference.name == null) {
+        assertEquals(expectedFile, typeReference.file);
+        assertEquals("tweedle", typeReference.format);
+        return;
+      }
+    }
+    throw new AssertionError("Missing unnamed type reference for " + expectedFile);
   }
 
   private static void assertImageReference(Manifest manifest, UUID expectedId, String expectedName, String expectedFile) {
@@ -1061,6 +1104,41 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           zipOutputStream,
           "src/" + programTypeName + ".twe",
           programTweedleSource.getBytes(StandardCharsets.UTF_8));
+    }
+  }
+
+  private static void writeJsonProjectArchiveWithUnnamedSiblingTypeReference(
+      File archive,
+      String programTypeName,
+      String programTweedleSource,
+      String siblingTypeName,
+      String siblingTweedleSource) throws Exception {
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = programTypeName;
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = programTypeName;
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    manifest.resources.add(new TypeReference(programTypeName, "src/" + programTypeName + ".twe", "tweedle"));
+    manifest.resources.add(new TypeReference(null, "src/" + siblingTypeName + ".twe", "tweedle"));
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(archive))) {
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.VERSION_ENTRY_NAME,
+          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.MANIFEST_ENTRY_NAME,
+          ManifestEncoderDecoder.toJson(manifest).getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "src/" + programTypeName + ".twe",
+          programTweedleSource.getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "src/" + siblingTypeName + ".twe",
+          siblingTweedleSource.getBytes(StandardCharsets.UTF_8));
     }
   }
 

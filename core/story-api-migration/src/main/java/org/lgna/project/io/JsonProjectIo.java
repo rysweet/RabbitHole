@@ -416,9 +416,17 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
 
       private void addUnsupportedTweedleType(TypeReference typeReference) {
-        if (typeReference.name != null) {
-          unsupportedTweedleTypeNames.add(typeReference.name);
+        unsupportedTweedleTypeNames.add(unsupportedTweedleTypeName(typeReference));
+      }
+
+      private static String unsupportedTweedleTypeName(TypeReference typeReference) {
+        if ((typeReference.name != null) && !typeReference.name.isEmpty()) {
+          return typeReference.name;
         }
+        if ((typeReference.file != null) && !typeReference.file.isEmpty()) {
+          return typeReference.file;
+        }
+        return "<unnamed>";
       }
 
       private boolean hasUnsupportedTweedleDecodeFor(String name) {
