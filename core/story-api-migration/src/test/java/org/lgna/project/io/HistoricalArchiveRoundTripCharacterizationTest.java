@@ -444,6 +444,37 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveMissingManifestDeclaredSiblingEntryFailsClearly() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-missing-sibling-entry-boundary.a3w");
+
+    writeJsonProjectArchiveOmittingSceneEntry(
+        projectArchive,
+        "GeneratedProgramWithMissingSiblingEntryBoundary",
+        "class GeneratedProgramWithMissingSiblingEntryBoundary extends SProgram { GeneratedMissingSiblingEntryScene scene; }",
+        "GeneratedMissingSiblingEntryScene");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithMissingSiblingEntryBoundary",
+          "src/GeneratedProgramWithMissingSiblingEntryBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedMissingSiblingEntryScene",
+          "src/GeneratedMissingSiblingEntryScene.twe");
+      assertNotNull("Generated fixture should include the manifest-declared program type entry",
+          zipFile.getEntry("src/GeneratedProgramWithMissingSiblingEntryBoundary.twe"));
+      assertNull("Generated fixture intentionally omits the manifest-declared sibling type entry",
+          zipFile.getEntry("src/GeneratedMissingSiblingEntryScene.twe"));
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Archive does not contain type entry src/GeneratedMissingSiblingEntryScene.twe"));
+  }
+
+  @Test
   public void generatedWorldArchiveWithUnsupportedResourceExpressionIsRejectedWithoutPartialProgramDecode() throws Exception {
     ImageResource imageResource = generatedImageResource("historical-world-texture.png", 0xFF663399);
     Project project = new Project(
@@ -1000,6 +1031,36 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           zipOutputStream,
           "src/" + sceneTypeName + ".twe",
           sceneTweedleSource.getBytes(StandardCharsets.UTF_8));
+    }
+  }
+
+  private static void writeJsonProjectArchiveOmittingSceneEntry(
+      File archive,
+      String programTypeName,
+      String programTweedleSource,
+      String sceneTypeName) throws Exception {
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = programTypeName;
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = programTypeName;
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    manifest.resources.add(new TypeReference(programTypeName, "src/" + programTypeName + ".twe", "tweedle"));
+    manifest.resources.add(new TypeReference(sceneTypeName, "src/" + sceneTypeName + ".twe", "tweedle"));
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(archive))) {
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.VERSION_ENTRY_NAME,
+          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.MANIFEST_ENTRY_NAME,
+          ManifestEncoderDecoder.toJson(manifest).getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "src/" + programTypeName + ".twe",
+          programTweedleSource.getBytes(StandardCharsets.UTF_8));
     }
   }
 
