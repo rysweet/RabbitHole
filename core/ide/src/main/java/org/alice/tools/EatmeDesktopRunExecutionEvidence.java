@@ -40,6 +40,7 @@ public final class EatmeDesktopRunExecutionEvidence {
   public static final String DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT = "desktop-run-pixel-observation.json";
   public static final String DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT = "desktop-first-lesson-next-action.json";
   public static final String DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT = "desktop-save-menu-action-target.json";
+  public static final String DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT = "desktop-run-status-summary.json";
   private static final String DESKTOP_RUN_RENDER_TARGET_SCREENSHOT = "desktop-run-render-target.png";
   private static final int MAX_RECORDED_EVENTS = 200;
   private static final String RENDER_AFFORDANCE_CLAIM =
@@ -280,6 +281,7 @@ public final class EatmeDesktopRunExecutionEvidence {
     Path pixelObservationArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT);
     Path nextActionArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT);
     Path saveMenuActionTargetArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT);
+    Path statusSummaryArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT);
     writeStringAtomically(
         artifact,
         "{\n"
@@ -334,6 +336,8 @@ public final class EatmeDesktopRunExecutionEvidence {
     requireNonEmptyArtifact(nextActionArtifact, "desktop first-lesson next-action artifact");
     writeSaveMenuActionTargetNoGo(saveMenuActionTargetArtifact);
     requireNonEmptyArtifact(saveMenuActionTargetArtifact, "desktop Save menu action-target artifact");
+    writeRunStatusSummary(statusSummaryArtifact);
+    requireNonEmptyArtifact(statusSummaryArtifact, "desktop Run status summary artifact");
     return artifact;
   }
 
@@ -423,6 +427,35 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "    \"desktop save-menu completion\",\n"
             + "    \"first-lesson completion\",\n"
             + "    \"grading\",\n"
+            + "    \"creative assessment\"\n"
+            + "  ]\n"
+            + "}\n");
+  }
+
+  private static void writeRunStatusSummary(Path artifact) throws IOException {
+    writeStringAtomically(
+        artifact,
+        "{\n"
+            + "  \"schema_version\": \"eatme.alice-desktop-run-status-summary/v1\",\n"
+            + "  \"status\": \"partial\",\n"
+            + "  \"source\": \"desktop_run_render_target_attachment\",\n"
+            + "  \"observed_artifacts\": {\n"
+            + "    \"run_attachment_observed\": \"" + DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT + "\",\n"
+            + "    \"pixel_observation\": \"" + DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT + "\",\n"
+            + "    \"next_action\": \"" + DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT + "\",\n"
+            + "    \"save_menu_action_target\": \"" + DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT + "\"\n"
+            + "  },\n"
+            + "  \"exact_next_user_action\": [\n"
+            + "    \"Open desktop-run-pixel-observation.json and use its status plus blocker details before claiming desktop pixels were sampled.\",\n"
+            + "    \"Open desktop-first-lesson-next-action.json to see which desktop action evidence is still missing.\",\n"
+            + "    \"Open desktop-save-menu-action-target.json before claiming Save menu readiness or completion.\"\n"
+            + "  ],\n"
+            + "  \"remaining_unproven_behavior\": [\n"
+            + "    \"visible rendering correctness\",\n"
+            + "    \"desktop save-menu completion\",\n"
+            + "    \"full Alice UI automation\",\n"
+            + "    \"first-lesson completion\",\n"
+            + "    \"learner-world grading\",\n"
             + "    \"creative assessment\"\n"
             + "  ]\n"
             + "}\n");

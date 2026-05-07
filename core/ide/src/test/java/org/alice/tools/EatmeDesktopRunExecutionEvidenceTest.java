@@ -106,11 +106,13 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     Path pixelObservationArtifact = evidenceDir.resolve("desktop-run-pixel-observation.json");
     Path nextActionArtifact = evidenceDir.resolve("desktop-first-lesson-next-action.json");
     Path saveMenuActionTargetArtifact = evidenceDir.resolve("desktop-save-menu-action-target.json");
+    Path statusSummaryArtifact = evidenceDir.resolve("desktop-run-status-summary.json");
     assertTrue(Files.size(artifact) > 0);
     assertTrue(Files.size(pixelBoundaryArtifact) > 0);
     assertTrue(Files.size(pixelObservationArtifact) > 0);
     assertTrue(Files.size(nextActionArtifact) > 0);
     assertTrue(Files.size(saveMenuActionTargetArtifact) > 0);
+    assertTrue(Files.size(statusSummaryArtifact) > 0);
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"evidenceKind\": \"desktop_run_render_affordance\""));
     assertTrue(json, json.contains("\"renderTargetAttachedToRunView\": true"));
@@ -248,6 +250,25 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(saveMenuActionTargetJson, saveMenuActionTargetJson.contains("desktop save-menu completion"));
     assertFalse(saveMenuActionTargetJson, saveMenuActionTargetJson.contains("procedure"));
     assertFalse(saveMenuActionTargetJson, saveMenuActionTargetJson.contains("code editor"));
+
+    String statusSummaryJson = Files.readString(statusSummaryArtifact);
+    assertTrue(statusSummaryJson,
+        statusSummaryJson.contains("\"schema_version\": \"eatme.alice-desktop-run-status-summary/v1\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"status\": \"partial\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"source\": \"desktop_run_render_target_attachment\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"run_attachment_observed\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"pixel_observation\": \"desktop-run-pixel-observation.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"next_action\": \"desktop-first-lesson-next-action.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"save_menu_action_target\": \"desktop-save-menu-action-target.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"exact_next_user_action\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("Open desktop-run-pixel-observation.json"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("Open desktop-first-lesson-next-action.json"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"remaining_unproven_behavior\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("visible rendering correctness"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("desktop save-menu completion"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("full Alice UI automation"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("first-lesson completion"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("learner-world grading"));
   }
 
   @Test
