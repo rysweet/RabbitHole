@@ -325,7 +325,7 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "  ]\n"
             + "}\n");
     requireNonEmptyArtifact(pixelBoundaryArtifact, "desktop Run pixel boundary artifact");
-    writePixelObservation(
+    PixelObservation pixelObservation = writePixelObservation(
         pixelObservationArtifact,
         evidenceDir,
         renderTargetComponent,
@@ -336,7 +336,7 @@ public final class EatmeDesktopRunExecutionEvidence {
     requireNonEmptyArtifact(nextActionArtifact, "desktop first-lesson next-action artifact");
     writeSaveMenuActionTargetNoGo(saveMenuActionTargetArtifact);
     requireNonEmptyArtifact(saveMenuActionTargetArtifact, "desktop Save menu action-target artifact");
-    writeRunStatusSummary(statusSummaryArtifact);
+    writeRunStatusSummary(statusSummaryArtifact, pixelObservation);
     requireNonEmptyArtifact(statusSummaryArtifact, "desktop Run status summary artifact");
     return artifact;
   }
@@ -432,13 +432,41 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "}\n");
   }
 
-  private static void writeRunStatusSummary(Path artifact) throws IOException {
+  private static void writeRunStatusSummary(Path artifact, PixelObservation pixelObservation) throws IOException {
     writeStringAtomically(
         artifact,
         "{\n"
             + "  \"schema_version\": \"eatme.alice-desktop-run-status-summary/v1\",\n"
             + "  \"status\": \"partial\",\n"
             + "  \"source\": \"desktop_run_render_target_attachment\",\n"
+            + "  \"pixel_observation_status\": \"" + pixelObservation.status + "\",\n"
+            + "  \"artifact_statuses\": [\n"
+            + "    {\n"
+            + "      \"artifact\": \"" + DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT + "\",\n"
+            + "      \"evidence_present\": true,\n"
+            + "      \"status\": \"present\",\n"
+            + "      \"reports\": \"Run view attachment evidence only\"\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"artifact\": \"" + DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT + "\",\n"
+            + "      \"evidence_present\": true,\n"
+            + "      \"status\": \"" + pixelObservation.status + "\",\n"
+            + "      \"reports\": \"" + pixelObservationSummary(pixelObservation) + "\"\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"artifact\": \"" + DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT + "\",\n"
+            + "      \"evidence_present\": true,\n"
+            + "      \"status\": \"blocked\",\n"
+            + "      \"reports\": \"desktop action evidence still missing\"\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"artifact\": \"" + DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT + "\",\n"
+            + "      \"evidence_present\": true,\n"
+            + "      \"status\": \"blocked\",\n"
+            + "      \"reports\": \"Save menu readiness or invocation not observed here\"\n"
+            + "    }\n"
+            + "  ],\n"
+            + "  \"reporting_note\": \"" + pixelObservationReportingNote(pixelObservation) + "\",\n"
             + "  \"observed_artifacts\": {\n"
             + "    \"run_attachment_observed\": \"" + DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT + "\",\n"
             + "    \"pixel_observation\": \"" + DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT + "\",\n"
@@ -461,7 +489,19 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "}\n");
   }
 
-  private static void writePixelObservation(
+  private static String pixelObservationSummary(PixelObservation pixelObservation) {
+    return pixelObservation.isObserved()
+        ? "desktop pixel sample observed; inspect the screenshot and sample details before reporting"
+        : "desktop pixel sample blocked; inspect blocker details before reporting";
+  }
+
+  private static String pixelObservationReportingNote(PixelObservation pixelObservation) {
+    return pixelObservation.isObserved()
+        ? "Report desktop-run-pixel-observation.json as observed only for pixel sampling, not visible rendering correctness."
+        : "Report desktop-run-pixel-observation.json as blocked until its blocker details are resolved or separate manual evidence is supplied.";
+  }
+
+  private static PixelObservation writePixelObservation(
       Path artifact,
       Path evidenceDir,
       Component renderTargetComponent,
@@ -500,6 +540,7 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "    \"creative assessment\"\n"
             + "  ]\n"
             + "}\n");
+    return observation;
   }
 
   private static PixelObservation observePixel(

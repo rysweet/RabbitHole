@@ -256,6 +256,16 @@ public class EatmeDesktopRunExecutionEvidenceTest {
         statusSummaryJson.contains("\"schema_version\": \"eatme.alice-desktop-run-status-summary/v1\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"status\": \"partial\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"source\": \"desktop_run_render_target_attachment\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"pixel_observation_status\": \"blocked\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact_statuses\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"evidence_present\": true"));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-run-render-affordance.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-run-pixel-observation.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-first-lesson-next-action.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-save-menu-action-target.json\""));
+    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"reporting_note\""));
+    assertTrue(statusSummaryJson,
+        statusSummaryJson.contains("Report desktop-run-pixel-observation.json as blocked until its blocker details are resolved or separate manual evidence is supplied."));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"run_attachment_observed\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"pixel_observation\": \"desktop-run-pixel-observation.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"next_action\": \"desktop-first-lesson-next-action.json\""));
