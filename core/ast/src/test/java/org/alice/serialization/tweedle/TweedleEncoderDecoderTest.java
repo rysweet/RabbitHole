@@ -258,12 +258,27 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithMethodParameterReportsUnsupportedMethodParameters() {
+  public void decodeClassWithRequiredMethodParameterCreatesUserMethodParameter() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { void initialize(WholeNumber count) { } }");
+
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("initialize", method.getName());
+    assertSame(JavaType.VOID_TYPE, method.getReturnType());
+    assertEquals(1, method.getRequiredParameters().size());
+    UserParameter parameter = method.getRequiredParameters().get(0);
+    assertEquals("count", parameter.getName());
+    assertSame(JavaType.getInstance(Integer.class), parameter.getValueType());
+  }
+
+  @Test
+  public void decodeClassWithOptionalMethodParameterReportsUnsupportedMethodParameters() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("class SyntheticType { void initialize(WholeNumber count) { } }"));
+        () -> coder.decode("class SyntheticType { void initialize(WholeNumber count <- 1) { } }"));
 
-    assertTrue(thrown.getMessage().contains("method parameters"));
+    assertTrue(thrown.getMessage().contains("optional method parameters"));
+    assertTrue(thrown.getMessage().contains("initialize"));
   }
 
   @Test

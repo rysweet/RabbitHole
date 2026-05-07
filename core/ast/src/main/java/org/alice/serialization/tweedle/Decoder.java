@@ -130,9 +130,9 @@ public class Decoder {
   }
 
   private UserMethod decodeMethod(TweedleMethod method) {
-    if (!method.getRequiredParameters().isEmpty() || !method.getOptionalParameters().isEmpty()) {
+    if (!method.getOptionalParameters().isEmpty()) {
       throw new UnsupportedTweedleDecodeException(
-          "Tweedle method parameters are not yet supported by the AST decoder: " + method.getName());
+          "Tweedle optional method parameters are not yet supported by the AST decoder: " + method.getName());
     }
     if (!method.getBody().isEmpty()) {
       throw new UnsupportedTweedleDecodeException(
@@ -145,7 +145,7 @@ public class Decoder {
     return new UserMethod(
         method.getName(),
         resolveReturnType(method.getType()),
-        new UserParameter[] {},
+        decodeRequiredParameters(method.getRequiredParameters(), "method parameter"),
         new BlockStatement());
   }
 
