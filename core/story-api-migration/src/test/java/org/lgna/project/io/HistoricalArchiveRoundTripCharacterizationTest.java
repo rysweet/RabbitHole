@@ -253,6 +253,39 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithConstructorBearingSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-constructor-sibling-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithConstructorSiblingBoundary",
+        "class GeneratedProgramWithConstructorSiblingBoundary extends SProgram { WholeNumber count; }",
+        "GeneratedConstructorSiblingBoundaryScene",
+        "class GeneratedConstructorSiblingBoundaryScene extends SScene { GeneratedConstructorSiblingBoundaryScene() { } }");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithConstructorSiblingBoundary",
+          "src/GeneratedProgramWithConstructorSiblingBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedConstructorSiblingBoundaryScene",
+          "src/GeneratedConstructorSiblingBoundaryScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedConstructorSiblingBoundaryScene.twe");
+      assertNotNull(
+          "Generated JSON .a3w fixture should contain the constructor-bearing sibling type source",
+          siblingTypeEntry);
+      assertTrue(readEntry(zipFile, siblingTypeEntry).contains("GeneratedConstructorSiblingBoundaryScene()"));
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedConstructorSiblingBoundaryScene]"));
+  }
+
+  @Test
   public void jsonProjectArchiveWithOnlyUnsupportedManifestTypesIsRejected() throws Exception {
     File projectArchive = temporaryFolder.newFile("all-unsupported-json-a3w-types-boundary.a3w");
 
