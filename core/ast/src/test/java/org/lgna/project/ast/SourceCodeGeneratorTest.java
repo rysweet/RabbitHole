@@ -56,6 +56,23 @@ public class SourceCodeGeneratorTest {
   }
 
   @Test
+  public void characterizesDisabledStatementInsideEnabledBlock() {
+    LocalDeclarationStatement disabledStatement = new LocalDeclarationStatement(
+        new UserLocal("hidden", String.class, true),
+        new StringLiteral("secret"));
+    disabledStatement.isEnabled.setValue(false);
+    BlockStatement block = new BlockStatement(
+        disabledStatement,
+        new LocalDeclarationStatement(
+            new UserLocal("shown", String.class, true),
+            new StringLiteral("visible")));
+
+    assertEquals(
+        "{\n/* disabled\nfinal String hidden=\"secret\";\n*/\nfinal String shown=\"visible\";}",
+        generate(block));
+  }
+
+  @Test
   public void characterizesRepresentativeExpressionAndTypeGoldenSnippets() {
     assertEquals(
         "new String[]{\"red\", \"blue\"}",
@@ -65,6 +82,18 @@ public class SourceCodeGeneratorTest {
             new StringLiteral("blue"))));
 
     assertEquals("String.class", generate(new TypeLiteral(String.class)));
+  }
+
+  @Test
+  public void characterizesSpecialPrimitiveLiteralNames() {
+    assertEquals("Integer.MAX_VALUE", generateInt(Integer.MAX_VALUE));
+    assertEquals("Integer.MIN_VALUE", generateInt(Integer.MIN_VALUE));
+    assertEquals("Float.NaN", generateFloat(Float.NaN));
+    assertEquals("Float.POSITIVE_INFINITY", generateFloat(Float.POSITIVE_INFINITY));
+    assertEquals("Float.NEGATIVE_INFINITY", generateFloat(Float.NEGATIVE_INFINITY));
+    assertEquals("Double.NaN", generateDouble(Double.NaN));
+    assertEquals("Double.POSITIVE_INFINITY", generateDouble(Double.POSITIVE_INFINITY));
+    assertEquals("Double.NEGATIVE_INFINITY", generateDouble(Double.NEGATIVE_INFINITY));
   }
 
   @Test
@@ -122,6 +151,24 @@ public class SourceCodeGeneratorTest {
         .addDefaultCodeOrganizerDefinition(CodeOrganizer.defaultCodeOrganizer)
         .build();
     type.process(generator);
+    return generator.getText();
+  }
+
+  private static String generateInt(int value) {
+    JavaCodeGenerator generator = new JavaCodeGenerator.Builder().build();
+    generator.processInt(value);
+    return generator.getText();
+  }
+
+  private static String generateFloat(float value) {
+    JavaCodeGenerator generator = new JavaCodeGenerator.Builder().build();
+    generator.processFloat(value);
+    return generator.getText();
+  }
+
+  private static String generateDouble(double value) {
+    JavaCodeGenerator generator = new JavaCodeGenerator.Builder().build();
+    generator.processDouble(value);
     return generator.getText();
   }
 }
