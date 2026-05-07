@@ -234,15 +234,25 @@ def probe_at_spi(java_pid: int) -> dict[str, Any]:
             "widgetLabels": [],
         }
 
-    all_widgets = enumerate_accessible_children(select_project_frame, depth=0, max_depth=8)
+    all_widgets = enumerate_accessible_children(select_project_frame, depth=0, max_depth=12)
 
     tab_role_names = {"page tab", "pagetab"}
-    tab_labels = [
+    # Alice's Select Project uses custom toggle buttons for its tab selectors.
+    # Collect names from both standard page-tab roles and toggle-button nodes
+    # whose name matches an expected tab label.
+    tab_labels_from_page_tab = [
         w["name"]
         for w in all_widgets
         if w.get("role", "").lower().replace(" ", "") in tab_role_names
         and w.get("name")
     ]
+    tab_labels_from_toggle = [
+        w["name"]
+        for w in all_widgets
+        if w.get("role", "").lower() == "toggle button"
+        and w.get("name") in EXPECTED_TAB_LABELS
+    ]
+    tab_labels = tab_labels_from_page_tab if tab_labels_from_page_tab else tab_labels_from_toggle
     widget_labels = [
         {"depth": w["depth"], "name": w["name"], "role": w["role"]}
         for w in all_widgets
@@ -261,6 +271,7 @@ def probe_at_spi(java_pid: int) -> dict[str, Any]:
         "widgetCount": len(all_widgets),
         "widgetLabels": widget_labels,
         "tabLabels": tab_labels,
+        "tabLabelSource": "page-tab" if tab_labels_from_page_tab else "toggle-button",
         "expectedTabLabels": EXPECTED_TAB_LABELS,
         "tabLabelMatch": sorted(tab_labels) == sorted(EXPECTED_TAB_LABELS),
         "atkWrapperJar": ATK_WRAPPER_JAR,

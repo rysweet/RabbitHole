@@ -16,11 +16,11 @@ userActions:
   - Launch with ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 so first-run license dialogs are bypassed only inside the evidence directory.
   - Wait for the Select Project chooser to become visible.
   - While Alice is still running, use pyatspi to enumerate the Select Project frame accessible children via AT-SPI2.
-  - Record the observed widget roles and names via AT-SPI. If status=observed, the Java process and Swing widgets are visible through AT-SPI; note that tab labels are not currently enumerated (tabLabels is empty, tabLabelMatch is false). If status=blocked, record the exact blocker and blockerDetail.
+  - Record the observed widget roles and names via AT-SPI. If status=observed, the Java process and Swing widgets are visible through AT-SPI; note that tab labels were not enumerated by searching for page-tab roles (tabLabels was empty in PR #272); they are now found as toggle-button nodes (tabLabelSource=toggle-button, tabLabelMatch=true). If status=blocked, record the exact blocker and blockerDetail.
 expectedOutcomes:
   - The first-run license dialog is not observed after isolated test opt-in.
   - A Java window titled Select Project is visible after launch readiness.
-  - swing-widget-observation.json records status=observed confirming the Java process and Swing widgets are visible through AT-SPI (widgetCount>0, dialog role observed). Tab labels (Blank Slates, Starters, My Projects, Recent, File System) are not currently enumerated via AT-SPI; tabLabels is empty and tabLabelMatch is false.
+  - swing-widget-observation.json records status=observed confirming the Java process and Swing widgets are visible through AT-SPI (widgetCount>0, dialog role observed). Tab labels (Blank Slates, Starters, My Projects, Recent, File System) are found as toggle-button nodes (tabLabelSource=toggle-button) after the depth limit was increased from 8 to 12; tabLabelMatch=true.
   - If the remediation is not yet effective, swing-widget-observation.json records a precise machine-readable blocker naming the exact condition still unmet.
   - The proof does not claim starter selection, project opening, world execution, grading, or full lesson completion.
 automation:

@@ -1,0 +1,62 @@
+id: alice-desktop-select-project-tab-click-exec
+title: Select Project AT-SPI tab structure diagnosis and click attempt via exec:exec
+workflow: select-project-tab-click-smoke
+automationMode: xvfb-real-alice
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Controlled QA license acceptance is explicitly enabled with an isolated java.util.prefs.userRoot.
+  - python3-pyatspi is installed (sudo apt-get install -y python3-pyatspi).
+  - libatk-wrapper-java is installed at /usr/share/java/java-atk-wrapper.jar.
+  - The AT-SPI2 accessibility bus is running for the current user session.
+  - alice-ide/pom.xml declares the alice-ide-atk exec:exec execution with -Xbootclasspath/a:/usr/share/java/java-atk-wrapper.jar.
+  - PR #272 has been merged, proving Java/Swing widgets are visible through AT-SPI with exec:exec + NO_AT_BRIDGE=1.
+userActions:
+  - Prepare core/resources/target/distribution, then start Alice using exec:exec@alice-ide-atk.
+  - Launch with ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 so first-run license dialogs are bypassed.
+  - Wait for the Select Project chooser to become visible.
+  - While Alice is still running, use tab-click-probe.py via pyatspi to enumerate ALL accessible nodes (including unnamed ones) in the Select Project frame, record their roles and names, identify page-tab-list and page-tab nodes, and attempt DoAction("click") on each tab node found.
+  - Record the full widget tree (all roles including unnamed) and the tab click attempt results. If any click succeeds, re-enumerate the tree to capture post-click state.
+expectedOutcomes:
+  - The first-run license dialog is not observed after isolated test opt-in.
+  - A Java window titled Select Project is visible after launch readiness; selectProjectWaitStatus=select-project-window-found confirms the window was specifically awaited before the inventory was collected.
+  - tab-click-observation.json records status=observed.
+  - tab-click-observation.json records toggleTabNodeCount=5 listing all five Select Project tab toggle buttons (Blank Slates, Starters, My Projects, Recent, File System) at depth=11 with their correct names. Alice's Select Project dialog uses toggle buttons (AT-SPI role="toggle button") rather than standard JTabbedPane page tabs.
+  - tab-click-observation.json records tabClickAttempts with clickSuccess=true for all five tabs; AT-SPI DoAction("click") successfully invokes each tab selector.
+  - tab-click-observation.json records anyClickSuccess=true.
+  - tab-click-observation.json records projectOpenAttempt.startersTabClick.success=true (Starters tab activated), projectOpenAttempt.listItemClick.success=true with item name from the Starters list (e.g., "Africa Full"), projectOpenAttempt.okButtonClick.success=true, and projectOpenObserved=true with projectOpenDetail confirming the Select Project frame is no longer present in the AT-SPI tree.
+  - The proof confirms project opening: Select Project was dismissed after clicking Starters tab, selecting a starter project by name, and clicking OK.
+automation:
+  cwd: alice-ide
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -Dcheckstyle.skip
+    - -DskipTests
+    - compile
+    - exec:exec@alice-ide-atk
+  timeoutSeconds: 240
+  readyWaitSeconds: 60
+evidence:
+  required:
+    - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
+    - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
+    - license-dialog.json recording not-observed.
+    - x-window-inventory.json naming visible X window title, class, process, and geometry; selectProjectWaitStatus=select-project-window-found confirms the Select Project window was specifically awaited.
+    - select-project-window.json recording observed Select Project title/class/process/geometry.
+    - tab-click-observation.json recording status=observed with toggleTabNodeCount=5 (Blank Slates, Starters, My Projects, Recent, File System), tabClickAttempts all success, projectOpenObserved=true with listItemClick.item naming the selected Starters project and projectOpenDetail confirming Select Project frame dismissed.
+    - Screenshot of the Alice desktop state.
+    - Environment summary with Java version, Maven version, and DISPLAY value.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the Select Project window is not visible within the readiness wait, the wait mechanism must be confirmed to include the new scenario ID (alice-desktop-select-project-tab-click-exec).
+    - If tab nodes have only toggle-button role with empty names, record the exact AT-SPI property gap.
+    - If listItemClick fails, record availableActions on the item panel and its label child; the panel may not expose a click action, requiring AT-SPI selection-interface interaction instead.
+    - Do not claim project opening unless tab-click-observation.json records projectOpenObserved=true.
+supportingEvidence:
+  - alice-desktop-select-project-atk-exec
+  - alice-desktop-select-project-widget-introspection
+  - alice-desktop-select-project-inventory
