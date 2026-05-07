@@ -1,11 +1,18 @@
 package org.alice.ide.croquet.models.projecturi;
 
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
+import org.lgna.croquet.history.UserActivity;
+import org.lgna.croquet.triggers.EventObjectTrigger;
+import org.lgna.croquet.triggers.Trigger;
+import org.lgna.croquet.views.MenuItem;
+import org.lgna.croquet.views.ViewController;
 
+import javax.swing.JMenuItem;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EventObject;
 import java.util.Objects;
 
 final class SaveOperationCompletionEvidence {
@@ -39,6 +46,20 @@ final class SaveOperationCompletionEvidence {
       String extension,
       boolean activeStageIdeAvailable,
       boolean projectDocumentFrameAvailable) {
+    recordSaveActionInvocation(
+        operationClass,
+        extension,
+        activeStageIdeAvailable,
+        projectDocumentFrameAvailable,
+        InvocationTrigger.none());
+  }
+
+  static void recordSaveActionInvocation(
+      String operationClass,
+      String extension,
+      boolean activeStageIdeAvailable,
+      boolean projectDocumentFrameAvailable,
+      InvocationTrigger invocationTrigger) {
     String evidenceDir = System.getProperty(EVIDENCE_DIR_PROPERTY);
     if (evidenceDir == null || evidenceDir.isBlank()) {
       return;
@@ -49,7 +70,8 @@ final class SaveOperationCompletionEvidence {
           operationClass,
           extension,
           activeStageIdeAvailable,
-          projectDocumentFrameAvailable);
+          projectDocumentFrameAvailable,
+          invocationTrigger);
     } catch (IOException | RuntimeException ex) {
       Logger.throwable(ex, "eatme Save action invocation evidence write failed: " + evidenceDir);
     }
@@ -100,6 +122,22 @@ final class SaveOperationCompletionEvidence {
       String extension,
       boolean activeStageIdeAvailable,
       boolean projectDocumentFrameAvailable) throws IOException {
+    return writeSaveActionInvocationProof(
+        evidenceDir,
+        operationClass,
+        extension,
+        activeStageIdeAvailable,
+        projectDocumentFrameAvailable,
+        InvocationTrigger.none());
+  }
+
+  static Path writeSaveActionInvocationProof(
+      Path evidenceDir,
+      String operationClass,
+      String extension,
+      boolean activeStageIdeAvailable,
+      boolean projectDocumentFrameAvailable,
+      InvocationTrigger invocationTrigger) throws IOException {
     Objects.requireNonNull(evidenceDir, "evidenceDir");
     Files.createDirectories(evidenceDir);
     Path artifact = artifactPath(evidenceDir, SAVE_ACTION_INVOCATION_PROOF_ARTIFACT);
@@ -109,12 +147,33 @@ final class SaveOperationCompletionEvidence {
             operationClass,
             extension,
             activeStageIdeAvailable,
-            projectDocumentFrameAvailable),
+            projectDocumentFrameAvailable,
+            invocationTrigger),
         StandardCharsets.UTF_8);
     if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
       throw new IOException("Save action invocation proof artifact was not written: " + artifact);
     }
     return artifact;
+  }
+
+  static InvocationTrigger invocationTrigger(UserActivity activity) {
+    if (activity == null || activity.getTrigger() == null) {
+      return InvocationTrigger.none();
+    }
+    Trigger trigger = activity.getTrigger();
+    ViewController<?, ?> viewController = trigger.getViewController();
+    String awtSourceClass = null;
+    if (trigger instanceof EventObjectTrigger<?> eventObjectTrigger) {
+      EventObject event = eventObjectTrigger.getEvent();
+      Object source = event == null ? null : event.getSource();
+      awtSourceClass = source instanceof JMenuItem
+          ? JMenuItem.class.getName()
+          : className(source);
+    }
+    return new InvocationTrigger(
+        className(trigger),
+        viewController == null ? null : viewController.getClass().getName(),
+        awtSourceClass);
   }
 
   static String escapeJson(String value) {
@@ -213,10 +272,13 @@ final class SaveOperationCompletionEvidence {
       String operationClass,
       String extension,
       boolean activeStageIdeAvailable,
-      boolean projectDocumentFrameAvailable) {
-    String reason = saveActionInvocationReason(activeStageIdeAvailable, projectDocumentFrameAvailable);
+      boolean projectDocumentFrameAvailable,
+      InvocationTrigger invocationTrigger) {
+    InvocationTrigger trigger = invocationTrigger == null ? InvocationTrigger.none() : invocationTrigger;
+    String reason = saveActionInvocationReason(activeStageIdeAvailable, projectDocumentFrameAvailable, trigger);
     String status = switch (reason) {
       case "save_action_invoked" -> "action_invoked";
+      case "save_menu_item_dispatched" -> "menu_item_dispatched";
       case "missing_active_stage_ide" -> "unsupported";
       default -> "blocked";
     };
@@ -236,7 +298,11 @@ final class SaveOperationCompletionEvidence {
         + "  },\n"
         + "  \"observed\": {\n"
         + "    \"active_stage_ide_available\": " + activeStageIdeAvailable + ",\n"
-        + "    \"project_document_frame_available\": " + projectDocumentFrameAvailable + "\n"
+        + "    \"project_document_frame_available\": " + projectDocumentFrameAvailable + ",\n"
+        + "    \"menu_item_dispatch\": " + trigger.isMenuItemDispatch() + ",\n"
+        + "    \"trigger_class\": " + stringJson(trigger.triggerClass()) + ",\n"
+        + "    \"view_controller_class\": " + stringJson(trigger.viewControllerClass()) + ",\n"
+        + "    \"awt_source_class\": " + stringJson(trigger.awtSourceClass()) + "\n"
         + "  },\n"
         + "  \"blocker\": {\n"
         + "    \"observed\": \"" + escapeJson(saveActionObserved(reason)) + "\",\n"
@@ -244,25 +310,22 @@ final class SaveOperationCompletionEvidence {
         + "  },\n"
         + "  \"reporting_summary\": \"" + escapeJson(saveActionReportingSummary(reason)) + "\",\n"
         + saveActionRequiresNextEvidenceJson(reason)
-        + "  \"doesNotClaim\": [\n"
-        + "    \"desktop Save menu item was clicked\",\n"
-        + "    \"Save dialog displayed\",\n"
-        + "    \"desktop Save dialog control\",\n"
-        + "    \"selected Save path supplied by UI automation\",\n"
-        + "    \"saved file completed\",\n"
-        + "    \"first-lesson completion\",\n"
-        + "    \"visible rendering correctness\",\n"
-        + "    \"grading\"\n"
-        + "  ]\n"
+        + saveActionDoesNotClaimJson(trigger)
         + "}\n";
   }
 
-  private static String saveActionInvocationReason(boolean activeStageIdeAvailable, boolean projectDocumentFrameAvailable) {
+  private static String saveActionInvocationReason(
+      boolean activeStageIdeAvailable,
+      boolean projectDocumentFrameAvailable,
+      InvocationTrigger invocationTrigger) {
     if (!activeStageIdeAvailable) {
       return "missing_active_stage_ide";
     }
     if (!projectDocumentFrameAvailable) {
       return "missing_project_document_frame";
+    }
+    if (invocationTrigger.isMenuItemDispatch()) {
+      return "save_menu_item_dispatched";
     }
     return "save_action_invoked";
   }
@@ -271,6 +334,7 @@ final class SaveOperationCompletionEvidence {
     return switch (reason) {
       case "missing_active_stage_ide" -> "SaveProjectOperation.fire(UserActivity) reached AbstractSaveOperation.perform, but StageIDE.getActiveInstance() returned null.";
       case "missing_project_document_frame" -> "StageIDE.getActiveInstance() resolved, but application.getDocumentFrame() returned null.";
+      case "save_menu_item_dispatched" -> "SaveProjectOperation Swing menu item doClick dispatched through OperationSwingModel and reached AbstractSaveOperation.perform with an active StageIDE and ProjectDocumentFrame.";
       default -> "SaveProjectOperation.fire(UserActivity) reached AbstractSaveOperation.perform with an active StageIDE and ProjectDocumentFrame.";
     };
   }
@@ -279,12 +343,13 @@ final class SaveOperationCompletionEvidence {
     return switch (reason) {
       case "missing_active_stage_ide" -> "The Save action invocation path is executable, but this JVM has no active StageIDE, so the production Save dialog path cannot resolve application.getDocumentFrame().showSaveFileDialog.";
       case "missing_project_document_frame" -> "The Save action invocation path found an active StageIDE, but no ProjectDocumentFrame was available to own the Save dialog.";
+      case "save_menu_item_dispatched" -> "The desktop Save menu item dispatch path reached the production Save operation owner; dialog display/control still require FileDialogUtilities evidence.";
       default -> "The Save action invocation reached the production Save operation owner; dialog display/control still require FileDialogUtilities evidence.";
     };
   }
 
   private static String saveActionRequiresNextEvidenceJson(String reason) {
-    if ("save_action_invoked".equals(reason)) {
+    if ("save_action_invoked".equals(reason) || "save_menu_item_dispatched".equals(reason)) {
       return "  \"requiresNextEvidence\": [\n"
           + "    \"desktop Save dialog discovery artifact with target_resolved\",\n"
           + "    \"desktop Save dialog control result artifact\",\n"
@@ -307,10 +372,30 @@ final class SaveOperationCompletionEvidence {
         + "  ],\n";
   }
 
+  private static String saveActionDoesNotClaimJson(InvocationTrigger invocationTrigger) {
+    String menuItemClaim = invocationTrigger.isMenuItemDispatch()
+        ? ""
+        : "    \"desktop Save menu item was clicked\",\n";
+    return "  \"doesNotClaim\": [\n"
+        + menuItemClaim
+        + "    \"Save dialog displayed\",\n"
+        + "    \"desktop Save dialog control\",\n"
+        + "    \"selected Save path supplied by UI automation\",\n"
+        + "    \"saved file completed\",\n"
+        + "    \"first-lesson completion\",\n"
+        + "    \"visible rendering correctness\",\n"
+        + "    \"grading\"\n"
+        + "  ]\n";
+  }
+
   private static String savedFileJson(SaveOperationFlow.Result result) {
     return result.savedFile() == null
         ? "null"
         : "\"" + escapeJson(result.savedFile().getPath()) + "\"";
+  }
+
+  private static String stringJson(String value) {
+    return value == null ? "null" : "\"" + escapeJson(value) + "\"";
   }
 
   private static String status(SaveOperationFlow.Result result) {
@@ -327,6 +412,10 @@ final class SaveOperationCompletionEvidence {
     return value == null ? "" : value;
   }
 
+  private static String className(Object value) {
+    return value == null ? null : value.getClass().getName();
+  }
+
   private static String operationSimpleName(String operationClass) {
     String value = nullToBlank(operationClass);
     int lastDot = value.lastIndexOf('.');
@@ -339,5 +428,39 @@ final class SaveOperationCompletionEvidence {
       throw new IllegalArgumentException("Save operation artifact escapes evidence dir");
     }
     return artifact;
+  }
+
+  static final class InvocationTrigger {
+    private final String triggerClass;
+    private final String viewControllerClass;
+    private final String awtSourceClass;
+
+    private InvocationTrigger(String triggerClass, String viewControllerClass, String awtSourceClass) {
+      this.triggerClass = triggerClass;
+      this.viewControllerClass = viewControllerClass;
+      this.awtSourceClass = awtSourceClass;
+    }
+
+    static InvocationTrigger none() {
+      return new InvocationTrigger(null, null, null);
+    }
+
+    String triggerClass() {
+      return triggerClass;
+    }
+
+    String viewControllerClass() {
+      return viewControllerClass;
+    }
+
+    String awtSourceClass() {
+      return awtSourceClass;
+    }
+
+    boolean isMenuItemDispatch() {
+      return "org.lgna.croquet.triggers.ActionEventTrigger".equals(triggerClass)
+          && MenuItem.class.getName().equals(viewControllerClass)
+          && JMenuItem.class.getName().equals(awtSourceClass);
+    }
   }
 }

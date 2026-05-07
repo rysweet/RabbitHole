@@ -71,12 +71,15 @@ public abstract class AbstractSaveOperation extends UriActionOperation {
   @Override
   protected void perform(UserActivity activity) {
     StageIDE application = StageIDE.getActiveInstance();
+    SaveOperationCompletionEvidence.InvocationTrigger invocationTrigger =
+        SaveOperationCompletionEvidence.invocationTrigger(activity);
     if (application == null) {
       SaveOperationCompletionEvidence.recordSaveActionInvocation(
           this.getClass().getName(),
           this.getExtension(),
           false,
-          false);
+          false,
+          invocationTrigger);
       activity.cancel();
       return;
     }
@@ -85,7 +88,8 @@ public abstract class AbstractSaveOperation extends UriActionOperation {
           this.getClass().getName(),
           this.getExtension(),
           true,
-          false);
+          false,
+          invocationTrigger);
       activity.cancel();
       return;
     }
@@ -93,7 +97,8 @@ public abstract class AbstractSaveOperation extends UriActionOperation {
         this.getClass().getName(),
         this.getExtension(),
         true,
-        true);
+        true,
+        invocationTrigger);
     if (SaveOperationCompletionEvidence.isSaveActionInvocationProofOnly()) {
       activity.cancel();
       return;
