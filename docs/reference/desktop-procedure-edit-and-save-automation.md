@@ -80,7 +80,7 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.ide.croquet.models.projecturi.SaveOperationFlowTest,org.alice.ide.croquet.models.projecturi.SaveOperationCompletionEvidenceTest,org.alice.ide.croquet.models.projecturi.SaveProjectOperationTest \
+  -Dtest=org.alice.ide.croquet.models.projecturi.SaveOperationFlowTest,org.alice.ide.croquet.models.projecturi.SaveOperationCompletionEvidenceTest,org.alice.ide.croquet.models.projecturi.SaveDialogDiscoveryTargetEvidenceTest,org.alice.ide.croquet.models.projecturi.SaveProjectOperationTest \
   test
 ```
 
@@ -88,6 +88,13 @@ When `org.alice.eatme.saveOperationEvidenceDir` is set, Save operation evidence
 also writes `desktop-save-dialog-control-target.json`. This artifact names the
 exact dialog seams that still require desktop control evidence and reports
 `unsupported` when no Save dialog was requested.
+
+When `org.alice.eatme.saveDialogDiscoveryEvidenceDir` is set,
+`FileDialogUtilities.showSaveFileDialog(Component,File,String,String)` also
+writes `desktop-save-dialog-discovery-target.json` before displaying the native
+Save dialog. In headless or rootless tests this is a machine-readable no-go
+artifact; in a real desktop it can only prove owner/root target resolution, not
+dialog display or control.
 
 Run the outside-in desktop scenario only when a real display is prepared:
 
