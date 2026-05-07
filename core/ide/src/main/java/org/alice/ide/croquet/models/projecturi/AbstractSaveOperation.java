@@ -71,7 +71,7 @@ public abstract class AbstractSaveOperation extends UriActionOperation {
   @Override
   protected void perform(UserActivity activity) {
     StageIDE application = StageIDE.getActiveInstance();
-    SaveOperationFlow.run(new SaveOperationFlow.Context() {
+    SaveOperationFlow.Result result = SaveOperationFlow.run(new SaveOperationFlow.Context() {
       @Override
       public File getCurrentFile() {
         return UriUtilities.getFile(application.getUri());
@@ -122,5 +122,6 @@ public abstract class AbstractSaveOperation extends UriActionOperation {
         activity.cancel();
       }
     }, this::isPromptNecessary, this.getExtension(), file -> this.save(application, file));
+    SaveOperationCompletionEvidence.record(this.getClass().getName(), this.getExtension(), result);
   }
 }
