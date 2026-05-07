@@ -180,12 +180,39 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithSizedWholeNumberArrayInitializerCreatesArrayInstanceCreation() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { WholeNumber[] counts <- new WholeNumber[2]; }");
+
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals("counts", field.getName());
+    assertSame(JavaType.getInstance(Integer[].class), field.getValueType());
+    Expression initializer = field.initializer.getValue();
+    assertTrue(initializer instanceof ArrayInstanceCreation);
+    ArrayInstanceCreation array = (ArrayInstanceCreation) initializer;
+    assertSame(JavaType.getInstance(Integer[].class), array.arrayType.getValue());
+    assertEquals(1, array.lengths.size());
+    assertEquals(Integer.valueOf(2), array.lengths.get(0));
+    assertTrue(array.expressions.isEmpty());
+  }
+
+  @Test
   public void decodeClassWithNonLiteralArrayInitializerElementReportsUnsupportedInitializer() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
         () -> coder.decode("class SyntheticType { WholeNumber[] counts <- new WholeNumber[] {1, 1 + 2}; }"));
 
     assertTrue(thrown.getMessage().contains("array initializer elements"));
+    assertTrue(thrown.getMessage().contains("counts"));
+  }
+
+  @Test
+  public void decodeClassWithNonLiteralArrayInitializerSizeReportsUnsupportedInitializer() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber[] counts <- new WholeNumber[1 + 1]; }"));
+
+    assertTrue(thrown.getMessage().contains("array initializer sizes"));
     assertTrue(thrown.getMessage().contains("counts"));
   }
 

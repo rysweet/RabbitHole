@@ -14,6 +14,7 @@ import org.lgna.common.Resource;
 import org.lgna.project.ast.AbstractDeclaration;
 import org.lgna.project.ast.AbstractNode;
 import org.lgna.project.ast.AbstractType;
+import org.lgna.project.ast.ArrayInstanceCreation;
 import org.lgna.project.ast.AstUtilities;
 import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.DoubleLiteral;
@@ -124,8 +125,7 @@ public class Decoder {
       throw unsupportedFieldInitializer(property);
     }
     if (!arrayInitializer.hasElementInitializers()) {
-      throw new UnsupportedTweedleDecodeException(
-          "Sized Tweedle array initializers are not yet supported by the AST decoder: " + property.getName());
+      return decodeSizedArrayFieldInitializer(property, valueType, arrayInitializer);
     }
 
     AbstractType<?, ?, ?> componentType = valueType.getComponentType();
@@ -135,6 +135,19 @@ public class Decoder {
       elements.add(elementExpression);
     }
     return AstUtilities.createArrayInstanceCreation(valueType, elements);
+  }
+
+  private Expression decodeSizedArrayFieldInitializer(
+      TweedleField property,
+      AbstractType<?, ?, ?> valueType,
+      TweedleArrayInitializer arrayInitializer) {
+    TweedleExpression size = arrayInitializer.getInitializeSize();
+    if (!(size instanceof TweedlePrimitiveValue<?> primitiveValue)
+        || !(primitiveValue.getPrimitiveValue() instanceof Integer length)
+        || length < 0) {
+      throw unsupportedArrayInitializerSize(property);
+    }
+    return new ArrayInstanceCreation(valueType, new Integer[] {length});
   }
 
   private Expression decodeArrayInitializerElement(
@@ -215,6 +228,11 @@ public class Decoder {
   private UnsupportedTweedleDecodeException unsupportedArrayInitializerElement(TweedleField property) {
     return new UnsupportedTweedleDecodeException(
         "Non-literal Tweedle array initializer elements are not yet supported by the AST decoder: " + property.getName());
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedArrayInitializerSize(TweedleField property) {
+    return new UnsupportedTweedleDecodeException(
+        "Non-literal Tweedle array initializer sizes are not yet supported by the AST decoder: " + property.getName());
   }
 
   private AbstractType<?, ?, ?> resolveType(TweedleType tweedleType, String usage) {
