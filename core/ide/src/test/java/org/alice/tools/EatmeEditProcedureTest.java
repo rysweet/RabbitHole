@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -57,10 +58,21 @@ public class EatmeEditProcedureTest {
     assertTrue(result, result.contains("\"status\":\"edited\""));
     assertTrue(result, result.contains("\"edited_project_artifact\":\"edited-project.a3p\""));
     assertTrue(result, result.contains("\"procedure_or_code_diff\":\"procedure.diff.json\""));
+    assertTrue(result, result.contains("\"procedure_tab_selection\":\"procedure-tab-selection.json\""));
     assertTrue(result, result.contains("\"procedure_ui_action_no_go\":\"procedure-ui-action-no-go.json\""));
     assertTrue(Files.size(evidenceDir.resolve("procedure-edit.json")) > 0);
     assertTrue(Files.size(evidenceDir.resolve("procedure.diff.json")) > 0);
+    assertTrue(Files.size(evidenceDir.resolve("procedure-tab-selection.json")) > 0);
     assertTrue(Files.size(evidenceDir.resolve("procedure-ui-action-no-go.json")) > 0);
+
+    String tabSelection = Files.readString(evidenceDir.resolve("procedure-tab-selection.json"));
+    assertTrue(tabSelection,
+        tabSelection.contains("\"schema_version\": \"eatme.alice-procedure-tab-selection/v1\""));
+    assertTrue(tabSelection, tabSelection.contains("\"selection_mode\": \"in_editor_procedure_tab_operation\""));
+    assertTrue(tabSelection, tabSelection.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
+    assertTrue(tabSelection, tabSelection.contains("\"selected_method\": \"eatmeFirstLesson\""));
+    assertTrue(tabSelection, tabSelection.contains("\"operation_fired\": true"));
+    assertTrue(tabSelection, tabSelection.contains("desktop UI action invoked"));
 
     String uiActionNoGo = Files.readString(evidenceDir.resolve("procedure-ui-action-no-go.json"));
     assertTrue(uiActionNoGo,
@@ -70,14 +82,15 @@ public class EatmeEditProcedureTest {
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"ast_edit_artifact\": \"procedure-edit.json\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_or_code_diff\": \"procedure.diff.json\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"exact_missing_ui_action_target\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("desktop code editor/procedure UI action for scene.eatmeFirstLesson"));
+    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_tab_selection\": \"procedure-tab-selection.json\""));
+    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"exact_missing_ui_edit_action_target\""));
+    assertTrue(uiActionNoGo, uiActionNoGo.contains("desktop code editor edit action after selecting scene.eatmeFirstLesson"));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("org.alice.ide.codeeditor.CodeEditor"));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("org.alice.ide.declarationseditor.CodeComposite"));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("org.alice.ide.declarationseditor.DeclarationsEditorComposite"));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"code_editor_action_target_not_exposed\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_selector_not_bound_to_ui_action\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"append_comment_ui_invocation_not_available\""));
+    assertFalse(uiActionNoGo, uiActionNoGo.contains("\"procedure_selector_not_bound_to_ui_action\""));
     String doesNotClaim = jsonSection(uiActionNoGo, "doesNotClaim");
     assertTrue(doesNotClaim, doesNotClaim.contains("desktop UI action invoked"));
     assertTrue(doesNotClaim, doesNotClaim.contains("code editor/procedure action completion"));

@@ -24,7 +24,7 @@ public final class ProcedureTabSelection {
     return selectProcedureInEditor(editor, procedure, activity);
   }
 
-  static UserMethod selectProcedureInEditor(DeclarationsEditorComposite editor, UserMethod procedure, UserActivity activity) {
+  public static UserMethod selectProcedureInEditor(DeclarationsEditorComposite editor, UserMethod procedure, UserActivity activity) {
     Operation operation = getSelectionOperation(editor, procedure);
     operation.fire(activity);
     UserMethod selectedProcedure = getSelectedProcedure(editor);

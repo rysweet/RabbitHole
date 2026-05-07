@@ -1,5 +1,12 @@
 package org.alice.tools;
 
+import org.alice.ide.declarationseditor.CodeComposite;
+import org.alice.ide.declarationseditor.DeclarationsEditorComposite;
+import org.alice.ide.declarationseditor.ProcedureTabSelection;
+import org.lgna.croquet.Application;
+import org.lgna.croquet.DocumentFrame;
+import org.lgna.croquet.Operation;
+import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.Project;
 import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.AbstractType;
@@ -7,26 +14,31 @@ import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.Comment;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.Statement;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.project.io.IoUtilities;
 import org.lgna.story.SScene;
 
+import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.SwingUtilities;
 
 public final class EatmeEditProcedure {
   private static final String SUPPORTED_SELECTOR_PREFIX = "scene.";
   private static final String SUPPORTED_EDIT_PREFIX = "append-comment:";
   private static final String EDIT_ARTIFACT = "procedure-edit.json";
   private static final String DIFF_ARTIFACT = "procedure.diff.json";
+  private static final String PROCEDURE_TAB_SELECTION_ARTIFACT = "procedure-tab-selection.json";
   private static final String UI_ACTION_NO_GO_ARTIFACT = "procedure-ui-action-no-go.json";
   private static final String EDITED_PROJECT = "edited-project.a3p";
 
@@ -47,7 +59,7 @@ public final class EatmeEditProcedure {
     try {
       Arguments arguments = Arguments.parse(args);
       ProcedureEdit edit = editProcedure(arguments);
-      out.println(resultJson(arguments.procedureSelector()));
+      out.println(resultJson(edit));
       return 0;
     } catch (IllegalArgumentException | IOException | VersionNotSupportedException ex) {
       err.println(ex.getMessage());
@@ -96,6 +108,7 @@ public final class EatmeEditProcedure {
       body = new BlockStatement();
       method.body.setValue(body);
     }
+    ProcedureTabSelectionEvidence tabSelection = selectProcedureTab(method);
     int beforeStatementCount = body.statements.size();
     body.statements.add(new Comment(commentText));
     int afterStatementCount = body.statements.size();
@@ -116,6 +129,7 @@ public final class EatmeEditProcedure {
         beforeStatementCount,
         afterStatementCount,
         editedProject.getFileName().toString(),
+        tabSelection.selectedMethod(),
         beforeMethods,
         afterMethods);
     Path editArtifact = artifactPath(arguments.evidenceDir(), EDIT_ARTIFACT);
@@ -124,10 +138,90 @@ public final class EatmeEditProcedure {
     Path diffArtifact = artifactPath(arguments.evidenceDir(), DIFF_ARTIFACT);
     Files.writeString(diffArtifact, diffArtifactJson(edit), StandardCharsets.UTF_8);
     requireNonEmptyArtifact(diffArtifact, "procedure diff artifact");
+    Path tabSelectionArtifact = artifactPath(arguments.evidenceDir(), PROCEDURE_TAB_SELECTION_ARTIFACT);
+    Files.writeString(tabSelectionArtifact, tabSelectionArtifactJson(edit), StandardCharsets.UTF_8);
+    requireNonEmptyArtifact(tabSelectionArtifact, "procedure tab selection artifact");
     Path uiActionNoGoArtifact = artifactPath(arguments.evidenceDir(), UI_ACTION_NO_GO_ARTIFACT);
     Files.writeString(uiActionNoGoArtifact, uiActionNoGoArtifactJson(edit), StandardCharsets.UTF_8);
     requireNonEmptyArtifact(uiActionNoGoArtifact, "procedure UI action no-go artifact");
     return edit;
+  }
+
+  private static ProcedureTabSelectionEvidence selectProcedureTab(UserMethod method) {
+    ensureCroquetApplication();
+    BlockStatement body = method.body.getValue();
+    List<Statement> statementSnapshot = null;
+    if (body != null && !body.statements.isEmpty()) {
+      statementSnapshot = new ArrayList<>();
+      for (Statement statement : body.statements) {
+        statementSnapshot.add(statement);
+      }
+      body.statements.clear();
+    }
+    try {
+      DeclarationsEditorComposite editor = new DeclarationsEditorComposite();
+      editor.getTabState().getData().internalSetAllItems(List.of(CodeComposite.getInstance(method)));
+      UserMethod[] selected = new UserMethod[1];
+      try {
+        SwingUtilities.invokeAndWait(() -> selected[0] = ProcedureTabSelection.selectProcedureInEditor(editor, method, null));
+      } catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException("procedure tab selection was interrupted", ex);
+      } catch (InvocationTargetException ex) {
+        Throwable cause = ex.getCause();
+        if (cause instanceof RuntimeException runtimeException) {
+          throw runtimeException;
+        }
+        throw new IllegalStateException("procedure tab selection failed", cause);
+      }
+      if (selected[0] != method) {
+        throw new IllegalStateException("procedure tab selection did not select: " + method.getName());
+      }
+      return new ProcedureTabSelectionEvidence(selected[0].getName());
+    } finally {
+      if (statementSnapshot != null) {
+        body.statements.clear();
+        body.statements.addAll(statementSnapshot);
+      }
+    }
+  }
+
+  private static void ensureCroquetApplication() {
+    if (Application.getActiveInstance() == null) {
+      new Application<DocumentFrame>() {
+        @Override
+        public DocumentFrame getDocumentFrame() {
+          return null;
+        }
+
+        @Override
+        protected Operation getAboutOperation() {
+          return null;
+        }
+
+        @Override
+        protected Operation getPreferencesOperation() {
+          return null;
+        }
+
+        @Override
+        protected void handleOpenFiles(List<java.io.File> files) {
+        }
+
+        @Override
+        protected void handleWindowOpened(WindowEvent e) {
+        }
+
+        @Override
+        public void handleQuit(UserActivity activity) {
+        }
+
+        @Override
+        public String getApplicationSubPath() {
+          return "eatme-procedure-tab-selection";
+        }
+      };
+    }
   }
 
   private static void requireNonEmptyArtifact(Path path, String label) throws IOException {
@@ -175,13 +269,14 @@ public final class EatmeEditProcedure {
     return names;
   }
 
-  private static String resultJson(String procedureSelector) {
+  private static String resultJson(ProcedureEdit edit) {
     return "{"
         + "\"schema_version\":\"eatme.alice-procedure-edit-result/v1\","
         + "\"status\":\"edited\","
-        + "\"procedure_selector\":\"" + escapeJson(procedureSelector) + "\","
+        + "\"procedure_selector\":\"" + escapeJson(edit.procedureSelector()) + "\","
         + "\"edited_project_artifact\":\"" + EDITED_PROJECT + "\","
         + "\"procedure_or_code_diff\":\"" + DIFF_ARTIFACT + "\","
+        + "\"procedure_tab_selection\":\"" + PROCEDURE_TAB_SELECTION_ARTIFACT + "\","
         + "\"procedure_ui_action_no_go\":\"" + UI_ACTION_NO_GO_ARTIFACT + "\""
         + "}";
   }
@@ -197,6 +292,27 @@ public final class EatmeEditProcedure {
         + "  \"before_statement_count\": " + edit.beforeStatementCount() + ",\n"
         + "  \"after_statement_count\": " + edit.afterStatementCount() + ",\n"
         + "  \"edited_project\": \"" + escapeJson(edit.editedProject()) + "\"\n"
+        + "}\n";
+  }
+
+  private static String tabSelectionArtifactJson(ProcedureEdit edit) {
+    return "{\n"
+        + "  \"schema_version\": \"eatme.alice-procedure-tab-selection/v1\",\n"
+        + "  \"procedure_selector\": \"" + escapeJson(edit.procedureSelector()) + "\",\n"
+        + "  \"scene_type\": \"" + escapeJson(edit.sceneType()) + "\",\n"
+        + "  \"method_name\": \"" + escapeJson(edit.methodName()) + "\",\n"
+        + "  \"selection_mode\": \"in_editor_procedure_tab_operation\",\n"
+        + "  \"selected_method\": \"" + escapeJson(edit.selectedMethod()) + "\",\n"
+        + "  \"operation_fired\": true,\n"
+        + "  \"doesNotClaim\": [\n"
+        + "    \"desktop UI action invoked\",\n"
+        + "    \"code editor/procedure action completion\",\n"
+        + "    \"full Alice UI automation\",\n"
+        + "    \"visible rendering correctness\",\n"
+        + "    \"first-lesson completion\",\n"
+        + "    \"grading\",\n"
+        + "    \"creative assessment\"\n"
+        + "  ]\n"
         + "}\n";
   }
 
@@ -222,16 +338,18 @@ public final class EatmeEditProcedure {
         + "  \"edit_spec\": \"" + escapeJson(edit.editSpec()) + "\",\n"
         + "  \"ast_edit_artifact\": \"" + EDIT_ARTIFACT + "\",\n"
         + "  \"procedure_or_code_diff\": \"" + DIFF_ARTIFACT + "\",\n"
-        + "  \"proven\": \"Deterministic project AST procedure edit writes edited-project.a3p and a procedure diff artifact.\",\n"
-        + "  \"exact_missing_ui_action_target\": {\n"
-        + "    \"expected_target\": \"desktop code editor/procedure UI action for " + escapeJson(edit.procedureSelector()) + "\",\n"
+        + "  \"procedure_tab_selection\": \"" + PROCEDURE_TAB_SELECTION_ARTIFACT + "\",\n"
+        + "  \"proven\": \"Deterministic project AST procedure edit writes edited-project.a3p, a procedure diff artifact, and an in-editor procedure tab selection artifact.\",\n"
+        + "  \"exact_missing_ui_edit_action_target\": {\n"
+        + "    \"expected_target\": \"desktop code editor edit action after selecting " + escapeJson(edit.procedureSelector()) + "\",\n"
         + "    \"missing_target\": \"No stable public action or invoker is exposed from org.alice.ide.codeeditor.CodeEditor or org.alice.ide.declarationseditor.CodeComposite for selecting "
-        + escapeJson(edit.procedureSelector()) + " and applying " + escapeJson(edit.editSpec()) + " through the desktop code editor.\"\n"
+        + escapeJson(edit.procedureSelector()) + " and applying " + escapeJson(edit.editSpec()) + " through the desktop code editor. The in-editor procedure tab operation is now fired separately and recorded in "
+        + PROCEDURE_TAB_SELECTION_ARTIFACT + ".\"\n"
         + "  },\n"
         + "  \"examined_code_targets\": [\n"
         + "    {\n"
         + "      \"class\": \"org.alice.ide.codeeditor.CodeEditor\",\n"
-        + "      \"observation\": \"Exposes getCode(), getTrackableShape(DropSite), and statement-list view construction, but no named operation that selects a procedure and invokes a code edit with an action result.\"\n"
+        + "      \"observation\": \"Exposes getCode(), getTrackableShape(DropSite), and statement-list view construction, but no named operation that invokes a code edit with an action result.\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"class\": \"org.alice.ide.declarationseditor.CodeComposite\",\n"
@@ -239,16 +357,15 @@ public final class EatmeEditProcedure {
         + "    },\n"
         + "    {\n"
         + "      \"class\": \"org.alice.ide.declarationseditor.DeclarationsEditorComposite\",\n"
-        + "      \"observation\": \"Exposes DeclarationMenu and DeclarationTabState, not a procedure-selector UI action invocation result.\"\n"
+        + "      \"observation\": \"Exposes DeclarationMenu and DeclarationTabState; the tab state now supports in-editor procedure selection evidence, but not a code edit action result.\"\n"
         + "    }\n"
         + "  ],\n"
         + "  \"blocker_codes\": [\n"
         + "    \"code_editor_action_target_not_exposed\",\n"
-        + "    \"procedure_selector_not_bound_to_ui_action\",\n"
         + "    \"append_comment_ui_invocation_not_available\"\n"
         + "  ],\n"
         + "  \"required_next\": [\n"
-        + "    \"Expose a stable code editor/procedure UI action target for a selected UserMethod.\",\n"
+        + "    \"Expose a stable code editor edit action target for the selected UserMethod.\",\n"
         + "    \"Return an invocation result that names the selected procedure and the changed code/procedure artifact.\"\n"
         + "  ],\n"
         + "  \"doesNotClaim\": [\n"
@@ -350,7 +467,11 @@ public final class EatmeEditProcedure {
       int beforeStatementCount,
       int afterStatementCount,
       String editedProject,
+      String selectedMethod,
       List<String> beforeMethods,
       List<String> afterMethods) {
+  }
+
+  record ProcedureTabSelectionEvidence(String selectedMethod) {
   }
 }
