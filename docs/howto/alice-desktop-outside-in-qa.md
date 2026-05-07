@@ -101,7 +101,7 @@ Run these commands from the root of a checkout of the same branch. The installed
 
 ## Run the real Alice launch scenario
 
-The launch scenario starts the real Alice desktop through the documented Maven path under Xvfb:
+The launch scenario starts the real Alice desktop through Maven under Xvfb:
 
 ```bash
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
@@ -111,10 +111,16 @@ The scenario runs:
 
 ```bash
 cd alice-ide
-mvn exec:java -Dalice-ide
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests compile exec:java -Dalice-ide
 ```
 
-The scenario YAML represents that launch as `automation.argv`, not as a shell command string, and the validator rejects unapproved argv entries before the runner starts Xvfb or Alice.
+The explicit `compile` step puts `org.alice.stageide.EntryPoint` in
+`alice-ide/target/classes` before `exec:java`. The checkstyle and test gates are
+run separately; this display runner keeps the launch proof focused on classpath,
+process lifetime, window readiness, and screenshot evidence. The scenario YAML
+represents that launch as `automation.argv`, not as a shell command string, and
+the validator rejects unapproved argv entries before the runner starts Xvfb or
+Alice.
 
 The runner writes evidence to:
 

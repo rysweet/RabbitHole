@@ -89,11 +89,13 @@ uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa
 
 The wrapper delegates to the same repo-owned runners and intentionally requires an Alice checkout as the current working tree.
 
-The launch scenario uses the documented Alice desktop path:
+The launch scenario uses the Alice desktop Maven path with an explicit compile
+step before `exec:java`, so `org.alice.stageide.EntryPoint` is present in
+`alice-ide/target/classes`:
 
 ```bash
 cd alice-ide
-mvn exec:java -Dalice-ide
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests compile exec:java -Dalice-ide
 ```
 
 Scenario automation stores executable steps as argv lists, not shell command strings. The validator and runner allow only the checked-in Alice QA argv set, including custom catalogs selected with `ALICE_QA_SCENARIO_DIR`.

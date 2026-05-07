@@ -54,7 +54,19 @@ mode_values = {
     "manual-evidence-required",
 }
 allowed_automation = {
-    ("alice-ide", ("mvn", "exec:java", "-Dalice-ide")),
+    (
+        "alice-ide",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-Dcheckstyle.skip",
+            "-DskipTests",
+            "compile",
+            "exec:java",
+            "-Dalice-ide",
+        ),
+    ),
     (
         ".",
         (

@@ -7,17 +7,22 @@ preconditions:
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
 userActions:
-  - Start Alice using the documented Maven launch path.
+  - Start Alice using the Maven launch path that compiles alice-ide classes before exec:java.
   - Wait for the main desktop window to become visible.
   - Confirm the first visible shell is ready for creating or opening a project.
 expectedOutcomes:
-  - Alice starts without uncaught startup exceptions.
+  - Alice starts without the org.alice.stageide.EntryPoint ClassNotFoundException.
   - The desktop shell is visible and ready for project interaction.
   - The captured evidence is sufficient to distinguish a usable desktop from a splash-only or crashed startup.
 automation:
   cwd: alice-ide
   argv:
     - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -Dcheckstyle.skip
+    - -DskipTests
+    - compile
     - exec:java
     - -Dalice-ide
   timeoutSeconds: 180

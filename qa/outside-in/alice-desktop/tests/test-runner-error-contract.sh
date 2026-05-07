@@ -24,6 +24,24 @@ path.write_text(text, encoding="utf-8")
 PY
 }
 
+write_legacy_bare_launch_argv() {
+  python3 - "$1" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = re.sub(
+    r"  argv:\n(?:    - .+\n)+  timeoutSeconds:",
+    "  argv:\n    - mvn\n    - exec:java\n    - -Dalice-ide\n  timeoutSeconds:",
+    text,
+    count=1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+}
+
 "$RUNNER" run alice-desktop-scene-creation --evidence-dir >"$tmp_root/missing-evidence-dir.out" 2>"$tmp_root/missing-evidence-dir.err"
 status=$?
 assert_exit_code "$status" 2 "missing --evidence-dir value is a command-line usage error"
@@ -63,6 +81,15 @@ ALICE_QA_SCENARIO_DIR="$unsafe_catalog" "$RUNNER" run alice-desktop-launch --evi
 status=$?
 assert_failure "$status" "runner rejects unapproved automation argv before launch"
 assert_contains "$tmp_root/unsafe.err" 'automation\.argv is restricted' "runner surfaces automation allowlist failures"
+
+legacy_bare_catalog="$tmp_root/legacy-bare-catalog"
+mkdir -p "$legacy_bare_catalog"
+cp "$BASE_DIR"/scenarios/*.yaml "$legacy_bare_catalog"/
+write_legacy_bare_launch_argv "$legacy_bare_catalog/launch.yaml"
+ALICE_QA_SCENARIO_DIR="$legacy_bare_catalog" "$RUNNER" run alice-desktop-launch --evidence-dir "$tmp_root/legacy-bare-evidence" >"$tmp_root/legacy-bare.out" 2>"$tmp_root/legacy-bare.err"
+status=$?
+assert_failure "$status" "runner rejects bare exec:java launch before it can report false display success"
+assert_contains "$tmp_root/legacy-bare.err" 'automation\.argv is restricted' "runner bare exec:java error names allowlist"
 
 traversal_cwd_catalog="$tmp_root/traversal-cwd-catalog"
 mkdir -p "$traversal_cwd_catalog"

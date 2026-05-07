@@ -24,6 +24,24 @@ path.write_text(text, encoding="utf-8")
 PY
 }
 
+write_legacy_bare_launch_argv() {
+  python3 - "$1" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = re.sub(
+    r"  argv:\n(?:    - .+\n)+  timeoutSeconds:",
+    "  argv:\n    - mvn\n    - exec:java\n    - -Dalice-ide\n  timeoutSeconds:",
+    text,
+    count=1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+}
+
 "$VALIDATOR" >"$tmp_root/valid.out" 2>"$tmp_root/valid.err"
 status=$?
 assert_success "$status" "current scenario catalog validates"
@@ -42,6 +60,22 @@ if len(catalog) != expected_count:
     raise AssertionError(f"expected {expected_count} scenarios, found {len(catalog)}")
 if not all("id" in scenario for scenario in catalog):
     raise AssertionError("every dumped scenario must include an id")
+launch = next(scenario for scenario in catalog if scenario["id"] == "alice-desktop-launch")
+expected_argv = [
+    "mvn",
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-Dcheckstyle.skip",
+    "-DskipTests",
+    "compile",
+    "exec:java",
+    "-Dalice-ide",
+]
+if launch["automation"]["argv"] != expected_argv:
+    raise AssertionError(
+        "launch automation must compile alice-ide before exec:java so "
+        "org.alice.stageide.EntryPoint is on the Maven exec classpath"
+    )
 PY
 status=$?
 assert_success "$status" "catalog JSON contains all scenarios"
@@ -102,11 +136,17 @@ mkdir -p "$legacy_command_dir"
 cp "$BASE_DIR"/scenarios/*.yaml "$legacy_command_dir"/
 python3 - "$legacy_command_dir/launch.yaml" <<'PY'
 from pathlib import Path
+import re
 import sys
 
 path = Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-text = text.replace("  argv:\n    - mvn\n    - exec:java\n    - -Dalice-ide\n", "  " + "command: mvn exec:java -Dalice-ide\n")
+text = re.sub(
+    r"  argv:\n(?:    - .+\n)+  timeoutSeconds:",
+    "  command: mvn exec:java -Dalice-ide\n  timeoutSeconds:",
+    text,
+    count=1,
+)
 path.write_text(text, encoding="utf-8")
 PY
 ALICE_QA_SCENARIO_DIR="$legacy_command_dir" "$VALIDATOR" >"$tmp_root/legacy-command.out" 2>"$tmp_root/legacy-command.err"
@@ -129,6 +169,15 @@ ALICE_QA_SCENARIO_DIR="$unsafe_argv_dir" "$VALIDATOR" >"$tmp_root/unsafe-argv.ou
 status=$?
 assert_failure "$status" "validator rejects unapproved automation argv"
 assert_contains "$tmp_root/unsafe-argv.err" 'automation\.argv is restricted' "unsafe argv error names allowlist"
+
+legacy_bare_launch_dir="$tmp_root/legacy-bare-launch"
+mkdir -p "$legacy_bare_launch_dir"
+cp "$BASE_DIR"/scenarios/*.yaml "$legacy_bare_launch_dir"/
+write_legacy_bare_launch_argv "$legacy_bare_launch_dir/launch.yaml"
+ALICE_QA_SCENARIO_DIR="$legacy_bare_launch_dir" "$VALIDATOR" >"$tmp_root/legacy-bare-launch.out" 2>"$tmp_root/legacy-bare-launch.err"
+status=$?
+assert_failure "$status" "validator rejects bare exec:java launch that skips class compilation"
+assert_contains "$tmp_root/legacy-bare-launch.err" 'automation\.argv is restricted' "bare exec:java error names allowlist"
 
 traversal_cwd_dir="$tmp_root/traversal-cwd"
 mkdir -p "$traversal_cwd_dir"

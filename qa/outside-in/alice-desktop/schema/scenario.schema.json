@@ -85,6 +85,21 @@
                   "const": "mvn"
                 },
                 {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-Dcheckstyle.skip"
+                },
+                {
+                  "const": "-DskipTests"
+                },
+                {
+                  "const": "compile"
+                },
+                {
                   "const": "exec:java"
                 },
                 {
@@ -92,8 +107,8 @@
                 }
               ],
               "items": false,
-              "minItems": 3,
-              "maxItems": 3
+              "minItems": 8,
+              "maxItems": 8
             },
             {
               "prefixItems": [

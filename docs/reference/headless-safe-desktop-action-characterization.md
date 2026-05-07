@@ -273,7 +273,7 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 
 ```text
 Environment: java.awt.headless=true
-Command: cd alice-ide && mvn exec:java -Dalice-ide
+Command: cd alice-ide && mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests compile exec:java -Dalice-ide
 Result: non-zero launch failure
 Exception: IllegalStateException
 Diagnostic: Alice desktop launch requires a graphical environment.

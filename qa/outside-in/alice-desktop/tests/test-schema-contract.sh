@@ -54,7 +54,16 @@ allowed_argv = {
     for option in argv_schema.get("oneOf", [])
 }
 expected_argv = {
-    ("mvn", "exec:java", "-Dalice-ide"),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-Dcheckstyle.skip",
+        "-DskipTests",
+        "compile",
+        "exec:java",
+        "-Dalice-ide",
+    ),
     (
         "mvn",
         "-DincludeSims=false",

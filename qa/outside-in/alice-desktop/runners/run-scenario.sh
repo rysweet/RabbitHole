@@ -66,10 +66,15 @@ validate_allowed_automation() {
   shift
 
   if [ "$cwd" = alice-ide ] &&
-    [ "$#" -eq 3 ] &&
+    [ "$#" -eq 8 ] &&
     [ "$1" = mvn ] &&
-    [ "$2" = exec:java ] &&
-    [ "$3" = -Dalice-ide ]; then
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -Dcheckstyle.skip ] &&
+    [ "$5" = -DskipTests ] &&
+    [ "$6" = compile ] &&
+    [ "$7" = exec:java ] &&
+    [ "$8" = -Dalice-ide ]; then
     return 0
   fi
 
