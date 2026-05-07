@@ -19,6 +19,7 @@ import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.CrawlPolicy;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalDeclarationStatement;
+import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ResourceExpression;
@@ -250,7 +251,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void constructorBearingJsonA3wProgramTypeIsRejected() throws Exception {
+  public void constructorBearingJsonA3wProgramTypeDecodesEmptyConstructor() throws Exception {
     File projectArchive = temporaryFolder.newFile("constructor-bearing-json-a3w-program-boundary.a3w");
 
     writeJsonProjectArchive(
@@ -277,15 +278,18 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           "GeneratedConstructorBoundaryScene",
           "src/GeneratedConstructorBoundaryScene.twe");
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    Project readProject = IoUtilities.readProject(projectArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Project archive manifest names program type 'GeneratedProgramWithConstructorBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedConstructorBoundaryScene]"));
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertEquals("GeneratedProgramWithConstructorBoundary", readProgramType.getName());
+    assertEmptyConstructor(readProgramType);
+    assertEquals(
+        "GeneratedConstructorBoundaryScene",
+        namedUserTypeNamed(readProject, "GeneratedConstructorBoundaryScene").getName());
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithConstructorBearingSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+  public void generatedJsonPlayerArchiveWithConstructorBearingSiblingTypeDecodesWithoutSilentOmission() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-constructor-sibling-boundary.a3w");
 
     writeJsonProjectArchive(
@@ -311,28 +315,33 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           siblingTypeEntry);
       assertTrue(readEntry(zipFile, siblingTypeEntry).contains("GeneratedConstructorSiblingBoundaryScene()"));
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    Project readProject = IoUtilities.readProject(projectArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedConstructorSiblingBoundaryScene]"));
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertEquals("GeneratedProgramWithConstructorSiblingBoundary", readProgramType.getName());
+    assertEquals(1, readProgramType.getDeclaredFields().size());
+    NamedUserType readSceneType = namedUserTypeNamed(readProject, "GeneratedConstructorSiblingBoundaryScene");
+    assertEmptyConstructor(readSceneType);
   }
 
   @Test
-  public void jsonProjectArchiveWithOnlyUnsupportedManifestTypesIsRejected() throws Exception {
-    File projectArchive = temporaryFolder.newFile("all-unsupported-json-a3w-types-boundary.a3w");
+  public void jsonProjectArchiveWithOnlyEmptyConstructorManifestTypesDecodes() throws Exception {
+    File projectArchive = temporaryFolder.newFile("all-empty-constructor-json-a3w-types-boundary.a3w");
 
     writeJsonProjectArchive(
         projectArchive,
-        "GeneratedProgramAllUnsupportedBoundary",
-        "class GeneratedProgramAllUnsupportedBoundary extends SProgram { GeneratedProgramAllUnsupportedBoundary() { } }",
-        "GeneratedSceneAllUnsupportedBoundary",
-        "class GeneratedSceneAllUnsupportedBoundary extends SScene { GeneratedSceneAllUnsupportedBoundary() { } }");
+        "GeneratedProgramAllEmptyConstructorBoundary",
+        "class GeneratedProgramAllEmptyConstructorBoundary extends SProgram { GeneratedProgramAllEmptyConstructorBoundary() { } }",
+        "GeneratedSceneAllEmptyConstructorBoundary",
+        "class GeneratedSceneAllEmptyConstructorBoundary extends SScene { GeneratedSceneAllEmptyConstructorBoundary() { } }");
 
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    Project readProject = IoUtilities.readProject(projectArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Project archive manifest names program type 'GeneratedProgramAllUnsupportedBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertEquals("GeneratedProgramAllEmptyConstructorBoundary", readProgramType.getName());
+    assertEmptyConstructor(readProgramType);
+    NamedUserType readSceneType = namedUserTypeNamed(readProject, "GeneratedSceneAllEmptyConstructorBoundary");
+    assertEmptyConstructor(readSceneType);
   }
 
   @Test
@@ -705,7 +714,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void constructorBearingJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
+  public void constructorBearingJsonTypeArchiveDecodesEmptyConstructor() throws Exception {
     ImageResource imageResource = generatedImageResource("json-type-constructor-boundary-texture.png", 0xFF336666);
     File typeArchive = temporaryFolder.newFile("constructor-bearing-json-a3c-boundary.a3c");
 
@@ -730,11 +739,14 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           imageResource.getName(),
           "resources/" + imageResource.getName());
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+    TypeResourcesPair typeResourcesPair = IoUtilities.readType(typeArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Type archive manifest names 'GeneratedJsonTypeWithConstructorBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+    NamedUserType readType = typeResourcesPair.getType();
+    assertEquals("GeneratedJsonTypeWithConstructorBoundary", readType.getName());
+    assertEmptyConstructor(readType);
+    Resource readResource = onlyResource(typeResourcesPair.getResources());
+    assertEquals(imageResource.getId(), readResource.getId());
+    assertEquals(imageResource.getName(), readResource.getName());
   }
 
   @Test
@@ -1298,6 +1310,13 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   private static Resource onlyResource(Collection<Resource> resources) {
     assertEquals(1, resources.size());
     return resources.iterator().next();
+  }
+
+  private static void assertEmptyConstructor(NamedUserType type) {
+    assertEquals(1, type.getDeclaredConstructors().size());
+    NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
+    assertTrue(constructor.getRequiredParameters().isEmpty());
+    assertTrue(constructor.body.getValue().statements.isEmpty());
   }
 
   private static NamedUserType namedUserTypeNamed(Project project, String name) {

@@ -2,6 +2,7 @@ package org.alice.serialization.tweedle;
 
 import org.alice.tweedle.TweedleArrayType;
 import org.alice.tweedle.TweedleClass;
+import org.alice.tweedle.TweedleConstructor;
 import org.alice.tweedle.TweedleLinkException;
 import org.alice.tweedle.TweedleField;
 import org.alice.tweedle.TweedleMethod;
@@ -20,10 +21,12 @@ import org.lgna.project.ast.ArrayInstanceCreation;
 import org.lgna.project.ast.AstUtilities;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.BooleanLiteral;
+import org.lgna.project.ast.ConstructorBlockStatement;
 import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.StringLiteral;
@@ -86,10 +89,6 @@ public class Decoder {
   }
 
   private NamedUserType decodeClass(TweedleClass tweedleClass) {
-    if (!tweedleClass.getConstructors().isEmpty()) {
-      throw new UnsupportedTweedleDecodeException("Tweedle class constructors are not yet supported by the AST decoder.");
-    }
-
     NamedUserType type = userTypeNamed(tweedleClass.getName());
     type.name.setValue(tweedleClass.getName());
     type.superType.setValue(resolveType(tweedleClass.getSuperclassName(), "superclass"));
@@ -99,7 +98,26 @@ public class Decoder {
     for (TweedleMethod method : tweedleClass.getMethods()) {
       type.methods.add(decodeMethod(method));
     }
+    for (TweedleConstructor constructor : tweedleClass.getConstructors()) {
+      type.constructors.add(decodeConstructor(tweedleClass, constructor));
+    }
     return type;
+  }
+
+  private NamedUserConstructor decodeConstructor(TweedleClass declaringClass, TweedleConstructor constructor) {
+    if (!constructor.getName().equals(declaringClass.getName())) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle constructor name does not match declaring class: " + constructor.getName());
+    }
+    if (!constructor.getRequiredParameters().isEmpty() || !constructor.getOptionalParameters().isEmpty()) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle constructor parameters are not yet supported by the AST decoder: " + constructor.getName());
+    }
+    if (!constructor.getBody().isEmpty()) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle constructor bodies are not yet supported by the AST decoder: " + constructor.getName());
+    }
+    return new NamedUserConstructor(new UserParameter[] {}, new ConstructorBlockStatement());
   }
 
   private UserMethod decodeMethod(TweedleMethod method) {

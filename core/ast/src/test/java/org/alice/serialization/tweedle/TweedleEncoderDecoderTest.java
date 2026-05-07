@@ -9,6 +9,7 @@ import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.StringLiteral;
@@ -274,12 +275,33 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithConstructorReportsUnsupportedMembers() {
+  public void decodeClassWithEmptyConstructorCreatesNamedUserConstructor() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { SyntheticType() { } }");
+
+    assertEquals(1, type.getDeclaredConstructors().size());
+    NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
+    assertTrue(constructor.getRequiredParameters().isEmpty());
+    assertTrue(constructor.body.getValue().statements.isEmpty());
+  }
+
+  @Test
+  public void decodeClassWithConstructorParameterReportsUnsupportedConstructorParameters() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("class SyntheticType { SyntheticType() { } }"));
+        () -> coder.decode("class SyntheticType { SyntheticType(WholeNumber count) { } }"));
 
-    assertTrue(thrown.getMessage().contains("constructors"));
+    assertTrue(thrown.getMessage().contains("constructor parameters"));
+    assertTrue(thrown.getMessage().contains("SyntheticType"));
+  }
+
+  @Test
+  public void decodeClassWithNonEmptyConstructorReportsUnsupportedConstructorBody() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { SyntheticType() { count <- 1; } }"));
+
+    assertTrue(thrown.getMessage().contains("constructor bodies"));
+    assertTrue(thrown.getMessage().contains("SyntheticType"));
   }
 
   @Test
