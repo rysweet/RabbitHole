@@ -31,6 +31,21 @@ public class ProcedureTabSelectionTest {
     assertNull(ProcedureTabSelection.getSelectedProcedure(editor));
   }
 
+  @Test
+  public void selectProcedureRequiresActiveAliceIde() {
+    DeclarationsEditorComposite editor = new DeclarationsEditorComposite();
+    UserMethod procedure = sceneProcedure("eatmeFirstLesson");
+
+    try {
+      ProcedureTabSelection.selectProcedure(editor, procedure);
+    } catch (IllegalStateException ex) {
+      assertEquals("procedure selection requires an active Alice IDE", ex.getMessage());
+      assertNull(ProcedureTabSelection.getSelectedProcedure(editor));
+      return;
+    }
+    throw new AssertionError("selectProcedure should require an active Alice IDE");
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void rejectsFunctionWhenProcedureSelectionIsRequired() {
     DeclarationsEditorComposite editor = new DeclarationsEditorComposite();

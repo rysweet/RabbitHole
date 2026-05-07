@@ -8,7 +8,7 @@ hooks to add, and the behavior that is still not proven.
 
 | User step | Class | What can be observed without launching the full desktop |
 | --- | --- | --- |
-| Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, and reports the currently selected procedure when one is active. |
+| Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, and reports the currently selected procedure when one is active. |
 | Select a procedure tab in Alice | `org.alice.ide.declarationseditor.DeclarationTabState` | Owns the real tab-selection operation used by the desktop declarations editor. |
 | Show procedure code | `org.alice.ide.declarationseditor.CodeComposite` | Wraps the selected `UserMethod` and creates the code view when the desktop activates the tab. |
 | Save the current project | `org.alice.ide.croquet.models.projecturi.SaveProjectOperation` | Keeps the user-facing Save command, prompt rule, icon, and toolbar behavior. |
@@ -17,7 +17,8 @@ hooks to add, and the behavior that is still not proven.
 
 `ProcedureTabSelection` is intentionally small. It does not edit code. It gives a
 desktop automation runner one stable place to ask, "which real Croquet operation
-selects this procedure tab?"
+selects this procedure tab?" The helper refuses to fire the operation until a
+live Alice IDE is active, because the tab change creates the desktop code view.
 
 ## Proposed next hooks
 
@@ -25,8 +26,8 @@ Add these in order, each with a focused test before changing behavior:
 
 1. Add a `ProcedureTabSelection` live-desktop test that starts Alice with a
    display, obtains `StageIDE.getActiveInstance().getDocumentFrame()
-   .getDeclarationsEditorComposite()`, asks for the procedure selection
-   operation, fires it with a Croquet `UserActivity`, and observes
+   .getDeclarationsEditorComposite()`, calls the guarded procedure selection
+   helper with a Croquet `UserActivity`, and observes
    `ProcedureTabSelection.getSelectedProcedure(...)`.
 2. Add a narrow code-editor observation helper that accepts the active
    `DeclarationsEditorComposite` and reports the selected `CodeComposite` and
@@ -79,7 +80,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
 
 This slice does not prove any of the following:
 
-- A live Alice desktop can open `scene.eatmeFirstLesson` through the new helper.
+- A live Alice desktop can open `scene.eatmeFirstLesson` through the guarded
+  selection helper.
 - The code editor can perform the requested procedure edit through a desktop
   command.
 - `SaveProjectOperation` completes through the menu in a live desktop run.
