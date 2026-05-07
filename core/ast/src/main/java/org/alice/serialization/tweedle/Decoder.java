@@ -17,6 +17,7 @@ import org.alice.tweedle.ast.LocalVariableDeclaration;
 import org.alice.tweedle.ast.TweedleArrayInitializer;
 import org.alice.tweedle.ast.TweedleExpression;
 import org.alice.tweedle.ast.TweedleLocalVariable;
+import org.alice.tweedle.ast.ThisExpression;
 import org.alice.tweedle.unlinked.TweedleUnlinkedParser;
 import org.lgna.common.Resource;
 import org.lgna.project.ast.AbstractDeclaration;
@@ -282,7 +283,31 @@ public class Decoder {
       }
       throw unsupportedMethodReturnIdentifier(method, identifierReference);
     }
+    if (returnExpression instanceof org.alice.tweedle.ast.FieldAccess fieldAccess) {
+      return decodeMethodReturnFieldAccess(method, returnType, fields, fieldAccess);
+    }
     throw unsupportedMethodReturnExpression(method);
+  }
+
+  private Expression decodeMethodReturnFieldAccess(
+      TweedleMethod method,
+      AbstractType<?, ?, ?> returnType,
+      List<UserField> fields,
+      org.alice.tweedle.ast.FieldAccess fieldAccess) {
+    if (!(fieldAccess.getTarget() instanceof ThisExpression)) {
+      throw unsupportedMethodReturnMemberExpression(method, fieldAccess);
+    }
+    UserField field = findField(fields, fieldAccess.getFieldName());
+    if (field == null) {
+      throw unsupportedMethodReturnMemberExpression(method, fieldAccess);
+    }
+    FieldAccess access = new FieldAccess(field);
+    if (returnType.isAssignableFrom(access.getType())) {
+      return access;
+    }
+    throw new UnsupportedTweedleDecodeException(
+        "Tweedle method return member expression type is not assignable to "
+            + returnType.getName() + ": " + method.getName() + ".this." + fieldAccess.getFieldName());
   }
 
   private UserLocal findLocal(List<UserLocal> locals, String name) {
@@ -458,6 +483,25 @@ public class Decoder {
     return new UnsupportedTweedleDecodeException(
         "Only required-parameter, local-variable, or field Tweedle method return identifiers are supported by the AST decoder: "
             + method.getName() + "." + identifierReference.getName());
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedMethodReturnMemberExpression(
+      TweedleMethod method,
+      org.alice.tweedle.ast.FieldAccess fieldAccess) {
+    return new UnsupportedTweedleDecodeException(
+        "Only this.field Tweedle method return member expressions are supported by the AST decoder: "
+            + method.getName() + "." + describeMemberAccess(fieldAccess));
+  }
+
+  private String describeMemberAccess(org.alice.tweedle.ast.FieldAccess fieldAccess) {
+    TweedleExpression target = fieldAccess.getTarget();
+    if (target instanceof ThisExpression) {
+      return "this." + fieldAccess.getFieldName();
+    }
+    if (target instanceof IdentifierReference identifierReference) {
+      return identifierReference.getName() + "." + fieldAccess.getFieldName();
+    }
+    return "<unsupported>." + fieldAccess.getFieldName();
   }
 
   private UnsupportedTweedleDecodeException unsupportedLocalInitializer(

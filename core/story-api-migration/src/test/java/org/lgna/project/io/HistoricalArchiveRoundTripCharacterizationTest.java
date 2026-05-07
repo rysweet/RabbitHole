@@ -17,6 +17,7 @@ import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.CrawlPolicy;
+import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalDeclarationStatement;
@@ -221,6 +222,33 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(
         "GeneratedMethodBoundaryScene",
         namedUserTypeNamed(readProject, "GeneratedMethodBoundaryScene").getName());
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveDecodesProgramMethodReturningThisField() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-this-field-method.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithThisFieldMethod",
+        """
+            class GeneratedProgramWithThisFieldMethod extends SProgram {
+              WholeNumber count <- 7;
+              WholeNumber getCount() { return this.count; }
+            }
+            """,
+        "GeneratedThisFieldMethodScene",
+        "class GeneratedThisFieldMethodScene extends SScene {}");
+
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with a this.field return method should decode", readProgramType);
+    assertEquals("GeneratedProgramWithThisFieldMethod", readProgramType.getName());
+    assertFieldReturnMethod(readProgramType, "getCount", "count");
+    assertEquals(
+        "GeneratedThisFieldMethodScene",
+        namedUserTypeNamed(readProject, "GeneratedThisFieldMethodScene").getName());
   }
 
   @Test
@@ -1350,6 +1378,23 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(
         expectedValue,
         ((IntegerLiteral) returnStatement.expression.getValue()).value.getValue().intValue());
+  }
+
+  private static void assertFieldReturnMethod(NamedUserType type, String expectedMethodName, String expectedFieldName) {
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals(expectedFieldName, field.getName());
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals(expectedMethodName, method.getName());
+    assertSame(JavaType.getInstance(Integer.class), method.getReturnType());
+    assertTrue(method.getRequiredParameters().isEmpty());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertTrue(returnStatement.expression.getValue() instanceof FieldAccess);
+    assertSame(field, ((FieldAccess) returnStatement.expression.getValue()).field.getValue());
   }
 
   private static NamedUserType namedUserTypeNamed(Project project, String name) {

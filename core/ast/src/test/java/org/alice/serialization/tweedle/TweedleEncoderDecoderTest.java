@@ -341,6 +341,42 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithThisFieldReturnMethodBodyCreatesFieldAccess() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          WholeNumber count <- 7;
+          WholeNumber getCount() { return this.count; }
+        }
+        """);
+
+    UserField field = type.getDeclaredFields().get(0);
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("getCount", method.getName());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertTrue(returnStatement.expression.getValue() instanceof FieldAccess);
+    FieldAccess access = (FieldAccess) returnStatement.expression.getValue();
+    assertSame(field, access.field.getValue());
+  }
+
+  @Test
+  public void decodeClassWithParameterMemberReturnMethodBodyReportsUnsupportedMemberExpression() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              WholeNumber getCount(WholeNumber value) { return value.count; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("method return member expressions"));
+    assertTrue(thrown.getMessage().contains("getCount"));
+    assertTrue(thrown.getMessage().contains("value.count"));
+  }
+
+  @Test
   public void decodeClassWithMismatchedFieldReturnMethodBodyReportsTypeError() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
