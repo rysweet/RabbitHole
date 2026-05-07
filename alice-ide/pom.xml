@@ -204,24 +204,30 @@
               -->
               <longModulepath>false</longModulepath>
               <!--
-                NO_AT_BRIDGE=1 prevents GTK (loaded by JavaFX) from loading the atk-bridge
-                GTK module. Without this flag, gtk_init() replaces the ATK utility layer
-                with GTK's own bridge, which unregisters the Java ATK wrapper and leaves
-                AT-SPI childCount=0 for all Swing windows. Setting NO_AT_BRIDGE=1 keeps
-                the Java ATK wrapper in control so pyatspi can enumerate Swing windows.
+                NO_AT_BRIDGE=1: the successful run of this scenario observed 35 Swing widgets
+                via AT-SPI with this variable set. Whether it is strictly necessary has not
+                been A/B validated separately; it is included because it was present in the
+                confirmed working configuration.
+                Hypothesis (unvalidated): without it, gtk_init() (loaded by JavaFX) may load
+                the atk-bridge GTK module and replace the Java ATK wrapper's ATK utility layer.
               -->
               <environmentVariables>
                 <NO_AT_BRIDGE>1</NO_AT_BRIDGE>
               </environmentVariables>
               <arguments>
-                <!-- ATK wrapper in bootstrap classpath: visible to getSystemClassLoader() -->
+                <!-- Linux/Debian-only: this path is specific to the libatk-wrapper-java Debian package.
+                     This execution (alice-ide-atk) is an explicit Linux-only scenario requirement;
+                     it is not intended to be portable across operating systems. -->
                 <argument>-Xbootclasspath/a:/usr/share/java/java-atk-wrapper.jar</argument>
                 <!-- Trigger AWT assistive-technology loading for the wrapper class -->
                 <argument>-Djavax.accessibility.assistive_technologies=org.GNOME.Accessibility.AtkWrapper</argument>
                 <argument>-Dorg.alice.ide.rootDirectory=../core/resources/target/distribution</argument>
                 <!-- JavaFX named modules required by EntryPoint extends Application in Java 21 -->
                 <argument>--module-path</argument>
-                <argument>${user.home}/.m2/repository/org/openjfx/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}-linux.jar:${user.home}/.m2/repository/org/openjfx/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}.jar:${user.home}/.m2/repository/org/openjfx/javafx-media/${javafx.version}/javafx-media-${javafx.version}-linux.jar:${user.home}/.m2/repository/org/openjfx/javafx-media/${javafx.version}/javafx-media-${javafx.version}.jar:${user.home}/.m2/repository/org/openjfx/javafx-base/${javafx.version}/javafx-base-${javafx.version}-linux.jar:${user.home}/.m2/repository/org/openjfx/javafx-base/${javafx.version}/javafx-base-${javafx.version}.jar</argument>
+                <!-- JavaFX module jars from the local Maven repository.
+                     ${settings.localRepository} resolves to the active local repo (honours
+                     -Dmaven.repo.local and custom settings.xml localRepository). -->
+                <argument>${settings.localRepository}/org/openjfx/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}-linux.jar:${settings.localRepository}/org/openjfx/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}.jar:${settings.localRepository}/org/openjfx/javafx-media/${javafx.version}/javafx-media-${javafx.version}-linux.jar:${settings.localRepository}/org/openjfx/javafx-media/${javafx.version}/javafx-media-${javafx.version}.jar:${settings.localRepository}/org/openjfx/javafx-base/${javafx.version}/javafx-base-${javafx.version}-linux.jar:${settings.localRepository}/org/openjfx/javafx-base/${javafx.version}/javafx-base-${javafx.version}.jar</argument>
                 <argument>--add-modules</argument>
                 <argument>javafx.graphics,javafx.media</argument>
                 <argument>-classpath</argument>

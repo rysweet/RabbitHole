@@ -182,11 +182,11 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-select-pro
   --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-widget-introspection
 ```
 
-Review `swing-widget-observation.json`. If `status=observed`, `tabLabels` lists the live tab names observed in the Select Project frame. If `status=blocked`, `blocker` and `blockerDetail` name the exact missing condition (e.g., `atk-wrapper-not-loaded` with the exact `JAVA_TOOL_OPTIONS` and `CLASSPATH` required).
+Review `swing-widget-observation.json`. If `status=observed`, the Java process and Swing widgets are visible through AT-SPI (`widgetCount>0`); note that tab labels are not currently enumerated (`tabLabels` is empty, `tabLabelMatch` is false). If `status=blocked`, `blocker` and `blockerDetail` name the exact missing condition (e.g., `atk-wrapper-not-loaded` with the exact `JAVA_TOOL_OPTIONS` and `CLASSPATH` required).
 
 ### Run the Select Project AT-SPI exec:exec remediation proof
 
-The `exec:java` scenario (above) hits a hard blocker: `exec:java` shares the Maven JVM where AWT is already initialised without the ATK wrapper. The `alice-desktop-select-project-atk-exec` scenario applies the documented remediation: it uses `exec:exec@alice-ide-atk` to spawn a fresh JVM, adds `/usr/share/java/java-atk-wrapper.jar` on `CLASSPATH` via the `java-atk-wrapper` system-scope Maven dependency, and sets `-Djavax.accessibility.assistive_technologies=org.GNOME.Accessibility.AtkWrapper` before the first AWT call. If the ATK wrapper loads correctly, `swing-widget-observation.json` will record `status=observed` with live `tabLabels`.
+The `exec:java` scenario (above) hits a hard blocker: `exec:java` shares the Maven JVM where AWT is already initialised without the ATK wrapper. The `alice-desktop-select-project-atk-exec` scenario applies a two-step remediation: it uses `exec:exec@alice-ide-atk` to spawn a fresh JVM with `/usr/share/java/java-atk-wrapper.jar` on the **bootstrap classpath** (`-Xbootclasspath/a:`) and `-Djavax.accessibility.assistive_technologies=org.GNOME.Accessibility.AtkWrapper` so the wrapper is active before the first AWT call. It also sets `NO_AT_BRIDGE=1` because the successful run observed Swing widgets with that environment variable set; whether this variable is strictly necessary has not been A/B validated separately. If both steps work correctly, `swing-widget-observation.json` will record `status=observed` with live widget introspection data.
 
 ```bash
 ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
@@ -194,7 +194,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-select-pro
   --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-atk-exec
 ```
 
-Review `swing-widget-observation.json`. If `status=observed`, `tabLabels` contains the live Select Project tab labels (e.g., `Blank Slates`, `Starters`, `My Projects`, `Recent`, `File System`), confirming live Swing widget introspection via AT-SPI. If `status=blocked`, `blocker` and `blockerDetail` name the exact remaining condition.
+Review `swing-widget-observation.json`. If `status=observed`, the Java process and Swing widgets are visible through AT-SPI (`widgetCount>0`, `dialog` role). Tab labels are not currently enumerated via AT-SPI (`tabLabels` is empty, `tabLabelMatch` is false). If `status=blocked`, `blocker` and `blockerDetail` name the exact remaining condition.
 
 ## Prepare evidence for manual workflows
 
