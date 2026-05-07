@@ -4,9 +4,11 @@ import org.alice.tweedle.TweedleArrayType;
 import org.alice.tweedle.TweedleClass;
 import org.alice.tweedle.TweedleLinkException;
 import org.alice.tweedle.TweedleField;
+import org.alice.tweedle.TweedleMethod;
 import org.alice.tweedle.TweedleNull;
 import org.alice.tweedle.TweedlePrimitiveValue;
 import org.alice.tweedle.TweedleType;
+import org.alice.tweedle.TweedleVoidType;
 import org.alice.tweedle.ast.TweedleArrayInitializer;
 import org.alice.tweedle.ast.TweedleExpression;
 import org.alice.tweedle.unlinked.TweedleUnlinkedParser;
@@ -16,6 +18,7 @@ import org.lgna.project.ast.AbstractNode;
 import org.lgna.project.ast.AbstractType;
 import org.lgna.project.ast.ArrayInstanceCreation;
 import org.lgna.project.ast.AstUtilities;
+import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
@@ -25,6 +28,8 @@ import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserField;
+import org.lgna.project.ast.UserMethod;
+import org.lgna.project.ast.UserParameter;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -81,8 +86,8 @@ public class Decoder {
   }
 
   private NamedUserType decodeClass(TweedleClass tweedleClass) {
-    if (!tweedleClass.getMethods().isEmpty() || !tweedleClass.getConstructors().isEmpty()) {
-      throw new UnsupportedTweedleDecodeException("Tweedle class methods and constructors are not yet supported by the AST decoder.");
+    if (!tweedleClass.getConstructors().isEmpty()) {
+      throw new UnsupportedTweedleDecodeException("Tweedle class constructors are not yet supported by the AST decoder.");
     }
 
     NamedUserType type = userTypeNamed(tweedleClass.getName());
@@ -91,7 +96,37 @@ public class Decoder {
     for (TweedleField property : tweedleClass.getProperties()) {
       type.fields.add(decodeField(property));
     }
+    for (TweedleMethod method : tweedleClass.getMethods()) {
+      type.methods.add(decodeMethod(method));
+    }
     return type;
+  }
+
+  private UserMethod decodeMethod(TweedleMethod method) {
+    if (!method.getRequiredParameters().isEmpty() || !method.getOptionalParameters().isEmpty()) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle method parameters are not yet supported by the AST decoder: " + method.getName());
+    }
+    if (!method.getBody().isEmpty()) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle method bodies are not yet supported by the AST decoder: " + method.getName());
+    }
+    if (method.getType() != TweedleVoidType.VOID) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle method return values are not yet supported by the AST decoder: " + method.getName());
+    }
+    return new UserMethod(
+        method.getName(),
+        resolveReturnType(method.getType()),
+        new UserParameter[] {},
+        new BlockStatement());
+  }
+
+  private AbstractType<?, ?, ?> resolveReturnType(TweedleType tweedleType) {
+    if (tweedleType == TweedleVoidType.VOID) {
+      return JavaType.VOID_TYPE;
+    }
+    return resolveType(tweedleType, "method return");
   }
 
   private UserField decodeField(TweedleField property) {

@@ -14,6 +14,7 @@ import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserArrayType;
 import org.lgna.project.ast.UserField;
+import org.lgna.project.ast.UserMethod;
 
 import java.util.Set;
 
@@ -235,12 +236,41 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithMethodReportsUnsupportedMembers() {
+  public void decodeClassWithEmptyVoidMethodCreatesUserMethod() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { void initialize() { } }");
+
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("initialize", method.getName());
+    assertSame(JavaType.VOID_TYPE, method.getReturnType());
+    assertTrue(method.getRequiredParameters().isEmpty());
+  }
+
+  @Test
+  public void decodeClassWithNonEmptyMethodReportsUnsupportedMethodBody() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
         () -> coder.decode("class SyntheticType { WholeNumber count() { return 1; } }"));
 
-    assertTrue(thrown.getMessage().contains("methods and constructors"));
+    assertTrue(thrown.getMessage().contains("method bodies"));
+  }
+
+  @Test
+  public void decodeClassWithMethodParameterReportsUnsupportedMethodParameters() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { void initialize(WholeNumber count) { } }"));
+
+    assertTrue(thrown.getMessage().contains("method parameters"));
+  }
+
+  @Test
+  public void decodeClassWithNonVoidEmptyMethodReportsUnsupportedReturnValues() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber count() { } }"));
+
+    assertTrue(thrown.getMessage().contains("method return values"));
   }
 
   @Test
@@ -249,7 +279,7 @@ public class TweedleEncoderDecoderTest {
         UnsupportedTweedleDecodeException.class,
         () -> coder.decode("class SyntheticType { SyntheticType() { } }"));
 
-    assertTrue(thrown.getMessage().contains("methods and constructors"));
+    assertTrue(thrown.getMessage().contains("constructors"));
   }
 
   @Test
