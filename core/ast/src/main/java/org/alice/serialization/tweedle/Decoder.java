@@ -91,22 +91,36 @@ public class Decoder {
 
   private UserField decodeField(TweedleField property) {
     AbstractType<?, ?, ?> valueType = resolveType(property.getType().getName(), "field");
-    if (property.hasInitializer() && valueType != null && valueType.isAssignableTo(Resource.class)) {
-      throw unsupportedResourceFieldInitializer(property);
-    }
-    Expression initializer = property.hasInitializer() ? decodeFieldInitializer(property) : null;
+    Expression initializer = property.hasInitializer() ? decodeFieldInitializer(property, valueType) : null;
     return new UserField(property.getName(), valueType, initializer);
   }
 
-  private Expression decodeFieldInitializer(TweedleField property) {
+  private Expression decodeFieldInitializer(TweedleField property, AbstractType<?, ?, ?> valueType) {
     TweedleExpression initializer = property.getInitializer();
+    if (initializer instanceof TweedleNull) {
+      return decodeNullFieldInitializer(property, valueType);
+    }
+    if (valueType != null && valueType.isAssignableTo(Resource.class)) {
+      throw unsupportedResourceFieldInitializer(property);
+    }
     if (initializer instanceof TweedlePrimitiveValue<?> primitiveValue) {
       return primitiveLiteral(primitiveValue.getPrimitiveValue());
     }
-    if (initializer instanceof TweedleNull) {
+    throw unsupportedFieldInitializer(property);
+  }
+
+  private Expression decodeNullFieldInitializer(TweedleField property, AbstractType<?, ?, ?> valueType) {
+    if (isSupportedNullableField(property, valueType)) {
       return new NullLiteral();
     }
-    throw unsupportedFieldInitializer(property);
+    throw new UnsupportedTweedleDecodeException(
+        "Null initializer is not yet supported for Tweedle field type "
+            + property.getType().getName() + ": " + property.getName());
+  }
+
+  private boolean isSupportedNullableField(TweedleField property, AbstractType<?, ?, ?> valueType) {
+    return "TextString".equals(property.getType().getName())
+        || valueType != null && valueType.isAssignableTo(Resource.class);
   }
 
   private Expression primitiveLiteral(Object value) {

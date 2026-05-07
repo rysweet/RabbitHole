@@ -1,6 +1,7 @@
 package org.alice.serialization.tweedle;
 
 import org.junit.Test;
+import org.lgna.common.resources.ImageResource;
 import org.lgna.project.ast.AbstractNode;
 import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.DoubleLiteral;
@@ -106,6 +107,27 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithResourceNullInitializedFieldCreatesNullLiteralInitializer() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { ImageResource picture <- null; }");
+
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals("picture", field.getName());
+    assertSame(JavaType.getInstance(ImageResource.class), field.getValueType());
+    assertTrue(field.initializer.getValue() instanceof NullLiteral);
+  }
+
+  @Test
+  public void decodeClassWithWholeNumberNullInitializedFieldReportsUnsupportedInitializer() {
+    RuntimeException thrown = assertThrows(
+        RuntimeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber count <- null; }"));
+
+    assertTrue(throwableMessageContains(thrown, "WholeNumber"));
+    assertTrue(throwableMessageContains(thrown, "Null initializer") || throwableMessageContains(thrown, "void"));
+  }
+
+  @Test
   public void decodeClassWithMethodReportsUnsupportedMembers() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -174,6 +196,16 @@ public class TweedleEncoderDecoderTest {
     Expression initializer = field.initializer.getValue();
     assertTrue(initializer instanceof BooleanLiteral);
     assertEquals(expectedValue, ((BooleanLiteral) initializer).value.getValue());
+  }
+
+  private static boolean throwableMessageContains(Throwable throwable, String expected) {
+    while (throwable != null) {
+      if (throwable.getMessage() != null && throwable.getMessage().contains(expected)) {
+        return true;
+      }
+      throwable = throwable.getCause();
+    }
+    return false;
   }
 
 }
