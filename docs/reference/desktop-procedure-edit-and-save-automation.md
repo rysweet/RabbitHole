@@ -13,7 +13,7 @@ hooks to add, and the behavior that is still not proven.
 | Select a procedure tab in Alice | `org.alice.ide.declarationseditor.DeclarationTabState` | Owns the real tab-selection operation used by the desktop declarations editor. |
 | Show procedure code | `org.alice.ide.declarationseditor.CodeComposite` | Wraps the selected `UserMethod` and creates the code view when the desktop activates the tab. |
 | Save the current project | `org.alice.ide.croquet.models.projecturi.SaveProjectOperation` | Keeps the user-facing Save command, prompt rule, icon, and toolbar behavior. |
-| Run the save flow | `org.alice.ide.croquet.models.projecturi.SaveOperationFlow` | Covers prompt, cancel, retry, wait cursor, error, finish, and save-callback behavior without Swing dialogs. |
+| Run the save flow | `org.alice.ide.croquet.models.projecturi.SaveOperationFlow` | Covers prompt, cancel, retry, wait cursor, error, finish, and save-callback behavior without Swing dialogs. Returns whether the flow finished or canceled, how many prompts and save attempts ran, and which file saved after `saveProjectTo(File)` returned. |
 | Connect Save to live Alice objects | `org.alice.ide.croquet.models.projecturi.AbstractSaveOperation` | Adapts the active `StageIDE`, `ProjectDocumentFrame`, Croquet `UserActivity`, wait cursor, and `ProjectApplication.saveProjectTo(File)` to `SaveOperationFlow`. |
 
 `ProcedureTabSelection` is intentionally small. It does not edit code. It gives a
@@ -39,9 +39,11 @@ Add these in order, each with a focused test before changing behavior:
    hook should invoke that command; it should not call the implementation command
    a desktop edit.
 4. Add a Save command observation test that fires `SaveProjectOperation` only in
-   a prepared desktop run where the current project file is writable, so no save
-   dialog is expected. Observe `UserActivity.finish()` and the project file's
-   write time or size after `ProjectApplication.saveProjectTo(File)` returns.
+    a prepared desktop run where the current project file is writable, so no save
+    dialog is expected. Observe `UserActivity.finish()` and the project file's
+    write time or size after `ProjectApplication.saveProjectTo(File)` returns.
+    `SaveOperationFlow.Result` is the checked-in completion seam for collecting
+    the non-dialog save outcome.
 5. Add a prompted Save test later, with an explicit dialog-control plan for
    `ProjectDocumentFrame.showSaveFileDialog(...)`. Do not mark Save-menu
    completion done until that dialog path is controlled and observed.

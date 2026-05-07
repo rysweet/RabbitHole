@@ -36,12 +36,20 @@ final class SaveOperationFlow {
     void save(File file) throws IOException;
   }
 
+  record Result(boolean finished, boolean canceled, int promptCount, int saveAttempts, File savedFile) {
+  }
+
   private SaveOperationFlow() {
   }
 
-  static void run(Context context, PromptDecision promptDecision, String extension, SaveAction saveAction) {
+  static Result run(Context context, PromptDecision promptDecision, String extension, SaveAction saveAction) {
     File filePrevious = context.getCurrentFile();
     boolean isExceptionRaised = false;
+    int promptCount = 0;
+    int saveAttempts = 0;
+    File savedFile = null;
+    boolean finished = false;
+    boolean canceled = false;
     do {
       File fileNext;
       if (context.isBackup()) {
@@ -52,8 +60,10 @@ final class SaveOperationFlow {
           newProjectName = FileUtilities.getBaseName(mainFile) + " Copy";
         }
 
+        promptCount++;
         fileNext = context.showSaveFileDialog(context.getDefaultDirectory(), newProjectName, extension);
       } else if (isExceptionRaised || promptDecision.isPromptNecessary(filePrevious)) {
+        promptCount++;
         fileNext = context.showSaveFileDialog(context.getDefaultDirectory(), FileUtilities.getBaseName(filePrevious), extension);
       } else {
         fileNext = filePrevious;
@@ -62,7 +72,9 @@ final class SaveOperationFlow {
       if (fileNext != null) {
         try {
           context.showWaitCursor();
+          saveAttempts++;
           saveAction.save(fileNext);
+          savedFile = fileNext;
         } catch (IOException ioe) {
           isExceptionRaised = true;
           //TODO I18n
@@ -72,10 +84,13 @@ final class SaveOperationFlow {
         }
         if (!isExceptionRaised) {
           context.finish();
+          finished = true;
         }
       } else {
         context.cancel();
+        canceled = true;
       }
     } while (isExceptionRaised);
+    return new Result(finished, canceled, promptCount, saveAttempts, savedFile);
   }
 }

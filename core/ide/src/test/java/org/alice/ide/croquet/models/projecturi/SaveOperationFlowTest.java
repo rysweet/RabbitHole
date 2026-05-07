@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -31,13 +32,18 @@ public class SaveOperationFlowTest {
     context.currentFile = currentProject;
     List<File> savedFiles = new ArrayList<>();
 
-    SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, savedFiles::add);
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, savedFiles::add);
 
     assertTrue(context.dialogRequests.isEmpty());
     assertEquals(Arrays.asList(currentProject), savedFiles);
     assertEquals(Arrays.asList("showWaitCursor", "hideWaitCursor", "finish"), context.events);
     assertTrue(context.finished);
     assertFalse(context.canceled);
+    assertTrue(result.finished());
+    assertFalse(result.canceled());
+    assertEquals(0, result.promptCount());
+    assertEquals(1, result.saveAttempts());
+    assertEquals(currentProject, result.savedFile());
   }
 
   @Test
@@ -45,13 +51,22 @@ public class SaveOperationFlowTest {
     FakeContext context = new FakeContext(temporaryFolder.getRoot());
     context.promptFiles.add(null);
 
-    SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> fail("Save should not run after cancel"));
+    SaveOperationFlow.Result result = SaveOperationFlow.run(
+        context,
+        file -> true,
+        PROJECT_EXTENSION,
+        file -> fail("Save should not run after cancel"));
 
     assertEquals(1, context.dialogRequests.size());
     assertEquals(new DialogRequest(temporaryFolder.getRoot(), null, PROJECT_EXTENSION), context.dialogRequests.get(0));
     assertTrue(context.canceled);
     assertFalse(context.finished);
     assertFalse(context.events.contains("showWaitCursor"));
+    assertFalse(result.finished());
+    assertTrue(result.canceled());
+    assertEquals(1, result.promptCount());
+    assertEquals(0, result.saveAttempts());
+    assertNull(result.savedFile());
   }
 
   @Test
@@ -64,13 +79,18 @@ public class SaveOperationFlowTest {
     context.promptFiles.add(targetProject);
     List<File> savedFiles = new ArrayList<>();
 
-    SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, savedFiles::add);
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, savedFiles::add);
 
     assertEquals(1, context.dialogRequests.size());
     assertEquals(new DialogRequest(temporaryFolder.getRoot(), "world Copy", PROJECT_EXTENSION), context.dialogRequests.get(0));
     assertEquals(Arrays.asList(targetProject), savedFiles);
     assertTrue(context.finished);
     assertFalse(context.canceled);
+    assertTrue(result.finished());
+    assertFalse(result.canceled());
+    assertEquals(1, result.promptCount());
+    assertEquals(1, result.saveAttempts());
+    assertEquals(targetProject, result.savedFile());
   }
 
   @Test
@@ -83,7 +103,7 @@ public class SaveOperationFlowTest {
     List<File> savedFiles = new ArrayList<>();
     AtomicInteger attempts = new AtomicInteger();
 
-    SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, file -> {
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, file -> {
       savedFiles.add(file);
       if (attempts.getAndIncrement() == 0) {
         throw new IOException("disk full");
@@ -102,6 +122,11 @@ public class SaveOperationFlowTest {
         "finish"), context.events);
     assertTrue(context.finished);
     assertFalse(context.canceled);
+    assertTrue(result.finished());
+    assertFalse(result.canceled());
+    assertEquals(1, result.promptCount());
+    assertEquals(2, result.saveAttempts());
+    assertEquals(retryProject, result.savedFile());
   }
 
   @Test
@@ -112,7 +137,7 @@ public class SaveOperationFlowTest {
     context.promptFiles.add(null);
     List<File> savedFiles = new ArrayList<>();
 
-    SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, file -> {
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, file -> {
       savedFiles.add(file);
       throw new IOException("permission denied");
     });
@@ -124,6 +149,11 @@ public class SaveOperationFlowTest {
     assertEquals(Arrays.asList("showWaitCursor", "hideWaitCursor", "cancel"), context.events);
     assertFalse(context.finished);
     assertTrue(context.canceled);
+    assertFalse(result.finished());
+    assertTrue(result.canceled());
+    assertEquals(1, result.promptCount());
+    assertEquals(1, result.saveAttempts());
+    assertNull(result.savedFile());
   }
 
   @Test
@@ -138,7 +168,7 @@ public class SaveOperationFlowTest {
     List<File> savedFiles = new ArrayList<>();
     AtomicInteger attempts = new AtomicInteger();
 
-    SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> {
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> {
       savedFiles.add(file);
       if (attempts.getAndIncrement() == 0) {
         throw new IOException("share unavailable");
@@ -158,6 +188,11 @@ public class SaveOperationFlowTest {
         "finish"), context.events);
     assertTrue(context.finished);
     assertFalse(context.canceled);
+    assertTrue(result.finished());
+    assertFalse(result.canceled());
+    assertEquals(2, result.promptCount());
+    assertEquals(2, result.saveAttempts());
+    assertEquals(retryDestination, result.savedFile());
   }
 
   @Test
@@ -168,7 +203,7 @@ public class SaveOperationFlowTest {
     context.promptFiles.add(null);
     List<File> savedFiles = new ArrayList<>();
 
-    SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> {
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> true, PROJECT_EXTENSION, file -> {
       savedFiles.add(file);
       throw new IOException("read only folder");
     });
@@ -181,6 +216,11 @@ public class SaveOperationFlowTest {
     assertEquals(Arrays.asList("showWaitCursor", "hideWaitCursor", "cancel"), context.events);
     assertFalse(context.finished);
     assertTrue(context.canceled);
+    assertFalse(result.finished());
+    assertTrue(result.canceled());
+    assertEquals(2, result.promptCount());
+    assertEquals(1, result.saveAttempts());
+    assertNull(result.savedFile());
   }
 
   private static final class FakeContext implements SaveOperationFlow.Context {

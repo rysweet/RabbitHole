@@ -1,0 +1,706 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO]
+[INFO] Alice                                                              [pom]
+[INFO] Alice Core                                                         [pom]
+[INFO] Utilities                                                          [jar]
+[INFO] Tweedle Language                                                   [jar]
+[INFO] Abstract Syntax Tree                                               [jar]
+[INFO] External Libraries                                                 [pom]
+[INFO] Wrapped Flow Layout                                                [jar]
+[INFO] Croquet                                                            [jar]
+[INFO] Internationalization                                               [jar]
+[INFO] Image Editor                                                       [jar]
+[INFO] Scene Graph                                                        [jar]
+[INFO] GL Render                                                          [jar]
+[INFO] Collada Schema 1.4.1                                               [jar]
+[INFO] Story API                                                          [jar]
+[INFO] Gallery Models                                                     [jar]
+[INFO] dae4j COLLADA Java Library                                         [jar]
+[INFO] Model Loading                                                      [jar]
+[INFO] Story API Project Migration                                        [jar]
+[INFO] Issue Reporting                                                    [jar]
+[INFO] Gallery Resources                                                  [jar]
+[INFO] IDE                                                                [jar]
+[INFO]
+[INFO] --------------------------< org.alice:parent >--------------------------
+[INFO] Building Alice 9.1.0-SNAPSHOT                                     [1/21]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ parent ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireMavenVersion passed
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ parent ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] ---------------------------< org.alice:core >---------------------------
+[INFO] Building Alice Core 9.1.0-SNAPSHOT                                [2/21]
+[INFO]   from core/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ core ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ core ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] ---------------------------< org.alice:util >---------------------------
+[INFO] Building Utilities 9.1.0-SNAPSHOT                                 [3/21]
+[INFO]   from core/util/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ util ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ util ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ util ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/util/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/util/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ util ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 408 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ util ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/util/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ util ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 10 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ util ---
+[INFO]
+[INFO] -------------------------< org.alice:tweedle >--------------------------
+[INFO] Building Tweedle Language 9.1.0-SNAPSHOT                          [4/21]
+[INFO]   from core/tweedle/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ tweedle ---
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (require-tweedle-lang-submodule) @ tweedle ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.files.RequireFilesExist passed
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ tweedle ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- antlr4:4.9.3:antlr4 (default) @ tweedle ---
+[INFO] ANTLR 4: Processing source directory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/tweedle-lang/Grammar
+[INFO] Processing grammar: TweedleLexer.g4
+[INFO] Processing grammar: TweedleParser.g4
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ tweedle ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/tweedle/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/tweedle/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/tweedle/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/tweedle/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ tweedle ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 88 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ tweedle ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/tweedle/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ tweedle ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 6 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ tweedle ---
+[INFO]
+[INFO] ---------------------------< org.alice:ast >----------------------------
+[INFO] Building Abstract Syntax Tree 9.1.0-SNAPSHOT                      [5/21]
+[INFO]   from core/ast/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ ast ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ ast ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ ast ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] Copying 44 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ast/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ast/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ ast ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 207 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ast ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ast/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ ast ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 5 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ ast ---
+[INFO]
+[INFO] --------------------< org.alice.external:external >---------------------
+[INFO] Building External Libraries 1.0                                   [6/21]
+[INFO]   from external/pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ external ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ external ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] ---------------< org.alice.external:wrapped-flow-layout >---------------
+[INFO] Building Wrapped Flow Layout 1.0                                  [7/21]
+[INFO]   from external/wrapped-flow-layout/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ wrapped-flow-layout ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ wrapped-flow-layout ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ wrapped-flow-layout ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/wrapped-flow-layout/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/wrapped-flow-layout/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/wrapped-flow-layout/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/wrapped-flow-layout/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ wrapped-flow-layout ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 1 source file with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ wrapped-flow-layout ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/wrapped-flow-layout/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ wrapped-flow-layout ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ wrapped-flow-layout ---
+[INFO] No tests to run.
+[INFO]
+[INFO] -------------------------< org.alice:croquet >--------------------------
+[INFO] Building Croquet 9.1.0-SNAPSHOT                                   [8/21]
+[INFO]   from core/croquet/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ croquet ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ croquet ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ croquet ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 15 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/croquet/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/croquet/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ croquet ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 408 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ croquet ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/croquet/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ croquet ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ croquet ---
+[INFO]
+[INFO] ---------------------------< org.alice:i18n >---------------------------
+[INFO] Building Internationalization 9.1.0-SNAPSHOT                      [9/21]
+[INFO]   from core/i18n/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ i18n ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ i18n ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ i18n ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/i18n/src/main/java
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 476 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/i18n/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/i18n/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ i18n ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ i18n ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/i18n/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ i18n ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ i18n ---
+[INFO] No tests to run.
+[INFO]
+[INFO] -----------------------< org.alice:image-editor >-----------------------
+[INFO] Building Image Editor 9.1.0-SNAPSHOT                             [10/21]
+[INFO]   from core/image-editor/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ image-editor ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ image-editor ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ image-editor ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 16 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/image-editor/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/image-editor/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ image-editor ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 12 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ image-editor ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/image-editor/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ image-editor ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ image-editor ---
+[INFO] No tests to run.
+[INFO]
+[INFO] ------------------------< org.alice:scenegraph >------------------------
+[INFO] Building Scene Graph 9.1.0-SNAPSHOT                              [11/21]
+[INFO]   from core/scenegraph/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ scenegraph ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ scenegraph ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ scenegraph ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/scenegraph/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/scenegraph/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/scenegraph/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/scenegraph/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ scenegraph ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 174 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ scenegraph ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/scenegraph/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ scenegraph ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1 source file with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ scenegraph ---
+[INFO]
+[INFO] -------------------------< org.alice:glrender >-------------------------
+[INFO] Building GL Render 9.1.0-SNAPSHOT                                [12/21]
+[INFO]   from core/glrender/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ glrender ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ glrender ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ glrender ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/glrender/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/glrender/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/glrender/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/glrender/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ glrender ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 121 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ glrender ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/glrender/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ glrender ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ glrender ---
+[INFO] No tests to run.
+[INFO]
+[INFO] --------------< org.alice.external:collada-schema-1-4-1 >---------------
+[INFO] Building Collada Schema 1.4.1 1.4.1                              [13/21]
+[INFO]   from external/collada-schema-1-4-1/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ collada-schema-1-4-1 ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ collada-schema-1-4-1 ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- cxf-xjc:3.3.0:xsdtojava (generate-sources) @ collada-schema-1-4-1 ---
+[WARNING] 1 problem was encountered while building the effective model for org.javassist:javassist:jar:3.18.2-GA during dependency collection step for plugin (use -X to see details)
+[INFO] Building jar: /tmp/cxf-xjc-plugin3629338723277057311.jar
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ collada-schema-1-4-1 ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada-schema-1-4-1/src/main/java
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada-schema-1-4-1/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada-schema-1-4-1/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ collada-schema-1-4-1 ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 193 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ collada-schema-1-4-1 ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada-schema-1-4-1/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ collada-schema-1-4-1 ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ collada-schema-1-4-1 ---
+[INFO] No tests to run.
+[INFO]
+[INFO] ------------------------< org.alice:story-api >-------------------------
+[INFO] Building Story API 9.1.0-SNAPSHOT                                [14/21]
+[INFO]   from core/story-api/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ story-api ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ story-api ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ story-api ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 55 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/story-api/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/story-api/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ story-api ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 504 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ story-api ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/story-api/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ story-api ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 4 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ story-api ---
+[INFO]
+[INFO] --------------------------< org.alice:models >--------------------------
+[INFO] Building Gallery Models 9.1.0-SNAPSHOT                           [15/21]
+[INFO]   from core/models/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ models ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ models ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ models ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/models/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/models/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/models/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/models/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ models ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 343 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ models ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/models/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ models ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ models ---
+[INFO] No tests to run.
+[INFO]
+[INFO] ------------------------< com.dddviewr:collada >------------------------
+[INFO] Building dae4j COLLADA Java Library 1.0                          [16/21]
+[INFO]   from external/collada/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ collada ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ collada ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ collada ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ collada ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 138 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ collada ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/external/collada/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ collada ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ collada ---
+[INFO] No tests to run.
+[INFO]
+[INFO] ----------------------< org.alice:model-loading >-----------------------
+[INFO] Building Model Loading 9.1.0-SNAPSHOT                            [17/21]
+[INFO]   from core/model-loading/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ model-loading ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ model-loading ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ model-loading ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/model-loading/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/model-loading/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/model-loading/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/model-loading/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ model-loading ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 29 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ model-loading ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/model-loading/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ model-loading ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 3 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ model-loading ---
+[INFO]
+[INFO] -------------------< org.alice:story-api-migration >--------------------
+[INFO] Building Story API Project Migration 9.1.0-SNAPSHOT              [18/21]
+[INFO]   from core/story-api-migration/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ story-api-migration ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ story-api-migration ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ story-api-migration ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 8 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/story-api-migration/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/story-api-migration/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ story-api-migration ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 39 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ story-api-migration ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/story-api-migration/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ story-api-migration ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 5 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ story-api-migration ---
+[INFO]
+[INFO] ---------------------< org.alice:issue-reporting >----------------------
+[INFO] Building Issue Reporting 9.1.0-SNAPSHOT                          [19/21]
+[INFO]   from core/issue-reporting/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ issue-reporting ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ issue-reporting ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ issue-reporting ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/issue-reporting/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/issue-reporting/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/issue-reporting/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/issue-reporting/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ issue-reporting ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 10 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ issue-reporting ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/issue-reporting/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ issue-reporting ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ issue-reporting ---
+[INFO] No tests to run.
+[INFO]
+[INFO] ------------------------< org.alice:resources >-------------------------
+[INFO] Building Gallery Resources 9.1.0-SNAPSHOT                        [20/21]
+[INFO]   from core/resources/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ resources ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ resources ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- dependency:3.8.1:unpack (distribution-platform) @ resources ---
+[INFO] Configured Artifact: org.jogamp.jogl:jogl-all:natives-linux-amd64:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.gluegen:gluegen-rt:natives-linux-amd64:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.jogl:jogl-all:natives-linux-armv6hf:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.gluegen:gluegen-rt:natives-linux-armv6hf:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.jogl:jogl-all:natives-macosx-universal:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.gluegen:gluegen-rt:natives-macosx-universal:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.jogl:jogl-all:natives-windows-amd64:2.5.0:jar
+[INFO] Configured Artifact: org.jogamp.gluegen:gluegen-rt:natives-windows-amd64:2.5.0:jar
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ resources ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/resources/src/main/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/resources/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/resources/src/main/resources
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/resources/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/resources/src/l10n-alice/resources
+[INFO]
+[INFO] --- resources:3.3.1:copy-resources (distribution-application) @ resources ---
+[INFO] Copying 3266 resources from src/application/resources to target/distribution/application
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ resources ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ resources ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/resources/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ resources ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- surefire:3.5.3:test (default-test) @ resources ---
+[INFO] No tests to run.
+[INFO]
+[INFO] ---------------------------< org.alice:ide >----------------------------
+[INFO] Building IDE 9.1.0-SNAPSHOT                                      [21/21]
+[INFO]   from core/ide/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- enforcer:3.5.0:enforce (enforce-maven-3) @ ide ---
+[INFO]
+[INFO] --- checkstyle:3.6.0:check (checkstyle) @ ide ---
+[INFO] You have 0 Checkstyle violations.
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ ide ---
+[INFO] Copying 0 resource from src/main/java to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 1650 resources from src/main/resources to target/classes
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/l10n-alice/java
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/l10n-alice/resources
+[INFO]
+[INFO] --- compiler:3.14.1:compile (default-compile) @ ide ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 1546 source files with javac [forked debug release 21] to target/classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ide ---
+[INFO] skip non existing resourceDirectory /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ ide ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 28 source files with javac [forked debug release 21] to target/test-classes
+[WARNING] Unable to autodetect 'javac' path, using 'javac' from the environment.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR :
+[INFO] -------------------------------------------------------------
+[ERROR] /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java:[35,21] error: cannot find symbol
+  symbol:   class Result
+  location: class SaveOperationFlow
+[ERROR] /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java:[54,21] error: cannot find symbol
+  symbol:   class Result
+  location: class SaveOperationFlow
+[ERROR] /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java:[82,21] error: cannot find symbol
+  symbol:   class Result
+  location: class SaveOperationFlow
+[INFO] 3 errors
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary:
+[INFO]
+[INFO] Alice 9.1.0-SNAPSHOT ............................... SUCCESS [  0.728 s]
+[INFO] Alice Core 9.1.0-SNAPSHOT .......................... SUCCESS [  0.060 s]
+[INFO] Utilities 9.1.0-SNAPSHOT ........................... SUCCESS [  5.894 s]
+[INFO] Tweedle Language 9.1.0-SNAPSHOT .................... SUCCESS [  3.152 s]
+[INFO] Abstract Syntax Tree 9.1.0-SNAPSHOT ................ SUCCESS [  4.105 s]
+[INFO] External Libraries 1.0 ............................. SUCCESS [  0.021 s]
+[INFO] Wrapped Flow Layout 1.0 ............................ SUCCESS [  0.572 s]
+[INFO] Croquet 9.1.0-SNAPSHOT ............................. SUCCESS [  4.476 s]
+[INFO] Internationalization 9.1.0-SNAPSHOT ................ SUCCESS [  0.154 s]
+[INFO] Image Editor 9.1.0-SNAPSHOT ........................ SUCCESS [  1.269 s]
+[INFO] Scene Graph 9.1.0-SNAPSHOT ......................... SUCCESS [  3.415 s]
+[INFO] GL Render 9.1.0-SNAPSHOT ........................... SUCCESS [  2.534 s]
+[INFO] Collada Schema 1.4.1 1.4.1 ......................... SUCCESS [  3.319 s]
+[INFO] Story API 9.1.0-SNAPSHOT ........................... SUCCESS [  5.863 s]
+[INFO] Gallery Models 9.1.0-SNAPSHOT ...................... SUCCESS [  2.679 s]
+[INFO] dae4j COLLADA Java Library 1.0 ..................... SUCCESS [  1.403 s]
+[INFO] Model Loading 9.1.0-SNAPSHOT ....................... SUCCESS [  3.260 s]
+[INFO] Story API Project Migration 9.1.0-SNAPSHOT ......... SUCCESS [  3.308 s]
+[INFO] Issue Reporting 9.1.0-SNAPSHOT ..................... SUCCESS [  0.988 s]
+[INFO] Gallery Resources 9.1.0-SNAPSHOT ................... SUCCESS [  0.861 s]
+[INFO] IDE 9.1.0-SNAPSHOT ................................. FAILURE [ 12.202 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:00 min
+[INFO] Finished at: 2026-05-07T14:37:03Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:testCompile (default-testCompile) on project ide: Compilation failure: Compilation failure:
+[ERROR] /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java:[35,21] error: cannot find symbol
+[ERROR]   symbol:   class Result
+[ERROR]   location: class SaveOperationFlow
+[ERROR] /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java:[54,21] error: cannot find symbol
+[ERROR]   symbol:   class Result
+[ERROR]   location: class SaveOperationFlow
+[ERROR] /home/azureuser/src/alice/RabbitHole-ui-save-next-step-20260507142838/core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java:[82,21] error: cannot find symbol
+[ERROR]   symbol:   class Result
+[ERROR]   location: class SaveOperationFlow
+[ERROR] -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR]
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :ide

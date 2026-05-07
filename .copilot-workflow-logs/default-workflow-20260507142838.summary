@@ -1,0 +1,4 @@
+default-workflow attempted before edits
+result: stopped after non-interactive run produced no output and remained running
+log: .copilot-workflow-logs/default-workflow-20260507142838.log
+status: 143 after terminating the stuck non-interactive recipe process
