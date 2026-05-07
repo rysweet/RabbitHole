@@ -324,12 +324,19 @@ import javafx.stage.Stage;
 public class AliceJavaFXLauncher extends Application {
     private static final String EVIDENCE_PREFIX = "ALICE_LAUNCHER_EVIDENCE";
     private static final String NO_GO_PREFIX = "ALICE_LAUNCHER_NO_GO";
+    private static final String RENDER_OBSERVATION_PREFIX = "ALICE_LAUNCHER_RENDER_OBSERVATION";
     private static String[] startingArgs;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
         evidence("javafx-application-started");
         if (primaryStage == null) {
+            renderObservation(
+                    "render-target-absent",
+                    false,
+                    false,
+                    "javafx-primary-stage",
+                    "JavaFX did not provide a primary Stage; no render target exists.");
             noGo("primary-stage-unavailable");
             return;
         }
@@ -341,15 +348,33 @@ public class AliceJavaFXLauncher extends Application {
             primaryStage.show();
         } catch (RuntimeException | Error showFailure) {
             if (isRenderTargetUnavailableFailure(showFailure)) {
+                renderObservation(
+                        "render-target-absent",
+                        false,
+                        false,
+                        "stage-show",
+                        "Stage.show failed before a render target could be observed.");
                 noGo("render-target-unavailable");
                 return;
             }
             throw showFailure;
         }
         if (!primaryStage.isShowing()) {
+            renderObservation(
+                    "render-target-absent",
+                    false,
+                    false,
+                    "stage-is-showing",
+                    "Stage.show returned, but Stage.isShowing was false; no shown render target was observed.");
             noGo("render-target-unavailable");
             return;
         }
+        renderObservation(
+                "target-showing-pixels-not-observed",
+                true,
+                false,
+                "pixel-observation-hook",
+                "Launcher has no JavaFX scene snapshot or screen capture hook; visible pixels are not asserted.");
         evidence("render-target-ready pixels-not-observed");
         Thread thread = new Thread(() -> {
             evidence("program-main-delegated rendering-not-asserted");
@@ -364,6 +389,44 @@ public class AliceJavaFXLauncher extends Application {
 
     private static void noGo(String marker) {
         System.out.println(NO_GO_PREFIX + " " + marker);
+    }
+
+    private static void renderObservation(
+            String status,
+            boolean renderTargetShowing,
+            boolean pixelsObserved,
+            String missingObservationMechanism,
+            String detail) {
+        System.out.println(RENDER_OBSERVATION_PREFIX
+                + " {"
+                + jsonField("schema_version", "alice.launcher.render-observation/v1") + ","
+                + jsonField("status", status) + ","
+                + jsonField("renderTargetShowing", renderTargetShowing) + ","
+                + jsonField("pixelsObserved", pixelsObserved) + ","
+                + jsonField("missingObservationMechanism", missingObservationMechanism) + ","
+                + jsonField("detail", detail)
+                + "}");
+    }
+
+    private static String jsonField(String name, String value) {
+        return (char) 34 + name + (char) 34 + ':' + (char) 34 + escapeJson(value) + (char) 34;
+    }
+
+    private static String jsonField(String name, boolean value) {
+        return (char) 34 + name + (char) 34 + ':' + value;
+    }
+
+    private static String escapeJson(String value) {
+        StringBuilder builder = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if ((ch == (char) 34) || (ch == (char) 92)) {
+                builder.append((char) 92).append(ch);
+            } else {
+                builder.append(ch);
+            }
+        }
+        return builder.toString();
     }
 
     private static boolean isDisplayUnavailableFailure(Throwable throwable) {
@@ -419,6 +482,12 @@ public class AliceJavaFXLauncher extends Application {
             Application.launch(args);
         } catch (RuntimeException | Error launchFailure) {
             if (isDisplayUnavailableFailure(launchFailure)) {
+                renderObservation(
+                        "render-target-absent",
+                        false,
+                        false,
+                        "javafx-display",
+                        "JavaFX launch failed before a Stage/render target was available.");
                 noGo("display-unavailable");
                 return;
             }

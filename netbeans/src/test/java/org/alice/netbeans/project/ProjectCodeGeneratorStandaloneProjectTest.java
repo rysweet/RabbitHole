@@ -54,6 +54,10 @@ import static org.junit.Assert.*;
 
 public class ProjectCodeGeneratorStandaloneProjectTest {
 
+  private static final String RENDER_OBSERVATION_JSON_PREFIX =
+      "ALICE_LAUNCHER_RENDER_OBSERVATION "
+          + "{\"schema_version\":\"alice.launcher.render-observation/v1\",";
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -98,10 +102,17 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE stage-received",
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          RENDER_OBSERVATION_JSON_PREFIX,
+          "\"status\":\"target-showing-pixels-not-observed\"",
+          "\"renderTargetShowing\":true",
+          "\"pixelsObserved\":false",
+          "\"missingObservationMechanism\":\"pixel-observation-hook\"",
           "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed");
-      assertFalse(output.contains("visible"));
-      assertFalse(output.contains("rendered"));
-      assertFalse(output.contains("shown"));
+      assertTrue(output.contains(
+          "\"detail\":\"Launcher has no JavaFX scene snapshot or screen capture hook; "
+              + "visible pixels are not asserted.\"}"));
+      assertFalse(output.contains("\"pixelsObserved\":true"));
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE pixels-observed"));
     }
   }
 
@@ -144,6 +155,11 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           output,
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          RENDER_OBSERVATION_JSON_PREFIX,
+          "\"status\":\"target-showing-pixels-not-observed\"",
+          "\"renderTargetShowing\":true",
+          "\"pixelsObserved\":false",
+          "\"missingObservationMechanism\":\"pixel-observation-hook\"",
           "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
           "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
     } finally {
@@ -185,7 +201,13 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE stage-received",
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          RENDER_OBSERVATION_JSON_PREFIX,
+          "\"status\":\"render-target-absent\"",
+          "\"renderTargetShowing\":false",
+          "\"pixelsObserved\":false",
+          "\"missingObservationMechanism\":\"stage-show\"",
           "ALICE_LAUNCHER_NO_GO render-target-unavailable");
+      assertTrue(output.contains("\"detail\":\"Stage.show failed before a render target could be observed.\"}"));
       assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE render-target-ready"));
       assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated"));
     } finally {
@@ -226,7 +248,13 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           output,
           "ALICE_LAUNCHER_EVIDENCE main-entered",
           "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+          RENDER_OBSERVATION_JSON_PREFIX,
+          "\"status\":\"render-target-absent\"",
+          "\"renderTargetShowing\":false",
+          "\"pixelsObserved\":false",
+          "\"missingObservationMechanism\":\"javafx-display\"",
           "ALICE_LAUNCHER_NO_GO display-unavailable");
+      assertTrue(output.contains("\"detail\":\"JavaFX launch failed before a Stage/render target was available.\"}"));
       assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE javafx-application-started"));
       assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated"));
     } finally {
@@ -368,6 +396,11 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE stage-received",
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          RENDER_OBSERVATION_JSON_PREFIX,
+          "\"status\":\"target-showing-pixels-not-observed\"",
+          "\"renderTargetShowing\":true",
+          "\"pixelsObserved\":false",
+          "\"missingObservationMechanism\":\"pixel-observation-hook\"",
           "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
           "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
       return;
@@ -422,6 +455,11 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         "ALICE_LAUNCHER_EVIDENCE stage-received",
         "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
         "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+        RENDER_OBSERVATION_JSON_PREFIX,
+        "\"status\":\"target-showing-pixels-not-observed\"",
+        "\"renderTargetShowing\":true",
+        "\"pixelsObserved\":false",
+        "\"missingObservationMechanism\":\"pixel-observation-hook\"",
         "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
         "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
   }

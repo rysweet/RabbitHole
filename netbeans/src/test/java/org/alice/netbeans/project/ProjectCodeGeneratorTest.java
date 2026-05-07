@@ -88,6 +88,7 @@ public class ProjectCodeGeneratorTest {
     assertTrue(launcherSource.contains("import javafx.scene.Scene;"));
     assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_EVIDENCE\""));
     assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_NO_GO\""));
+    assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_RENDER_OBSERVATION\""));
     assertTrue(launcherSource.contains("evidence(\"main-entered\")"));
     assertTrue(launcherSource.contains("evidence(\"javafx-launch-attempted\")"));
     assertTrue(launcherSource.contains("Application.launch(args)"));
@@ -98,15 +99,20 @@ public class ProjectCodeGeneratorTest {
     assertTrue(launcherSource.contains("evidence(\"stage-show-attempted\")"));
     assertTrue(launcherSource.contains("primaryStage.show()"));
     assertTrue(launcherSource.contains("primaryStage.isShowing()"));
+    assertTrue(launcherSource.contains("renderObservation("));
+    assertTrue(launcherSource.contains("jsonField(\"schema_version\", \"alice.launcher.render-observation/v1\")"));
+    assertTrue(launcherSource.contains("\"render-target-absent\""));
+    assertTrue(launcherSource.contains("\"target-showing-pixels-not-observed\""));
+    assertTrue(launcherSource.contains("\"pixel-observation-hook\""));
     assertTrue(launcherSource.contains("evidence(\"render-target-ready pixels-not-observed\")"));
     assertTrue(launcherSource.contains("noGo(\"render-target-unavailable\")"));
     assertTrue(launcherSource.contains("evidence(\"program-main-delegated rendering-not-asserted\")"));
     assertTrue(launcherSource.contains("Program.main(startingArgs)"));
     assertTrue(launcherSource.contains("isDisplayUnavailableFailure"));
     assertTrue(launcherSource.contains("noGo(\"display-unavailable\")"));
-    assertFalse(launcherSource.toLowerCase().contains("visible"));
+    assertFalse(launcherSource.contains("evidence(\"pixels-observed\")"));
+    assertFalse(launcherSource.contains("\"pixelsObserved\", true"));
     assertFalse(launcherSource.toLowerCase().contains("rendered"));
-    assertFalse(launcherSource.toLowerCase().contains("shown"));
   }
 
   @Test
