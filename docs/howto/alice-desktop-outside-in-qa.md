@@ -107,7 +107,18 @@ The launch scenario starts the real Alice desktop through Maven under Xvfb:
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 ```
 
-The scenario runs:
+Before launch, the runner verifies `alice-ide/pom.xml` configures
+`org.alice.ide.rootDirectory=../core/resources/target/distribution`. If
+`core/resources/target/distribution` is missing, it prepares that distribution
+from the repository root with:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests -pl core/resources process-resources
+```
+
+It writes `root-directory-prep.json` for both ready/prepared and blocked cases,
+naming the exact property, distribution path, Maven project, and Maven phase.
+The scenario then runs:
 
 ```bash
 cd alice-ide
@@ -116,11 +127,11 @@ mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests compile e
 
 The explicit `compile` step puts `org.alice.stageide.EntryPoint` in
 `alice-ide/target/classes` before `exec:java`. The checkstyle and test gates are
-run separately; this display runner keeps the launch proof focused on classpath,
-process lifetime, window readiness, and screenshot evidence. The scenario YAML
-represents that launch as `automation.argv`, not as a shell command string, and
-the validator rejects unapproved argv entries before the runner starts Xvfb or
-Alice.
+run separately; this display runner keeps the launch proof focused on root
+directory readiness, classpath, process lifetime, window readiness, and
+screenshot evidence. The scenario YAML represents that launch as
+`automation.argv`, not as a shell command string, and the validator rejects
+unapproved argv entries before the runner starts Xvfb or Alice.
 
 The runner writes evidence to:
 
@@ -128,7 +139,7 @@ The runner writes evidence to:
 qa/outside-in/alice-desktop/evidence/alice-desktop-launch/<timestamp>/
 ```
 
-A successful launch evidence capture includes an environment summary, Xvfb log, Alice launch log, status file, screenshot, and `x-window-inventory.json`. The window inventory records visible X window title, class, process, and geometry after the readiness wait so a blocked run names the exact window signal that was or was not present. The runner checks process, window-readiness, and screenshot-capture status; it does not deeply classify every line in `launch.log` as a semantic pass/fail oracle. Review `status.txt`, `x-window-inventory.json`, `launch.log`, and the screenshot before treating the launch evidence as accepted.
+A successful launch evidence capture includes `root-directory-prep.json`, an environment summary, Xvfb log, Alice launch log, status file, screenshot, and `x-window-inventory.json`. The window inventory records visible X window title, class, process, and geometry after the readiness wait so a blocked run names the exact window signal that was or was not present. The runner checks root-directory preparation, process, window-readiness, and screenshot-capture status; it does not deeply classify every line in `launch.log` as a semantic pass/fail oracle. Review `root-directory-prep.json`, `status.txt`, `x-window-inventory.json`, `launch.log`, and the screenshot before treating the launch evidence as accepted.
 
 If Xvfb is unavailable, no display can be selected, or Xvfb exits before Alice starts, the runner exits non-zero and writes a manual fallback checklist with whichever early diagnostics are available. These early fallback directories may not contain `status.txt` because the launch did not reach the evidence-capture phase.
 

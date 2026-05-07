@@ -5,6 +5,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$BASE_DIR/../../.." && pwd)
 VALIDATOR="$SCRIPT_DIR/validate-scenarios.sh"
+ROOT_DIRECTORY_PREP="$SCRIPT_DIR/prepare-root-directory.py"
 
 usage() {
   cat <<'EOF'
@@ -802,6 +803,7 @@ run_xvfb_real_alice() {
   local timeout_override=$3
 
   local automation_fields cwd configured_timeout ready_wait run_timeout display scenario_id automation_mode resolved_cwd
+  local root_directory_prep_status root_directory_prep_blocker
   local -a argv
   mapfile -t automation_fields < <(json_fields "$scenario_json" "automation.cwd" "automation.timeoutSeconds" "automation.readyWaitSeconds" "id" "automationMode")
   cwd=${automation_fields[0]}
@@ -896,6 +898,86 @@ run_xvfb_real_alice() {
     printf 'No free X display found; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
+
+  if ! python3 "$ROOT_DIRECTORY_PREP" \
+      --repo-root "$REPO_ROOT" \
+      --alice-cwd "$cwd" \
+      --output "$run_dir/root-directory-prep.json" \
+      --log "$run_dir/root-directory-prep.log"; then
+    write_environment "$run_dir" "$display"
+    write_checklist "$scenario_json" "$run_dir" >/dev/null
+    if [ -f "$run_dir/root-directory-prep.json" ]; then
+      root_directory_prep_status=$(inventory_json_field "$run_dir/root-directory-prep.json" status)
+      root_directory_prep_blocker=$(inventory_json_field "$run_dir/root-directory-prep.json" blocker)
+    else
+      root_directory_prep_status=blocked
+      root_directory_prep_blocker=root-directory-prep-script-failed
+      cat > "$run_dir/root-directory-prep.json" <<'JSON'
+{
+  "blocker": "root-directory-prep-script-failed",
+  "blockerDetail": "prepare-root-directory.py failed before writing root-directory-prep.json; inspect the runner stderr/stdout and retry after fixing the helper invocation.",
+  "configuredRootDirectory": "",
+  "distributionExists": false,
+  "expectedRootDirectory": "../core/resources/target/distribution",
+  "mavenPhase": "process-resources",
+  "mavenProject": "core/resources",
+  "prepAttempted": false,
+  "resolvedRootDirectory": "",
+  "rootDirectoryProperty": "org.alice.ide.rootDirectory",
+  "status": "blocked"
+}
+JSON
+    fi
+    write_x_window_inventory \
+      "$run_dir" \
+      not-attempted \
+      "$root_directory_prep_blocker" \
+      "Alice rootDirectory launch preparation failed before Xvfb start; inspect root-directory-prep.json and root-directory-prep.log." \
+      "$display" \
+      before-x-server-start \
+      "" \
+      "" \
+      not-started
+    write_controlled_display_pixel_observation \
+      "$run_dir" \
+      blocked \
+      "$root_directory_prep_blocker" \
+      "Alice rootDirectory launch preparation failed before Xvfb start; inspect root-directory-prep.json for the exact property, Maven phase, and distribution path." \
+      "$display" \
+      false \
+      no-visible-pixel-proof \
+      "" \
+      not-attempted \
+      not-started \
+      not-attempted \
+      "" \
+      "$xvfb_executable" \
+      "" \
+      not-attempted \
+      "" \
+      before-x-server-start \
+      not-attempted \
+      x-window-inventory.json \
+      0
+    {
+      printf 'scenario=%s\n' "$scenario_id"
+      printf 'automationMode=%s\n' "$automation_mode"
+      printf 'display=%s\n' "$display"
+      printf 'rootDirectoryPrep=%s\n' root-directory-prep.json
+      printf 'rootDirectoryPrepStatus=%s\n' "$root_directory_prep_status"
+      printf 'rootDirectoryPrepBlocker=%s\n' "$root_directory_prep_blocker"
+      printf 'readyStatus=not-attempted\n'
+      printf 'processStatus=not-started\n'
+      printf 'screenshotStatus=not-attempted\n'
+      printf 'windowInventory=%s\n' x-window-inventory.json
+      printf 'applicationRootError=not-attempted\n'
+      printf 'timeoutSeconds=%s\n' "$run_timeout"
+    } > "$run_dir/status.txt"
+    printf 'Alice rootDirectory launch preparation blocked: %s; see %s/root-directory-prep.json\n' "$root_directory_prep_blocker" "$run_dir" >&2
+    return 2
+  fi
+  root_directory_prep_status=$(inventory_json_field "$run_dir/root-directory-prep.json" status)
+  root_directory_prep_blocker=$(inventory_json_field "$run_dir/root-directory-prep.json" blocker)
 
   Xvfb "$display" -screen 0 "${ALICE_QA_SCREEN:-1280x900x24}" > "$run_dir/xvfb.log" 2>&1 &
   xvfb_pid=$!
@@ -1024,6 +1106,9 @@ run_xvfb_real_alice() {
     printf 'readyStatus=%s\n' "$ready_status"
     printf 'processStatus=%s\n' "$process_status"
     printf 'screenshotStatus=%s\n' "$screenshot_status"
+    printf 'rootDirectoryPrep=%s\n' root-directory-prep.json
+    printf 'rootDirectoryPrepStatus=%s\n' "$root_directory_prep_status"
+    printf 'rootDirectoryPrepBlocker=%s\n' "$root_directory_prep_blocker"
     printf 'windowInventory=%s\n' x-window-inventory.json
     printf 'windowInventoryStatus=%s\n' "$window_inventory_status"
     printf 'aliceWindowCandidateCount=%s\n' "$alice_window_candidate_count"

@@ -7,7 +7,7 @@ preconditions:
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
 userActions:
-  - Start Alice using the Maven launch path that compiles alice-ide classes before exec:java.
+  - Prepare core/resources/target/distribution, then start Alice using the Maven launch path that compiles alice-ide classes before exec:java.
   - Wait for the main desktop window to become visible.
   - Confirm the first visible shell is ready for creating or opening a project.
 expectedOutcomes:
@@ -29,6 +29,7 @@ automation:
   readyWaitSeconds: 60
 evidence:
   required:
+    - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution, or naming the exact missing distribution/Maven phase blocker.
     - Launch log containing Alice startup output.
     - Screenshot of the Alice desktop window or first ready project shell.
     - x-window-inventory.json naming visible X window title, class, process, and geometry after launch readiness wait.

@@ -89,9 +89,18 @@ uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa
 
 The wrapper delegates to the same repo-owned runners and intentionally requires an Alice checkout as the current working tree.
 
-The launch scenario uses the Alice desktop Maven path with an explicit compile
-step before `exec:java`, so `org.alice.stageide.EntryPoint` is present in
-`alice-ide/target/classes`:
+The launch scenario first verifies the Alice exec root-directory property and
+prepares the distribution root if it is missing:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests -pl core/resources process-resources
+```
+
+It then uses the Alice desktop Maven path with an explicit compile step before
+`exec:java`, so `org.alice.stageide.EntryPoint` is present in
+`alice-ide/target/classes` and the JVM sees
+`org.alice.ide.rootDirectory=../core/resources/target/distribution` from
+`alice-ide/pom.xml`:
 
 ```bash
 cd alice-ide
@@ -100,7 +109,7 @@ mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests compile e
 
 Scenario automation stores executable steps as argv lists, not shell command strings. The validator and runner allow only the checked-in Alice QA argv set, including custom catalogs selected with `ALICE_QA_SCENARIO_DIR`.
 
-The runner records evidence under `qa/outside-in/alice-desktop/evidence/<scenario-id>/<timestamp>/`. Successful Xvfb launch evidence includes an environment summary, Xvfb log, Alice launch log, screenshot (`screenshot.png` or `screenshot.xwd`), `x-window-inventory.json`, `application-root-error.json`, `controlled-display-pixel-observation.json`, optional screenshot pixel stats, and status file. The window inventory records visible X window title, class, process, and geometry after the readiness wait. When a Java window titled `Application Root Error` appears, `application-root-error.json` maps that exact blocker to the observed JVM `org.alice.ide.rootDirectory` condition, expected dialog text, and next invocation change; it does not infer text without that exact window. The controlled display artifact records the exact blocker when Xvfb, display allocation, screenshot capture, process lifetime, Alice-window detection, application-root detection, or screenshot pixel analysis prevents pixel observation; it does not assert Alice rendering correctness. Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
+The runner records evidence under `qa/outside-in/alice-desktop/evidence/<scenario-id>/<timestamp>/`. Successful Xvfb launch evidence includes `root-directory-prep.json`, an environment summary, Xvfb log, Alice launch log, screenshot (`screenshot.png` or `screenshot.xwd`), `x-window-inventory.json`, `application-root-error.json`, `controlled-display-pixel-observation.json`, optional screenshot pixel stats, and status file. The root-directory prep artifact records whether `core/resources/target/distribution` was already present or prepared with Maven phase `process-resources`, and blocked cases name the exact missing property, distribution path, or Maven failure. The window inventory records visible X window title, class, process, and geometry after the readiness wait. When a Java window titled `Application Root Error` appears, `application-root-error.json` maps that exact blocker to the observed JVM `org.alice.ide.rootDirectory` condition, expected dialog text, and next invocation change; it does not infer text without that exact window. The controlled display artifact records the exact blocker when root-directory preparation, Xvfb, display allocation, screenshot capture, process lifetime, Alice-window detection, application-root detection, or screenshot pixel analysis prevents pixel observation; it does not assert Alice rendering correctness. Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
 
 ## Configuration
 
