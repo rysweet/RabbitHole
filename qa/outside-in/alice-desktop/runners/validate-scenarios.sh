@@ -47,6 +47,7 @@ workflow_values = {
     "save-load",
     "select-project-interaction-smoke",
     "select-project-widget-introspection-smoke",
+    "select-project-atk-exec-smoke",
     "export",
     "wizard-palette-completion-smoke",
 }
@@ -67,6 +68,18 @@ allowed_automation = {
             "compile",
             "exec:java",
             "-Dalice-ide",
+        ),
+    ),
+    (
+        "alice-ide",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-Dcheckstyle.skip",
+            "-DskipTests",
+            "compile",
+            "exec:exec@alice-ide-atk",
         ),
     ),
     (

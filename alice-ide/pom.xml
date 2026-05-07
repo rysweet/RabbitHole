@@ -168,6 +168,69 @@
               <goal>java</goal>
             </goals>
           </execution>
+          <!--
+            alice-ide-atk: run Alice as a separate JVM process so the AT-SPI Java ATK wrapper
+            jar is visible to the system classloader at JVM startup.
+
+            exec:java shares the Maven JVM (AWT already initialised, AppClassLoader does not
+            contain the ATK jar, so Toolkit.loadAssistiveTechnologies() cannot find
+            org.GNOME.Accessibility.AtkWrapper).
+
+            exec:exec spawns a fresh JVM where:
+              -Xbootclasspath/a: prepends java-atk-wrapper.jar to the bootstrap classpath, making
+              the class visible to ClassLoader.getSystemClassLoader() when AWT calls
+              loadAssistiveTechnologies() for the first time.
+
+              JavaFX modules (javafx.graphics, javafx.media) must be on the module-path rather than
+              -classpath in Java 21; EntryPoint extends javafx.application.Application so the
+              launcher requires named JavaFX modules.  The three platform-independent + Linux jars
+              for javafx-graphics, javafx-media, and javafx-base cover the application launch path.
+
+            Run: mvn ... compile exec:exec@alice-ide-atk
+          -->
+          <execution>
+            <id>alice-ide-atk</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>java</executable>
+              <!--
+                longModulepath defaults to true in exec-maven-plugin 3.5.0. When true,
+                the plugin creates an argfile for the module-path value, but the
+                implementation silently drops the value from the command line when
+                invoked via a named execution (exec:exec@alice-ide-atk). Setting
+                longModulepath=false passes the module path directly as an argument.
+              -->
+              <longModulepath>false</longModulepath>
+              <!--
+                NO_AT_BRIDGE=1 prevents GTK (loaded by JavaFX) from loading the atk-bridge
+                GTK module. Without this flag, gtk_init() replaces the ATK utility layer
+                with GTK's own bridge, which unregisters the Java ATK wrapper and leaves
+                AT-SPI childCount=0 for all Swing windows. Setting NO_AT_BRIDGE=1 keeps
+                the Java ATK wrapper in control so pyatspi can enumerate Swing windows.
+              -->
+              <environmentVariables>
+                <NO_AT_BRIDGE>1</NO_AT_BRIDGE>
+              </environmentVariables>
+              <arguments>
+                <!-- ATK wrapper in bootstrap classpath: visible to getSystemClassLoader() -->
+                <argument>-Xbootclasspath/a:/usr/share/java/java-atk-wrapper.jar</argument>
+                <!-- Trigger AWT assistive-technology loading for the wrapper class -->
+                <argument>-Djavax.accessibility.assistive_technologies=org.GNOME.Accessibility.AtkWrapper</argument>
+                <argument>-Dorg.alice.ide.rootDirectory=../core/resources/target/distribution</argument>
+                <!-- JavaFX named modules required by EntryPoint extends Application in Java 21 -->
+                <argument>--module-path</argument>
+                <argument>${user.home}/.m2/repository/org/openjfx/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}-linux.jar:${user.home}/.m2/repository/org/openjfx/javafx-graphics/${javafx.version}/javafx-graphics-${javafx.version}.jar:${user.home}/.m2/repository/org/openjfx/javafx-media/${javafx.version}/javafx-media-${javafx.version}-linux.jar:${user.home}/.m2/repository/org/openjfx/javafx-media/${javafx.version}/javafx-media-${javafx.version}.jar:${user.home}/.m2/repository/org/openjfx/javafx-base/${javafx.version}/javafx-base-${javafx.version}-linux.jar:${user.home}/.m2/repository/org/openjfx/javafx-base/${javafx.version}/javafx-base-${javafx.version}.jar</argument>
+                <argument>--add-modules</argument>
+                <argument>javafx.graphics,javafx.media</argument>
+                <argument>-classpath</argument>
+                <!-- exec-maven-plugin <classpath/> element expands to the Maven project runtime classpath -->
+                <classpath/>
+                <argument>org.alice.stageide.EntryPoint</argument>
+              </arguments>
+            </configuration>
+          </execution>
         </executions>
         <configuration>
           <!-- systemProperties and mainClass are for exec:java only. They will not work with exec:exec. -->

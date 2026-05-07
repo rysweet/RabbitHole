@@ -86,6 +86,18 @@ validate_allowed_automation() {
     return 0
   fi
 
+  if [ "$cwd" = alice-ide ] &&
+    [ "$#" -eq 7 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -Dcheckstyle.skip ] &&
+    [ "$5" = -DskipTests ] &&
+    [ "$6" = compile ] &&
+    [ "$7" = exec:exec@alice-ide-atk ]; then
+    return 0
+  fi
+
   if [ "$cwd" = . ] &&
     [ "$#" -eq 8 ] &&
     [ "$1" = mvn ] &&
@@ -1212,7 +1224,8 @@ JSON
   write_license_dialog_probe "$run_dir/x-window-inventory.json" "$run_dir/license-dialog.json"
   write_select_project_probe "$run_dir/x-window-inventory.json" "$run_dir/select-project-window.json"
   local swing_widget_status=not-requested swing_widget_blocker=not-requested
-  if [ "$scenario_id" = alice-desktop-select-project-widget-introspection ]; then
+  if [ "$scenario_id" = alice-desktop-select-project-widget-introspection ] || \
+     [ "$scenario_id" = alice-desktop-select-project-atk-exec ]; then
     # Allow the Swing accessibility tree to build before probing.
     sleep 3
     write_swing_widget_probe "$run_dir/x-window-inventory.json" "$run_dir/swing-widget-observation.json"

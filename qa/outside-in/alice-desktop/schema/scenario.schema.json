@@ -43,6 +43,7 @@
         "scene-creation",
         "select-project-interaction-smoke",
         "select-project-widget-introspection-smoke",
+        "select-project-atk-exec-smoke",
         "wizard-palette-completion-smoke"
       ]
     },
