@@ -67,6 +67,7 @@ import java.util.Map;
 public class FileDialogUtilities {
   public static final String SAVE_DIALOG_DISCOVERY_EVIDENCE_DIR_PROPERTY = "org.alice.eatme.saveDialogDiscoveryEvidenceDir";
   public static final String SAVE_DIALOG_DISCOVERY_TARGET_ARTIFACT = "desktop-save-dialog-discovery-target.json";
+  public static final String SAVE_DIALOG_SELECTED_PATH_PROPERTY = "org.alice.eatme.saveDialogSelectedPath";
 
   private interface FileDialog {
     String getFile();
@@ -214,7 +215,11 @@ public class FileDialogUtilities {
     String directoryPath = directory != null ? directory.getAbsolutePath() : null;
     FileDialog fileDialog;
     Component root = SwingUtilities.getRoot(component);
-    recordSaveDialogDiscoveryTarget(component, directory, filename, extension, root);
+    SelectedPathAutomation selectedPathAutomation = selectedPathAutomation(directory, extension);
+    recordSaveDialogDiscoveryTarget(component, directory, filename, extension, root, selectedPathAutomation);
+    if (selectedPathAutomation.isConfigured()) {
+      return selectedPathAutomation.selectedFile();
+    }
     String secondaryKey;
     if (directoryPath != null) {
       secondaryKey = directoryPath;
@@ -295,12 +300,22 @@ public class FileDialogUtilities {
       String filename,
       String extension,
       Component root) {
+    recordSaveDialogDiscoveryTarget(component, directory, filename, extension, root, selectedPathAutomation(directory, extension));
+  }
+
+  private static void recordSaveDialogDiscoveryTarget(
+      Component component,
+      File directory,
+      String filename,
+      String extension,
+      Component root,
+      SelectedPathAutomation selectedPathAutomation) {
     String evidenceDir = System.getProperty(SAVE_DIALOG_DISCOVERY_EVIDENCE_DIR_PROPERTY);
     if (evidenceDir == null || evidenceDir.isBlank()) {
       return;
     }
     try {
-      writeSaveDialogDiscoveryTarget(Path.of(evidenceDir), component, directory, filename, extension, root);
+      writeSaveDialogDiscoveryTarget(Path.of(evidenceDir), component, directory, filename, extension, root, selectedPathAutomation);
     } catch (IOException | RuntimeException ex) {
       Logger.throwable(ex, "Save dialog discovery target evidence write failed: " + evidenceDir);
     }
@@ -313,11 +328,29 @@ public class FileDialogUtilities {
       String filename,
       String extension,
       Component root) throws IOException {
+    return writeSaveDialogDiscoveryTarget(
+        evidenceDir,
+        component,
+        directory,
+        filename,
+        extension,
+        root,
+        selectedPathAutomation(directory, extension));
+  }
+
+  private static Path writeSaveDialogDiscoveryTarget(
+      Path evidenceDir,
+      Component component,
+      File directory,
+      String filename,
+      String extension,
+      Component root,
+      SelectedPathAutomation selectedPathAutomation) throws IOException {
     Files.createDirectories(evidenceDir);
     Path artifact = artifactPath(evidenceDir, SAVE_DIALOG_DISCOVERY_TARGET_ARTIFACT);
     Files.writeString(
         artifact,
-        saveDialogDiscoveryJson(component, directory, filename, extension, root),
+        saveDialogDiscoveryJson(component, directory, filename, extension, root, selectedPathAutomation),
         StandardCharsets.UTF_8);
     if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
       throw new IOException("Save dialog discovery target artifact was not written: " + artifact);
@@ -330,7 +363,8 @@ public class FileDialogUtilities {
       File directory,
       String filename,
       String extension,
-    Component root) {
+      Component root,
+      SelectedPathAutomation selectedPathAutomation) {
     String reason = saveDialogDiscoveryReason(component, root);
     String status = switch (reason) {
       case "target_resolved" -> "target_resolved";
@@ -363,6 +397,7 @@ public class FileDialogUtilities {
         + "    \"root_displayable\": " + booleanJson(root == null ? null : root.isDisplayable()) + ",\n"
         + "    \"root_showing\": " + booleanJson(root == null ? null : root.isShowing()) + "\n"
         + "  },\n"
+        + "  \"selected_path_automation\": " + selectedPathAutomationJson(selectedPathAutomation) + ",\n"
         + "  \"reporting_summary\": \"" + escapeJson(reportingSummary(reason)) + "\",\n"
         + "  \"blocker\": {\n"
         + "    \"observed\": \"" + escapeJson(observed(reason)) + "\",\n"
@@ -426,6 +461,136 @@ public class FileDialogUtilities {
       case "dialog_root_not_displayable" -> "root Component exists but root.isDisplayable() is false";
       default -> "owner Component and displayable root Component resolved";
     };
+  }
+
+  private static SelectedPathAutomation selectedPathAutomation(File directory, String extension) {
+    String configuredPath = System.getProperty(SAVE_DIALOG_SELECTED_PATH_PROPERTY);
+    if (configuredPath == null || configuredPath.isBlank()) {
+      return SelectedPathAutomation.inactive();
+    }
+    if (directory == null) {
+      return SelectedPathAutomation.unsupported("missing_requested_directory", configuredPath, null, false);
+    }
+    if (!directory.isDirectory()) {
+      return SelectedPathAutomation.unsupported("requested_directory_not_available", configuredPath, null, false);
+    }
+    Path requestedDirectory;
+    try {
+      requestedDirectory = directory.toPath().toRealPath();
+    } catch (IOException ioe) {
+      return SelectedPathAutomation.unsupported("requested_directory_not_available", configuredPath, null, false);
+    }
+    Path configured;
+    try {
+      configured = Path.of(configuredPath);
+    } catch (RuntimeException ex) {
+      return SelectedPathAutomation.unsupported("selected_path_invalid", configuredPath, null, false);
+    }
+    if (!configured.isAbsolute()) {
+      return SelectedPathAutomation.unsupported("selected_path_not_absolute", configuredPath, null, false);
+    }
+    Path selectedPath = addExtensionIfMissing(configured.normalize(), extension);
+    Path selectedParent = selectedPath.getParent();
+    if (selectedParent == null || !Files.isDirectory(selectedParent)) {
+      return SelectedPathAutomation.unsupported("selected_parent_directory_not_available", configuredPath, null, false);
+    }
+    if (Files.isSymbolicLink(selectedPath)) {
+      return SelectedPathAutomation.unsupported("selected_path_is_symbolic_link", configuredPath, null, false);
+    }
+    Path selectedParentReal;
+    try {
+      selectedParentReal = selectedParent.toRealPath();
+    } catch (IOException ioe) {
+      return SelectedPathAutomation.unsupported("selected_parent_directory_not_available", configuredPath, null, false);
+    }
+    boolean safeUnderRequestedDirectory = selectedParentReal.startsWith(requestedDirectory);
+    if (!safeUnderRequestedDirectory) {
+      return SelectedPathAutomation.unsupported(
+          "selected_path_outside_requested_directory",
+          configuredPath,
+          null,
+          false);
+    }
+    return SelectedPathAutomation.accepted(configuredPath, selectedPath.toFile());
+  }
+
+  private static Path addExtensionIfMissing(Path path, String extension) {
+    if (extension == null || extension.isBlank()) {
+      return path;
+    }
+    Path fileName = path.getFileName();
+    if (fileName == null || fileName.toString().endsWith("." + extension)) {
+      return path;
+    }
+    Path parent = path.getParent();
+    Path fileNameWithExtension = Path.of(fileName + "." + extension);
+    return parent == null ? fileNameWithExtension : parent.resolve(fileNameWithExtension);
+  }
+
+  private static String selectedPathAutomationJson(SelectedPathAutomation selectedPathAutomation) {
+    SelectedPathAutomation value =
+        selectedPathAutomation == null ? SelectedPathAutomation.inactive() : selectedPathAutomation;
+    return "{\n"
+        + "    \"property\": \"" + SAVE_DIALOG_SELECTED_PATH_PROPERTY + "\",\n"
+        + "    \"status\": \"" + value.status() + "\",\n"
+        + "    \"reason\": \"" + value.reason() + "\",\n"
+        + "    \"configured_path\": " + stringJson(value.configuredPath()) + ",\n"
+        + "    \"selected_file\": " + fileJson(value.selectedFile()) + ",\n"
+        + "    \"safe_under_requested_directory\": " + booleanJson(value.safeUnderRequestedDirectory()) + ",\n"
+        + "    \"reporting_summary\": \"" + escapeJson(selectedPathAutomationSummary(value.reason())) + "\"\n"
+        + "  }";
+  }
+
+  private static String selectedPathAutomationSummary(String reason) {
+    return switch (reason) {
+      case "inactive" -> "No selected Save path automation property was configured.";
+      case "selected_path_property_accepted" -> "FileDialogUtilities.showSaveFileDialog returned the opt-in selected Save path without opening a desktop dialog.";
+      case "missing_requested_directory" -> "Selected Save path automation requires the Save dialog request to include a directory.";
+      case "requested_directory_not_available" -> "Selected Save path automation requires the requested Save directory to exist.";
+      case "selected_path_invalid" -> "Configured selected Save path is not a valid local path.";
+      case "selected_path_not_absolute" -> "Configured selected Save path must be absolute.";
+      case "selected_parent_directory_not_available" -> "Configured selected Save path must have an existing parent directory.";
+      case "selected_path_is_symbolic_link" -> "Configured selected Save path must not be a symbolic link.";
+      case "selected_path_outside_requested_directory" -> "Configured selected Save path must stay under the requested directory.";
+      default -> "Selected Save path automation was not accepted.";
+    };
+  }
+
+  private record SelectedPathAutomation(
+      String status,
+      String reason,
+      String configuredPath,
+      File selectedFile,
+      Boolean safeUnderRequestedDirectory) {
+    static SelectedPathAutomation inactive() {
+      return new SelectedPathAutomation("inactive", "inactive", null, null, null);
+    }
+
+    static SelectedPathAutomation accepted(String configuredPath, File selectedFile) {
+      return new SelectedPathAutomation(
+          "selected_path_injected",
+          "selected_path_property_accepted",
+          configuredPath,
+          selectedFile,
+          true);
+    }
+
+    static SelectedPathAutomation unsupported(
+        String reason,
+        String configuredPath,
+        File selectedFile,
+        boolean safeUnderRequestedDirectory) {
+      return new SelectedPathAutomation(
+          "unsupported",
+          reason,
+          configuredPath,
+          selectedFile,
+          safeUnderRequestedDirectory);
+    }
+
+    boolean isConfigured() {
+      return !"inactive".equals(this.status);
+    }
   }
 
   private static String fileJson(File file) {
