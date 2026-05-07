@@ -94,6 +94,10 @@ public abstract class AbstractSaveOperation extends UriActionOperation {
         this.getExtension(),
         true,
         true);
+    if (SaveOperationCompletionEvidence.isSaveActionInvocationProofOnly()) {
+      activity.cancel();
+      return;
+    }
     SaveOperationFlow.Result result = SaveOperationFlow.run(new SaveOperationFlow.Context() {
       @Override
       public File getCurrentFile() {

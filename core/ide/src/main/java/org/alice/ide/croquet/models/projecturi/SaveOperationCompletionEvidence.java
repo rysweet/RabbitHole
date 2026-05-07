@@ -10,6 +10,7 @@ import java.util.Objects;
 
 final class SaveOperationCompletionEvidence {
   static final String EVIDENCE_DIR_PROPERTY = "org.alice.eatme.saveOperationEvidenceDir";
+  static final String PROOF_ONLY_PROPERTY = "org.alice.eatme.saveActionInvocationProofOnly";
   static final String ARTIFACT = "desktop-save-operation-result.json";
   static final String DIALOG_CONTROL_ARTIFACT = "desktop-save-dialog-control-target.json";
   static final String SAVE_ACTION_INVOCATION_PROOF_ARTIFACT = "desktop-save-action-invocation-proof.json";
@@ -27,6 +28,10 @@ final class SaveOperationCompletionEvidence {
     } catch (IOException | RuntimeException ex) {
       Logger.throwable(ex, "eatme Save operation completion evidence write failed: " + evidenceDir);
     }
+  }
+
+  static boolean isSaveActionInvocationProofOnly() {
+    return Boolean.getBoolean(PROOF_ONLY_PROPERTY);
   }
 
   static void recordSaveActionInvocation(
@@ -238,11 +243,7 @@ final class SaveOperationCompletionEvidence {
         + "    \"required\": \"active StageIDE with ProjectDocumentFrame before AbstractSaveOperation can request the production Save dialog\"\n"
         + "  },\n"
         + "  \"reporting_summary\": \"" + escapeJson(saveActionReportingSummary(reason)) + "\",\n"
-        + "  \"requiresNextEvidence\": [\n"
-        + "    \"invoke SaveProjectOperation from a running Alice desktop with StageIDE.getActiveInstance() resolved\",\n"
-        + "    \"desktop Save dialog discovery artifact with target_resolved\",\n"
-        + "    \"selected Save path supplied by UI automation\"\n"
-        + "  ],\n"
+        + saveActionRequiresNextEvidenceJson(reason)
         + "  \"doesNotClaim\": [\n"
         + "    \"desktop Save menu item was clicked\",\n"
         + "    \"Save dialog displayed\",\n"
@@ -280,6 +281,30 @@ final class SaveOperationCompletionEvidence {
       case "missing_project_document_frame" -> "The Save action invocation path found an active StageIDE, but no ProjectDocumentFrame was available to own the Save dialog.";
       default -> "The Save action invocation reached the production Save operation owner; dialog display/control still require FileDialogUtilities evidence.";
     };
+  }
+
+  private static String saveActionRequiresNextEvidenceJson(String reason) {
+    if ("save_action_invoked".equals(reason)) {
+      return "  \"requiresNextEvidence\": [\n"
+          + "    \"desktop Save dialog discovery artifact with target_resolved\",\n"
+          + "    \"desktop Save dialog control result artifact\",\n"
+          + "    \"selected Save path supplied by UI automation\"\n"
+          + "  ],\n";
+    }
+    if ("missing_project_document_frame".equals(reason)) {
+      return "  \"requiresNextEvidence\": [\n"
+          + "    \"invoke SaveProjectOperation from an initialized Alice desktop with a ProjectDocumentFrame\",\n"
+          + "    \"desktop Save dialog discovery artifact with target_resolved\",\n"
+          + "    \"desktop Save dialog control result artifact\",\n"
+          + "    \"selected Save path supplied by UI automation\"\n"
+          + "  ],\n";
+    }
+    return "  \"requiresNextEvidence\": [\n"
+        + "    \"invoke SaveProjectOperation from a running Alice desktop with StageIDE.getActiveInstance() resolved\",\n"
+        + "    \"desktop Save dialog discovery artifact with target_resolved\",\n"
+        + "    \"desktop Save dialog control result artifact\",\n"
+        + "    \"selected Save path supplied by UI automation\"\n"
+        + "  ],\n";
   }
 
   private static String savedFileJson(SaveOperationFlow.Result result) {
