@@ -12,6 +12,7 @@ import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
+import org.lgna.project.ast.ParameterAccess;
 import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserArrayType;
@@ -275,6 +276,25 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithParameterReturnMethodBodyCreatesParameterAccess() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { WholeNumber count(WholeNumber value) { return value; } }");
+
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("count", method.getName());
+    assertEquals(1, method.getRequiredParameters().size());
+    UserParameter parameter = method.getRequiredParameters().get(0);
+    assertEquals("value", parameter.getName());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertTrue(returnStatement.expression.getValue() instanceof ParameterAccess);
+    ParameterAccess access = (ParameterAccess) returnStatement.expression.getValue();
+    assertSame(parameter, access.parameter.getValue());
+  }
+
+  @Test
   public void decodeClassWithNonLiteralReturnMethodBodyReportsUnsupportedReturnExpression() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -282,6 +302,28 @@ public class TweedleEncoderDecoderTest {
 
     assertTrue(thrown.getMessage().contains("method return expressions"));
     assertTrue(thrown.getMessage().contains("count"));
+  }
+
+  @Test
+  public void decodeClassWithUnknownIdentifierReturnMethodBodyReportsUnsupportedReturnIdentifier() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber count(WholeNumber value) { return missing; } }"));
+
+    assertTrue(thrown.getMessage().contains("method return identifiers"));
+    assertTrue(thrown.getMessage().contains("missing"));
+    assertTrue(thrown.getMessage().contains("count"));
+  }
+
+  @Test
+  public void decodeClassWithMismatchedParameterReturnMethodBodyReportsTypeError() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { TextString label(WholeNumber value) { return value; } }"));
+
+    assertTrue(thrown.getMessage().contains("return identifier type is not assignable"));
+    assertTrue(thrown.getMessage().contains("label"));
+    assertTrue(thrown.getMessage().contains("value"));
   }
 
   @Test
