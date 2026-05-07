@@ -525,6 +525,50 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithResourceFieldInitializerProgramTypeIsRejectedWithoutPartialProgramDecode() throws Exception {
+    ImageResource imageResource = generatedImageResource("historical-world-program-texture.png", 0xFF996633);
+    File projectArchive = temporaryFolder.newFile("generated-json-player-resource-field-initializer-program-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithResourceInitializer",
+        "class GeneratedProgramWithResourceInitializer extends SProgram { ImageResource texture <- \""
+            + imageResource.getName()
+            + "\"; }",
+        "GeneratedResourceInitializerScene",
+        "class GeneratedResourceInitializerScene extends SScene {}",
+        imageResource);
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithResourceInitializer",
+          "src/GeneratedProgramWithResourceInitializer.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedResourceInitializerScene",
+          "src/GeneratedResourceInitializerScene.twe");
+      assertImageReference(
+          manifest,
+          imageResource.getId(),
+          imageResource.getName(),
+          "resources/" + imageResource.getName());
+      ZipEntry programTypeEntry = zipFile.getEntry("src/GeneratedProgramWithResourceInitializer.twe");
+      assertNotNull("Generated JSON .a3w fixture should contain the resource-initializer program type source",
+          programTypeEntry);
+      assertTrue(readEntry(zipFile, programTypeEntry).contains(
+          "ImageResource texture <- \"" + imageResource.getName() + "\""));
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains(
+        "Project archive manifest names program type 'GeneratedProgramWithResourceInitializer'"));
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains(
+        "decoded type names are [GeneratedResourceInitializerScene]"));
+  }
+
+  @Test
   public void generatedJsonPlayerArchiveWithResourceFieldInitializerSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
     ImageResource imageResource = generatedImageResource("historical-world-sibling-texture.png", 0xFF993366);
     File projectArchive = temporaryFolder.newFile("generated-json-player-resource-field-initializer-sibling-boundary.a3w");
