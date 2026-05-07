@@ -317,7 +317,11 @@ public class ProjectCodeGenerator {
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 // If this project will not build and run make sure it is using
 // a JDK that includes JavaFX, such as Bellsoft's Liberica JDK.
@@ -325,6 +329,7 @@ public class AliceJavaFXLauncher extends Application {
     private static final String EVIDENCE_PREFIX = "ALICE_LAUNCHER_EVIDENCE";
     private static final String NO_GO_PREFIX = "ALICE_LAUNCHER_NO_GO";
     private static final String RENDER_OBSERVATION_PREFIX = "ALICE_LAUNCHER_RENDER_OBSERVATION";
+    private static final Color OBSERVATION_MARKER_COLOR = Color.rgb(32, 96, 160);
     private static String[] startingArgs;
 
     @Override
@@ -341,8 +346,9 @@ public class AliceJavaFXLauncher extends Application {
             return;
         }
         evidence("stage-received");
-        primaryStage.setScene(new Scene(new Group()));
-        evidence("scene-configured rendering-not-asserted");
+        Scene scene = createObservationScene();
+        primaryStage.setScene(scene);
+        evidence("scene-configured observation-marker");
         evidence("stage-show-attempted");
         try {
             primaryStage.show();
@@ -369,13 +375,85 @@ public class AliceJavaFXLauncher extends Application {
             noGo("render-target-unavailable");
             return;
         }
+        PixelObservation pixelObservation = observeShownScenePixel(scene);
         renderObservation(
-                "target-showing-pixels-not-observed",
+                pixelObservation.status,
                 true,
-                false,
-                "pixel-observation-hook",
-                "Launcher has no JavaFX scene snapshot or screen capture hook; visible pixels are not asserted.");
-        evidence("render-target-ready pixels-not-observed");
+                pixelObservation.pixelsObserved,
+                pixelObservation.missingObservationMechanism,
+                pixelObservation.detail);
+        if (pixelObservation.pixelsObserved) {
+            evidence("pixels-observed shown-stage-marker");
+        } else {
+            noGo(pixelObservation.status);
+            evidence("render-target-ready pixels-not-observed");
+            return;
+        }
+        delegateProgramMain();
+    }
+
+    private static Scene createObservationScene() {
+        Group root = new Group(new Rectangle(64.0, 64.0, OBSERVATION_MARKER_COLOR));
+        return new Scene(root, 64.0, 64.0, OBSERVATION_MARKER_COLOR);
+    }
+
+    private static PixelObservation observeShownScenePixel(Scene scene) {
+        try {
+            Window window = scene.getWindow();
+            if (window == null) {
+                return PixelObservation.notObserved(
+                        "pixel-observation-unavailable",
+                        "stage-window-screen-bounds",
+                        "Shown Scene did not expose a Window for screen coordinate sampling.");
+            }
+            double sampleX = 8.0;
+            double sampleY = 8.0;
+            if ((scene.getWidth() <= sampleX) || (scene.getHeight() <= sampleY)) {
+                return PixelObservation.notObserved(
+                        "pixel-observation-unavailable",
+                        "stage-window-screen-bounds",
+                        "Shown Scene dimensions were too small for the launcher marker sample point.");
+            }
+            double screenX = window.getX() + scene.getX() + sampleX;
+            double screenY = window.getY() + scene.getY() + sampleY;
+            if (!Double.isFinite(screenX) || !Double.isFinite(screenY)) {
+                return PixelObservation.notObserved(
+                        "pixel-observation-unavailable",
+                        "stage-window-screen-bounds",
+                        "Shown Scene did not provide finite screen coordinates for pixel sampling.");
+            }
+            Robot robot = new Robot();
+            Color observedColor = robot.getPixelColor(screenX, screenY);
+            if (observedColor == null) {
+                return PixelObservation.notObserved(
+                        "pixel-observation-unavailable",
+                        "javafx.scene.robot.Robot",
+                        "JavaFX Robot returned no color for the shown Scene sample point.");
+            }
+            if (matchesObservationMarker(observedColor)) {
+                return PixelObservation.observed(
+                        "Screen capture sampled launcher marker at "
+                                + coordinateDetail(screenX, screenY)
+                                + " with color " + colorDetail(observedColor) + ".");
+            }
+            return PixelObservation.notObserved(
+                    "pixel-observation-mismatch",
+                    "expected-observation-marker-pixel",
+                    "Screen capture sampled " + colorDetail(observedColor)
+                            + " at " + coordinateDetail(screenX, screenY)
+                            + " instead of launcher marker " + colorDetail(OBSERVATION_MARKER_COLOR) + ".");
+        } catch (RuntimeException | Error pixelFailure) {
+            if (isPixelObservationUnsupportedFailure(pixelFailure)) {
+                return PixelObservation.notObserved(
+                        "pixel-observation-unsupported",
+                        "javafx.scene.robot.Robot",
+                        "JavaFX Robot screen capture was unavailable: " + describeFailure(pixelFailure));
+            }
+            throw pixelFailure;
+        }
+    }
+
+    private static void delegateProgramMain() {
         Thread thread = new Thread(() -> {
             evidence("program-main-delegated rendering-not-asserted");
             Program.main(startingArgs);
@@ -408,6 +486,57 @@ public class AliceJavaFXLauncher extends Application {
                 + "}");
     }
 
+    private static final class PixelObservation {
+        private final String status;
+        private final boolean pixelsObserved;
+        private final String missingObservationMechanism;
+        private final String detail;
+
+        private PixelObservation(
+                String status,
+                boolean pixelsObserved,
+                String missingObservationMechanism,
+                String detail) {
+            this.status = status;
+            this.pixelsObserved = pixelsObserved;
+            this.missingObservationMechanism = missingObservationMechanism;
+            this.detail = detail;
+        }
+
+        private static PixelObservation observed(String detail) {
+            return new PixelObservation(
+                    "shown-target-pixel-observed",
+                    true,
+                    "none",
+                    detail);
+        }
+
+        private static PixelObservation notObserved(
+                String status,
+                String missingObservationMechanism,
+                String detail) {
+            return new PixelObservation(status, false, missingObservationMechanism, detail);
+        }
+    }
+
+    private static boolean matchesObservationMarker(Color observedColor) {
+        return Math.abs(observedColor.getRed() - OBSERVATION_MARKER_COLOR.getRed()) <= 0.01
+                && Math.abs(observedColor.getGreen() - OBSERVATION_MARKER_COLOR.getGreen()) <= 0.01
+                && Math.abs(observedColor.getBlue() - OBSERVATION_MARKER_COLOR.getBlue()) <= 0.01
+                && observedColor.getOpacity() > 0.99;
+    }
+
+    private static String colorDetail(Color color) {
+        return "rgb("
+                + Math.round(color.getRed() * 255.0) + ","
+                + Math.round(color.getGreen() * 255.0) + ","
+                + Math.round(color.getBlue() * 255.0) + ")";
+    }
+
+    private static String coordinateDetail(double screenX, double screenY) {
+        return "(" + Math.round(screenX) + "," + Math.round(screenY) + ")";
+    }
+
     private static String jsonField(String name, String value) {
         return (char) 34 + name + (char) 34 + ':' + (char) 34 + escapeJson(value) + (char) 34;
     }
@@ -427,6 +556,37 @@ public class AliceJavaFXLauncher extends Application {
             }
         }
         return builder.toString();
+    }
+
+    private static boolean isPixelObservationUnsupportedFailure(Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if ((current instanceof UnsupportedOperationException)
+                    || "java.awt.HeadlessException".equals(current.getClass().getName())
+                    || "java.lang.NoClassDefFoundError".equals(current.getClass().getName())
+                    || "java.lang.NoSuchMethodError".equals(current.getClass().getName())) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase(java.util.Locale.ROOT);
+                if (normalized.contains("robot")
+                        || normalized.contains("screen capture")
+                        || normalized.contains("unable to open display")
+                        || normalized.contains("no display")
+                        || normalized.contains("headless")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static String describeFailure(Throwable throwable) {
+        String message = throwable.getMessage();
+        if ((message == null) || message.isBlank()) {
+            return throwable.getClass().getName();
+        }
+        return throwable.getClass().getName() + ": " + message;
     }
 
     private static boolean isDisplayUnavailableFailure(Throwable throwable) {

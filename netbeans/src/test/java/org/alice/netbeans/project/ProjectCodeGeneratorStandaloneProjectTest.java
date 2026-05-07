@@ -100,19 +100,15 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
           "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
           "ALICE_LAUNCHER_EVIDENCE stage-received",
-          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
           RENDER_OBSERVATION_JSON_PREFIX,
-          "\"status\":\"target-showing-pixels-not-observed\"",
+          "\"status\":\"shown-target-pixel-observed\"",
           "\"renderTargetShowing\":true",
-          "\"pixelsObserved\":false",
-          "\"missingObservationMechanism\":\"pixel-observation-hook\"",
-          "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed");
-      assertTrue(output.contains(
-          "\"detail\":\"Launcher has no JavaFX scene snapshot or screen capture hook; "
-              + "visible pixels are not asserted.\"}"));
-      assertFalse(output.contains("\"pixelsObserved\":true"));
-      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE pixels-observed"));
+          "\"pixelsObserved\":true",
+          "\"missingObservationMechanism\":\"none\"",
+          "ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker");
+      assertFalse(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation"));
     }
   }
 
@@ -153,14 +149,14 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       assertEquals("AliceJavaFXLauncher-ProgramMain", generatedProgramMainThreadName);
       assertOutputContainsInOrder(
           output,
-          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
           RENDER_OBSERVATION_JSON_PREFIX,
-          "\"status\":\"target-showing-pixels-not-observed\"",
+          "\"status\":\"shown-target-pixel-observed\"",
           "\"renderTargetShowing\":true",
-          "\"pixelsObserved\":false",
-          "\"missingObservationMechanism\":\"pixel-observation-hook\"",
-          "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
+          "\"pixelsObserved\":true",
+          "\"missingObservationMechanism\":\"none\"",
+          "ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker",
           "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
     } finally {
       synchronized (GENERATED_PROGRAM_PROBE_LOCK) {
@@ -199,7 +195,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
           "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
           "ALICE_LAUNCHER_EVIDENCE stage-received",
-          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
           RENDER_OBSERVATION_JSON_PREFIX,
           "\"status\":\"render-target-absent\"",
@@ -394,14 +390,14 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
           "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
           "ALICE_LAUNCHER_EVIDENCE stage-received",
-          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker",
           "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
           RENDER_OBSERVATION_JSON_PREFIX,
-          "\"status\":\"target-showing-pixels-not-observed\"",
+          "\"status\":\"shown-target-pixel-observed\"",
           "\"renderTargetShowing\":true",
-          "\"pixelsObserved\":false",
-          "\"missingObservationMechanism\":\"pixel-observation-hook\"",
-          "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
+          "\"pixelsObserved\":true",
+          "\"missingObservationMechanism\":\"none\"",
+          "ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker",
           "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
       return;
     }
@@ -453,14 +449,14 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
         "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
         "ALICE_LAUNCHER_EVIDENCE stage-received",
-        "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+        "ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker",
         "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
         RENDER_OBSERVATION_JSON_PREFIX,
-        "\"status\":\"target-showing-pixels-not-observed\"",
+        "\"status\":\"shown-target-pixel-observed\"",
         "\"renderTargetShowing\":true",
-        "\"pixelsObserved\":false",
-        "\"missingObservationMechanism\":\"pixel-observation-hook\"",
-        "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
+        "\"pixelsObserved\":true",
+        "\"missingObservationMechanism\":\"none\"",
+        "ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker",
         "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
   }
 
@@ -642,6 +638,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           }
         }
         """);
+    writeShownJavaFxPixelObservationStubs(sourceDirectory);
   }
 
   private static void writeProgramMarkerSource(Path sourceDirectory) throws Exception {
@@ -785,6 +782,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           }
         }
         """);
+    writeShownJavaFxPixelObservationStubs(sourceDirectory);
   }
 
   private static void writeJavaFxRenderTargetUnavailableStubs(Path sourceDirectory) throws Exception {
@@ -848,6 +846,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           }
         }
         """);
+    writeRenderTargetUnavailableJavaFxPixelObservationStubs(sourceDirectory);
   }
 
   private static void writeJavaFxDisplayUnavailableStubs(Path sourceDirectory) throws Exception {
@@ -896,6 +895,190 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
 
         public class Scene {
           public Scene(Group root) {
+          }
+        }
+        """);
+    writeShownJavaFxPixelObservationStubs(sourceDirectory);
+  }
+
+  private static void writeShownJavaFxPixelObservationStubs(Path sourceDirectory) throws Exception {
+    writeJavaFxPixelObservationStubs(
+        sourceDirectory,
+        """
+        package javafx.stage;
+
+        public class Stage extends Window {
+          public static volatile boolean sceneConfigured;
+          public static volatile boolean showInvoked;
+          public static volatile boolean showing;
+
+          public void setScene(javafx.scene.Scene scene) {
+            sceneConfigured = scene != null;
+            if (scene != null) {
+              scene.setWindow(this);
+            }
+          }
+
+          public void show() {
+            showInvoked = true;
+            showing = true;
+          }
+
+          public boolean isShowing() {
+            return showing;
+          }
+        }
+        """);
+  }
+
+  private static void writeRenderTargetUnavailableJavaFxPixelObservationStubs(Path sourceDirectory) throws Exception {
+    writeJavaFxPixelObservationStubs(
+        sourceDirectory,
+        """
+        package javafx.stage;
+
+        public class Stage extends Window {
+          public void setScene(javafx.scene.Scene scene) {
+            if (scene != null) {
+              scene.setWindow(this);
+            }
+          }
+
+          public void show() {
+            throw new UnsupportedOperationException("No render target available for launcher test");
+          }
+
+          public boolean isShowing() {
+            return false;
+          }
+        }
+        """);
+  }
+
+  private static void writeJavaFxPixelObservationStubs(Path sourceDirectory, String stageSource) throws Exception {
+    writeJavaSource(sourceDirectory.resolve("javafx/stage/Stage.java"), stageSource);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/stage/Window.java"),
+        """
+        package javafx.stage;
+
+        public class Window {
+          public double getX() {
+            return 100.0;
+          }
+
+          public double getY() {
+            return 120.0;
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        """
+        package javafx.scene;
+
+        public class Group {
+          public Group(Object... children) {
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        """
+        package javafx.scene;
+
+        public class Scene {
+          private final double width;
+          private final double height;
+          private javafx.stage.Window window;
+
+          public Scene(Group root, double width, double height, javafx.scene.paint.Color fill) {
+            this.width = width;
+            this.height = height;
+          }
+
+          public double getX() {
+            return 0.0;
+          }
+
+          public double getY() {
+            return 0.0;
+          }
+
+          public double getWidth() {
+            return width;
+          }
+
+          public double getHeight() {
+            return height;
+          }
+
+          public javafx.stage.Window getWindow() {
+            return window;
+          }
+
+          public void setWindow(javafx.stage.Window window) {
+            this.window = window;
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/paint/Color.java"),
+        """
+        package javafx.scene.paint;
+
+        public class Color {
+          private final double red;
+          private final double green;
+          private final double blue;
+          private final double opacity;
+
+          private Color(double red, double green, double blue, double opacity) {
+            this.red = red;
+            this.green = green;
+            this.blue = blue;
+            this.opacity = opacity;
+          }
+
+          public static Color rgb(int red, int green, int blue) {
+            return new Color(red / 255.0, green / 255.0, blue / 255.0, 1.0);
+          }
+
+          public double getRed() {
+            return red;
+          }
+
+          public double getGreen() {
+            return green;
+          }
+
+          public double getBlue() {
+            return blue;
+          }
+
+          public double getOpacity() {
+            return opacity;
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/shape/Rectangle.java"),
+        """
+        package javafx.scene.shape;
+
+        public class Rectangle {
+          public Rectangle(double width, double height, javafx.scene.paint.Color fill) {
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/robot/Robot.java"),
+        """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            return javafx.scene.paint.Color.rgb(32, 96, 160);
           }
         }
         """);

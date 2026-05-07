@@ -77,7 +77,7 @@ public class ProjectCodeGeneratorTest {
   }
 
   @Test
-  public void generatedLauncherDefinesJavaFxHandoffAndRenderReadinessEvidenceWithoutPixelClaims() throws Exception {
+  public void generatedLauncherDefinesJavaFxHandoffAndVisiblePixelObservationEvidence() throws Exception {
     File sourceDirectory = temporaryFolder.newFolder("launcher-evidence-src");
     FileObject launcherFileObject = ProjectCodeGenerator.generateLauncher(sourceDirectory);
     Path launcherPath = sourceDirectory.toPath().resolve(launcherFileObject.getNameExt());
@@ -86,6 +86,10 @@ public class ProjectCodeGeneratorTest {
 
     assertTrue(launcherSource.contains("import javafx.scene.Group;"));
     assertTrue(launcherSource.contains("import javafx.scene.Scene;"));
+    assertTrue(launcherSource.contains("import javafx.scene.paint.Color;"));
+    assertTrue(launcherSource.contains("import javafx.scene.robot.Robot;"));
+    assertTrue(launcherSource.contains("import javafx.scene.shape.Rectangle;"));
+    assertTrue(launcherSource.contains("import javafx.stage.Window;"));
     assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_EVIDENCE\""));
     assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_NO_GO\""));
     assertTrue(launcherSource.contains("\"ALICE_LAUNCHER_RENDER_OBSERVATION\""));
@@ -94,25 +98,102 @@ public class ProjectCodeGeneratorTest {
     assertTrue(launcherSource.contains("Application.launch(args)"));
     assertTrue(launcherSource.contains("evidence(\"javafx-application-started\")"));
     assertTrue(launcherSource.contains("noGo(\"primary-stage-unavailable\")"));
-    assertTrue(launcherSource.contains("primaryStage.setScene(new Scene(new Group()))"));
-    assertTrue(launcherSource.contains("evidence(\"scene-configured rendering-not-asserted\")"));
+    assertTrue(launcherSource.contains("private static final Color OBSERVATION_MARKER_COLOR"));
+    assertTrue(launcherSource.contains("new Scene(root, 64.0, 64.0, OBSERVATION_MARKER_COLOR)"));
+    assertTrue(launcherSource.contains("new Rectangle(64.0, 64.0, OBSERVATION_MARKER_COLOR)"));
+    assertTrue(launcherSource.contains("evidence(\"scene-configured observation-marker\")"));
     assertTrue(launcherSource.contains("evidence(\"stage-show-attempted\")"));
     assertTrue(launcherSource.contains("primaryStage.show()"));
     assertTrue(launcherSource.contains("primaryStage.isShowing()"));
     assertTrue(launcherSource.contains("renderObservation("));
     assertTrue(launcherSource.contains("jsonField(\"schema_version\", \"alice.launcher.render-observation/v1\")"));
     assertTrue(launcherSource.contains("\"render-target-absent\""));
-    assertTrue(launcherSource.contains("\"target-showing-pixels-not-observed\""));
-    assertTrue(launcherSource.contains("\"pixel-observation-hook\""));
-    assertTrue(launcherSource.contains("evidence(\"render-target-ready pixels-not-observed\")"));
+    assertTrue(launcherSource.contains("\"shown-target-pixel-observed\""));
+    assertTrue(launcherSource.contains("\"pixel-observation-unsupported\""));
+    assertTrue(launcherSource.contains("\"stage-window-screen-bounds\""));
+    assertTrue(launcherSource.contains("Robot robot = new Robot()"));
+    assertTrue(launcherSource.contains("robot.getPixelColor(screenX, screenY)"));
+    assertTrue(launcherSource.contains("evidence(\"pixels-observed shown-stage-marker\")"));
+    assertTrue(launcherSource.contains("noGo(pixelObservation.status)"));
     assertTrue(launcherSource.contains("noGo(\"render-target-unavailable\")"));
     assertTrue(launcherSource.contains("evidence(\"program-main-delegated rendering-not-asserted\")"));
     assertTrue(launcherSource.contains("Program.main(startingArgs)"));
     assertTrue(launcherSource.contains("isDisplayUnavailableFailure"));
     assertTrue(launcherSource.contains("noGo(\"display-unavailable\")"));
-    assertFalse(launcherSource.contains("evidence(\"pixels-observed\")"));
-    assertFalse(launcherSource.contains("\"pixelsObserved\", true"));
-    assertFalse(launcherSource.toLowerCase().contains("rendered"));
+    assertTrue(launcherSource.contains("PixelObservation.observed("));
+    assertFalse(launcherSource.toLowerCase().contains("world pixels observed"));
+  }
+
+  @Test
+  public void generatedLauncherReportsVisiblePixelObservedWhenRobotSamplesMarker() throws Exception {
+    String output = runGeneratedLauncherWithRobot(
+        "launcher-visible-pixel-observed",
+        """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            return javafx.scene.paint.Color.rgb(32, 96, 160);
+          }
+        }
+        """);
+
+    assertTrue(output.contains("ALICE_LAUNCHER_RENDER_OBSERVATION"));
+    assertTrue(output.contains("\"status\":\"shown-target-pixel-observed\""));
+    assertTrue(output.contains("\"renderTargetShowing\":true"));
+    assertTrue(output.contains("\"pixelsObserved\":true"));
+    assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker"));
+    assertFalse(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation"));
+  }
+
+  @Test
+  public void generatedLauncherReportsUnsupportedPixelObservationWithoutPretendingSuccess() throws Exception {
+    String output = runGeneratedLauncherWithRobot(
+        "launcher-visible-pixel-unsupported",
+        """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            throw new UnsupportedOperationException("screen capture unsupported in this runtime");
+          }
+        }
+        """);
+
+    assertTrue(output.contains("ALICE_LAUNCHER_RENDER_OBSERVATION"));
+    assertTrue(output.contains("\"status\":\"pixel-observation-unsupported\""));
+    assertTrue(output.contains("\"renderTargetShowing\":true"));
+    assertTrue(output.contains("\"pixelsObserved\":false"));
+    assertTrue(output.contains("\"missingObservationMechanism\":\"javafx.scene.robot.Robot\""));
+    assertTrue(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation-unsupported"));
+    assertFalse(output.contains("\"status\":\"shown-target-pixel-observed\""));
+    assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker"));
+    assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
+  }
+
+  @Test
+  public void generatedLauncherReportsPixelMismatchWithoutDelegatingProgramMain() throws Exception {
+    String output = runGeneratedLauncherWithRobot(
+        "launcher-visible-pixel-mismatch",
+        """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            return javafx.scene.paint.Color.rgb(255, 0, 0);
+          }
+        }
+        """);
+
+    assertTrue(output.contains("ALICE_LAUNCHER_RENDER_OBSERVATION"));
+    assertTrue(output.contains("\"status\":\"pixel-observation-mismatch\""));
+    assertTrue(output.contains("\"renderTargetShowing\":true"));
+    assertTrue(output.contains("\"pixelsObserved\":false"));
+    assertTrue(output.contains("\"missingObservationMechanism\":\"expected-observation-marker-pixel\""));
+    assertTrue(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation-mismatch"));
+    assertFalse(output.contains("\"status\":\"shown-target-pixel-observed\""));
+    assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker"));
+    assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
   }
 
   @Test
@@ -130,10 +211,57 @@ public class ProjectCodeGeneratorTest {
         assertGeneratedLauncherPassesStartingArgsToProgramMain("launcher-empty-args-runtime", args));
   }
 
+  private String runGeneratedLauncherWithRobot(String folderName, String robotSource) throws Exception {
+    Path sourceDirectory = temporaryFolder.newFolder(folderName + "-src").toPath();
+    ProjectCodeGenerator.generateLauncher(sourceDirectory.toFile());
+    writeProgramMainCaptureStub(sourceDirectory);
+    writeJavaFxApplicationStub(sourceDirectory);
+    writeJavaFxObservationStubs(sourceDirectory, robotSource);
+    Path classesDirectory = temporaryFolder.newFolder(folderName + "-classes").toPath();
+    compileLauncherRuntimeSources(sourceDirectory, classesDirectory);
+
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()},
+        ClassLoader.getPlatformClassLoader())) {
+      Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
+      Class<?> programClass = Class.forName("Program", true, classLoader);
+
+      return captureSystemOut(() -> {
+        launcherClass.getMethod("main", String[].class).invoke(null, (Object) new String[0]);
+        waitForStringArray(programClass.getField("receivedArgs"));
+      });
+    }
+  }
+
   private String[] assertGeneratedLauncherPassesStartingArgsToProgramMain(String folderName, String[] args)
       throws Exception {
     Path sourceDirectory = temporaryFolder.newFolder(folderName + "-src").toPath();
     ProjectCodeGenerator.generateLauncher(sourceDirectory.toFile());
+    writeProgramMainCaptureStub(sourceDirectory);
+    writeJavaFxApplicationStub(sourceDirectory);
+    writeJavaFxObservationStubs(sourceDirectory, defaultRobotSource());
+    Path classesDirectory = temporaryFolder.newFolder(folderName + "-classes").toPath();
+    compileLauncherRuntimeSources(sourceDirectory, classesDirectory);
+
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()},
+        ClassLoader.getPlatformClassLoader())) {
+      Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
+      Class<?> programClass = Class.forName("Program", true, classLoader);
+
+      final String[][] receivedArgs = new String[1][];
+      String output = captureSystemOut(() -> {
+        launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
+        receivedArgs[0] = waitForStringArray(programClass.getField("receivedArgs"));
+      });
+      assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE javafx-application-started"));
+      assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
+      assertArrayEquals(args, receivedArgs[0]);
+      return receivedArgs[0];
+    }
+  }
+
+  private static void writeProgramMainCaptureStub(Path sourceDirectory) throws Exception {
     writeJavaSource(
         sourceDirectory.resolve("Program.java"),
         """
@@ -145,6 +273,9 @@ public class ProjectCodeGeneratorTest {
           }
         }
         """);
+  }
+
+  private static void writeJavaFxApplicationStub(Path sourceDirectory) throws Exception {
     writeJavaSource(
         sourceDirectory.resolve("javafx/application/Application.java"),
         """
@@ -169,20 +300,42 @@ public class ProjectCodeGeneratorTest {
           }
         }
         """);
+  }
+
+  private static void writeJavaFxObservationStubs(Path sourceDirectory, String robotSource) throws Exception {
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/stage/Window.java"),
+        """
+        package javafx.stage;
+
+        public class Window {
+          public double getX() {
+            return 100.0;
+          }
+
+          public double getY() {
+            return 120.0;
+          }
+        }
+        """);
     writeJavaSource(
         sourceDirectory.resolve("javafx/stage/Stage.java"),
         """
         package javafx.stage;
 
-        public class Stage {
+        public class Stage extends Window {
+          private boolean showing;
+
           public void setScene(javafx.scene.Scene scene) {
+            scene.setWindow(this);
           }
 
           public void show() {
+            showing = true;
           }
 
           public boolean isShowing() {
-            return true;
+            return showing;
           }
         }
         """);
@@ -192,6 +345,8 @@ public class ProjectCodeGeneratorTest {
         package javafx.scene;
 
         public class Group {
+          public Group(Object... children) {
+          }
         }
         """);
     writeJavaSource(
@@ -200,36 +355,117 @@ public class ProjectCodeGeneratorTest {
         package javafx.scene;
 
         public class Scene {
-          public Scene(Group root) {
+          private final double width;
+          private final double height;
+          private javafx.stage.Window window;
+
+          public Scene(Group root, double width, double height, javafx.scene.paint.Color fill) {
+            this.width = width;
+            this.height = height;
+          }
+
+          public double getX() {
+            return 0.0;
+          }
+
+          public double getY() {
+            return 0.0;
+          }
+
+          public double getWidth() {
+            return width;
+          }
+
+          public double getHeight() {
+            return height;
+          }
+
+          public javafx.stage.Window getWindow() {
+            return window;
+          }
+
+          public void setWindow(javafx.stage.Window window) {
+            this.window = window;
           }
         }
         """);
-    Path classesDirectory = temporaryFolder.newFolder(folderName + "-classes").toPath();
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/paint/Color.java"),
+        """
+        package javafx.scene.paint;
+
+        public class Color {
+          private final double red;
+          private final double green;
+          private final double blue;
+          private final double opacity;
+
+          private Color(double red, double green, double blue, double opacity) {
+            this.red = red;
+            this.green = green;
+            this.blue = blue;
+            this.opacity = opacity;
+          }
+
+          public static Color rgb(int red, int green, int blue) {
+            return new Color(red / 255.0, green / 255.0, blue / 255.0, 1.0);
+          }
+
+          public double getRed() {
+            return red;
+          }
+
+          public double getGreen() {
+            return green;
+          }
+
+          public double getBlue() {
+            return blue;
+          }
+
+          public double getOpacity() {
+            return opacity;
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/shape/Rectangle.java"),
+        """
+        package javafx.scene.shape;
+
+        public class Rectangle {
+          public Rectangle(double width, double height, javafx.scene.paint.Color fill) {
+          }
+        }
+        """);
+    writeJavaSource(sourceDirectory.resolve("javafx/scene/robot/Robot.java"), robotSource);
+  }
+
+  private static String defaultRobotSource() {
+    return """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            return javafx.scene.paint.Color.rgb(32, 96, 160);
+          }
+        }
+        """;
+  }
+
+  private static void compileLauncherRuntimeSources(Path sourceDirectory, Path classesDirectory) throws Exception {
     compileJavaSources(
         classesDirectory,
         sourceDirectory.resolve("AliceJavaFXLauncher.java"),
         sourceDirectory.resolve("Program.java"),
         sourceDirectory.resolve("javafx/application/Application.java"),
         sourceDirectory.resolve("javafx/stage/Stage.java"),
+        sourceDirectory.resolve("javafx/stage/Window.java"),
         sourceDirectory.resolve("javafx/scene/Group.java"),
-        sourceDirectory.resolve("javafx/scene/Scene.java"));
-
-    try (URLClassLoader classLoader = new URLClassLoader(
-        new URL[] {classesDirectory.toUri().toURL()},
-        ClassLoader.getPlatformClassLoader())) {
-      Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
-      Class<?> programClass = Class.forName("Program", true, classLoader);
-
-      final String[][] receivedArgs = new String[1][];
-      String output = captureSystemOut(() -> {
-        launcherClass.getMethod("main", String[].class).invoke(null, (Object) args);
-        receivedArgs[0] = waitForStringArray(programClass.getField("receivedArgs"));
-      });
-      assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE javafx-application-started"));
-      assertTrue(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
-      assertArrayEquals(args, receivedArgs[0]);
-      return receivedArgs[0];
-    }
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        sourceDirectory.resolve("javafx/scene/paint/Color.java"),
+        sourceDirectory.resolve("javafx/scene/shape/Rectangle.java"),
+        sourceDirectory.resolve("javafx/scene/robot/Robot.java"));
   }
 
   @Test
