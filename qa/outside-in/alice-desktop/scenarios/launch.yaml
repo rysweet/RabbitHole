@@ -32,6 +32,7 @@ evidence:
     - Launch log containing Alice startup output.
     - Screenshot of the Alice desktop window or first ready project shell.
     - x-window-inventory.json naming visible X window title, class, process, and geometry after launch readiness wait.
+    - application-root-error.json when a Java window titled Application Root Error appears before the Alice desktop.
     - controlled-display-pixel-observation.json naming observed controlled-display pixels or the exact display/Xvfb blocker.
     - Exit, status, or timeout record.
     - Environment summary with Java version, Maven version, and DISPLAY value.

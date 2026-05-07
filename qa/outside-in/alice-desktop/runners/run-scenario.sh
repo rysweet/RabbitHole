@@ -697,6 +697,13 @@ print(value)
 PY
 }
 
+write_application_root_error_probe() {
+  local inventory_path=$1
+  local output_path=$2
+
+  python3 "$SCRIPT_DIR/application-root-error-probe.py" "$inventory_path" "$output_path"
+}
+
 select_display() {
   if [ -n "${ALICE_QA_DISPLAY:-}" ]; then
     printf '%s\n' "$ALICE_QA_DISPLAY"
@@ -990,9 +997,12 @@ run_xvfb_real_alice() {
   fi
 
   collect_x_window_inventory "$run_dir" "$display" after-readiness-wait "$alice_pid"
-  local window_inventory_status alice_window_candidate_count
+  write_application_root_error_probe "$run_dir/x-window-inventory.json" "$run_dir/application-root-error.json"
+  local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker
   window_inventory_status=$(inventory_json_field "$run_dir/x-window-inventory.json" status)
   alice_window_candidate_count=$(inventory_json_field "$run_dir/x-window-inventory.json" aliceWindowCandidateCount)
+  application_root_error_status=$(inventory_json_field "$run_dir/application-root-error.json" status)
+  application_root_error_blocker=$(inventory_json_field "$run_dir/application-root-error.json" blocker)
 
   local screenshot_tool screenshot_status
   screenshot_tool=$(screenshot_tool_name)
@@ -1017,6 +1027,9 @@ run_xvfb_real_alice() {
     printf 'windowInventory=%s\n' x-window-inventory.json
     printf 'windowInventoryStatus=%s\n' "$window_inventory_status"
     printf 'aliceWindowCandidateCount=%s\n' "$alice_window_candidate_count"
+    printf 'applicationRootError=%s\n' application-root-error.json
+    printf 'applicationRootErrorStatus=%s\n' "$application_root_error_status"
+    printf 'applicationRootErrorBlocker=%s\n' "$application_root_error_blocker"
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
@@ -1057,6 +1070,12 @@ run_xvfb_real_alice() {
     observation_status=blocked
     observation_blocker=application-exited-before-window-ready
     observation_detail="Alice launch process exited before window readiness; inspect launch.log."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$application_root_error_status" = observed ]; then
+    observation_status=blocked
+    observation_blocker="$application_root_error_blocker"
+    observation_detail="A Java window titled Application Root Error was observed before any Alice desktop candidate; inspect application-root-error.json for exact expected dialog text and next invocation change."
     pixels_observed=false
     observation_claim=no-visible-pixel-proof
   elif [ "$ready_status" != alice-window-found ]; then
