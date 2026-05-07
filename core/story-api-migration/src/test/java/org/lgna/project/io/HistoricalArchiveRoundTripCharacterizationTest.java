@@ -185,6 +185,49 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithMethodBearingSiblingTypeReadsProjectAndOmitsUnsupportedSibling() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-method-sibling-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithMethodSiblingBoundary",
+        "class GeneratedProgramWithMethodSiblingBoundary extends SProgram { WholeNumber count; }",
+        "GeneratedMethodSiblingBoundaryScene",
+        "class GeneratedMethodSiblingBoundaryScene extends SScene { WholeNumber count() { return 1; } }");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithMethodSiblingBoundary",
+          "src/GeneratedProgramWithMethodSiblingBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedMethodSiblingBoundaryScene",
+          "src/GeneratedMethodSiblingBoundaryScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedMethodSiblingBoundaryScene.twe");
+      assertNotNull(
+          "Generated JSON .a3w fixture should contain the method-bearing sibling type source",
+          siblingTypeEntry);
+      assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count()"));
+    }
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    assertNotNull("Project read should succeed when only a non-program sibling type is unsupported", readProject);
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Decodable manifest program type should be available", readProgramType);
+    assertEquals("GeneratedProgramWithMethodSiblingBoundary", readProgramType.getName());
+    assertTrue(
+        "Decoded named user types should include the decodable program type",
+        readProject.getNamedUserTypes().stream()
+            .anyMatch(type -> "GeneratedProgramWithMethodSiblingBoundary".equals(type.getName())));
+    assertFalse(
+        "Unsupported method-bearing sibling type should be omitted from decoded named user types",
+        readProject.getNamedUserTypes().stream()
+            .anyMatch(type -> "GeneratedMethodSiblingBoundaryScene".equals(type.getName())));
+  }
+
+  @Test
   public void constructorBearingJsonA3wProgramTypeIsRejected() throws Exception {
     File projectArchive = temporaryFolder.newFile("constructor-bearing-json-a3w-program-boundary.a3w");
 
