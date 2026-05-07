@@ -88,13 +88,17 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       assertArrayEquals(args, (String[]) applicationClass.getField("launchedArgs").get(null));
       assertTrue((Boolean) applicationClass.getField("startInvoked").get(null));
       assertTrue((Boolean) stageClass.getField("sceneConfigured").get(null));
+      assertTrue((Boolean) stageClass.getField("showInvoked").get(null));
+      assertTrue((Boolean) stageClass.getField("showing").get(null));
       assertOutputContainsInOrder(
           output,
           "ALICE_LAUNCHER_EVIDENCE main-entered",
           "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
           "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
           "ALICE_LAUNCHER_EVIDENCE stage-received",
-          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted");
+          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed");
       assertFalse(output.contains("visible"));
       assertFalse(output.contains("rendered"));
       assertFalse(output.contains("shown"));
@@ -139,6 +143,8 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       assertOutputContainsInOrder(
           output,
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
           "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
     } finally {
       synchronized (GENERATED_PROGRAM_PROBE_LOCK) {
@@ -147,6 +153,51 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         generatedProgramMainLatch = null;
       }
     }
+  }
+
+  @Test
+  public void generatedLauncherReportsRenderTargetUnavailableWhenStageShowCannotPresent() throws Exception {
+    Path projectDirectory = temporaryFolder.newFolder("launcher-render-target-unavailable-project").toPath();
+    Path sourceDirectory = projectDirectory.resolve("src");
+    Files.createDirectories(sourceDirectory);
+
+    ProjectCodeGenerator.generateLauncher(sourceDirectory.toFile());
+    writeProgramUnexpectedRunMarkerSource(sourceDirectory);
+    writeJavaFxRenderTargetUnavailableStubs(sourceDirectory);
+
+    Path classesDirectory = projectDirectory.resolve("build").resolve("classes");
+    compileJavaSources(classesDirectory, javaSourcesUnder(sourceDirectory));
+
+    Path programMarker = projectDirectory.resolve("program-main-marker.txt");
+    String previousMarker = System.getProperty("alice.test.program.marker");
+    System.setProperty("alice.test.program.marker", programMarker.toAbsolutePath().normalize().toString());
+    try (GeneratedProjectClassLoader classLoader = new GeneratedProjectClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()})) {
+      Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
+
+      String output = captureSystemOut(() ->
+          launcherClass.getMethod("main", String[].class).invoke(null, (Object) new String[] {"render-target"}));
+      assertOutputContainsInOrder(
+          output,
+          "ALICE_LAUNCHER_EVIDENCE main-entered",
+          "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+          "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
+          "ALICE_LAUNCHER_EVIDENCE stage-received",
+          "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          "ALICE_LAUNCHER_NO_GO render-target-unavailable");
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE render-target-ready"));
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated"));
+    } finally {
+      if (previousMarker == null) {
+        System.clearProperty("alice.test.program.marker");
+      } else {
+        System.setProperty("alice.test.program.marker", previousMarker);
+      }
+    }
+    assertFalse(
+        "Program.main must not run when the generated launcher cannot present a render target",
+        Files.exists(programMarker));
   }
 
   @Test
@@ -316,6 +367,8 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
           "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
           "ALICE_LAUNCHER_EVIDENCE stage-received",
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+          "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+          "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
           "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
       return;
     }
@@ -368,6 +421,8 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         "ALICE_LAUNCHER_EVIDENCE javafx-application-started",
         "ALICE_LAUNCHER_EVIDENCE stage-received",
         "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
+        "ALICE_LAUNCHER_EVIDENCE stage-show-attempted",
+        "ALICE_LAUNCHER_EVIDENCE render-target-ready pixels-not-observed",
         "ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted");
   }
 
@@ -514,9 +569,20 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
 
         public class Stage {
           public static volatile boolean sceneConfigured;
+          public static volatile boolean showInvoked;
+          public static volatile boolean showing;
 
           public void setScene(javafx.scene.Scene scene) {
             sceneConfigured = scene != null;
+          }
+
+          public void show() {
+            showInvoked = true;
+            showing = true;
+          }
+
+          public boolean isShowing() {
+            return showing;
           }
         }
         """);
@@ -654,6 +720,76 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         public class Stage {
           public void setScene(javafx.scene.Scene scene) {
           }
+
+          public void show() {
+          }
+
+          public boolean isShowing() {
+            return true;
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        """
+        package javafx.scene;
+
+        public class Group {
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        """
+        package javafx.scene;
+
+        public class Scene {
+          public Scene(Group root) {
+          }
+        }
+        """);
+  }
+
+  private static void writeJavaFxRenderTargetUnavailableStubs(Path sourceDirectory) throws Exception {
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/application/Application.java"),
+        """
+        package javafx.application;
+
+        public abstract class Application {
+          public abstract void start(javafx.stage.Stage stage) throws Exception;
+
+          public static void launch(String[] args) {
+            try {
+              String callerClassName = StackWalker
+                  .getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+                  .walk(frames -> frames.skip(1).findFirst().orElseThrow().getDeclaringClass().getName());
+              Application application = (Application) Class
+                  .forName(callerClassName)
+                  .getDeclaredConstructor()
+                  .newInstance();
+              application.start(new javafx.stage.Stage());
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/stage/Stage.java"),
+        """
+        package javafx.stage;
+
+        public class Stage {
+          public void setScene(javafx.scene.Scene scene) {
+          }
+
+          public void show() {
+            throw new UnsupportedOperationException("No render target available for launcher test");
+          }
+
+          public boolean isShowing() {
+            return false;
+          }
         }
         """);
     writeJavaSource(
@@ -697,6 +833,13 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
 
         public class Stage {
           public void setScene(javafx.scene.Scene scene) {
+          }
+
+          public void show() {
+          }
+
+          public boolean isShowing() {
+            return true;
           }
         }
         """);

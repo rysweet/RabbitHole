@@ -336,6 +336,21 @@ public class AliceJavaFXLauncher extends Application {
         evidence("stage-received");
         primaryStage.setScene(new Scene(new Group()));
         evidence("scene-configured rendering-not-asserted");
+        evidence("stage-show-attempted");
+        try {
+            primaryStage.show();
+        } catch (RuntimeException | Error showFailure) {
+            if (isRenderTargetUnavailableFailure(showFailure)) {
+                noGo("render-target-unavailable");
+                return;
+            }
+            throw showFailure;
+        }
+        if (!primaryStage.isShowing()) {
+            noGo("render-target-unavailable");
+            return;
+        }
+        evidence("render-target-ready pixels-not-observed");
         Thread thread = new Thread(() -> {
             evidence("program-main-delegated rendering-not-asserted");
             Program.main(startingArgs);
@@ -362,6 +377,28 @@ public class AliceJavaFXLauncher extends Application {
             }
         }
         return false;
+    }
+
+    private static boolean isRenderTargetUnavailableFailure(Throwable throwable) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (current instanceof UnsupportedOperationException
+                    && isRenderTargetUnavailableMessage(current.getMessage())) {
+                return true;
+            }
+            if ("java.awt.HeadlessException".equals(current.getClass().getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isRenderTargetUnavailableMessage(String message) {
+        if (message == null) {
+            return false;
+        }
+        String normalized = message.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("render target")
+            || isDisplayUnavailableMessage(message);
     }
 
     private static boolean isDisplayUnavailableMessage(String message) {

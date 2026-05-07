@@ -77,7 +77,7 @@ public class ProjectCodeGeneratorTest {
   }
 
   @Test
-  public void generatedLauncherDefinesJavaFxHandoffAndSceneSetupEvidenceWithoutRenderingClaims() throws Exception {
+  public void generatedLauncherDefinesJavaFxHandoffAndRenderReadinessEvidenceWithoutPixelClaims() throws Exception {
     File sourceDirectory = temporaryFolder.newFolder("launcher-evidence-src");
     FileObject launcherFileObject = ProjectCodeGenerator.generateLauncher(sourceDirectory);
     Path launcherPath = sourceDirectory.toPath().resolve(launcherFileObject.getNameExt());
@@ -95,12 +95,15 @@ public class ProjectCodeGeneratorTest {
     assertTrue(launcherSource.contains("noGo(\"primary-stage-unavailable\")"));
     assertTrue(launcherSource.contains("primaryStage.setScene(new Scene(new Group()))"));
     assertTrue(launcherSource.contains("evidence(\"scene-configured rendering-not-asserted\")"));
+    assertTrue(launcherSource.contains("evidence(\"stage-show-attempted\")"));
+    assertTrue(launcherSource.contains("primaryStage.show()"));
+    assertTrue(launcherSource.contains("primaryStage.isShowing()"));
+    assertTrue(launcherSource.contains("evidence(\"render-target-ready pixels-not-observed\")"));
+    assertTrue(launcherSource.contains("noGo(\"render-target-unavailable\")"));
     assertTrue(launcherSource.contains("evidence(\"program-main-delegated rendering-not-asserted\")"));
     assertTrue(launcherSource.contains("Program.main(startingArgs)"));
     assertTrue(launcherSource.contains("isDisplayUnavailableFailure"));
     assertTrue(launcherSource.contains("noGo(\"display-unavailable\")"));
-    assertFalse(launcherSource.contains("primaryStage.show"));
-    assertFalse(launcherSource.contains(".show()"));
     assertFalse(launcherSource.toLowerCase().contains("visible"));
     assertFalse(launcherSource.toLowerCase().contains("rendered"));
     assertFalse(launcherSource.toLowerCase().contains("shown"));
@@ -167,6 +170,13 @@ public class ProjectCodeGeneratorTest {
 
         public class Stage {
           public void setScene(javafx.scene.Scene scene) {
+          }
+
+          public void show() {
+          }
+
+          public boolean isShowing() {
+            return true;
           }
         }
         """);
