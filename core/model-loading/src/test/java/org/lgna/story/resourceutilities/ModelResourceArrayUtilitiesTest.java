@@ -3,16 +3,20 @@ package org.lgna.story.resourceutilities;
 import edu.cmu.cs.dennisc.pattern.Tuple2;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.DataFormatException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ModelResourceArrayUtilitiesTest {
   @Test
@@ -51,5 +55,46 @@ public class ModelResourceArrayUtilitiesTest {
     assertFalse(ModelResourceArrayUtilities.hasArray("TOE", joints));
     assertEquals(Arrays.asList("FINGER_00", "FINGER_01"),
         ModelResourceArrayUtilities.getArrayEntriesFromJointList(joints, null, null, null).get("FINGER"));
+  }
+
+  @Test
+  public void arrayEntriesGroupAcrossCustomNamesBeforeSorting() throws Exception {
+    Map<String, String> customNames = new HashMap<String, String>();
+    customNames.put("LEFT_WHEEL", "WHEEL");
+    customNames.put("RIGHT_WHEEL", "WHEEL");
+
+    Map<String, List<String>> entries = ModelResourceArrayUtilities.getArrayEntries(
+        Arrays.asList("LEFT_WHEEL_01", "RIGHT_WHEEL_00"), customNames, null, null);
+
+    assertEquals(Collections.singleton("WHEEL"), entries.keySet());
+    assertEquals(Arrays.asList("RIGHT_WHEEL_00", "LEFT_WHEEL_01"), entries.get("WHEEL"));
+  }
+
+  @Test
+  public void arrayNameSkipListAppliesAfterCustomMappingAndIgnoresCase() {
+    Map<String, String> customNames = new HashMap<String, String>();
+    customNames.put("FRONT_WHEEL", "Wheel");
+
+    assertNull(ModelResourceArrayUtilities.getArrayNameForJoint(
+        "FRONT_WHEEL_01", customNames, new String[] {"wheel"}));
+  }
+
+  @Test
+  public void arrayEntriesRejectDuplicateResolvedIndices() {
+    PrintStream originalErr = System.err;
+    ByteArrayOutputStream capturedErr = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(capturedErr));
+    try {
+      ModelResourceArrayUtilities.getArrayEntries(
+          Arrays.asList("WHEEL_0", "WHEEL_00"), null, null, null);
+      fail("Expected duplicate resolved array indices to be rejected");
+    } catch (DataFormatException exception) {
+      assertTrue(exception.getMessage().contains("ERROR COMPARING ARRAY NAME INDICES"));
+      assertTrue(exception.getMessage().contains("WHEEL_0"));
+      assertTrue(exception.getMessage().contains("WHEEL_00"));
+      assertTrue(capturedErr.toString().contains("ERROR COMPARING ARRAY NAME INDICES"));
+    } finally {
+      System.setErr(originalErr);
+    }
   }
 }
