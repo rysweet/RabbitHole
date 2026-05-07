@@ -26,6 +26,7 @@ evidence:
   required:
     - Launch log containing Alice startup output.
     - Screenshot of the Alice desktop window or first ready project shell.
+    - controlled-display-pixel-observation.json naming observed controlled-display pixels or the exact display/Xvfb blocker.
     - Exit, status, or timeout record.
     - Environment summary with Java version, Maven version, and DISPLAY value.
     - Notes identifying whether the screenshot shows a ready desktop, project chooser, or fallback failure state.

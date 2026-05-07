@@ -20,9 +20,11 @@ Environment:
   ALICE_QA_READY_WAIT_SECONDS
                          Override GUI readiness wait before screenshot capture.
   ALICE_QA_RUN_GATED_SMOKES=1
-                         Execute gated command smoke scenarios.
-                         Without it, gated smokes write gated-not-run evidence
-                         and exit non-zero unless --prepare-only is requested.
+                          Execute gated command smoke scenarios.
+                          Without it, gated smokes write gated-not-run evidence
+                          and exit non-zero unless --prepare-only is requested.
+  ALICE_QA_DISABLE_XVFB=1
+                          Force the Xvfb-unavailable fallback for contract tests.
 EOF
 }
 
@@ -386,6 +388,75 @@ write_environment() {
   } > "$run_dir/environment.txt"
 }
 
+write_controlled_display_pixel_observation() {
+  local run_dir=$1
+  local status=$2
+  local blocker=$3
+  local blocker_detail=$4
+  local display=${5:-}
+  local pixels_observed=${6:-false}
+  local claim=${7:-no-visible-pixel-proof}
+  local missing_executable=${8:-}
+  local ready_status=${9:-not-attempted}
+  local process_status=${10:-not-started}
+  local screenshot_status=${11:-not-attempted}
+  local screenshot_file=${12:-}
+  local xvfb_executable=${13:-}
+  local screenshot_tool=${14:-}
+  local screenshot_pixel_status=${15:-not-attempted}
+  local screenshot_pixel_detail=${16:-}
+
+  CONTROLLED_DISPLAY_STATUS="$status" \
+  CONTROLLED_DISPLAY_BLOCKER="$blocker" \
+  CONTROLLED_DISPLAY_BLOCKER_DETAIL="$blocker_detail" \
+  CONTROLLED_DISPLAY_DISPLAY="$display" \
+  CONTROLLED_DISPLAY_PIXELS_OBSERVED="$pixels_observed" \
+  CONTROLLED_DISPLAY_CLAIM="$claim" \
+  CONTROLLED_DISPLAY_MISSING_EXECUTABLE="$missing_executable" \
+  CONTROLLED_DISPLAY_READY_STATUS="$ready_status" \
+  CONTROLLED_DISPLAY_PROCESS_STATUS="$process_status" \
+  CONTROLLED_DISPLAY_SCREENSHOT_STATUS="$screenshot_status" \
+  CONTROLLED_DISPLAY_SCREENSHOT_FILE="$screenshot_file" \
+  CONTROLLED_DISPLAY_XVFB_EXECUTABLE="$xvfb_executable" \
+  CONTROLLED_DISPLAY_SCREENSHOT_TOOL="$screenshot_tool" \
+  CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS="$screenshot_pixel_status" \
+  CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL="$screenshot_pixel_detail" \
+  python3 - "$run_dir/controlled-display-pixel-observation.json" <<'PY'
+import json
+import os
+import sys
+
+path = sys.argv[1]
+
+def value(name):
+    return os.environ.get(name, "")
+
+payload = {
+    "status": value("CONTROLLED_DISPLAY_STATUS"),
+    "blocker": value("CONTROLLED_DISPLAY_BLOCKER"),
+    "blockerDetail": value("CONTROLLED_DISPLAY_BLOCKER_DETAIL"),
+    "display": value("CONTROLLED_DISPLAY_DISPLAY"),
+    "pixelsObserved": value("CONTROLLED_DISPLAY_PIXELS_OBSERVED") == "true",
+    "claim": value("CONTROLLED_DISPLAY_CLAIM"),
+    "readyStatus": value("CONTROLLED_DISPLAY_READY_STATUS"),
+    "processStatus": value("CONTROLLED_DISPLAY_PROCESS_STATUS"),
+    "screenshotStatus": value("CONTROLLED_DISPLAY_SCREENSHOT_STATUS"),
+    "screenshotFile": value("CONTROLLED_DISPLAY_SCREENSHOT_FILE"),
+    "xvfbExecutable": value("CONTROLLED_DISPLAY_XVFB_EXECUTABLE"),
+    "screenshotTool": value("CONTROLLED_DISPLAY_SCREENSHOT_TOOL"),
+    "screenshotPixelStatus": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS"),
+    "screenshotPixelDetail": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL"),
+}
+missing_executable = value("CONTROLLED_DISPLAY_MISSING_EXECUTABLE")
+if missing_executable:
+    payload["missingExecutable"] = missing_executable
+
+with open(path, "w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
 select_display() {
   if [ -n "${ALICE_QA_DISPLAY:-}" ]; then
     printf '%s\n' "$ALICE_QA_DISPLAY"
@@ -394,7 +465,7 @@ select_display() {
 
   local number
   for number in {90..120}; do
-    if [ ! -e "/tmp/.X${number}-lock" ]; then
+    if ! DISPLAY=":$number" xdpyinfo >/dev/null 2>&1; then
       printf ':%s\n' "$number"
       return 0
     fi
@@ -416,6 +487,68 @@ capture_screenshot() {
   fi
 }
 
+screenshot_tool_name() {
+  if command -v import >/dev/null 2>&1; then
+    printf 'import\n'
+  elif command -v gnome-screenshot >/dev/null 2>&1; then
+    printf 'gnome-screenshot\n'
+  elif command -v xwd >/dev/null 2>&1; then
+    printf 'xwd\n'
+  else
+    printf 'none\n'
+  fi
+}
+
+analyze_screenshot_pixels() {
+  local image_path=$1
+  local output_path=$2
+  if ! command -v identify >/dev/null 2>&1; then
+    {
+      printf 'status=analysis-unavailable\n'
+      printf 'detail=ImageMagick identify is not available; screenshot pixels cannot be classified.\n'
+    } > "$output_path"
+    return 0
+  fi
+
+  if ! identify -quiet \
+      -format 'width=%w\nheight=%h\nminima=%[fx:minima]\nmaxima=%[fx:maxima]\nmean=%[fx:mean]\ncolors=%k\n' \
+      "$image_path" > "$output_path.raw" 2>"$output_path.err"; then
+    {
+      printf 'status=analysis-failed\n'
+      printf 'detail=ImageMagick identify could not inspect the screenshot; see screenshot-pixels.txt.err.\n'
+    } > "$output_path"
+    return 0
+  fi
+
+  local maxima colors width height
+  maxima=$(sed -n 's/^maxima=//p' "$output_path.raw")
+  colors=$(sed -n 's/^colors=//p' "$output_path.raw")
+  width=$(sed -n 's/^width=//p' "$output_path.raw")
+  height=$(sed -n 's/^height=//p' "$output_path.raw")
+  if [[ ! "$maxima" =~ ^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then
+    {
+      printf 'status=analysis-failed\n'
+      printf 'detail=ImageMagick identify did not report a numeric maxima value; screenshot pixels cannot be classified safely.\n'
+      cat "$output_path.raw"
+    } > "$output_path"
+    return 0
+  fi
+  if awk "BEGIN { exit !($maxima == 0) }"; then
+    {
+      printf 'status=uniform-black\n'
+      printf 'detail=Screenshot is %sx%s with %s color(s), but every sampled pixel is black.\n' "$width" "$height" "$colors"
+      cat "$output_path.raw"
+    } > "$output_path"
+    return 0
+  fi
+
+  {
+    printf 'status=non-black-pixels\n'
+    printf 'detail=Screenshot is %sx%s with non-black pixel data.\n' "$width" "$height"
+    cat "$output_path.raw"
+  } > "$output_path"
+}
+
 run_xvfb_real_alice() {
   local scenario_json=$1
   local run_dir=$2
@@ -433,13 +566,26 @@ run_xvfb_real_alice() {
   run_timeout="${timeout_override:-$configured_timeout}"
   xvfb_pid=
   alice_pid=
+  xvfb_executable=$(command -v Xvfb 2>/dev/null || true)
+  if [ "${ALICE_QA_DISABLE_XVFB:-}" = "1" ]; then
+    xvfb_executable=
+  fi
 
   validate_allowed_automation "$cwd" "${argv[@]}"
   resolved_cwd=$(resolve_automation_cwd "$cwd")
 
-  if ! command -v Xvfb >/dev/null 2>&1; then
+  if [ -z "$xvfb_executable" ]; then
     write_environment "$run_dir"
     write_checklist "$scenario_json" "$run_dir" >/dev/null
+    write_controlled_display_pixel_observation \
+      "$run_dir" \
+      blocked \
+      x-server-unavailable \
+      "Xvfb executable is not available on PATH; install Xvfb before retrying this controlled-display runner." \
+      "" \
+      false \
+      no-visible-pixel-proof \
+      Xvfb
     printf 'Xvfb is not available; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -447,6 +593,20 @@ run_xvfb_real_alice() {
   if ! display=$(select_display); then
     write_environment "$run_dir"
     write_checklist "$scenario_json" "$run_dir" >/dev/null
+    write_controlled_display_pixel_observation \
+      "$run_dir" \
+      blocked \
+      display-allocation-unavailable \
+      "No free X display could be selected; set ALICE_QA_DISPLAY to a reachable display and retry." \
+      "" \
+      false \
+      no-visible-pixel-proof \
+      "" \
+      not-attempted \
+      not-started \
+      not-attempted \
+      "" \
+      "$xvfb_executable"
     printf 'No free X display found; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -478,6 +638,20 @@ run_xvfb_real_alice() {
   sleep 2
   if ! kill -0 "$xvfb_pid" >/dev/null 2>&1; then
     write_checklist "$scenario_json" "$run_dir" >/dev/null
+    write_controlled_display_pixel_observation \
+      "$run_dir" \
+      blocked \
+      x-server-start-failed \
+      "Xvfb exited before Alice launch; inspect xvfb.log for display permissions, screen geometry, or backend startup errors." \
+      "$display" \
+      false \
+      no-visible-pixel-proof \
+      "" \
+      not-attempted \
+      not-started \
+      not-attempted \
+      "" \
+      "$xvfb_executable"
     printf 'Xvfb exited before Alice launch; see %s/xvfb.log\n' "$run_dir" >&2
     return 2
   fi
@@ -500,22 +674,28 @@ run_xvfb_real_alice() {
         ready_status=process-exited
         break
       fi
-      if xdotool search --onlyvisible --name Alice >/dev/null 2>&1; then
+      if xdotool search --onlyvisible --name Alice >/dev/null 2>&1 ||
+          xdotool search --onlyvisible --class Alice >/dev/null 2>&1 ||
+          xdotool search --onlyvisible --class alice >/dev/null 2>&1; then
         ready_status=alice-window-found
-        break
-      elif xdotool search --onlyvisible --class ".*" >/dev/null 2>&1; then
-        ready_status=visible-window-found
         break
       fi
       sleep 1
       waited=$((waited + 1))
     done
+    if [ "$ready_status" = not-found ] &&
+        kill -0 "$alice_pid" >/dev/null 2>&1 &&
+        xdotool search --onlyvisible --class ".*" >/dev/null 2>&1; then
+      ready_status=non-alice-visible-window-found
+    fi
   else
     sleep "$ready_wait"
     ready_status=waited-without-window-detector
   fi
 
-  local screenshot_status=screenshot-captured
+  local screenshot_tool screenshot_status
+  screenshot_tool=$(screenshot_tool_name)
+  screenshot_status=screenshot-captured
   if ! capture_screenshot "$run_dir/screenshot.png" > "$run_dir/screenshot.log" 2>&1; then
     screenshot_status=screenshot-failed
     write_checklist "$scenario_json" "$run_dir" >/dev/null
@@ -536,6 +716,82 @@ run_xvfb_real_alice() {
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
+  local observation_status observation_blocker observation_detail pixels_observed observation_claim screenshot_file
+  observation_status=observed
+  observation_blocker=none
+  observation_detail="Xvfb display was reachable, a visible Alice window was detected, and a root screenshot with non-black pixels was captured; this does not assert Alice rendering correctness."
+  pixels_observed=true
+  observation_claim=controlled-display-pixels-observed-rendering-not-asserted
+  screenshot_file=screenshot.png
+  if [ "$screenshot_tool" = xwd ]; then
+    screenshot_file=screenshot.xwd
+  fi
+  local screenshot_pixel_status screenshot_pixel_detail
+  screenshot_pixel_status=not-attempted
+  screenshot_pixel_detail=
+  if [ "$screenshot_status" = screenshot-captured ] && [ "$screenshot_tool" != xwd ]; then
+    analyze_screenshot_pixels "$run_dir/$screenshot_file" "$run_dir/screenshot-pixels.txt"
+    screenshot_pixel_status=$(sed -n 's/^status=//p' "$run_dir/screenshot-pixels.txt" | head -1)
+    screenshot_pixel_detail=$(sed -n 's/^detail=//p' "$run_dir/screenshot-pixels.txt" | head -1)
+  elif [ "$screenshot_status" = screenshot-captured ]; then
+    screenshot_pixel_status=analysis-unavailable
+    screenshot_pixel_detail="xwd screenshot capture is available, but this runner does not classify xwd pixel contents."
+  fi
+  if [ "$screenshot_status" != screenshot-captured ]; then
+    observation_status=blocked
+    observation_blocker=screenshot-capture-failed
+    observation_detail="Screenshot capture failed on DISPLAY=$display; install import, gnome-screenshot, or xwd and inspect screenshot.log."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$process_status" != running ]; then
+    observation_status=blocked
+    observation_blocker=application-exited-before-pixel-capture
+    observation_detail="Alice launch process exited before pixel capture could prove a visible display; inspect launch.log."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$ready_status" = process-exited ]; then
+    observation_status=blocked
+    observation_blocker=application-exited-before-window-ready
+    observation_detail="Alice launch process exited before window readiness; inspect launch.log."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$ready_status" != alice-window-found ]; then
+    observation_status=blocked
+    observation_blocker=alice-window-not-found
+    observation_detail="Xvfb was reachable, but xdotool did not find a visible Alice window before screenshot capture; readyStatus=$ready_status."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$screenshot_pixel_status" = uniform-black ]; then
+    observation_status=blocked
+    observation_blocker=screenshot-captured-uniform-black
+    observation_detail="A controlled Xvfb screenshot was captured after Alice window readiness, but the image was uniformly black."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$screenshot_pixel_status" != non-black-pixels ]; then
+    observation_status=attempted
+    observation_blocker=screenshot-pixel-analysis-unavailable
+    observation_detail="$screenshot_pixel_detail"
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  fi
+  write_controlled_display_pixel_observation \
+    "$run_dir" \
+    "$observation_status" \
+    "$observation_blocker" \
+    "$observation_detail" \
+    "$display" \
+    "$pixels_observed" \
+    "$observation_claim" \
+    "" \
+    "$ready_status" \
+    "$process_status" \
+    "$screenshot_status" \
+    "$screenshot_file" \
+    "$xvfb_executable" \
+    "$screenshot_tool" \
+    "$screenshot_pixel_status" \
+    "$screenshot_pixel_detail"
+
   if [ "$screenshot_status" != screenshot-captured ]; then
     printf 'Screenshot capture failed; see %s/screenshot.log\n' "$run_dir" >&2
     return 2
@@ -550,6 +806,10 @@ run_xvfb_real_alice() {
   fi
   if [ "$ready_status" = not-found ]; then
     printf 'No visible Alice desktop window was detected; see %s/status.txt\n' "$run_dir" >&2
+    return 1
+  fi
+  if [ "$observation_status" != observed ]; then
+    printf 'Controlled display pixel proof blocked: %s; see %s/controlled-display-pixel-observation.json\n' "$observation_blocker" "$run_dir" >&2
     return 1
   fi
 

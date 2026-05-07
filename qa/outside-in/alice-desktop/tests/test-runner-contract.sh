@@ -59,4 +59,19 @@ status=$?
 assert_failure "$status" "runner rejects unknown scenario ids"
 assert_contains "$tmp_root/unknown.err" 'not found|unknown scenario|alice-desktop-not-a-scenario' "unknown scenario error names requested id"
 
+ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run alice-desktop-launch --evidence-dir "$tmp_root/no-xvfb-evidence" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
+status=$?
+assert_exit_code "$status" 2 "xvfb launch reports unsupported display setup without pretending success"
+no_xvfb_run_dir=$(single_child_dir "$tmp_root/no-xvfb-evidence/alice-desktop-launch")
+status=$?
+assert_success "$status" "xvfb fallback creates one evidence directory"
+observation="$no_xvfb_run_dir/controlled-display-pixel-observation.json"
+assert_file_exists "$observation" "xvfb fallback writes controlled display pixel observation artifact"
+assert_contains "$observation" '"status": "blocked"' "xvfb fallback records blocked status"
+assert_contains "$observation" '"blocker": "x-server-unavailable"' "xvfb fallback names missing X server blocker"
+assert_contains "$observation" '"missingExecutable": "Xvfb"' "xvfb fallback names exact missing executable"
+assert_contains "$observation" '"pixelsObserved": false' "xvfb fallback does not claim pixel observation"
+assert_contains "$observation" '"claim": "no-visible-pixel-proof"' "xvfb fallback avoids visible rendering claims"
+assert_contains "$tmp_root/no-xvfb.err" 'Xvfb is not available' "xvfb fallback stderr names missing Xvfb"
+
 finish
