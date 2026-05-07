@@ -20,8 +20,12 @@ public final class ProcedureTabSelection {
   }
 
   public static UserMethod selectProcedure(DeclarationsEditorComposite editor, UserMethod procedure, UserActivity activity) {
-    Operation operation = getSelectionOperation(editor, procedure);
     requireActiveAliceIde();
+    return selectProcedureInEditor(editor, procedure, activity);
+  }
+
+  static UserMethod selectProcedureInEditor(DeclarationsEditorComposite editor, UserMethod procedure, UserActivity activity) {
+    Operation operation = getSelectionOperation(editor, procedure);
     operation.fire(activity);
     UserMethod selectedProcedure = getSelectedProcedure(editor);
     if (selectedProcedure != procedure) {

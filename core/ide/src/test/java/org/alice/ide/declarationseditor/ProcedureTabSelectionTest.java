@@ -2,7 +2,10 @@ package org.alice.ide.declarationseditor;
 
 import org.junit.Test;
 import org.alice.ide.IDE;
+import org.lgna.croquet.Application;
+import org.lgna.croquet.DocumentFrame;
 import org.lgna.croquet.Operation;
+import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.ast.AstUtilities;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.JavaType;
@@ -10,6 +13,11 @@ import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.story.SScene;
+
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.util.List;
+import javax.swing.SwingUtilities;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -46,6 +54,20 @@ public class ProcedureTabSelectionTest {
     throw new AssertionError("selectProcedure should require an active Alice IDE");
   }
 
+  @Test
+  public void selectionOperationCanOpenProcedureTabInEditor() throws Exception {
+    DeclarationsEditorComposite editor = new DeclarationsEditorComposite();
+    UserMethod procedure = sceneProcedure("eatmeFirstLesson");
+    ensureCroquetApplication();
+    editor.getTabState().getData().internalSetAllItems(List.of(CodeComposite.getInstance(procedure)));
+    UserMethod[] selected = new UserMethod[1];
+
+    SwingUtilities.invokeAndWait(() -> selected[0] = ProcedureTabSelection.selectProcedureInEditor(editor, procedure, null));
+
+    assertSame(procedure, selected[0]);
+    assertSame(procedure, ProcedureTabSelection.getSelectedProcedure(editor));
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void rejectsFunctionWhenProcedureSelectionIsRequired() {
     DeclarationsEditorComposite editor = new DeclarationsEditorComposite();
@@ -59,5 +81,43 @@ public class ProcedureTabSelectionTest {
     UserMethod procedure = new UserMethod(name, JavaType.VOID_TYPE, new UserParameter[0], new BlockStatement());
     sceneType.methods.add(procedure);
     return procedure;
+  }
+
+  private static void ensureCroquetApplication() {
+    if (Application.getActiveInstance() == null) {
+      new Application<DocumentFrame>() {
+        @Override
+        public DocumentFrame getDocumentFrame() {
+          return null;
+        }
+
+        @Override
+        protected Operation getAboutOperation() {
+          return null;
+        }
+
+        @Override
+        protected Operation getPreferencesOperation() {
+          return null;
+        }
+
+        @Override
+        protected void handleOpenFiles(List<File> files) {
+        }
+
+        @Override
+        protected void handleWindowOpened(WindowEvent e) {
+        }
+
+        @Override
+        public void handleQuit(UserActivity activity) {
+        }
+
+        @Override
+        public String getApplicationSubPath() {
+          return "procedure-tab-selection-test";
+        }
+      };
+    }
   }
 }
