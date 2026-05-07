@@ -422,6 +422,22 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithLiteralLocalConstructorBodyCreatesLocalDeclaration() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { SyntheticType() { WholeNumber local <- 1; } }");
+
+    assertEquals(1, type.getDeclaredConstructors().size());
+    NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
+    assertEquals(1, constructor.body.getValue().statements.size());
+    assertTrue(constructor.body.getValue().statements.get(0) instanceof LocalDeclarationStatement);
+    LocalDeclarationStatement localStatement =
+        (LocalDeclarationStatement) constructor.body.getValue().statements.get(0);
+    UserLocal local = localStatement.local.getValue();
+    assertEquals("local", local.getName());
+    assertSame(JavaType.getInstance(Integer.class), local.getValueType());
+    assertIntegerLiteral(localStatement.initializer.getValue(), 1);
+  }
+
+  @Test
   public void decodeClassWithOptionalConstructorParameterReportsUnsupportedConstructorParameters() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -429,6 +445,16 @@ public class TweedleEncoderDecoderTest {
 
     assertTrue(thrown.getMessage().contains("optional constructor parameters"));
     assertTrue(thrown.getMessage().contains("SyntheticType"));
+  }
+
+  @Test
+  public void decodeClassWithNonLiteralConstructorLocalInitializerReportsUnsupportedLocalInitializer() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { SyntheticType() { WholeNumber local <- 1 + 2; } }"));
+
+    assertTrue(thrown.getMessage().contains("local variable initializers"));
+    assertTrue(thrown.getMessage().contains("SyntheticType.local"));
   }
 
   @Test

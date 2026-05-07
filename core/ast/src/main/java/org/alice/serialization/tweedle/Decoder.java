@@ -39,6 +39,7 @@ import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ParameterAccess;
 import org.lgna.project.ast.Statement;
 import org.lgna.project.ast.StringLiteral;
+import org.lgna.project.ast.SuperConstructorInvocationStatement;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
@@ -123,13 +124,26 @@ public class Decoder {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle optional constructor parameters are not yet supported by the AST decoder: " + constructor.getName());
     }
-    if (!constructor.getBody().isEmpty()) {
-      throw new UnsupportedTweedleDecodeException(
-          "Tweedle constructor bodies are not yet supported by the AST decoder: " + constructor.getName());
-    }
     return new NamedUserConstructor(
         decodeRequiredParameters(constructor.getRequiredParameters(), "constructor parameter"),
-        new ConstructorBlockStatement());
+        decodeConstructorBody(constructor));
+  }
+
+  private ConstructorBlockStatement decodeConstructorBody(TweedleConstructor constructor) {
+    List<Statement> statements = new ArrayList<>();
+    for (TweedleStatement statement : constructor.getBody()) {
+      if (statement instanceof LocalVariableDeclaration localVariableDeclaration) {
+        statements.add(decodeLocalDeclarationStatement(constructor.getName(), localVariableDeclaration));
+      } else {
+        throw unsupportedConstructorBody(constructor);
+      }
+    }
+    if (statements.isEmpty()) {
+      return new ConstructorBlockStatement();
+    }
+    return new ConstructorBlockStatement(
+        new SuperConstructorInvocationStatement(),
+        statements.toArray(Statement[]::new));
   }
 
   private UserParameter[] decodeRequiredParameters(List<TweedleRequiredParameter> parameters, String usage) {
@@ -168,7 +182,8 @@ public class Decoder {
     for (int i = 0; i < method.getBody().size(); i++) {
       TweedleStatement statement = method.getBody().get(i);
       if (statement instanceof LocalVariableDeclaration localVariableDeclaration) {
-        LocalDeclarationStatement localStatement = decodeLocalDeclarationStatement(method, localVariableDeclaration);
+        LocalDeclarationStatement localStatement =
+            decodeLocalDeclarationStatement(method.getName(), localVariableDeclaration);
         statements.add(localStatement);
         locals.add(localStatement.local.getValue());
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
@@ -185,19 +200,19 @@ public class Decoder {
   }
 
   private LocalDeclarationStatement decodeLocalDeclarationStatement(
-      TweedleMethod method,
+      String ownerName,
       LocalVariableDeclaration localVariableDeclaration) {
     TweedleLocalVariable tweedleLocal = localVariableDeclaration.getDeclaration();
     AbstractType<?, ?, ?> localType = resolveType(tweedleLocal.getType(), "local variable");
     TweedleExpression initializer = tweedleLocal.getInitializer();
     if (!(initializer instanceof TweedlePrimitiveValue<?> primitiveValue)) {
-      throw unsupportedLocalInitializer(method, tweedleLocal);
+      throw unsupportedLocalInitializer(ownerName, tweedleLocal);
     }
     Expression astInitializer = primitiveLiteral(primitiveValue.getPrimitiveValue());
     if (!localType.isAssignableFrom(astInitializer.getType())) {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle local variable initializer type is not assignable to "
-              + localType.getName() + ": " + method.getName() + "." + tweedleLocal.getName());
+              + localType.getName() + ": " + ownerName + "." + tweedleLocal.getName());
     }
     return new LocalDeclarationStatement(
         new UserLocal(tweedleLocal.getName(), localType, localVariableDeclaration.isConstant()),
@@ -404,6 +419,11 @@ public class Decoder {
         "Tweedle method bodies are not yet supported by the AST decoder: " + method.getName());
   }
 
+  private UnsupportedTweedleDecodeException unsupportedConstructorBody(TweedleConstructor constructor) {
+    return new UnsupportedTweedleDecodeException(
+        "Tweedle constructor bodies are not yet supported by the AST decoder: " + constructor.getName());
+  }
+
   private UnsupportedTweedleDecodeException unsupportedMethodReturnExpression(TweedleMethod method) {
     return new UnsupportedTweedleDecodeException(
         "Non-literal Tweedle method return expressions are not yet supported by the AST decoder: " + method.getName());
@@ -418,11 +438,11 @@ public class Decoder {
   }
 
   private UnsupportedTweedleDecodeException unsupportedLocalInitializer(
-      TweedleMethod method,
+      String ownerName,
       TweedleLocalVariable local) {
     return new UnsupportedTweedleDecodeException(
         "Non-literal Tweedle local variable initializers are not yet supported by the AST decoder: "
-            + method.getName() + "." + local.getName());
+            + ownerName + "." + local.getName());
   }
 
   private UnsupportedTweedleDecodeException unsupportedFieldInitializer(TweedleField property) {
