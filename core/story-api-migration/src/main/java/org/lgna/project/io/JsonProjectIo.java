@@ -103,6 +103,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         }
         verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
       }
+      verifyArchiveHasNoUnsupportedManifestTypes("Project archive", decodedTypes);
       Set<NamedUserType> namedUserTypes = new HashSet<>(decodedTypes.types);
       namedUserTypes.remove(programType);
       return new Project(programType, namedUserTypes, resources, sceneCameraType(manifest));
@@ -120,6 +121,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       if (type == null) {
         verifyTypeArchiveHasExpectedType(manifest, decodedTypes);
       }
+      verifyArchiveHasNoUnsupportedManifestTypes("Type archive", decodedTypes);
       return new TypeResourcesPair(type, resources);
     }
 
@@ -345,10 +347,21 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       if (decodedTypes.hasTypeReferences) {
         throw new IOException(
             archiveKind + " manifest names " + expectedNameRole + "'" + expectedName
-                + "' but decoded type names are " + decodedTypeNames(decodedTypes.types));
+                + "' but decoded type names are " + decodedTypeNames(decodedTypes.types)
+                + unsupportedTypeNamesClause(decodedTypes));
       }
       throw new IOException(
           archiveKind + " manifest for '" + expectedName + "' does not contain " + missingReferenceDescription);
+    }
+
+    private static void verifyArchiveHasNoUnsupportedManifestTypes(
+        String archiveKind,
+        TypeReadResult decodedTypes) throws IOException {
+      if (decodedTypes.hasUnsupportedTweedleTypes()) {
+        throw new IOException(
+            archiveKind + " contains unsupported manifest-declared Tweedle type names "
+                + decodedTypes.unsupportedTweedleTypeNames());
+      }
     }
 
     private static boolean hasNoManifestName(Manifest manifest) {
@@ -361,6 +374,13 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
           .map(NamedUserType::getName)
           .sorted()
           .collect(Collectors.joining(", ", "[", "]"));
+    }
+
+    private static String unsupportedTypeNamesClause(TypeReadResult decodedTypes) {
+      if (!decodedTypes.hasUnsupportedTweedleTypes()) {
+        return "";
+      }
+      return "; unsupported manifest-declared Tweedle type names are " + decodedTypes.unsupportedTweedleTypeNames();
     }
 
     private static String typeReferenceContext(TypeReference typeReference) {
@@ -403,6 +423,16 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
       private boolean hasUnsupportedTweedleDecodeFor(String name) {
         return (name != null) && unsupportedTweedleTypeNames.contains(name);
+      }
+
+      private boolean hasUnsupportedTweedleTypes() {
+        return !unsupportedTweedleTypeNames.isEmpty();
+      }
+
+      private String unsupportedTweedleTypeNames() {
+        return unsupportedTweedleTypeNames.stream()
+            .sorted()
+            .collect(Collectors.joining(", ", "[", "]"));
       }
     }
 

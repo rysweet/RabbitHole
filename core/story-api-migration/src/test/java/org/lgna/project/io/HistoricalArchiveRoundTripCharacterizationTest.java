@@ -185,7 +185,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithMethodBearingSiblingTypeReadsProjectAndOmitsUnsupportedSibling() throws Exception {
+  public void generatedJsonPlayerArchiveWithMethodBearingSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-method-sibling-boundary.a3w");
 
     writeJsonProjectArchive(
@@ -211,20 +211,10 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           siblingTypeEntry);
       assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count()"));
     }
-    Project readProject = IoUtilities.readProject(projectArchive);
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
 
-    assertNotNull("Project read should succeed when only a non-program sibling type is unsupported", readProject);
-    NamedUserType readProgramType = readProject.getProgramType();
-    assertNotNull("Decodable manifest program type should be available", readProgramType);
-    assertEquals("GeneratedProgramWithMethodSiblingBoundary", readProgramType.getName());
-    assertTrue(
-        "Decoded named user types should include the decodable program type",
-        readProject.getNamedUserTypes().stream()
-            .anyMatch(type -> "GeneratedProgramWithMethodSiblingBoundary".equals(type.getName())));
-    assertFalse(
-        "Unsupported method-bearing sibling type should be omitted from decoded named user types",
-        readProject.getNamedUserTypes().stream()
-            .anyMatch(type -> "GeneratedMethodSiblingBoundaryScene".equals(type.getName())));
+    assertTrue(thrown.getMessage().contains(
+        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedMethodSiblingBoundaryScene]"));
   }
 
   @Test
