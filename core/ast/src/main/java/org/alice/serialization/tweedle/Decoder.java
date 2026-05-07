@@ -8,6 +8,7 @@ import org.alice.tweedle.TweedleField;
 import org.alice.tweedle.TweedleMethod;
 import org.alice.tweedle.TweedleNull;
 import org.alice.tweedle.TweedlePrimitiveValue;
+import org.alice.tweedle.TweedleRequiredParameter;
 import org.alice.tweedle.TweedleType;
 import org.alice.tweedle.TweedleVoidType;
 import org.alice.tweedle.ast.TweedleArrayInitializer;
@@ -109,15 +110,23 @@ public class Decoder {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle constructor name does not match declaring class: " + constructor.getName());
     }
-    if (!constructor.getRequiredParameters().isEmpty() || !constructor.getOptionalParameters().isEmpty()) {
+    if (!constructor.getOptionalParameters().isEmpty()) {
       throw new UnsupportedTweedleDecodeException(
-          "Tweedle constructor parameters are not yet supported by the AST decoder: " + constructor.getName());
+          "Tweedle optional constructor parameters are not yet supported by the AST decoder: " + constructor.getName());
     }
     if (!constructor.getBody().isEmpty()) {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle constructor bodies are not yet supported by the AST decoder: " + constructor.getName());
     }
-    return new NamedUserConstructor(new UserParameter[] {}, new ConstructorBlockStatement());
+    return new NamedUserConstructor(
+        decodeRequiredParameters(constructor.getRequiredParameters(), "constructor parameter"),
+        new ConstructorBlockStatement());
+  }
+
+  private UserParameter[] decodeRequiredParameters(List<TweedleRequiredParameter> parameters, String usage) {
+    return parameters.stream()
+        .map(parameter -> new UserParameter(parameter.getName(), resolveType(parameter.getType(), usage)))
+        .toArray(UserParameter[]::new);
   }
 
   private UserMethod decodeMethod(TweedleMethod method) {
