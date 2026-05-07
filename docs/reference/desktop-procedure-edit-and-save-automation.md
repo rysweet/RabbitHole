@@ -9,6 +9,7 @@ hooks to add, and the behavior that is still not proven.
 | User step | Class | What can be observed without launching the full desktop |
 | --- | --- | --- |
 | Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, and reports the currently selected procedure when one is active. |
+| Run the current procedure edit implementation | `org.alice.tools.ProcedureEditCommand` | Applies the supported `append-comment` edit to the selected `UserMethod` and returns statement counts for `procedure-edit-command.json`. This is an implementation command, not a desktop code-editor command. |
 | Select a procedure tab in Alice | `org.alice.ide.declarationseditor.DeclarationTabState` | Owns the real tab-selection operation used by the desktop declarations editor. |
 | Show procedure code | `org.alice.ide.declarationseditor.CodeComposite` | Wraps the selected `UserMethod` and creates the code view when the desktop activates the tab. |
 | Save the current project | `org.alice.ide.croquet.models.projecturi.SaveProjectOperation` | Keeps the user-facing Save command, prompt rule, icon, and toolbar behavior. |
@@ -33,9 +34,10 @@ Add these in order, each with a focused test before changing behavior:
    `DeclarationsEditorComposite` and reports the selected `CodeComposite` and
    `CodeEditor.getCode()` value. This should prove the procedure tab is active,
    not that any visual layout is correct.
-3. Add a separate edit-command hook only after the desktop code editor exposes a
-   real command for the intended edit. The hook should invoke that command; it
-   should not mutate the AST directly and then call it a desktop edit.
+3. Replace the implementation edit command with a desktop code-editor edit hook
+   only after the code editor exposes a real command for the intended edit. The
+   hook should invoke that command; it should not call the implementation command
+   a desktop edit.
 4. Add a Save command observation test that fires `SaveProjectOperation` only in
    a prepared desktop run where the current project file is writable, so no save
    dialog is expected. Observe `UserActivity.finish()` and the project file's
@@ -54,6 +56,18 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.ide.declarationseditor.ProcedureTabSelectionTest \
+  test
+```
+
+Run the headless edit proof tests when `EatmeEditProcedure` or the edit command
+artifact changes:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.tools.EatmeEditProcedureTest,org.alice.ide.declarationseditor.ProcedureTabSelectionTest \
   test
 ```
 

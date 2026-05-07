@@ -11,7 +11,6 @@ import org.lgna.project.Project;
 import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.AbstractType;
 import org.lgna.project.ast.BlockStatement;
-import org.lgna.project.ast.Comment;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.Statement;
@@ -37,6 +36,7 @@ public final class EatmeEditProcedure {
   private static final String SUPPORTED_SELECTOR_PREFIX = "scene.";
   private static final String SUPPORTED_EDIT_PREFIX = "append-comment:";
   private static final String EDIT_ARTIFACT = "procedure-edit.json";
+  private static final String EDIT_COMMAND_ARTIFACT = "procedure-edit-command.json";
   private static final String DIFF_ARTIFACT = "procedure.diff.json";
   private static final String PROCEDURE_TAB_SELECTION_ARTIFACT = "procedure-tab-selection.json";
   private static final String UI_ACTION_NO_GO_ARTIFACT = "procedure-ui-action-no-go.json";
@@ -109,9 +109,13 @@ public final class EatmeEditProcedure {
       method.body.setValue(body);
     }
     ProcedureTabSelectionEvidence tabSelection = selectProcedureTab(method);
-    int beforeStatementCount = body.statements.size();
-    body.statements.add(new Comment(commentText));
-    int afterStatementCount = body.statements.size();
+    ProcedureEditCommand.Result commandResult = ProcedureEditCommand.appendComment(
+        arguments.procedureSelector(),
+        method,
+        tabSelection.selectedMethod(),
+        commentText);
+    int beforeStatementCount = commandResult.beforeStatementCount();
+    int afterStatementCount = commandResult.afterStatementCount();
     List<String> afterMethods = methodNames(sceneType);
 
     Path editedProject = artifactPath(arguments.evidenceDir(), EDITED_PROJECT);
@@ -130,11 +134,15 @@ public final class EatmeEditProcedure {
         afterStatementCount,
         editedProject.getFileName().toString(),
         tabSelection.selectedMethod(),
+        commandResult,
         beforeMethods,
         afterMethods);
     Path editArtifact = artifactPath(arguments.evidenceDir(), EDIT_ARTIFACT);
     Files.writeString(editArtifact, editArtifactJson(edit), StandardCharsets.UTF_8);
     requireNonEmptyArtifact(editArtifact, "procedure edit artifact");
+    Path editCommandArtifact = artifactPath(arguments.evidenceDir(), EDIT_COMMAND_ARTIFACT);
+    Files.writeString(editCommandArtifact, editCommandArtifactJson(edit), StandardCharsets.UTF_8);
+    requireNonEmptyArtifact(editCommandArtifact, "procedure edit command artifact");
     Path diffArtifact = artifactPath(arguments.evidenceDir(), DIFF_ARTIFACT);
     Files.writeString(diffArtifact, diffArtifactJson(edit), StandardCharsets.UTF_8);
     requireNonEmptyArtifact(diffArtifact, "procedure diff artifact");
@@ -275,6 +283,7 @@ public final class EatmeEditProcedure {
         + "\"status\":\"edited\","
         + "\"procedure_selector\":\"" + escapeJson(edit.procedureSelector()) + "\","
         + "\"edited_project_artifact\":\"" + EDITED_PROJECT + "\","
+        + "\"procedure_edit_command\":\"" + EDIT_COMMAND_ARTIFACT + "\","
         + "\"procedure_or_code_diff\":\"" + DIFF_ARTIFACT + "\","
         + "\"procedure_tab_selection\":\"" + PROCEDURE_TAB_SELECTION_ARTIFACT + "\","
         + "\"procedure_ui_action_no_go\":\"" + UI_ACTION_NO_GO_ARTIFACT + "\""
@@ -329,6 +338,30 @@ public final class EatmeEditProcedure {
         + "}\n";
   }
 
+  private static String editCommandArtifactJson(ProcedureEdit edit) {
+    ProcedureEditCommand.Result result = edit.commandResult();
+    return "{\n"
+        + "  \"schema_version\": \"eatme.alice-procedure-edit-command/v1\",\n"
+        + "  \"procedure_selector\": \"" + escapeJson(result.procedureSelector()) + "\",\n"
+        + "  \"command\": \"" + escapeJson(result.command()) + "\",\n"
+        + "  \"method_name\": \"" + escapeJson(result.methodName()) + "\",\n"
+        + "  \"selected_method\": \"" + escapeJson(result.selectedMethod()) + "\",\n"
+        + "  \"completed\": " + result.completed() + ",\n"
+        + "  \"before_statement_count\": " + result.beforeStatementCount() + ",\n"
+        + "  \"after_statement_count\": " + result.afterStatementCount() + ",\n"
+        + "  \"statement_count_delta\": " + result.statementCountDelta() + ",\n"
+        + "  \"doesNotClaim\": [\n"
+        + "    \"desktop UI action invoked\",\n"
+        + "    \"desktop code editor command completion\",\n"
+        + "    \"Save-menu completion\",\n"
+        + "    \"full Alice UI automation\",\n"
+        + "    \"visible rendering correctness\",\n"
+        + "    \"first-lesson completion\",\n"
+        + "    \"grading\"\n"
+        + "  ]\n"
+        + "}\n";
+  }
+
   private static String uiActionNoGoArtifactJson(ProcedureEdit edit) {
     return "{\n"
         + "  \"schema_version\": \"eatme.alice-code-procedure-ui-action-no-go/v1\",\n"
@@ -337,9 +370,10 @@ public final class EatmeEditProcedure {
         + "  \"procedure_selector\": \"" + escapeJson(edit.procedureSelector()) + "\",\n"
         + "  \"edit_spec\": \"" + escapeJson(edit.editSpec()) + "\",\n"
         + "  \"ast_edit_artifact\": \"" + EDIT_ARTIFACT + "\",\n"
+        + "  \"procedure_edit_command\": \"" + EDIT_COMMAND_ARTIFACT + "\",\n"
         + "  \"procedure_or_code_diff\": \"" + DIFF_ARTIFACT + "\",\n"
         + "  \"procedure_tab_selection\": \"" + PROCEDURE_TAB_SELECTION_ARTIFACT + "\",\n"
-        + "  \"proven\": \"Deterministic project AST procedure edit writes edited-project.a3p, a procedure diff artifact, and an in-editor procedure tab selection artifact.\",\n"
+        + "  \"proven\": \"Deterministic project edit command appends the requested procedure comment and writes edited-project.a3p, a command artifact, a procedure diff artifact, and an in-editor procedure tab selection artifact.\",\n"
         + "  \"exact_missing_ui_edit_action_target\": {\n"
         + "    \"expected_target\": \"desktop code editor edit action after selecting " + escapeJson(edit.procedureSelector()) + "\",\n"
         + "    \"missing_target\": \"No stable public action or invoker is exposed from org.alice.ide.codeeditor.CodeEditor or org.alice.ide.declarationseditor.CodeComposite for selecting "
@@ -468,6 +502,7 @@ public final class EatmeEditProcedure {
       int afterStatementCount,
       String editedProject,
       String selectedMethod,
+      ProcedureEditCommand.Result commandResult,
       List<String> beforeMethods,
       List<String> afterMethods) {
   }

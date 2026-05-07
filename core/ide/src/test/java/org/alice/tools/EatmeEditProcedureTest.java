@@ -57,10 +57,12 @@ public class EatmeEditProcedureTest {
     assertTrue(result, result.contains("\"schema_version\":\"eatme.alice-procedure-edit-result/v1\""));
     assertTrue(result, result.contains("\"status\":\"edited\""));
     assertTrue(result, result.contains("\"edited_project_artifact\":\"edited-project.a3p\""));
+    assertTrue(result, result.contains("\"procedure_edit_command\":\"procedure-edit-command.json\""));
     assertTrue(result, result.contains("\"procedure_or_code_diff\":\"procedure.diff.json\""));
     assertTrue(result, result.contains("\"procedure_tab_selection\":\"procedure-tab-selection.json\""));
     assertTrue(result, result.contains("\"procedure_ui_action_no_go\":\"procedure-ui-action-no-go.json\""));
     assertTrue(Files.size(evidenceDir.resolve("procedure-edit.json")) > 0);
+    assertTrue(Files.size(evidenceDir.resolve("procedure-edit-command.json")) > 0);
     assertTrue(Files.size(evidenceDir.resolve("procedure.diff.json")) > 0);
     assertTrue(Files.size(evidenceDir.resolve("procedure-tab-selection.json")) > 0);
     assertTrue(Files.size(evidenceDir.resolve("procedure-ui-action-no-go.json")) > 0);
@@ -74,6 +76,19 @@ public class EatmeEditProcedureTest {
     assertTrue(tabSelection, tabSelection.contains("\"operation_fired\": true"));
     assertTrue(tabSelection, tabSelection.contains("desktop UI action invoked"));
 
+    String editCommand = Files.readString(evidenceDir.resolve("procedure-edit-command.json"));
+    assertTrue(editCommand,
+        editCommand.contains("\"schema_version\": \"eatme.alice-procedure-edit-command/v1\""));
+    assertTrue(editCommand, editCommand.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
+    assertTrue(editCommand, editCommand.contains("\"command\": \"append-comment\""));
+    assertTrue(editCommand, editCommand.contains("\"selected_method\": \"eatmeFirstLesson\""));
+    assertTrue(editCommand, editCommand.contains("\"completed\": true"));
+    assertTrue(editCommand, editCommand.contains("\"before_statement_count\": 0"));
+    assertTrue(editCommand, editCommand.contains("\"after_statement_count\": 1"));
+    assertTrue(editCommand, editCommand.contains("\"statement_count_delta\": 1"));
+    assertTrue(editCommand, editCommand.contains("\"doesNotClaim\""));
+    assertTrue(editCommand, editCommand.contains("desktop UI action invoked"));
+
     String uiActionNoGo = Files.readString(evidenceDir.resolve("procedure-ui-action-no-go.json"));
     assertTrue(uiActionNoGo,
         uiActionNoGo.contains("\"schema_version\": \"eatme.alice-code-procedure-ui-action-no-go/v1\""));
@@ -81,6 +96,7 @@ public class EatmeEditProcedureTest {
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"source\": \"EatmeEditProcedure\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"ast_edit_artifact\": \"procedure-edit.json\""));
+    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_edit_command\": \"procedure-edit-command.json\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_or_code_diff\": \"procedure.diff.json\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_tab_selection\": \"procedure-tab-selection.json\""));
     assertTrue(uiActionNoGo, uiActionNoGo.contains("\"exact_missing_ui_edit_action_target\""));
