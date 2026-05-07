@@ -84,7 +84,10 @@ Running the exported project launches `AliceJavaFXLauncher`. The launcher first
 hands control to the JavaFX runtime. When the runtime provides a non-null primary
 stage, the launcher configures a minimal scene and delegates the exported Alice
 program entry point to `Program.main(startingArgs)` using the existing
-background-thread delegation pattern.
+background-thread delegation pattern. The handoff thread is named
+`AliceJavaFXLauncher-ProgramMain` so launcher/runtime smoke tests can
+distinguish clean launcher delegation from direct `Program.main(...)` execution
+without claiming rendering or window visibility.
 
 In a headless or display-unavailable environment, the launcher reports a
 deterministic no-go result instead of reporting success merely because the

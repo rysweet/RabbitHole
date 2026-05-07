@@ -339,7 +339,7 @@ public class AliceJavaFXLauncher extends Application {
         Thread thread = new Thread(() -> {
             evidence("program-main-delegated rendering-not-asserted");
             Program.main(startingArgs);
-        });
+        }, "AliceJavaFXLauncher-ProgramMain");
         thread.start();
     }
 

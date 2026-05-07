@@ -120,6 +120,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     CountDownLatch latch = new CountDownLatch(1);
     synchronized (GENERATED_PROGRAM_PROBE_LOCK) {
       generatedProgramMainArgs = null;
+      generatedProgramMainThreadName = null;
       generatedProgramMainLatch = latch;
     }
     try (GeneratedProjectClassLoader classLoader = new GeneratedProjectClassLoader(
@@ -134,6 +135,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
             latch.await(5, TimeUnit.SECONDS));
       });
       assertArrayEquals(args, generatedProgramMainArgs);
+      assertEquals("AliceJavaFXLauncher-ProgramMain", generatedProgramMainThreadName);
       assertOutputContainsInOrder(
           output,
           "ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted",
@@ -141,9 +143,51 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     } finally {
       synchronized (GENERATED_PROGRAM_PROBE_LOCK) {
         generatedProgramMainArgs = null;
+        generatedProgramMainThreadName = null;
         generatedProgramMainLatch = null;
       }
     }
+  }
+
+  @Test
+  public void generatedLauncherReportsDisplayUnavailableWhenJavaFxLaunchCannotCreateDisplay() throws Exception {
+    Path projectDirectory = temporaryFolder.newFolder("launcher-display-unavailable-project").toPath();
+    Path sourceDirectory = projectDirectory.resolve("src");
+    Files.createDirectories(sourceDirectory);
+
+    ProjectCodeGenerator.generateLauncher(sourceDirectory.toFile());
+    writeProgramUnexpectedRunMarkerSource(sourceDirectory);
+    writeJavaFxDisplayUnavailableStubs(sourceDirectory);
+
+    Path classesDirectory = projectDirectory.resolve("build").resolve("classes");
+    compileJavaSources(classesDirectory, javaSourcesUnder(sourceDirectory));
+
+    Path programMarker = projectDirectory.resolve("program-main-marker.txt");
+    String previousMarker = System.getProperty("alice.test.program.marker");
+    System.setProperty("alice.test.program.marker", programMarker.toAbsolutePath().normalize().toString());
+    try (GeneratedProjectClassLoader classLoader = new GeneratedProjectClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()})) {
+      Class<?> launcherClass = Class.forName("AliceJavaFXLauncher", true, classLoader);
+
+      String output = captureSystemOut(() ->
+          launcherClass.getMethod("main", String[].class).invoke(null, (Object) new String[] {"headless"}));
+      assertOutputContainsInOrder(
+          output,
+          "ALICE_LAUNCHER_EVIDENCE main-entered",
+          "ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted",
+          "ALICE_LAUNCHER_NO_GO display-unavailable");
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE javafx-application-started"));
+      assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated"));
+    } finally {
+      if (previousMarker == null) {
+        System.clearProperty("alice.test.program.marker");
+      } else {
+        System.setProperty("alice.test.program.marker", previousMarker);
+      }
+    }
+    assertFalse(
+        "Program.main must not run when JavaFX reports a display-unavailable launch boundary",
+        Files.exists(programMarker));
   }
 
   @Test
@@ -418,6 +462,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
   public static void recordGeneratedProgramMainArgs(String[] args) {
     synchronized (GENERATED_PROGRAM_PROBE_LOCK) {
       generatedProgramMainArgs = args;
+      generatedProgramMainThreadName = Thread.currentThread().getName();
       if (generatedProgramMainLatch != null) {
         generatedProgramMainLatch.countDown();
       }
@@ -426,6 +471,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
 
   private static final Object GENERATED_PROGRAM_PROBE_LOCK = new Object();
   private static volatile String[] generatedProgramMainArgs;
+  private static volatile String generatedProgramMainThreadName;
   private static CountDownLatch generatedProgramMainLatch;
 
   private static void writeJavaFxStubs(Path sourceDirectory) throws Exception {
@@ -597,6 +643,50 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
                   lines,
                   java.nio.charset.StandardCharsets.UTF_8);
             }
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/stage/Stage.java"),
+        """
+        package javafx.stage;
+
+        public class Stage {
+          public void setScene(javafx.scene.Scene scene) {
+          }
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Group.java"),
+        """
+        package javafx.scene;
+
+        public class Group {
+        }
+        """);
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/scene/Scene.java"),
+        """
+        package javafx.scene;
+
+        public class Scene {
+          public Scene(Group root) {
+          }
+        }
+        """);
+  }
+
+  private static void writeJavaFxDisplayUnavailableStubs(Path sourceDirectory) throws Exception {
+    writeJavaSource(
+        sourceDirectory.resolve("javafx/application/Application.java"),
+        """
+        package javafx.application;
+
+        public abstract class Application {
+          public abstract void start(javafx.stage.Stage stage) throws Exception;
+
+          public static void launch(String[] args) {
+            throw new RuntimeException(new UnsupportedOperationException("No display available for launcher test"));
           }
         }
         """);
