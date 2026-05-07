@@ -189,6 +189,9 @@ public class Decoder {
             decodeLocalDeclarationStatement(method.getName(), localVariableDeclaration);
         statements.add(localStatement);
         locals.add(localStatement.local.getValue());
+      } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
+          && expressionStatement.getExpression() instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
+        statements.add(decodeMethodFieldAssignment(method, assignment, fields));
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
           && i == method.getBody().size() - 1) {
         statements.add(decodeReturnStatement(method, returnType, requiredParameters, locals, fields, returnStatement));
@@ -196,7 +199,8 @@ public class Decoder {
         throw unsupportedMethodBody(method);
       }
     }
-    if (!(method.getBody().get(method.getBody().size() - 1) instanceof org.alice.tweedle.ast.ReturnStatement)) {
+    if (returnType != JavaType.VOID_TYPE
+        && !(method.getBody().get(method.getBody().size() - 1) instanceof org.alice.tweedle.ast.ReturnStatement)) {
       throw unsupportedMethodBody(method);
     }
     return new BlockStatement(statements.toArray(Statement[]::new));
@@ -220,6 +224,52 @@ public class Decoder {
     return new LocalDeclarationStatement(
         new UserLocal(tweedleLocal.getName(), localType, localVariableDeclaration.isConstant()),
         astInitializer);
+  }
+
+  private Statement decodeMethodFieldAssignment(
+      TweedleMethod method,
+      org.alice.tweedle.ast.AssignmentExpression assignment,
+      List<UserField> fields) {
+    TweedleExpression value = assignment.getValueExp();
+    if (!(value instanceof TweedlePrimitiveValue<?> primitiveValue)) {
+      throw new UnsupportedTweedleDecodeException(
+          "Non-literal Tweedle field assignment values are not yet supported by the AST decoder: " + method.getName());
+    }
+    Expression rhs = primitiveLiteral(primitiveValue.getPrimitiveValue());
+    TweedleExpression assignee = assignment.getAssigneeExp();
+    if (assignee instanceof IdentifierReference identifierReference) {
+      UserField field = findField(fields, identifierReference.getName());
+      if (field != null) {
+        if (!field.getValueType().isAssignableFrom(rhs.getType())) {
+          throw new UnsupportedTweedleDecodeException(
+              "Tweedle field assignment value type is not assignable to "
+                  + field.getValueType().getName() + ": " + method.getName() + "." + identifierReference.getName());
+        }
+        return AstUtilities.createFieldAssignmentStatement(field, rhs);
+      }
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle field assignment target is not a known field: " + method.getName() + "." + identifierReference.getName());
+    }
+    if (assignee instanceof org.alice.tweedle.ast.FieldAccess fieldAccess) {
+      if (!(fieldAccess.getTarget() instanceof ThisExpression)) {
+        throw new UnsupportedTweedleDecodeException(
+            "Only this.field Tweedle assignment targets are supported by the AST decoder: "
+                + method.getName() + "." + describeMemberAccess(fieldAccess));
+      }
+      UserField field = findField(fields, fieldAccess.getFieldName());
+      if (field == null) {
+        throw new UnsupportedTweedleDecodeException(
+            "Tweedle this.field assignment target is not a known field: " + method.getName() + "." + fieldAccess.getFieldName());
+      }
+      if (!field.getValueType().isAssignableFrom(rhs.getType())) {
+        throw new UnsupportedTweedleDecodeException(
+            "Tweedle field assignment value type is not assignable to "
+                + field.getValueType().getName() + ": " + method.getName() + ".this." + fieldAccess.getFieldName());
+      }
+      return AstUtilities.createFieldAssignmentStatement(field, rhs);
+    }
+    throw new UnsupportedTweedleDecodeException(
+        "Unsupported Tweedle assignment target in method: " + method.getName());
   }
 
   private org.lgna.project.ast.ReturnStatement decodeReturnStatement(

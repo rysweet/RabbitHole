@@ -4,9 +4,11 @@ import org.junit.Test;
 import org.lgna.common.resources.ImageResource;
 import org.lgna.project.ast.AbstractNode;
 import org.lgna.project.ast.ArrayInstanceCreation;
+import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
+import org.lgna.project.ast.ExpressionStatement;
 import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
@@ -539,6 +541,119 @@ public class TweedleEncoderDecoderTest {
 
     assertTrue(thrown.getMessage().contains("constructor bodies"));
     assertTrue(thrown.getMessage().contains("SyntheticType"));
+  }
+
+  @Test
+  public void decodeClassWithFieldAssignmentInVoidMethodBodyCreatesAssignmentStatement() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          WholeNumber count <- 0;
+          void setCount() { count <- 7; }
+        }
+        """);
+
+    UserField field = type.getDeclaredFields().get(0);
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("setCount", method.getName());
+    assertSame(JavaType.VOID_TYPE, method.getReturnType());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) method.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof AssignmentExpression);
+    AssignmentExpression assign = (AssignmentExpression) stmt.expression.getValue();
+    assertSame(AssignmentExpression.Operator.ASSIGN, assign.operator.getValue());
+    assertTrue(assign.leftHandSide.getValue() instanceof FieldAccess);
+    FieldAccess lhs = (FieldAccess) assign.leftHandSide.getValue();
+    assertSame(field, lhs.field.getValue());
+    assertIntegerLiteral(assign.rightHandSide.getValue(), 7);
+  }
+
+  @Test
+  public void decodeClassWithThisFieldAssignmentInVoidMethodBodyCreatesAssignmentStatement() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          WholeNumber count <- 0;
+          void setCount() { this.count <- 7; }
+        }
+        """);
+
+    UserField field = type.getDeclaredFields().get(0);
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("setCount", method.getName());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) method.body.getValue().statements.get(0);
+    AssignmentExpression assign = (AssignmentExpression) stmt.expression.getValue();
+    assertTrue(assign.leftHandSide.getValue() instanceof FieldAccess);
+    FieldAccess lhs = (FieldAccess) assign.leftHandSide.getValue();
+    assertSame(field, lhs.field.getValue());
+    assertIntegerLiteral(assign.rightHandSide.getValue(), 7);
+  }
+
+  @Test
+  public void decodeClassWithFieldAssignmentThenReturnInMethodBodyCreatesOrderedStatements() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          WholeNumber count <- 0;
+          WholeNumber update() { count <- 7; return count; }
+        }
+        """);
+
+    UserField field = type.getDeclaredFields().get(0);
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("update", method.getName());
+    assertEquals(2, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) method.body.getValue().statements.get(0);
+    AssignmentExpression assign = (AssignmentExpression) stmt.expression.getValue();
+    assertSame(field, ((FieldAccess) assign.leftHandSide.getValue()).field.getValue());
+    assertIntegerLiteral(assign.rightHandSide.getValue(), 7);
+    assertTrue(method.body.getValue().statements.get(1) instanceof ReturnStatement);
+    ReturnStatement ret = (ReturnStatement) method.body.getValue().statements.get(1);
+    assertTrue(ret.expression.getValue() instanceof FieldAccess);
+    assertSame(field, ((FieldAccess) ret.expression.getValue()).field.getValue());
+  }
+
+  @Test
+  public void decodeClassWithNonLiteralFieldAssignmentInMethodBodyReportsUnsupportedAssignment() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              WholeNumber count <- 0;
+              void setCount() { count <- 1 + 2; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("Non-literal Tweedle field assignment values"));
+    assertTrue(thrown.getMessage().contains("setCount"));
+  }
+
+  @Test
+  public void decodeClassWithUnknownIdentifierFieldAssignmentInMethodBodyReportsUnsupportedTarget() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { void setCount() { unknown <- 7; } }"));
+
+    assertTrue(thrown.getMessage().contains("field assignment target is not a known field"));
+    assertTrue(thrown.getMessage().contains("unknown"));
+    assertTrue(thrown.getMessage().contains("setCount"));
+  }
+
+  @Test
+  public void decodeClassWithTypeMismatchFieldAssignmentInMethodBodyReportsTypeError() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              WholeNumber count <- 0;
+              void setCount() { count <- "hello"; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("Tweedle field assignment value type is not assignable to"));
+    assertTrue(thrown.getMessage().contains("setCount"));
+    assertTrue(thrown.getMessage().contains("count"));
   }
 
   @Test

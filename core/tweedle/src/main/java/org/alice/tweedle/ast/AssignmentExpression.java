@@ -14,6 +14,14 @@ public class AssignmentExpression extends TweedleExpression {
     this.valueExp = valueExp;
   }
 
+  public TweedleExpression getAssigneeExp() {
+    return assigneeExp;
+  }
+
+  public TweedleExpression getValueExp() {
+    return valueExp;
+  }
+
   @Override
   public TweedleValue evaluate(Frame frame) {
     TweedleValue newValue = valueExp.evaluate(frame);
