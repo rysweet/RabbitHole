@@ -11,7 +11,14 @@ import org.lgna.project.virtualmachine.events.StatementExecutionEvent;
 import org.lgna.project.virtualmachine.events.VirtualMachineListener;
 import org.lgna.project.virtualmachine.events.WhileLoopIterationEvent;
 
+import java.awt.AWTException;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
+import java.awt.IllegalComponentStateException;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,6 +29,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.imageio.ImageIO;
 
 public final class EatmeDesktopRunExecutionEvidence {
   public static final String EVIDENCE_DIR_PROPERTY = "org.alice.eatme.desktopRunExecutionEvidenceDir";
@@ -29,6 +37,8 @@ public final class EatmeDesktopRunExecutionEvidence {
   public static final String DESKTOP_RUN_RUNTIME_LOG = "desktop-run-runtime.log";
   public static final String DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT = "desktop-run-render-affordance.json";
   public static final String DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT = "desktop-run-pixel-boundary.json";
+  public static final String DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT = "desktop-run-pixel-observation.json";
+  private static final String DESKTOP_RUN_RENDER_TARGET_SCREENSHOT = "desktop-run-render-target.png";
   private static final int MAX_RECORDED_EVENTS = 200;
   private static final String RENDER_AFFORDANCE_CLAIM =
       "A Run view attachment signal was observed.";
@@ -265,6 +275,7 @@ public final class EatmeDesktopRunExecutionEvidence {
     Files.createDirectories(evidenceDir);
     Path artifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT);
     Path pixelBoundaryArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT);
+    Path pixelObservationArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT);
     writeStringAtomically(
         artifact,
         "{\n"
@@ -308,12 +319,134 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "  ]\n"
             + "}\n");
     requireNonEmptyArtifact(pixelBoundaryArtifact, "desktop Run pixel boundary artifact");
+    writePixelObservation(
+        pixelObservationArtifact,
+        evidenceDir,
+        renderTargetComponent,
+        renderPanelComponent,
+        runViewComponent);
+    requireNonEmptyArtifact(pixelObservationArtifact, "desktop Run pixel observation artifact");
     return artifact;
+  }
+
+  private static void writePixelObservation(
+      Path artifact,
+      Path evidenceDir,
+      Component renderTargetComponent,
+      Component renderPanelComponent,
+      Component runViewComponent) throws IOException {
+    PixelObservation observation = observePixel(evidenceDir, renderTargetComponent);
+    writeStringAtomically(
+        artifact,
+        "{\n"
+            + "  \"schema_version\": \"eatme.alice-desktop-run-pixel-observation/v1\",\n"
+            + "  \"status\": \"" + observation.status + "\",\n"
+            + "  \"source\": \"desktop_run_render_target_attachment\",\n"
+            + "  \"claim\": \"" + EatmeRunWindowEvidence.escapeJson(observation.claim) + "\",\n"
+            + "  \"component_state\": {\n"
+            + "    \"graphicsEnvironmentHeadless\": " + GraphicsEnvironment.isHeadless() + ",\n"
+            + "    \"renderTargetDisplayable\": " + renderTargetComponent.isDisplayable() + ",\n"
+            + "    \"renderTargetShowing\": " + renderTargetComponent.isShowing() + ",\n"
+            + "    \"renderTargetWidth\": " + renderTargetComponent.getWidth() + ",\n"
+            + "    \"renderTargetHeight\": " + renderTargetComponent.getHeight() + ",\n"
+            + "    \"renderPanelDisplayable\": " + renderPanelComponent.isDisplayable() + ",\n"
+            + "    \"renderPanelShowing\": " + renderPanelComponent.isShowing() + ",\n"
+            + "    \"renderPanelWidth\": " + renderPanelComponent.getWidth() + ",\n"
+            + "    \"renderPanelHeight\": " + renderPanelComponent.getHeight() + ",\n"
+            + "    \"runViewDisplayable\": " + runViewComponent.isDisplayable() + ",\n"
+            + "    \"runViewShowing\": " + runViewComponent.isShowing() + ",\n"
+            + "    \"runViewWidth\": " + runViewComponent.getWidth() + ",\n"
+            + "    \"runViewHeight\": " + runViewComponent.getHeight() + "\n"
+            + "  },\n"
+            + observation.detailJson
+            + "  \"doesNotClaim\": [\n"
+            + "    \"desktop world execution\",\n"
+            + "    \"visible rendering correctness\",\n"
+            + "    \"desktop save-menu completion\",\n"
+            + "    \"full lesson flow\",\n"
+            + "    \"grading\",\n"
+            + "    \"creative assessment\"\n"
+            + "  ]\n"
+            + "}\n");
+  }
+
+  private static PixelObservation observePixel(Path evidenceDir, Component renderTargetComponent) {
+    List<String> blockerCodes = new ArrayList<>();
+    if (GraphicsEnvironment.isHeadless()) {
+      blockerCodes.add("java_awt_headless");
+    }
+    if (!renderTargetComponent.isDisplayable()) {
+      blockerCodes.add("render_target_not_displayable");
+    }
+    if (!renderTargetComponent.isShowing()) {
+      blockerCodes.add("render_target_not_showing");
+    }
+    if (renderTargetComponent.getWidth() <= 0 || renderTargetComponent.getHeight() <= 0) {
+      blockerCodes.add("render_target_has_no_positive_size");
+    }
+
+    Point screenLocation = null;
+    if (blockerCodes.isEmpty()) {
+      try {
+        screenLocation = renderTargetComponent.getLocationOnScreen();
+      } catch (IllegalComponentStateException ex) {
+        blockerCodes.add("render_target_screen_location_unavailable");
+      } catch (SecurityException ex) {
+        blockerCodes.add("render_target_screen_location_denied");
+      }
+    }
+
+    if (!blockerCodes.isEmpty()) {
+      return PixelObservation.blocked(blockerCodes, "");
+    }
+
+    try {
+      Rectangle captureArea = new Rectangle(
+          screenLocation.x,
+          screenLocation.y,
+          renderTargetComponent.getWidth(),
+          renderTargetComponent.getHeight());
+      BufferedImage screenshot = new Robot().createScreenCapture(captureArea);
+      if (screenshot.getWidth() <= 0 || screenshot.getHeight() <= 0) {
+        return PixelObservation.blocked(List.of("render_target_screenshot_has_no_positive_size"), "");
+      }
+      Path screenshotPath = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_RENDER_TARGET_SCREENSHOT);
+      writePngAtomically(screenshotPath, screenshot);
+      int sampleX = screenshot.getWidth() / 2;
+      int sampleY = screenshot.getHeight() / 2;
+      int argb = screenshot.getRGB(sampleX, sampleY);
+      return PixelObservation.observed(
+          DESKTOP_RUN_RENDER_TARGET_SCREENSHOT,
+          captureArea,
+          screenshot.getWidth(),
+          screenshot.getHeight(),
+          sampleX,
+          sampleY,
+          argb);
+    } catch (AWTException ex) {
+      return PixelObservation.blocked(List.of("java_awt_robot_unavailable"), ex.getClass().getSimpleName());
+    } catch (IOException ex) {
+      return PixelObservation.blocked(List.of("render_target_screenshot_write_failed"), ex.getClass().getSimpleName());
+    } catch (IllegalArgumentException ex) {
+      return PixelObservation.blocked(List.of("render_target_screen_capture_area_invalid"), ex.getClass().getSimpleName());
+    } catch (SecurityException ex) {
+      return PixelObservation.blocked(List.of("render_target_screen_capture_denied"), ex.getClass().getSimpleName());
+    } catch (RuntimeException ex) {
+      return PixelObservation.blocked(List.of("render_target_pixel_sample_failed"), ex.getClass().getSimpleName());
+    }
   }
 
   private static void writeStringAtomically(Path target, String content) throws IOException {
     Path temp = target.resolveSibling(target.getFileName() + ".tmp");
     Files.writeString(temp, content, StandardCharsets.UTF_8);
+    Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+  }
+
+  private static void writePngAtomically(Path target, BufferedImage image) throws IOException {
+    Path temp = target.resolveSibling(target.getFileName() + ".tmp");
+    if (!ImageIO.write(image, "png", temp.toFile())) {
+      throw new IOException("PNG writer unavailable: " + target);
+    }
     Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
   }
 
@@ -348,5 +481,71 @@ public final class EatmeDesktopRunExecutionEvidence {
       return container.getComponentCount();
     }
     return 0;
+  }
+
+  private static final class PixelObservation {
+    private final String status;
+    private final String claim;
+    private final String detailJson;
+
+    private PixelObservation(String status, String claim, String detailJson) {
+      this.status = status;
+      this.claim = claim;
+      this.detailJson = detailJson;
+    }
+
+    private static PixelObservation blocked(List<String> blockerCodes, String exceptionType) {
+      return new PixelObservation(
+          "blocked",
+          "No desktop pixel was sampled.",
+          "  \"blocker\": {\n"
+              + "    \"reason\": \"A desktop screenshot requires a non-headless graphics environment, a showing Run render target, positive component size, and screen-capture access.\",\n"
+              + "    \"codes\": " + jsonArray(blockerCodes) + ",\n"
+              + "    \"exceptionType\": \"" + EatmeRunWindowEvidence.escapeJson(exceptionType) + "\"\n"
+              + "  },\n");
+    }
+
+    private static PixelObservation observed(
+        String screenshot,
+        Rectangle captureArea,
+        int screenshotWidth,
+        int screenshotHeight,
+        int sampleX,
+        int sampleY,
+        int argb) {
+      return new PixelObservation(
+          "observed",
+          "A desktop screenshot of the Run render target area was captured and its center pixel was sampled.",
+          "  \"screenshot\": {\n"
+              + "    \"file\": \"" + EatmeRunWindowEvidence.escapeJson(screenshot) + "\",\n"
+              + "    \"width\": " + screenshotWidth + ",\n"
+              + "    \"height\": " + screenshotHeight + "\n"
+              + "  },\n"
+              + "  \"captureArea\": {\n"
+              + "    \"coordinateSystem\": \"screen\",\n"
+              + "    \"x\": " + captureArea.x + ",\n"
+              + "    \"y\": " + captureArea.y + ",\n"
+              + "    \"width\": " + captureArea.width + ",\n"
+              + "    \"height\": " + captureArea.height + "\n"
+              + "  },\n"
+              + "  \"sample\": {\n"
+              + "    \"coordinateSystem\": \"screenshot\",\n"
+              + "    \"x\": " + sampleX + ",\n"
+              + "    \"y\": " + sampleY + ",\n"
+              + "    \"argb\": \"" + String.format("0x%08X", argb) + "\"\n"
+              + "  },\n");
+    }
+  }
+
+  private static String jsonArray(List<String> values) {
+    StringBuilder builder = new StringBuilder("[");
+    for (int i = 0; i < values.size(); i++) {
+      if (i > 0) {
+        builder.append(", ");
+      }
+      builder.append('"').append(EatmeRunWindowEvidence.escapeJson(values.get(i))).append('"');
+    }
+    builder.append(']');
+    return builder.toString();
   }
 }

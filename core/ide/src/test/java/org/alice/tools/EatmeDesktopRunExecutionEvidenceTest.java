@@ -6,13 +6,19 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.swing.JPanel;
+import javax.swing.JFrame;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.GraphicsEnvironment;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Level;
 
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -97,8 +103,10 @@ public class EatmeDesktopRunExecutionEvidenceTest {
 
     Path artifact = evidenceDir.resolve("desktop-run-render-affordance.json");
     Path pixelBoundaryArtifact = evidenceDir.resolve("desktop-run-pixel-boundary.json");
+    Path pixelObservationArtifact = evidenceDir.resolve("desktop-run-pixel-observation.json");
     assertTrue(Files.size(artifact) > 0);
     assertTrue(Files.size(pixelBoundaryArtifact) > 0);
+    assertTrue(Files.size(pixelObservationArtifact) > 0);
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"evidenceKind\": \"desktop_run_render_affordance\""));
     assertTrue(json, json.contains("\"renderTargetAttachedToRunView\": true"));
@@ -150,6 +158,28 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertNoField(pixelBoundaryJson, "screenshot");
     assertNoField(pixelBoundaryJson, "screenLocation");
     assertNoField(pixelBoundaryJson, "mousePosition");
+
+    String pixelObservationJson = Files.readString(pixelObservationArtifact);
+    assertTrue(pixelObservationJson,
+        pixelObservationJson.contains("\"schema_version\": \"eatme.alice-desktop-run-pixel-observation/v1\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"status\": \"blocked\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"source\": \"desktop_run_render_target_attachment\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"component_state\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetDisplayable\": false"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetShowing\": false"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetWidth\": 0"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetHeight\": 0"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"blocker\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_not_displayable\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_not_showing\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_has_no_positive_size\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("desktop world execution"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("visible rendering correctness"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("desktop save-menu completion"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("full lesson flow"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("grading"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("creative assessment"));
+    assertNoField(pixelObservationJson, "mousePosition");
   }
 
   @Test
@@ -172,6 +202,47 @@ public class EatmeDesktopRunExecutionEvidenceTest {
 
     Path artifact = evidenceDir.resolve("desktop-run-render-affordance.json");
     assertTrue(Files.size(artifact) > 0);
+  }
+
+  @Test
+  public void writesObservedPixelArtifactWhenDesktopCaptureIsAvailable() throws Exception {
+    assumeFalse(GraphicsEnvironment.isHeadless());
+    Path evidenceDir = temporaryFolder.newFolder("observed-pixel").toPath();
+    JPanel renderTargetComponent = new JPanel();
+    renderTargetComponent.setBackground(Color.BLUE);
+    renderTargetComponent.setPreferredSize(new Dimension(24, 24));
+    JFrame frame = new JFrame("Run pixel observation test");
+    frame.getContentPane().add(renderTargetComponent, BorderLayout.CENTER);
+    frame.pack();
+
+    String previousEvidenceDir = System.getProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY);
+    try {
+      frame.setVisible(true);
+      System.setProperty(EatmeDesktopRunExecutionEvidence.EVIDENCE_DIR_PROPERTY, evidenceDir.toString());
+
+      EatmeDesktopRunExecutionEvidence.recordRenderTargetAttached(
+          renderTargetComponent,
+          renderTargetComponent,
+          frame.getContentPane(),
+          false);
+    } finally {
+      frame.dispose();
+      restoreEvidenceDirProperty(previousEvidenceDir);
+    }
+
+    Path pixelObservationArtifact = evidenceDir.resolve("desktop-run-pixel-observation.json");
+    String pixelObservationJson = Files.readString(pixelObservationArtifact);
+    assumeTrue(pixelObservationJson, pixelObservationJson.contains("\"status\": \"observed\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"screenshot\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"file\": \"desktop-run-render-target.png\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetWidth\": 24"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetHeight\": 24"));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"captureArea\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"coordinateSystem\": \"screen\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"sample\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"coordinateSystem\": \"screenshot\""));
+    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"argb\": \"0x"));
+    assertTrue(Files.size(evidenceDir.resolve("desktop-run-render-target.png")) > 0);
   }
 
   @Test
