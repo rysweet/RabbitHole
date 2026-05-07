@@ -29,6 +29,7 @@ import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.ConstructorBlockStatement;
 import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
+import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalAccess;
@@ -107,7 +108,7 @@ public class Decoder {
       type.fields.add(decodeField(property));
     }
     for (TweedleMethod method : tweedleClass.getMethods()) {
-      type.methods.add(decodeMethod(method));
+      type.methods.add(decodeMethod(method, type.getDeclaredFields()));
     }
     for (TweedleConstructor constructor : tweedleClass.getConstructors()) {
       type.constructors.add(decodeConstructor(tweedleClass, constructor));
@@ -152,7 +153,7 @@ public class Decoder {
         .toArray(UserParameter[]::new);
   }
 
-  private UserMethod decodeMethod(TweedleMethod method) {
+  private UserMethod decodeMethod(TweedleMethod method, List<UserField> fields) {
     if (!method.getOptionalParameters().isEmpty()) {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle optional method parameters are not yet supported by the AST decoder: " + method.getName());
@@ -163,13 +164,14 @@ public class Decoder {
         method.getName(),
         returnType,
         requiredParameters,
-        decodeMethodBody(method, returnType, requiredParameters));
+        decodeMethodBody(method, returnType, requiredParameters, fields));
   }
 
   private BlockStatement decodeMethodBody(
       TweedleMethod method,
       AbstractType<?, ?, ?> returnType,
-      UserParameter[] requiredParameters) {
+      UserParameter[] requiredParameters,
+      List<UserField> fields) {
     if (method.getBody().isEmpty()) {
       if (returnType != JavaType.VOID_TYPE) {
         throw new UnsupportedTweedleDecodeException(
@@ -188,7 +190,7 @@ public class Decoder {
         locals.add(localStatement.local.getValue());
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
           && i == method.getBody().size() - 1) {
-        statements.add(decodeReturnStatement(method, returnType, requiredParameters, locals, returnStatement));
+        statements.add(decodeReturnStatement(method, returnType, requiredParameters, locals, fields, returnStatement));
       } else {
         throw unsupportedMethodBody(method);
       }
@@ -224,9 +226,10 @@ public class Decoder {
       AbstractType<?, ?, ?> returnType,
       UserParameter[] requiredParameters,
       List<UserLocal> locals,
+      List<UserField> fields,
       org.alice.tweedle.ast.ReturnStatement returnStatement) {
     Expression expression =
-        decodeMethodReturnExpression(method, returnType, requiredParameters, locals, returnStatement.getExpression());
+        decodeMethodReturnExpression(method, returnType, requiredParameters, locals, fields, returnStatement.getExpression());
     return new org.lgna.project.ast.ReturnStatement(returnType, expression);
   }
 
@@ -235,6 +238,7 @@ public class Decoder {
       AbstractType<?, ?, ?> returnType,
       UserParameter[] requiredParameters,
       List<UserLocal> locals,
+      List<UserField> fields,
       TweedleExpression returnExpression) {
     if (returnExpression instanceof TweedlePrimitiveValue<?> primitiveValue) {
       Expression expression = primitiveLiteral(primitiveValue.getPrimitiveValue());
@@ -266,6 +270,16 @@ public class Decoder {
             "Tweedle method return identifier type is not assignable to "
                 + returnType.getName() + ": " + method.getName() + "." + identifierReference.getName());
       }
+      UserField field = findField(fields, identifierReference.getName());
+      if (field != null) {
+        FieldAccess access = new FieldAccess(field);
+        if (returnType.isAssignableFrom(access.getType())) {
+          return access;
+        }
+        throw new UnsupportedTweedleDecodeException(
+            "Tweedle method return identifier type is not assignable to "
+                + returnType.getName() + ": " + method.getName() + "." + identifierReference.getName());
+      }
       throw unsupportedMethodReturnIdentifier(method, identifierReference);
     }
     throw unsupportedMethodReturnExpression(method);
@@ -285,6 +299,15 @@ public class Decoder {
     for (UserParameter parameter : parameters) {
       if (parameter.getName().equals(name)) {
         return parameter;
+      }
+    }
+    return null;
+  }
+
+  private UserField findField(List<UserField> fields, String name) {
+    for (UserField field : fields) {
+      if (field.getName().equals(name)) {
+        return field;
       }
     }
     return null;
@@ -433,7 +456,7 @@ public class Decoder {
       TweedleMethod method,
       IdentifierReference identifierReference) {
     return new UnsupportedTweedleDecodeException(
-        "Only required-parameter or local-variable Tweedle method return identifiers are supported by the AST decoder: "
+        "Only required-parameter, local-variable, or field Tweedle method return identifiers are supported by the AST decoder: "
             + method.getName() + "." + identifierReference.getName());
   }
 

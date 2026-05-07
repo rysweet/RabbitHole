@@ -7,6 +7,7 @@ import org.lgna.project.ast.ArrayInstanceCreation;
 import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
+import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalAccess;
@@ -315,6 +316,43 @@ public class TweedleEncoderDecoderTest {
 
     assertTrue(thrown.getMessage().contains("method return identifiers"));
     assertTrue(thrown.getMessage().contains("missing"));
+    assertTrue(thrown.getMessage().contains("count"));
+  }
+
+  @Test
+  public void decodeClassWithFieldReturnMethodBodyCreatesFieldAccess() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          WholeNumber count <- 7;
+          WholeNumber getCount() { return count; }
+        }
+        """);
+
+    UserField field = type.getDeclaredFields().get(0);
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("getCount", method.getName());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertTrue(returnStatement.expression.getValue() instanceof FieldAccess);
+    FieldAccess access = (FieldAccess) returnStatement.expression.getValue();
+    assertSame(field, access.field.getValue());
+  }
+
+  @Test
+  public void decodeClassWithMismatchedFieldReturnMethodBodyReportsTypeError() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              WholeNumber count <- 7;
+              TextString getCount() { return count; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("return identifier type is not assignable"));
+    assertTrue(thrown.getMessage().contains("getCount"));
     assertTrue(thrown.getMessage().contains("count"));
   }
 
