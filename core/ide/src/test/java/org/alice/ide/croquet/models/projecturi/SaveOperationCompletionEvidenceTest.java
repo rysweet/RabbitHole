@@ -77,6 +77,17 @@ public class SaveOperationCompletionEvidenceTest {
       assertTrue(json, json.contains("\"canceled\": true"));
       assertTrue(json, json.contains("\"save_attempts\": 0"));
       assertTrue(json, json.contains("\"saved_file\": null"));
+
+      Path dialogArtifact = evidenceDir.resolve(SaveOperationCompletionEvidence.DIALOG_CONTROL_ARTIFACT);
+      assertTrue(Files.size(dialogArtifact) > 0);
+      String dialogJson = Files.readString(dialogArtifact);
+      assertTrue(dialogJson, dialogJson.contains("\"schema_version\": \"eatme.alice-desktop-save-dialog-control-target/v1\""));
+      assertTrue(dialogJson, dialogJson.contains("\"status\": \"blocked\""));
+      assertTrue(dialogJson, dialogJson.contains("\"prompt_count\": 1"));
+      assertTrue(dialogJson, dialogJson.contains("org.lgna.croquet.DocumentFrame#showSaveFileDialog(File,String,String)"));
+      assertTrue(dialogJson, dialogJson.contains("edu.cmu.cs.dennisc.java.awt.FileDialogUtilities#showSaveFileDialog(Component,File,String,String)"));
+      assertTrue(dialogJson, dialogJson.contains("desktop Save dialog control"));
+      assertTrue(dialogJson, dialogJson.contains("doesNotClaim"));
     } finally {
       if (previousEvidenceDir == null) {
         System.clearProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY);
@@ -105,6 +116,27 @@ public class SaveOperationCompletionEvidenceTest {
         System.setProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY, previousEvidenceDir);
       }
     }
+  }
+
+  @Test
+  public void dialogControlTargetReportsUnsupportedWhenSaveDidNotPrompt() throws Exception {
+    Path evidenceDir = Files.createDirectories(newTestDir().resolve("dialog-evidence"));
+
+    Path artifact = SaveOperationCompletionEvidence.writeDialogControlTarget(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        new SaveOperationFlow.Result(true, false, 0, 1, new File("classroom.a3p")));
+
+    assertTrue(Files.size(artifact) > 0);
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"schema_version\": \"eatme.alice-desktop-save-dialog-control-target/v1\""));
+    assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertTrue(json, json.contains("\"reason\": \"save_operation_did_not_request_dialog\""));
+    assertTrue(json, json.contains("\"prompt_count\": 0"));
+    assertTrue(json, json.contains("No Save dialog was requested, so this artifact cannot prove dialog discovery or control."));
+    assertTrue(json, json.contains("desktop Save dialog control"));
+    assertTrue(json, json.contains("full Alice UI automation"));
   }
 
   private static Path newTestDir() throws Exception {

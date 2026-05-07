@@ -11,6 +11,7 @@ import java.util.Objects;
 final class SaveOperationCompletionEvidence {
   static final String EVIDENCE_DIR_PROPERTY = "org.alice.eatme.saveOperationEvidenceDir";
   static final String ARTIFACT = "desktop-save-operation-result.json";
+  static final String DIALOG_CONTROL_ARTIFACT = "desktop-save-dialog-control-target.json";
 
   private SaveOperationCompletionEvidence() {
   }
@@ -35,16 +36,33 @@ final class SaveOperationCompletionEvidence {
     Objects.requireNonNull(evidenceDir, "evidenceDir");
     Objects.requireNonNull(result, "result");
     Files.createDirectories(evidenceDir);
-    Path artifact = evidenceDir.resolve(ARTIFACT).normalize();
-    if (!artifact.startsWith(evidenceDir.normalize())) {
-      throw new IllegalArgumentException("Save operation artifact escapes evidence dir");
-    }
+    Path artifact = artifactPath(evidenceDir, ARTIFACT);
     Files.writeString(
         artifact,
         resultJson(operationClass, extension, result),
         StandardCharsets.UTF_8);
     if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
       throw new IOException("Save operation completion artifact was not written: " + artifact);
+    }
+    writeDialogControlTarget(evidenceDir, operationClass, extension, result);
+    return artifact;
+  }
+
+  static Path writeDialogControlTarget(
+      Path evidenceDir,
+      String operationClass,
+      String extension,
+      SaveOperationFlow.Result result) throws IOException {
+    Objects.requireNonNull(evidenceDir, "evidenceDir");
+    Objects.requireNonNull(result, "result");
+    Files.createDirectories(evidenceDir);
+    Path artifact = artifactPath(evidenceDir, DIALOG_CONTROL_ARTIFACT);
+    Files.writeString(
+        artifact,
+        dialogControlTargetJson(operationClass, extension, result),
+        StandardCharsets.UTF_8);
+    if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
+      throw new IOException("Save dialog control target artifact was not written: " + artifact);
     }
     return artifact;
   }
@@ -96,6 +114,51 @@ final class SaveOperationCompletionEvidence {
         + "}\n";
   }
 
+  private static String dialogControlTargetJson(String operationClass, String extension, SaveOperationFlow.Result result) {
+    boolean dialogWasRequested = result.promptCount() > 0;
+    String status = dialogWasRequested ? "blocked" : "unsupported";
+    String reason = dialogWasRequested
+        ? "desktop_save_dialog_control_not_available"
+        : "save_operation_did_not_request_dialog";
+    String summary = dialogWasRequested
+        ? "SaveOperationFlow requested the production Save dialog seam, but no desktop dialog discovery/control evidence exists yet."
+        : "No Save dialog was requested, so this artifact cannot prove dialog discovery or control.";
+    return "{\n"
+        + "  \"schema_version\": \"eatme.alice-desktop-save-dialog-control-target/v1\",\n"
+        + "  \"status\": \"" + status + "\",\n"
+        + "  \"reason\": \"" + reason + "\",\n"
+        + "  \"source\": \"AbstractSaveOperation.perform\",\n"
+        + "  \"operation\": \"" + escapeJson(nullToBlank(operationClass)) + "\",\n"
+        + "  \"extension\": \"" + escapeJson(nullToBlank(extension)) + "\",\n"
+        + "  \"result_status\": \"" + status(result) + "\",\n"
+        + "  \"prompt_count\": " + result.promptCount() + ",\n"
+        + "  \"save_attempts\": " + result.saveAttempts() + ",\n"
+        + "  \"saved_file\": " + savedFileJson(result) + ",\n"
+        + "  \"dialog_targets\": {\n"
+        + "    \"desktop_frame\": \"org.lgna.croquet.DocumentFrame#showSaveFileDialog(File,String,String)\",\n"
+        + "    \"native_chooser\": \"edu.cmu.cs.dennisc.java.awt.FileDialogUtilities#showSaveFileDialog(Component,File,String,String)\"\n"
+        + "  },\n"
+        + "  \"reporting_summary\": \"" + escapeJson(summary) + "\",\n"
+        + "  \"missing_evidence\": [\n"
+        + "    \"desktop Save dialog discovery\",\n"
+        + "    \"desktop Save dialog control\",\n"
+        + "    \"selected Save path supplied by UI automation\"\n"
+        + "  ],\n"
+        + "  \"requiresNextEvidence\": [\n"
+        + "    \"desktop Save dialog owner/component artifact\",\n"
+        + "    \"desktop Save dialog control result artifact\"\n"
+        + "  ],\n"
+        + "  \"doesNotClaim\": [\n"
+        + "    \"desktop Save menu item was clicked\",\n"
+        + "    \"desktop Save dialog control\",\n"
+        + "    \"full Alice UI automation\",\n"
+        + "    \"first-lesson completion\",\n"
+        + "    \"visible rendering correctness\",\n"
+        + "    \"grading\"\n"
+        + "  ]\n"
+        + "}\n";
+  }
+
   private static String savedFileJson(SaveOperationFlow.Result result) {
     return result.savedFile() == null
         ? "null"
@@ -114,5 +177,13 @@ final class SaveOperationCompletionEvidence {
 
   private static String nullToBlank(String value) {
     return value == null ? "" : value;
+  }
+
+  private static Path artifactPath(Path evidenceDir, String artifactName) {
+    Path artifact = evidenceDir.resolve(artifactName).normalize();
+    if (!artifact.startsWith(evidenceDir.normalize())) {
+      throw new IllegalArgumentException("Save operation artifact escapes evidence dir");
+    }
+    return artifact;
   }
 }
