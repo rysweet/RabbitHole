@@ -36,6 +36,8 @@ public class SaveOperationCompletionEvidenceTest {
     assertTrue(json, json.contains("\"prompt_count\": 1"));
     assertTrue(json, json.contains("\"save_attempts\": 2"));
     assertTrue(json, json.contains("\"saved_file\": \"" + SaveOperationCompletionEvidence.escapeJson(savedFile.getPath()) + "\""));
+    assertTrue(json, json.contains("\"saved_file_exists\": true"));
+    assertTrue(json, json.contains("\"saved_file_size_bytes\": " + savedFile.length()));
     assertTrue(json, json.contains("Save dialog control"));
   }
 
@@ -78,6 +80,8 @@ public class SaveOperationCompletionEvidenceTest {
       assertTrue(json, json.contains("\"canceled\": true"));
       assertTrue(json, json.contains("\"save_attempts\": 0"));
       assertTrue(json, json.contains("\"saved_file\": null"));
+      assertTrue(json, json.contains("\"saved_file_exists\": null"));
+      assertTrue(json, json.contains("\"saved_file_size_bytes\": null"));
 
       Path dialogArtifact = evidenceDir.resolve(SaveOperationCompletionEvidence.DIALOG_CONTROL_ARTIFACT);
       assertTrue(Files.size(dialogArtifact) > 0);

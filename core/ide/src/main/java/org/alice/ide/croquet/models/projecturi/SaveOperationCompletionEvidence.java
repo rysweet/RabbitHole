@@ -212,6 +212,8 @@ final class SaveOperationCompletionEvidence {
         + "  \"prompt_count\": " + result.promptCount() + ",\n"
         + "  \"save_attempts\": " + result.saveAttempts() + ",\n"
         + "  \"saved_file\": " + savedFileJson(result) + ",\n"
+        + "  \"saved_file_exists\": " + savedFileExistsJson(result) + ",\n"
+        + "  \"saved_file_size_bytes\": " + savedFileSizeJson(result) + ",\n"
         + "  \"doesNotClaim\": [\n"
         + "    \"desktop Save menu item was clicked\",\n"
         + "    \"Save dialog control\",\n"
@@ -392,6 +394,23 @@ final class SaveOperationCompletionEvidence {
     return result.savedFile() == null
         ? "null"
         : "\"" + escapeJson(result.savedFile().getPath()) + "\"";
+  }
+
+  private static String savedFileExistsJson(SaveOperationFlow.Result result) {
+    return result.savedFile() == null
+        ? "null"
+        : Boolean.toString(Files.isRegularFile(result.savedFile().toPath()));
+  }
+
+  private static String savedFileSizeJson(SaveOperationFlow.Result result) {
+    if (result.savedFile() == null || !Files.isRegularFile(result.savedFile().toPath())) {
+      return "null";
+    }
+    try {
+      return Long.toString(Files.size(result.savedFile().toPath()));
+    } catch (IOException ioe) {
+      return "null";
+    }
   }
 
   private static String stringJson(String value) {
