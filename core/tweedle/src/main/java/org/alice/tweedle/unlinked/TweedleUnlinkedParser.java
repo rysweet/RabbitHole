@@ -279,10 +279,20 @@ public class TweedleUnlinkedParser {
     @Override
     public TweedleExpression visitExpression(TweedleParser.ExpressionContext context) {
       TweedleExpression expression = buildExpression(context);
-      if (expectedType != null && expression != null && expression.getType() != null && !expectedType.willAcceptValueOfType(expression.getType()) && !expression.getType().willAcceptValueOfType(expectedType)) {
+      if (!isExpectedTypeCompatible(expression)) {
         throw new RuntimeException("Had been expecting expression of type " + expectedType + ", but it is typed as " + expression.getType());
       }
       return expression;
+    }
+
+    private boolean isExpectedTypeCompatible(TweedleExpression expression) {
+      if (expectedType == null || expression == null || expression.getType() == null) {
+        return true;
+      }
+      if (expression instanceof TweedleNull) {
+        return expectedType == TweedleTypes.TEXT_STRING || !(expectedType instanceof TweedlePrimitiveType<?>);
+      }
+      return expectedType.willAcceptValueOfType(expression.getType()) || expression.getType().willAcceptValueOfType(expectedType);
     }
 
     private TweedleExpression buildExpression(TweedleParser.ExpressionContext context) {

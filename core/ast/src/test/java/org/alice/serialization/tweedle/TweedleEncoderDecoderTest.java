@@ -8,6 +8,7 @@ import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserField;
 
@@ -95,12 +96,13 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithNullInitializedFieldReportsMalformedTweedle() {
-    IllegalArgumentException thrown = assertThrows(
-        IllegalArgumentException.class,
-        () -> coder.decode("class SyntheticType { TextString label <- null; }"));
+  public void decodeClassWithNullInitializedFieldCreatesNullLiteralInitializer() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { TextString label <- null; }");
 
-    assertTrue(thrown.getMessage().contains("Unable to parse Tweedle type"));
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals("label", field.getName());
+    assertTrue(field.initializer.getValue() instanceof NullLiteral);
   }
 
   @Test

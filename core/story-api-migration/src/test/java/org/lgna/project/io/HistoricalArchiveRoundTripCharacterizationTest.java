@@ -20,6 +20,7 @@ import org.lgna.project.ast.CrawlPolicy;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ResourceExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
@@ -740,7 +741,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void nullInitializerJsonTypeArchiveFailsWithArchiveEntryPath() throws Exception {
+  public void nullInitializerJsonTypeArchiveDecodesTextFieldInitializer() throws Exception {
     ImageResource imageResource = generatedImageResource("json-type-null-initializer-boundary-texture.png", 0xFF663333);
     File typeArchive = temporaryFolder.newFile("null-initializer-json-a3c-boundary.a3c");
 
@@ -765,10 +766,23 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
           imageResource.getName(),
           "resources/" + imageResource.getName());
     }
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeArchive));
+    TypeResourcesPair readPair = IoUtilities.readType(typeArchive);
 
-    assertTrue(thrown.getMessage().contains(
-        "Unable to decode Tweedle type entry src/GeneratedJsonTypeWithNullInitializerBoundary.twe"));
+    NamedUserType readType = readPair.getType();
+    assertNotNull("Null-initializer JSON .a3c fixture should decode the type", readType);
+    assertEquals("GeneratedJsonTypeWithNullInitializerBoundary", readType.getName());
+    assertEquals("SProgram", readType.getSuperType().getName());
+    assertEquals(1, readType.getDeclaredFields().size());
+    UserField field = readType.getDeclaredFields().get(0);
+    assertEquals("label", field.getName());
+    assertTrue(field.initializer.getValue() instanceof NullLiteral);
+
+    Resource readResource = onlyResource(readPair.getResources());
+    assertEquals(imageResource.getId(), readResource.getId());
+    assertEquals(imageResource.getName(), readResource.getName());
+    assertEquals(imageResource.getOriginalFileName(), readResource.getOriginalFileName());
+    assertEquals(imageResource.getContentType(), readResource.getContentType());
+    assertArrayEquals(imageResource.getData(), readResource.getData());
   }
 
   @Test

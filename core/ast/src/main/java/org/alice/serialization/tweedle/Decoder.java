@@ -3,6 +3,7 @@ package org.alice.serialization.tweedle;
 import org.alice.tweedle.TweedleClass;
 import org.alice.tweedle.TweedleLinkException;
 import org.alice.tweedle.TweedleField;
+import org.alice.tweedle.TweedleNull;
 import org.alice.tweedle.TweedlePrimitiveValue;
 import org.alice.tweedle.TweedleType;
 import org.alice.tweedle.ast.TweedleExpression;
@@ -17,6 +18,7 @@ import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserField;
 
@@ -100,6 +102,9 @@ public class Decoder {
     TweedleExpression initializer = property.getInitializer();
     if (initializer instanceof TweedlePrimitiveValue<?> primitiveValue) {
       return primitiveLiteral(primitiveValue.getPrimitiveValue());
+    }
+    if (initializer instanceof TweedleNull) {
+      return new NullLiteral();
     }
     throw unsupportedFieldInitializer(property);
   }

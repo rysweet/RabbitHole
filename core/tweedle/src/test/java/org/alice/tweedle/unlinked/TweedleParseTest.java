@@ -195,6 +195,20 @@ public class TweedleParseTest {
   }
 
   @Test
+  public void classWithNullInitializedTextFieldShouldHaveNullInitializer() {
+    TweedleClass tested = (TweedleClass) parseType("class Scene extends SScene { TextString label <- null; }");
+
+    TweedleField field = tested.getProperties().getFirst();
+    assertTrue("The property should have an initializer.", field.hasInitializer());
+    assertSame("The initializer should be Tweedle null.", TweedleNull.NULL, field.getInitializer());
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void classWithNullInitializedWholeNumberFieldShouldFailTypeCheck() {
+    parseType("class Scene extends SScene { WholeNumber count <- null; }");
+  }
+
+  @Test
   public void classMethodShouldHaveReturnType() {
     String scene = "class Scene extends SScene {\n" + "  WholeNumber sumThing() {\n" + "    return 3 + 4;\n" + "  }\n" + "}";
     TweedleClass tested = (TweedleClass) parseType(scene);
