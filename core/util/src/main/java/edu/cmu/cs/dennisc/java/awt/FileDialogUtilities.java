@@ -401,13 +401,9 @@ public class FileDialogUtilities {
         + "  \"reporting_summary\": \"" + escapeJson(reportingSummary(reason)) + "\",\n"
         + "  \"blocker\": {\n"
         + "    \"observed\": \"" + escapeJson(observed(reason)) + "\",\n"
-        + "    \"required\": \"displayable Alice ProjectDocumentFrame root window before FileDialogUtilities.showSaveFileDialog displays the Save dialog\"\n"
+        + "    \"required\": \"" + escapeJson(blockerRequired(reason)) + "\"\n"
         + "  },\n"
-        + "  \"requiresNextEvidence\": [\n"
-        + "    \"displayable Alice ProjectDocumentFrame root window at FileDialogUtilities.showSaveFileDialog\",\n"
-        + "    \"Save dialog displayed result from FileDialogUtilities after FileDialog.show() returns\",\n"
-        + "    \"selected Save path supplied by UI automation\"\n"
-        + "  ],\n"
+        + saveDialogRequiresNextEvidenceJson(reason)
         + "  \"doesNotClaim\": [\n"
         + "    \"desktop Save menu item was clicked\",\n"
         + "    \"Save dialog displayed\",\n"
@@ -461,6 +457,28 @@ public class FileDialogUtilities {
       case "dialog_root_not_displayable" -> "root Component exists but root.isDisplayable() is false";
       default -> "owner Component and displayable root Component resolved";
     };
+  }
+
+  private static String blockerRequired(String reason) {
+    if ("target_resolved".equals(reason)) {
+      return "Save dialog display/control result after FileDialog.show(), or completed saved project file evidence through the Save flow";
+    }
+    return "displayable Alice ProjectDocumentFrame root window before FileDialogUtilities.showSaveFileDialog displays the Save dialog";
+  }
+
+  private static String saveDialogRequiresNextEvidenceJson(String reason) {
+    if ("target_resolved".equals(reason)) {
+      return "  \"requiresNextEvidence\": [\n"
+          + "    \"Save dialog displayed result from FileDialogUtilities after FileDialog.show() returns\",\n"
+          + "    \"Save dialog control result artifact\",\n"
+          + "    \"completed saved project file evidence through the Save flow\"\n"
+          + "  ],\n";
+    }
+    return "  \"requiresNextEvidence\": [\n"
+        + "    \"displayable Alice ProjectDocumentFrame root window at FileDialogUtilities.showSaveFileDialog\",\n"
+        + "    \"Save dialog displayed result from FileDialogUtilities after FileDialog.show() returns\",\n"
+        + "    \"selected Save path supplied by UI automation\"\n"
+        + "  ],\n";
   }
 
   private static SelectedPathAutomation selectedPathAutomation(File directory, String extension) {

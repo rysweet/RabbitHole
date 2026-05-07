@@ -3,7 +3,9 @@ package org.alice.ide.croquet.models.projecturi;
 import edu.cmu.cs.dennisc.java.awt.FileDialogUtilities;
 import org.junit.Test;
 
+import javax.swing.JFrame;
 import javax.swing.JPanel;
+import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +13,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNoException;
 
 public class SaveDialogDiscoveryTargetEvidenceTest {
@@ -146,6 +149,34 @@ public class SaveDialogDiscoveryTargetEvidenceTest {
     assertTrue(json, json.contains("FileDialogUtilities.showSaveFileDialog"));
     assertTrue(json, json.contains("Save dialog displayed"));
     assertTrue(json, json.contains("Save dialog controlled"));
+  }
+
+  @Test
+  public void writesBlockedDialogDiscoveryTargetWhenRootWindowIsNotDisplayable() throws Exception {
+    assumeFalse("requires a headful AWT environment", GraphicsEnvironment.isHeadless());
+    Path evidenceDir = newTestDir().resolve("not-displayable-root");
+    JFrame owner = new JFrame("unshown-save-owner");
+    try {
+      Path artifact = FileDialogUtilities.writeSaveDialogDiscoveryTarget(
+          evidenceDir,
+          owner,
+          new File("target/projects"),
+          "classroom",
+          "a3p");
+
+      assertTrue(Files.size(artifact) > 0);
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("\"status\": \"blocked\""));
+      assertTrue(json, json.contains("\"reason\": \"dialog_root_not_displayable\""));
+      assertTrue(json, json.contains("\"owner_component_class\": \"javax.swing.JFrame\""));
+      assertTrue(json, json.contains("\"owner_displayable\": false"));
+      assertTrue(json, json.contains("\"root_component_class\": \"javax.swing.JFrame\""));
+      assertTrue(json, json.contains("\"root_displayable\": false"));
+      assertTrue(json, json.contains("The Save dialog root window exists but is not displayable yet."));
+      assertTrue(json, json.contains("displayable Alice ProjectDocumentFrame root window"));
+    } finally {
+      owner.dispose();
+    }
   }
 
   @Test
