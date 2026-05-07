@@ -200,6 +200,15 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(nextActionJson, nextActionJson.contains("\"status\": \"blocked\""));
     assertTrue(nextActionJson, nextActionJson.contains("\"source\": \"desktop_run_render_target_attachment\""));
     assertTrue(nextActionJson, nextActionJson.contains("\"evaluated_after\": \"desktop-run-pixel-observation.json\""));
+    assertTrue(nextActionJson, nextActionJson.contains("\"reporting_summary\""));
+    assertTrue(nextActionJson,
+        nextActionJson.contains("Run window attachment evidence was recorded in desktop-run-render-affordance.json."));
+    assertTrue(nextActionJson,
+        nextActionJson.contains("Read desktop-run-pixel-observation.json before reporting whether desktop pixels were sampled."));
+    assertTrue(nextActionJson, nextActionJson.contains("\"next_action_status\": \"blocked\""));
+    assertTrue(nextActionJson, nextActionJson.contains("\"missing_evidence\""));
+    assertTrue(nextActionJson, nextActionJson.contains("desktop Save menu readiness or invocation result"));
+    assertTrue(nextActionJson, nextActionJson.contains("code editor/procedure action readiness or invocation result"));
     assertTrue(nextActionJson, nextActionJson.contains("\"candidate_actions\""));
     assertTrue(nextActionJson, nextActionJson.contains("\"desktop_save_menu_action\""));
     assertTrue(nextActionJson, nextActionJson.contains("\"desktop_code_editor_or_procedure_action\""));
