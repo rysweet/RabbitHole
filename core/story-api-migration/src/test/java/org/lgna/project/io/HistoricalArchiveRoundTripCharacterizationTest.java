@@ -384,6 +384,39 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithUnresolvedParentSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-unresolved-parent-sibling-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithUnresolvedParentSiblingBoundary",
+        "class GeneratedProgramWithUnresolvedParentSiblingBoundary extends SProgram { WholeNumber count; }",
+        "GeneratedUnresolvedParentSiblingBoundaryScene",
+        "class GeneratedUnresolvedParentSiblingBoundaryScene extends MissingLegacySceneParent { WholeNumber count; }");
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithUnresolvedParentSiblingBoundary",
+          "src/GeneratedProgramWithUnresolvedParentSiblingBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedUnresolvedParentSiblingBoundaryScene",
+          "src/GeneratedUnresolvedParentSiblingBoundaryScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedUnresolvedParentSiblingBoundaryScene.twe");
+      assertNotNull(
+          "Generated JSON .a3w fixture should contain the unresolved-parent sibling type source",
+          siblingTypeEntry);
+      assertTrue(readEntry(zipFile, siblingTypeEntry).contains("extends MissingLegacySceneParent"));
+    }
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedUnresolvedParentSiblingBoundaryScene]"));
+  }
+
+  @Test
   public void generatedJsonPlayerArchiveMissingManifestDeclaredProgramEntryFailsClearly() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-missing-program-entry-boundary.a3w");
 
