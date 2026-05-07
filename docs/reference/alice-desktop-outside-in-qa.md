@@ -176,6 +176,7 @@ Runner and validator commands return a non-zero exit status when the catalog is 
 | `ALICE_QA_DISPLAY` | Xvfb runs | First free display from `:90` through `:120` | Reuses a specific X display instead of selecting one automatically. |
 | `ALICE_QA_SCREEN` | Xvfb runs | `1280x900x24` | Sets Xvfb screen geometry. |
 | `ALICE_QA_READY_WAIT_SECONDS` | Xvfb runs | Scenario `automation.readyWaitSeconds` | Overrides the scenario readiness wait before screenshot capture. |
+| `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS` | Xvfb runs | unset | Set to `1` only for controlled QA launches that need isolated first-run License Agreement acceptance state. The runner records the generated `java.util.prefs.userRoot` and `.java/.userPrefs/` state files in `license-acceptance.json`. |
 | `ALICE_QA_RUN_GATED_SMOKES` | Gated command smokes | unset | Set to `1` to execute configured command smokes. When unset, the runner writes `outcome=gated-not-run` status and a checklist, then exits non-zero unless `--prepare-only` was requested. |
 | `ALICE_QA_DISABLE_WINDOW_DETECTOR` | Xvfb runs | unset | Set to `1` only for contract tests to force a plain `window-detector-unavailable` inventory record. |
 | `NODE_OPTIONS` | Surrounding Node tooling | unset | Use `--max-old-space-size=32768` when a larger QA orchestrator invokes Node-based helpers around this lane. The lane itself does not require Node. |

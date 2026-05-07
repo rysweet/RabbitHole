@@ -6,6 +6,8 @@ BASE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$BASE_DIR/../../.." && pwd)
 VALIDATOR="$SCRIPT_DIR/validate-scenarios.sh"
 ROOT_DIRECTORY_PREP="$SCRIPT_DIR/prepare-root-directory.py"
+LICENSE_ACCEPTANCE_PREP="$SCRIPT_DIR/prepare-license-acceptance.py"
+LICENSE_DIALOG_PROBE="$SCRIPT_DIR/license-dialog-probe.py"
 
 usage() {
   cat <<'EOF'
@@ -19,9 +21,12 @@ Environment:
   ALICE_QA_DISPLAY       Reuse a specific X display, for example :99.
   ALICE_QA_SCREEN        Xvfb screen geometry, default 1280x900x24.
   ALICE_QA_READY_WAIT_SECONDS
-                         Override GUI readiness wait before screenshot capture.
+                          Override GUI readiness wait before screenshot capture.
+  ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1
+                           Prepare isolated first-run License Agreement acceptance
+                           state for this controlled QA launch only.
   ALICE_QA_RUN_GATED_SMOKES=1
-                          Execute gated command smoke scenarios.
+                           Execute gated command smoke scenarios.
                           Without it, gated smokes write gated-not-run evidence
                           and exit non-zero unless --prepare-only is requested.
   ALICE_QA_DISABLE_XVFB=1
@@ -705,6 +710,13 @@ write_application_root_error_probe() {
   python3 "$SCRIPT_DIR/application-root-error-probe.py" "$inventory_path" "$output_path"
 }
 
+write_license_dialog_probe() {
+  local inventory_path=$1
+  local output_path=$2
+
+  python3 "$LICENSE_DIALOG_PROBE" "$inventory_path" "$output_path"
+}
+
 select_display() {
   if [ -n "${ALICE_QA_DISPLAY:-}" ]; then
     printf '%s\n' "$ALICE_QA_DISPLAY"
@@ -979,6 +991,59 @@ JSON
   root_directory_prep_status=$(inventory_json_field "$run_dir/root-directory-prep.json" status)
   root_directory_prep_blocker=$(inventory_json_field "$run_dir/root-directory-prep.json" blocker)
 
+  local license_acceptance_status license_acceptance_blocker license_prefs_user_root license_jvm_option
+  license_prefs_user_root="$(cd "$run_dir" && pwd)/java-user-prefs"
+  license_jvm_option="-Djava.util.prefs.userRoot=$license_prefs_user_root"
+  if [ "${ALICE_QA_ACCEPT_LICENSES_FOR_TESTS:-}" = "1" ]; then
+    if ! python3 "$LICENSE_ACCEPTANCE_PREP" \
+        --user-root "$license_prefs_user_root" \
+        --output "$run_dir/license-acceptance.json" \
+        --accept-for-tests; then
+      write_environment "$run_dir" "$display"
+      write_checklist "$scenario_json" "$run_dir" >/dev/null
+      write_x_window_inventory \
+        "$run_dir" \
+        not-attempted \
+        license-acceptance-prep-failed \
+        "Alice first-run license acceptance prep failed before launch; inspect license-acceptance.json." \
+        "$display" \
+        before-alice-launch \
+        "" \
+        "" \
+        not-started
+      write_controlled_display_pixel_observation \
+        "$run_dir" \
+        blocked \
+        license-acceptance-prep-failed \
+        "Alice first-run license acceptance prep failed before launch; inspect license-acceptance.json." \
+        "$display" \
+        false \
+        no-visible-pixel-proof \
+        "" \
+        not-attempted \
+        not-started \
+        not-attempted \
+        "" \
+        "$xvfb_executable" \
+        "" \
+        not-attempted \
+        "" \
+        before-alice-launch \
+        not-attempted \
+        x-window-inventory.json \
+        0
+      printf 'Alice license acceptance prep failed; see %s/license-acceptance.json\n' "$run_dir" >&2
+      return 2
+    fi
+  else
+    python3 "$LICENSE_ACCEPTANCE_PREP" \
+      --user-root "$license_prefs_user_root" \
+      --output "$run_dir/license-acceptance.json" >/dev/null 2>&1 || true
+    license_jvm_option=
+  fi
+  license_acceptance_status=$(inventory_json_field "$run_dir/license-acceptance.json" status)
+  license_acceptance_blocker=$(inventory_json_field "$run_dir/license-acceptance.json" blocker)
+
   Xvfb "$display" -screen 0 "${ALICE_QA_SCREEN:-1280x900x24}" > "$run_dir/xvfb.log" 2>&1 &
   xvfb_pid=$!
   alice_pid=
@@ -1046,6 +1111,18 @@ JSON
 
   (
     cd "$resolved_cwd"
+    if [ -n "$license_jvm_option" ]; then
+      if [ -n "${MAVEN_OPTS:-}" ]; then
+        export MAVEN_OPTS="${MAVEN_OPTS} ${license_jvm_option}"
+      else
+        export MAVEN_OPTS="$license_jvm_option"
+      fi
+      if [ -n "${JAVA_TOOL_OPTIONS:-}" ]; then
+        export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS} ${license_jvm_option}"
+      else
+        export JAVA_TOOL_OPTIONS="$license_jvm_option"
+      fi
+    fi
     timeout -k 10s "${run_timeout}s" "${argv[@]}"
   ) > "$run_dir/launch.log" 2>&1 &
   alice_pid=$!
@@ -1080,11 +1157,14 @@ JSON
 
   collect_x_window_inventory "$run_dir" "$display" after-readiness-wait "$alice_pid"
   write_application_root_error_probe "$run_dir/x-window-inventory.json" "$run_dir/application-root-error.json"
-  local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker
+  write_license_dialog_probe "$run_dir/x-window-inventory.json" "$run_dir/license-dialog.json"
+  local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker license_dialog_status license_dialog_blocker
   window_inventory_status=$(inventory_json_field "$run_dir/x-window-inventory.json" status)
   alice_window_candidate_count=$(inventory_json_field "$run_dir/x-window-inventory.json" aliceWindowCandidateCount)
   application_root_error_status=$(inventory_json_field "$run_dir/application-root-error.json" status)
   application_root_error_blocker=$(inventory_json_field "$run_dir/application-root-error.json" blocker)
+  license_dialog_status=$(inventory_json_field "$run_dir/license-dialog.json" status)
+  license_dialog_blocker=$(inventory_json_field "$run_dir/license-dialog.json" blocker)
 
   local screenshot_tool screenshot_status
   screenshot_tool=$(screenshot_tool_name)
@@ -1109,12 +1189,18 @@ JSON
     printf 'rootDirectoryPrep=%s\n' root-directory-prep.json
     printf 'rootDirectoryPrepStatus=%s\n' "$root_directory_prep_status"
     printf 'rootDirectoryPrepBlocker=%s\n' "$root_directory_prep_blocker"
+    printf 'licenseAcceptance=%s\n' license-acceptance.json
+    printf 'licenseAcceptanceStatus=%s\n' "$license_acceptance_status"
+    printf 'licenseAcceptanceBlocker=%s\n' "$license_acceptance_blocker"
     printf 'windowInventory=%s\n' x-window-inventory.json
     printf 'windowInventoryStatus=%s\n' "$window_inventory_status"
     printf 'aliceWindowCandidateCount=%s\n' "$alice_window_candidate_count"
     printf 'applicationRootError=%s\n' application-root-error.json
     printf 'applicationRootErrorStatus=%s\n' "$application_root_error_status"
     printf 'applicationRootErrorBlocker=%s\n' "$application_root_error_blocker"
+    printf 'licenseDialog=%s\n' license-dialog.json
+    printf 'licenseDialogStatus=%s\n' "$license_dialog_status"
+    printf 'licenseDialogBlocker=%s\n' "$license_dialog_blocker"
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
@@ -1161,6 +1247,12 @@ JSON
     observation_status=blocked
     observation_blocker="$application_root_error_blocker"
     observation_detail="A Java window titled Application Root Error was observed before any Alice desktop candidate; inspect application-root-error.json for exact expected dialog text and next invocation change."
+    pixels_observed=false
+    observation_claim=no-visible-pixel-proof
+  elif [ "$license_dialog_status" = observed ]; then
+    observation_status=blocked
+    observation_blocker="$license_dialog_blocker"
+    observation_detail="A first-run License Agreement dialog was observed; inspect license-dialog.json for exact title, controls, and the isolated test-only Java Preferences bypass."
     pixels_observed=false
     observation_claim=no-visible-pixel-proof
   elif [ "$ready_status" != alice-window-found ]; then

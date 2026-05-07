@@ -107,6 +107,15 @@ The launch scenario starts the real Alice desktop through Maven under Xvfb:
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 ```
 
+On a first-run profile, the Alice License Agreement dialogs may be the expected
+blocker. To keep that state out of real user preferences during a controlled QA
+launch, opt in explicitly:
+
+```bash
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
+```
+
 Before launch, the runner verifies `alice-ide/pom.xml` configures
 `org.alice.ide.rootDirectory=../core/resources/target/distribution`. If
 `core/resources/target/distribution` is missing, it prepares that distribution
@@ -139,7 +148,7 @@ The runner writes evidence to:
 qa/outside-in/alice-desktop/evidence/alice-desktop-launch/<timestamp>/
 ```
 
-A successful launch evidence capture includes `root-directory-prep.json`, an environment summary, Xvfb log, Alice launch log, status file, screenshot, and `x-window-inventory.json`. The window inventory records visible X window title, class, process, and geometry after the readiness wait so a blocked run names the exact window signal that was or was not present. The runner checks root-directory preparation, process, window-readiness, and screenshot-capture status; it does not deeply classify every line in `launch.log` as a semantic pass/fail oracle. Review `root-directory-prep.json`, `status.txt`, `x-window-inventory.json`, `launch.log`, and the screenshot before treating the launch evidence as accepted.
+A successful launch evidence capture includes `root-directory-prep.json`, `license-acceptance.json`, `license-dialog.json`, an environment summary, Xvfb log, Alice launch log, status file, screenshot, and `x-window-inventory.json`. The window inventory records visible X window title, class, process, and geometry after the readiness wait so a blocked run names the exact window signal that was or was not present. The license artifacts record the exact first-run dialog title/controls when observed, or the isolated `java.util.prefs.userRoot` state files under `.java/.userPrefs/` used when `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` is set. The runner checks root-directory preparation, first-run license state, process, window-readiness, and screenshot-capture status; it does not deeply classify every line in `launch.log` as a semantic pass/fail oracle. Review `root-directory-prep.json`, `license-acceptance.json`, `license-dialog.json`, `status.txt`, `x-window-inventory.json`, `launch.log`, and the screenshot before treating the launch evidence as accepted.
 
 If Xvfb is unavailable, no display can be selected, or Xvfb exits before Alice starts, the runner exits non-zero and writes a manual fallback checklist with whichever early diagnostics are available. These early fallback directories may not contain `status.txt` because the launch did not reach the evidence-capture phase.
 
@@ -213,6 +222,7 @@ The runner accepts these environment variables:
 | `ALICE_QA_DISPLAY` | Reuse a specific X display instead of selecting a free display from `:90` through `:120`. | `ALICE_QA_DISPLAY=:99` |
 | `ALICE_QA_SCREEN` | Set Xvfb screen geometry. Defaults to `1280x900x24`. | `ALICE_QA_SCREEN=1600x1000x24` |
 | `ALICE_QA_READY_WAIT_SECONDS` | Override the scenario readiness wait before screenshot capture. | `ALICE_QA_READY_WAIT_SECONDS=60` |
+| `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS` | Prepare isolated first-run License Agreement acceptance state for controlled QA launches only. | `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` |
 | `ALICE_QA_RUN_GATED_SMOKES` | Run gated CLI/UI smoke commands instead of recording a non-success gated skip. | `ALICE_QA_RUN_GATED_SMOKES=1` |
 
 Example:
