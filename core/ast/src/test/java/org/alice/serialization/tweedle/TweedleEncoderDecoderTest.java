@@ -9,6 +9,8 @@ import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.LocalAccess;
+import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
@@ -17,6 +19,7 @@ import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserArrayType;
 import org.lgna.project.ast.UserField;
+import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 
@@ -324,6 +327,42 @@ public class TweedleEncoderDecoderTest {
     assertTrue(thrown.getMessage().contains("return identifier type is not assignable"));
     assertTrue(thrown.getMessage().contains("label"));
     assertTrue(thrown.getMessage().contains("value"));
+  }
+
+  @Test
+  public void decodeClassWithLiteralLocalThenReturnLocalCreatesLocalAccess() throws Exception {
+    NamedUserType type = decodeUserType(
+        "class SyntheticType { WholeNumber count() { WholeNumber local <- 1; return local; } }");
+
+    assertEquals(1, type.getDeclaredMethods().size());
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("count", method.getName());
+    assertEquals(2, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof LocalDeclarationStatement);
+    LocalDeclarationStatement localStatement =
+        (LocalDeclarationStatement) method.body.getValue().statements.get(0);
+    UserLocal local = localStatement.local.getValue();
+    assertEquals("local", local.getName());
+    assertSame(JavaType.getInstance(Integer.class), local.getValueType());
+    assertIntegerLiteral(localStatement.initializer.getValue(), 1);
+
+    assertTrue(method.body.getValue().statements.get(1) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(1);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertTrue(returnStatement.expression.getValue() instanceof LocalAccess);
+    LocalAccess access = (LocalAccess) returnStatement.expression.getValue();
+    assertSame(local, access.local.getValue());
+  }
+
+  @Test
+  public void decodeClassWithNonLiteralLocalInitializerReportsUnsupportedLocalInitializer() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode(
+            "class SyntheticType { WholeNumber count() { WholeNumber local <- 1 + 2; return local; } }"));
+
+    assertTrue(thrown.getMessage().contains("local variable initializers"));
+    assertTrue(thrown.getMessage().contains("count.local"));
   }
 
   @Test

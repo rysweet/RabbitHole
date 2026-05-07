@@ -9,11 +9,14 @@ import org.alice.tweedle.TweedleMethod;
 import org.alice.tweedle.TweedleNull;
 import org.alice.tweedle.TweedlePrimitiveValue;
 import org.alice.tweedle.TweedleRequiredParameter;
+import org.alice.tweedle.TweedleStatement;
 import org.alice.tweedle.TweedleType;
 import org.alice.tweedle.TweedleVoidType;
 import org.alice.tweedle.ast.IdentifierReference;
+import org.alice.tweedle.ast.LocalVariableDeclaration;
 import org.alice.tweedle.ast.TweedleArrayInitializer;
 import org.alice.tweedle.ast.TweedleExpression;
+import org.alice.tweedle.ast.TweedleLocalVariable;
 import org.alice.tweedle.unlinked.TweedleUnlinkedParser;
 import org.lgna.common.Resource;
 import org.lgna.project.ast.AbstractDeclaration;
@@ -28,12 +31,16 @@ import org.lgna.project.ast.DoubleLiteral;
 import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
+import org.lgna.project.ast.LocalAccess;
+import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ParameterAccess;
+import org.lgna.project.ast.Statement;
 import org.lgna.project.ast.StringLiteral;
 import org.lgna.project.ast.UserField;
+import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 
@@ -156,19 +163,55 @@ public class Decoder {
       }
       return new BlockStatement();
     }
-    if (method.getBody().size() == 1
-        && method.getBody().get(0) instanceof org.alice.tweedle.ast.ReturnStatement returnStatement) {
-      return new BlockStatement(decodeReturnStatement(method, returnType, requiredParameters, returnStatement));
+    List<Statement> statements = new ArrayList<>();
+    List<UserLocal> locals = new ArrayList<>();
+    for (int i = 0; i < method.getBody().size(); i++) {
+      TweedleStatement statement = method.getBody().get(i);
+      if (statement instanceof LocalVariableDeclaration localVariableDeclaration) {
+        LocalDeclarationStatement localStatement = decodeLocalDeclarationStatement(method, localVariableDeclaration);
+        statements.add(localStatement);
+        locals.add(localStatement.local.getValue());
+      } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
+          && i == method.getBody().size() - 1) {
+        statements.add(decodeReturnStatement(method, returnType, requiredParameters, locals, returnStatement));
+      } else {
+        throw unsupportedMethodBody(method);
+      }
     }
-    throw unsupportedMethodBody(method);
+    if (!(method.getBody().get(method.getBody().size() - 1) instanceof org.alice.tweedle.ast.ReturnStatement)) {
+      throw unsupportedMethodBody(method);
+    }
+    return new BlockStatement(statements.toArray(Statement[]::new));
+  }
+
+  private LocalDeclarationStatement decodeLocalDeclarationStatement(
+      TweedleMethod method,
+      LocalVariableDeclaration localVariableDeclaration) {
+    TweedleLocalVariable tweedleLocal = localVariableDeclaration.getDeclaration();
+    AbstractType<?, ?, ?> localType = resolveType(tweedleLocal.getType(), "local variable");
+    TweedleExpression initializer = tweedleLocal.getInitializer();
+    if (!(initializer instanceof TweedlePrimitiveValue<?> primitiveValue)) {
+      throw unsupportedLocalInitializer(method, tweedleLocal);
+    }
+    Expression astInitializer = primitiveLiteral(primitiveValue.getPrimitiveValue());
+    if (!localType.isAssignableFrom(astInitializer.getType())) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle local variable initializer type is not assignable to "
+              + localType.getName() + ": " + method.getName() + "." + tweedleLocal.getName());
+    }
+    return new LocalDeclarationStatement(
+        new UserLocal(tweedleLocal.getName(), localType, localVariableDeclaration.isConstant()),
+        astInitializer);
   }
 
   private org.lgna.project.ast.ReturnStatement decodeReturnStatement(
       TweedleMethod method,
       AbstractType<?, ?, ?> returnType,
       UserParameter[] requiredParameters,
+      List<UserLocal> locals,
       org.alice.tweedle.ast.ReturnStatement returnStatement) {
-    Expression expression = decodeMethodReturnExpression(method, returnType, requiredParameters, returnStatement.getExpression());
+    Expression expression =
+        decodeMethodReturnExpression(method, returnType, requiredParameters, locals, returnStatement.getExpression());
     return new org.lgna.project.ast.ReturnStatement(returnType, expression);
   }
 
@@ -176,6 +219,7 @@ public class Decoder {
       TweedleMethod method,
       AbstractType<?, ?, ?> returnType,
       UserParameter[] requiredParameters,
+      List<UserLocal> locals,
       TweedleExpression returnExpression) {
     if (returnExpression instanceof TweedlePrimitiveValue<?> primitiveValue) {
       Expression expression = primitiveLiteral(primitiveValue.getPrimitiveValue());
@@ -183,10 +227,20 @@ public class Decoder {
         return expression;
       }
       throw new UnsupportedTweedleDecodeException(
-          "Tweedle method return expression type is not assignable to "
-              + returnType.getName() + ": " + method.getName());
+            "Tweedle method return expression type is not assignable to "
+                + returnType.getName() + ": " + method.getName());
     }
     if (returnExpression instanceof IdentifierReference identifierReference) {
+      UserLocal local = findLocal(locals, identifierReference.getName());
+      if (local != null) {
+        LocalAccess access = new LocalAccess(local);
+        if (returnType.isAssignableFrom(access.getType())) {
+          return access;
+        }
+        throw new UnsupportedTweedleDecodeException(
+            "Tweedle method return identifier type is not assignable to "
+                + returnType.getName() + ": " + method.getName() + "." + identifierReference.getName());
+      }
       UserParameter parameter = findParameter(requiredParameters, identifierReference.getName());
       if (parameter != null) {
         ParameterAccess access = new ParameterAccess(parameter);
@@ -200,6 +254,16 @@ public class Decoder {
       throw unsupportedMethodReturnIdentifier(method, identifierReference);
     }
     throw unsupportedMethodReturnExpression(method);
+  }
+
+  private UserLocal findLocal(List<UserLocal> locals, String name) {
+    for (int i = locals.size() - 1; i >= 0; i--) {
+      UserLocal local = locals.get(i);
+      if (local.getName().equals(name)) {
+        return local;
+      }
+    }
+    return null;
   }
 
   private UserParameter findParameter(UserParameter[] parameters, String name) {
@@ -349,8 +413,16 @@ public class Decoder {
       TweedleMethod method,
       IdentifierReference identifierReference) {
     return new UnsupportedTweedleDecodeException(
-        "Only required-parameter Tweedle method return identifiers are supported by the AST decoder: "
+        "Only required-parameter or local-variable Tweedle method return identifiers are supported by the AST decoder: "
             + method.getName() + "." + identifierReference.getName());
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedLocalInitializer(
+      TweedleMethod method,
+      TweedleLocalVariable local) {
+    return new UnsupportedTweedleDecodeException(
+        "Non-literal Tweedle local variable initializers are not yet supported by the AST decoder: "
+            + method.getName() + "." + local.getName());
   }
 
   private UnsupportedTweedleDecodeException unsupportedFieldInitializer(TweedleField property) {
