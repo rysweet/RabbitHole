@@ -96,6 +96,8 @@ Use Python as an acceptance check for the two action-seam outcomes. This check
 intentionally rejects structured run-failure diagnostics; those artifacts explain
 why the live shard could not reach the procedure target, but they are not proof
 that the action seam is edit-ready or blocked by the named edit contract gap.
+A blocked artifact must still include `observedTarget`; `observedTarget=null`
+means the run stopped before the action seam was reached.
 
 ```bash
 artifact=/tmp/alice-first-lesson-live-procedure-target/alice-desktop-first-lesson-live-procedure-target-observation/<timestamp>/first-lesson-live-procedure-target-observation.json
