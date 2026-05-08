@@ -242,14 +242,18 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 Open the generated run directory and review `manual-evidence-checklist.txt`,
 `environment.txt`, and `status.txt`. The checklist describes the manual evidence
 needed for instructor starter-project setup, student open, and student save
-review. Checklist generation does not complete the scenario.
+review. It also includes an `Assessment boundary` section with manual evidence
+required, setup/open/save evidence review only, no automated grading, no rubric
+scoring, no correctness scoring, and no creative assessment. Checklist
+generation does not complete the scenario.
 
 Before accepting the run, add the instructor launch log, starter project
 screenshot, saved starter `.a3p`, student launch or open log, loaded project
 screenshot, saved student copy `.a3p`, and `review-notes.txt`.
 `review-notes.txt` should identify the reviewed files and the setup/open/save
 decision only. Do not turn this evidence into learner-work grading, rubric
-scoring, correctness assessment, or creativity assessment.
+scoring, correctness assessment, correctness scoring, creativity assessment, or
+creative assessment.
 
 Review the checked-in blocker record:
 
@@ -261,7 +265,10 @@ python3 -m json.tool \
 The record is documentation for the current boundary. It names
 `define-reviewed-assessment-contract` as the next blocker before any future
 learner-work grading, rubric scoring, correctness assessment, or creativity
-assessment capability can be claimed.
+assessment capability can be claimed. Learner-world state extraction for grading
+or creative assessment remains blocked until a reviewed assessment contract and
+evidence mapping exist. The full contract is documented in
+[Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Step 9: Prepare a gated command smoke
 

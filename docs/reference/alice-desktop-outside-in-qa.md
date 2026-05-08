@@ -11,6 +11,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 - [Scenario schema](#scenario-schema)
 - [Automation modes](#automation-modes)
 - [Evidence contract](#evidence-contract)
+- [Learner-world boundary](#learner-world-boundary)
 - [Workflow evidence requirements](#workflow-evidence-requirements)
 - [Scenario authoring rules](#scenario-authoring-rules)
 - [Extension rules](#extension-rules)
@@ -84,6 +85,14 @@ assessment contract and evidence mapping. The declarative blocker record is
 it names next blocker `define-reviewed-assessment-contract` and is not consumed
 by the runner as behavior.
 
+The selected boundary scenario is
+`alice-desktop-instructor-student-setup`. Its generated
+`manual-evidence-checklist.txt` includes an `Assessment boundary` section that
+states manual evidence required, setup/open/save evidence review only, no
+automated grading, no rubric scoring, no correctness scoring, and no creative
+assessment. See [Learner-world assessment boundary](./learner-world-assessment-boundary.md)
+for the artifact fields, checklist text, review workflow, and extension rules.
+
 ### Boundary artifact
 
 `learner-world-assessment-boundary.json` is a checked-in declarative contract
@@ -94,8 +103,14 @@ runner input, or assessment engine.
 | --- | --- | --- |
 | `id` | string | Stable artifact identifier. Current value: `learner-world-assessment-boundary`. |
 | `scope` | string | The bounded QA area: instructor/student learner-world setup, open, and save evidence. |
+| `selectedScenario` | string | The manual scenario that surfaces this boundary: `alice-desktop-instructor-student-setup`. |
+| `automationMode` | string | The boundary mode: `manual-evidence-required`. |
 | `currentCapability` | string | The current capability statement. It is limited to collecting evidence for setup, open, and save workflow review. |
+| `supportedEvidence` | string array | The supported evidence areas: instructor setup, student open, and student save. |
+| `assessmentLimits` | string array | User-facing limits, including no automated grading, no rubric scoring, no correctness scoring, and no creative assessment. |
 | `nonCapabilities` | string array | Capabilities not claimed by this lane: learner-work grading, rubric scoring, correctness assessment, and creativity assessment. |
+| `blocker.id` | string | The required blocker before future assessment work can be claimed. Current value: `define-reviewed-assessment-contract`. |
+| `blocker.description` | string | Human-readable explanation that learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping exist. |
 | `nextBlocker.id` | string | The next required blocker before future assessment work can be claimed. Current value: `define-reviewed-assessment-contract`. |
 | `nextBlocker.description` | string | Human-readable explanation that a reviewed assessment contract and evidence mapping are required before learner-work grading, rubric scoring, correctness assessment, or creativity assessment can be claimed. |
 
@@ -402,7 +417,7 @@ Manual scenario preparation includes:
 | --- | --- |
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
 | `status.txt` | Scenario ID, automation mode, generated checklist name, and `manual-evidence-required` outcome. |
-| `manual-evidence-checklist.txt` | Scenario preconditions, actions, outcomes, required evidence, and fallback notes. This file prepares the work; it is not proof that the workflow has been executed. |
+| `manual-evidence-checklist.txt` | Scenario preconditions, actions, outcomes, required evidence, fallback notes, and any declared assessment boundary section. This file prepares the work; it is not proof that the workflow has been executed. |
 
 Gated command smoke preparation includes:
 
@@ -459,6 +474,14 @@ The artifact must not include environment variables, credentials, process dumps,
 Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, most scenarios do not write `status.txt` because launch did not reach the evidence-capture phase. The post-open runtime/display accessibility scenario is the exception: it writes `post-open-runtime-display-accessibility-evidence.json` and `status.txt` with a blocked runtime/display accessibility outcome when an early prerequisite prevents collection.
 
 Manual scenarios are complete only after a human performs the workflow and places the required artifacts in the same timestamped run directory. Every accepted manual run must include `review-notes.txt` with the scenario ID, run directory, evidence files reviewed, observed result, deviations from the checklist, and an explicit accept or reject decision.
+
+For `alice-desktop-instructor-student-setup`, the manual checklist must include
+an `Assessment boundary` section. The section keeps the run artifact aligned
+with the checked-in boundary contract: setup/open/save evidence review only,
+manual evidence required, no automated grading, no rubric scoring, no
+correctness scoring, no creative assessment, and blocker
+`define-reviewed-assessment-contract` before learner-world state extraction for
+grading or creative assessment can be claimed.
 
 ## Workflow evidence requirements
 

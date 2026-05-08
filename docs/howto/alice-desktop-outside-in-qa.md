@@ -436,10 +436,19 @@ student-copy.a3p
 review-notes.txt
 ```
 
+Open `manual-evidence-checklist.txt` before collecting the manual artifacts. The
+checklist includes an `Assessment boundary` section that states manual evidence
+required, setup/open/save evidence review only, no automated grading, no rubric
+scoring, no correctness scoring, and no creative assessment. Treat missing
+learner-world state extraction for grading or creative assessment as blocker
+`define-reviewed-assessment-contract`, not as a hidden fallback.
+
 Accept the manual run only as setup/open/save evidence. `review-notes.txt`
 should list the reviewed files, state whether the starter project was prepared,
 opened by the student, and saved as a separate copy, and end with `decision:
-accept` or `decision: reject`.
+accept` or `decision: reject`. Do not use the run notes to claim learner-work
+grading, rubric scoring, correctness assessment, correctness scoring, creativity
+assessment, or creative assessment.
 
 The learner-world claim boundary is recorded in:
 
@@ -448,12 +457,15 @@ qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 ```
 
 Treat that JSON file as documentation for the current boundary, not as runner
-configuration. Its `currentCapability` is setup/open/save workflow evidence, its
-`nonCapabilities` list excludes learner-work grading, rubric scoring,
-correctness assessment, and creativity assessment, and its `nextBlocker.id` is
-`define-reviewed-assessment-contract`. The blocker must be resolved with a
-reviewed assessment contract and evidence mapping before those capabilities can
-be claimed.
+configuration. Its `selectedScenario` is
+`alice-desktop-instructor-student-setup`, its `automationMode` is
+`manual-evidence-required`, its supported evidence is instructor setup, student
+open, and student save, and its limits include no automated grading, no rubric
+scoring, no correctness scoring, and no creative assessment. Its blocker is
+`define-reviewed-assessment-contract`, which must be resolved with a reviewed
+assessment contract and evidence mapping before learner-world state extraction
+for grading or creative assessment can be claimed. The complete contract is
+described in [Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Choose a custom evidence directory
 
