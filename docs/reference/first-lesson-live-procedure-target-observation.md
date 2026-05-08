@@ -1,9 +1,15 @@
-# First-Lesson Live Procedure Target Action Seam
+# [PLANNED - Implementation Pending] First-Lesson Live Procedure Target Action Seam
 
-This reference defines the outside-in QA shard that opens the configured
-first-lesson flow starter through Select Project, observes the live
-`scene.eatmeFirstLesson` procedure/code-editor target, and records whether that
-target is ready for a public desktop edit action.
+This reference defines the intended next outside-in QA contract for opening the
+configured first-lesson flow starter through Select Project, observing the live
+`scene.eatmeFirstLesson` procedure/code-editor target, and recording whether
+that target is ready for a public desktop edit action.
+
+The scenario ID, workflow, and artifact filename retain the existing
+`first-lesson-live-procedure-target-observation` names for catalog stability.
+The artifact fields in this document are the contract to implement before this
+shard can be treated as current action-seam proof. A target-only observation
+artifact is not compliant with this planned contract.
 
 ## Contents
 
@@ -11,6 +17,7 @@ target is ready for a public desktop edit action.
 - [Runner interface](#runner-interface)
 - [Scenario contract](#scenario-contract)
 - [Artifact API](#artifact-api)
+- [Implementation requirements](#implementation-requirements)
 - [Configuration](#configuration)
 - [Examples](#examples)
 - [Security and safety rules](#security-and-safety-rules)
@@ -19,7 +26,7 @@ target is ready for a public desktop edit action.
 
 ## Scope
 
-The shard covers exactly one transition in the first-lesson flow:
+The planned shard covers exactly one transition in the first-lesson flow:
 
 ```text
 Select Project opens the first-lesson project
@@ -39,13 +46,14 @@ It exists because earlier shards already cover adjacent boundaries:
 | Runtime/display accessibility and rendering blocker | `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
 | Learner assessment boundary | `qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`. |
 
-The shard does not mutate the project. It does not click into an edit control,
-invoke a private implementation method, use reflection, synthesize a desktop edit,
-Save, Run, assert rendering correctness, grade learner work, or assess creative
-quality. A passing run means only that the live target/action seam is
-machine-readable: either the observed target is ready for a supported public
-desktop edit invocation, or the artifact names the exact contract that prevents
-the next proof.
+The shard must not mutate the project. It must not click into an edit control,
+invoke a private implementation method, use reflection, synthesize a desktop
+edit, Save, Run, assert rendering correctness, grade learner work, or assess
+creative quality. A passing action-seam proof means only that the live
+target/action seam is machine-readable: either the observed target is ready for a
+supported public desktop edit invocation, or the artifact names the exact
+missing public `CodeEditor`/`CodeComposite` edit invocation contract that
+prevents the next proof.
 
 ## Runner interface
 
@@ -56,7 +64,7 @@ export NODE_OPTIONS=--max-old-space-size=32768
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 ```
 
-Run the live procedure target action seam shard:
+Run the planned live procedure target action seam shard:
 
 ```bash
 rm -rf /tmp/alice-first-lesson-live-procedure-target
@@ -113,18 +121,18 @@ Scenario identity:
 | `targetStarter.displayName` | `Africa Full`, the configured starter selected through the Select Project shard. |
 | `targetStarter.repositoryPath` | `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
 
-Required evidence:
+Planned required evidence:
 
 | Artifact | Purpose |
 | --- | --- |
-| `first-lesson-live-procedure-target-observation.json` | Machine-readable edit-ready or blocked decision for the first-lesson procedure/code-editor action seam. |
+| `first-lesson-live-procedure-target-observation.json` | Planned machine-readable edit-ready or named-blocker decision for the first-lesson procedure/code-editor action seam. |
 | `status.txt` | Final runner status, including the action-seam status and outcome. |
 | `tab-click-observation.json` | Supporting Select Project evidence that the target starter was selected and opened. |
 | `post-project-open-observation.json` | Supporting post-open main-window evidence. |
 | `x-window-inventory.json` | Bounded Alice-related X window inventory. |
 | `launch.log` and `xvfb.log` | Desktop launch and display logs. |
 
-The runner preserves the probe artifact fields exactly. It does not add
+The runner must preserve the probe artifact fields exactly. It must not add
 synthetic UI clicks, fake edit actions, reflection calls, Save calls, render
 assertions, grading rules, or lesson-completion claims. Unknown workflows and
 unknown argv values are rejected before launch. The decision artifact is written
@@ -133,7 +141,8 @@ symlink artifact targets.
 
 ## Artifact API
 
-The `first-lesson-live-procedure-target-observation.json` artifact uses schema:
+The planned `first-lesson-live-procedure-target-observation.json` artifact uses
+schema:
 
 ```text
 eatme.first-lesson-live-procedure-target-observation/v1
@@ -147,13 +156,13 @@ Required top-level fields:
 | `scenario` | string | Always `alice-desktop-first-lesson-live-procedure-target-observation`. |
 | `workflow` | string | Always `first-lesson-live-procedure-target-observation`. |
 | `automationMode` | string | Always `xvfb-real-alice`. |
-| `status` | enum | `edit-ready` when the observed target has a public desktop edit invocation contract; `blocked` when the seam cannot proceed. |
+| `status` | enum | `edit-ready` when the observed target has a public desktop edit invocation contract; `blocked` when the seam reaches a named no-go state. |
 | `seam` | string | Always `live-first-lesson-procedure-target-to-desktop-edit-action`. |
 | `project` | object | First-lesson starter metadata and Select Project open status. |
 | `requiredTarget` | object | The procedure/code-editor target the next shard needs. |
 | `observedTarget` | object or null | Bounded target metadata when the target is observed; `null` when target observation itself is blocked. |
 | `desktopEditAction` | object | Public edit-action readiness evidence for the observed target, or a precise no-go blocker. |
-| `blocker` | object | Top-level machine-readable blocker. `kind=none` only when `status=edit-ready`. |
+| `blocker` | object | Top-level machine-readable blocker. For accepted action-seam proof this mirrors `desktopEditAction.blocker`. |
 | `downstreamBlockedStep` | string | `none` when edit-ready; otherwise `desktop-procedure-edit-action-proof`. |
 | `outOfScope` | string array | Explicit non-claims for edit mutation, Save, rendering correctness, learner assessment, creative assessment, and full lesson completion. |
 
@@ -197,12 +206,17 @@ Required top-level fields:
 | `blocker.message` | string | Empty when ready; otherwise the exact human-readable blocker. |
 | `doesNotClaim` | string array | Explicit non-claims for edit mutation, Save, rendering correctness, learner assessment, creative assessment, and full lesson completion. |
 
-Accepted `blocker.kind` values:
+Accepted action-seam `blocker.kind` values:
 
 | Kind | Required `blocker.message` | Meaning |
 | --- | --- | --- |
 | `none` | Empty string | The target was observed and is ready for a public desktop edit action. |
 | `missing-desktop-edit-action-contract` | `missing public CodeEditor/CodeComposite edit invocation contract` | The target was observed, but no callable public desktop edit invocation contract exists for the next proof. |
+
+Structured run failure `blocker.kind` values:
+
+| Kind | Required `blocker.message` | Meaning |
+| --- | --- | --- |
 | `select-project-open-not-observed` | `Select Project did not open the configured first-lesson starter` | Supporting Select Project evidence did not open the first-lesson starter. |
 | `post-open-window-not-observed` | `post-open Alice main window was not observed` | The main window was not observed after project open. |
 | `procedure-target-not-found` | `scene.eatmeFirstLesson procedure/code-editor target was not found` | The live desktop did not expose the procedure tab or code-editor target. |
@@ -210,18 +224,46 @@ Accepted `blocker.kind` values:
 | `at-spi-or-atk-unavailable` | `AT-SPI/ATK accessibility infrastructure was unavailable` | Accessibility infrastructure was unavailable. |
 | `display-prerequisite-unavailable` | `Xvfb display prerequisite was unavailable` | Xvfb, display allocation, or screen capture prerequisites failed before target observation. |
 
+Structured run failure blockers are useful diagnostics, but they are not accepted
+action-seam proof for the next first-lesson action slice. Resolve the supporting
+run failure or use the adjacent runtime/display/accessibility shard before
+claiming this planned seam.
+
 For the next first-lesson action slice, the focused artifact test accepts only
 two action-seam outcomes:
 
 1. `status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`,
-   `desktopEditAction.status=ready`, and `blocker.kind=none`.
+   `desktopEditAction.status=ready`, `desktopEditAction.blocker.kind=none`, and
+   top-level `blocker.kind=none`.
 2. `status=blocked`, `observedTarget.procedureName=scene.eatmeFirstLesson`,
    `observedTarget.readyForDesktopEditAction=false`,
-   `blocker.kind=missing-desktop-edit-action-contract`, and
-   `blocker.message=missing public CodeEditor/CodeComposite edit invocation contract`.
+   `desktopEditAction.blocker.kind=missing-desktop-edit-action-contract`,
+   top-level `blocker.kind=missing-desktop-edit-action-contract`, and
+   `blocker.message=missing public CodeEditor/CodeComposite edit invocation
+   contract`.
 
 Target-only observation with no edit-readiness classification is not a passing
 artifact for this shard.
+
+## Implementation requirements
+
+Implement the planned contract before presenting this shard as current behavior:
+
+1. Emit `status=edit-ready` or `status=blocked`; do not emit target-only
+   `status=observed` for the action-seam proof.
+2. Emit `seam=live-first-lesson-procedure-target-to-desktop-edit-action`.
+3. Replace target-only field names with the action-seam names:
+   `observedTarget.procedureName` instead of `procedureSelector`, and
+   `observedTarget.kind` instead of `targetKind`.
+4. Emit `observedTarget.readyForDesktopEditAction` and a `desktopEditAction`
+   object on every action-seam artifact.
+5. Emit top-level `blocker.kind` and `blocker.message` as an object. For the two
+   accepted action-seam outcomes, this top-level blocker must mirror
+   `desktopEditAction.blocker`.
+6. Include `creative assessment` in both top-level `outOfScope` and
+   `desktopEditAction.doesNotClaim`.
+7. Update the focused artifact test to pass only the edit-ready evidence or the
+   exact `missing-desktop-edit-action-contract` no-go artifact described above.
 
 ## Configuration
 
@@ -238,7 +280,7 @@ read-only after Select Project opens the first-lesson starter.
 
 ## Examples
 
-Edit-ready decision artifact:
+Planned edit-ready decision artifact:
 
 ```json
 {
@@ -301,8 +343,8 @@ Edit-ready decision artifact:
 }
 ```
 
-Named no-go decision artifact when the target is observed but the public edit
-invocation contract is missing:
+Planned named no-go decision artifact when the target is observed but the public
+edit invocation contract is missing:
 
 ```json
 {
@@ -378,12 +420,13 @@ invocation contract is missing:
   no Run, no rendering oracle, no learner assessment, no creative assessment,
   and no lesson-completion assertion.
 - Fail loudly for malformed scenarios, unknown workflows, missing supporting
-  artifacts, invalid JSON, missing required artifact fields, vague blockers, or
-  target-only observation without edit-readiness evidence.
+  artifacts, invalid JSON, missing required artifact fields, mismatched top-level
+  and nested action blockers, vague blockers, or target-only observation without
+  edit-readiness evidence.
 
 ## Claim boundaries
 
-This shard may claim only:
+This planned shard may claim only:
 
 - Select Project opened the configured first-lesson starter when supporting
   `tab-click-observation.json` says so.
@@ -394,9 +437,11 @@ This shard may claim only:
   names a procedure/code-editor target.
 - The observed target is ready for desktop edit action only when
   `observedTarget.readyForDesktopEditAction=true`,
-  `desktopEditAction.status=ready`, and `blocker.kind=none`.
+  `desktopEditAction.status=ready`, `desktopEditAction.blocker.kind=none`, and
+  top-level `blocker.kind=none`.
 - The next action proof is blocked by the missing edit contract only when
-  `blocker.kind=missing-desktop-edit-action-contract` and
+  top-level `blocker.kind=missing-desktop-edit-action-contract`,
+  `desktopEditAction.blocker.kind=missing-desktop-edit-action-contract`, and
   `blocker.message=missing public CodeEditor/CodeComposite edit invocation contract`.
 
 This shard must not claim:

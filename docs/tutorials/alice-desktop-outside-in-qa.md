@@ -1,6 +1,6 @@
 # Alice desktop outside-in QA tutorial
 
-This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review the target-specific Select Project proof, review the first-lesson procedure target action seam, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
+This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review the target-specific Select Project proof, review the planned first-lesson procedure target action seam, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
 
 ## What you will do
 
@@ -10,7 +10,7 @@ You will:
 2. List the executable scenario catalog.
 3. Run Alice under Xvfb for the launch workflow.
 4. Review the target-specific Select Project `Africa Full` proof.
-5. Review the first-lesson live procedure target action seam.
+5. Review the planned first-lesson live procedure target action seam.
 6. Review post-open runtime/display accessibility evidence.
 7. Generate a save/load evidence checklist.
 8. Review the learner-world setup/open/save boundary.
@@ -113,9 +113,10 @@ screenshot.png or screenshot.xwd
 
 Accept this tutorial step only when `tab-click-observation.json` records `evidenceStatus=opened`, exact `Africa Full` `targetStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, and `projectOpenObserved=true`. A blocked artifact is still useful when it preserves `blocker` and `blockerDetail` and provides one structured `nextBlocker` with the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. Do not convert either result into a full Alice UI automation, visible rendering, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher, or unrelated decoder claim.
 
-## Step 5: Review the first-lesson live procedure target
+## Step 5: Review the planned first-lesson live procedure target
 
-Run the read-only first-lesson procedure target action seam:
+Run the read-only first-lesson procedure target action seam when implementing or
+reviewing the planned contract:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -138,11 +139,14 @@ launch.log
 xvfb.log
 ```
 
-Accept this tutorial step only when the decision artifact records either
-`status=edit-ready`, `blocker.kind=none`, and
-`observedTarget.readyForDesktopEditAction=true`, or the exact no-go blocker
-`blocker.kind=missing-desktop-edit-action-contract` with
-`blocker.message=missing public CodeEditor/CodeComposite edit invocation contract`.
+Accept this tutorial step only after the planned artifact contract is
+implemented and the decision artifact records either `status=edit-ready`,
+`observedTarget.readyForDesktopEditAction=true`,
+`desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the
+exact no-go blocker in both `desktopEditAction.blocker.kind` and top-level
+`blocker.kind`: `missing-desktop-edit-action-contract` with
+`blocker.message=missing public CodeEditor/CodeComposite edit invocation
+contract`.
 Do not convert either result into a desktop edit, Save, rendering, learner
 assessment, grading, creative assessment, or full first-lesson completion claim.
 

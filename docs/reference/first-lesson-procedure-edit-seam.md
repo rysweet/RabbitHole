@@ -37,13 +37,14 @@ file, the full first-lesson project shape, desktop rendering, grading, creative
 assessment, Save, launcher, model exporter, hotspot, or Select Project PID
 behavior.
 
-The adjacent live-desktop seam is [First-Lesson Live Procedure Target Action
-Seam](./first-lesson-live-procedure-target-observation.md). That shard starts
-after Select Project opens the first-lesson starter and records whether the live
-`scene.eatmeFirstLesson` procedure/code-editor target is ready for a public
-desktop edit action, or blocked by the missing public `CodeEditor`/`CodeComposite`
-edit invocation contract. It does not replace this AST/project edit proof, and
-this AST/project edit proof does not replace the live target/action seam.
+The planned adjacent live-desktop seam is [First-Lesson Live Procedure Target
+Action Seam](./first-lesson-live-procedure-target-observation.md). That shard
+starts after Select Project opens the first-lesson starter and records whether
+the live `scene.eatmeFirstLesson` procedure/code-editor target is ready for a
+public desktop edit action, or blocked by the missing public
+`CodeEditor`/`CodeComposite` edit invocation contract. It does not replace this
+AST/project edit proof, and this AST/project edit proof does not replace the live
+target/action seam.
 
 ## Usage
 
