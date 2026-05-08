@@ -434,7 +434,7 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency evidence with `worldCanvasPixelTarget` target-ready or blocked metadata. Target readiness is only a sampling handoff, not visible rendered-world proof. |
 | `visible-rendering-pixel-target-blocker.json` | Exact blocker when the runner cannot identify one valid Run-window/world-canvas screen-coordinate target. |
-| `visible-rendering-pixel-sampling-blocker.json` | Exact blocker after target readiness when real rendered-world pixels are unavailable, unsampled, unchecked, stale, or inconclusive. The blocker keeps `sampleCount=0` and does not claim visible rendered-world correctness. |
+| `visible-rendering-pixel-sampling-blocker.json` | Exact blocker after target readiness when rendered-world pixels have not been sampled and checked. The blocker keeps `renderedWorldPixelsObserved=false`, `sampleCount=0`, and does not claim visible rendered-world correctness. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
@@ -443,14 +443,16 @@ For launch runs, `status.txt` records whether the process stayed alive, whether 
 For post-open runtime/display accessibility runs, `status.txt` records
 `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`,
 `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`,
-`controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`,
-`visibleRenderingPixelTargetStatus`, and `outcome=blocked` for this rendering
-slice. `runtime-display-accessibility-status.txt`
+`controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and
+`visibleRenderingPixelTargetStatus`. `runtime-display-accessibility-status.txt`
 is probe-local; use `status.txt` for the final scenario decision because it also
 accounts for controlled-display pixel status, target readiness, and the
-post-target-readiness pixel-sampling blocker. When that seam is reached it also
-records `visibleRenderingPixelSamplingStatus=blocked`. The JSON artifact is the
-runtime/display machine-readable contract:
+post-target-readiness pixel-sampling blocker. Visible-rendering pass requires
+`outcome=passed` with `visibleRenderingPixelSamplingStatus=observed`; until
+sampling exists, target-ready runs record `outcome=blocked`,
+`visibleRenderingPixelSamplingStatus=blocked`, and
+`visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`.
+The JSON artifact is the runtime/display machine-readable contract:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -487,7 +489,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
-| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt` with `outcome=blocked`, `runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`, and `visibleRenderingPixelSamplingStatus=blocked` when target readiness exists. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `visible-rendering-pixel-sampling-blocker.json` when target readiness exists, `visible-rendering-pixel-target-blocker.json` when target readiness is blocked, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. Target readiness alone must not be treated as visible rendered-world proof; `visible-rendering-pixel-sampling-blocker.json` records the fail-closed rendered-pixel limitation when target readiness exists but rendered pixels are unavailable or unchecked. |
+| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt`. Visible-rendering pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`, and `visibleRenderingPixelSamplingStatus=observed`; until sampling exists, target-ready runs record `outcome=blocked`, `visibleRenderingPixelSamplingStatus=blocked`, and `visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `visible-rendering-pixel-sampling-blocker.json` when target readiness exists, `visible-rendering-pixel-target-blocker.json` when target readiness is blocked, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. Target readiness alone must not be treated as visible rendered-world proof; `visible-rendering-pixel-sampling-blocker.json` records the fail-closed rendered-pixel limitation when target readiness exists but rendered pixels are unavailable or unchecked. |
 | Select Project tab-click smoke | `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened`, matching `openedStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`, or existing `blocker`/`blockerDetail` fields plus structured target-specific `nextBlocker` details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |

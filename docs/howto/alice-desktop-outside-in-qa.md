@@ -346,7 +346,7 @@ If an implementation or environment prerequisite is missing, the runner still wr
 }
 ```
 
-Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and the visible-rendering seam status. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, `visibleRenderingPixelTargetStatus`, and `outcome=blocked` for this rendering slice. When target readiness exists it also records `visibleRenderingPixelSamplingStatus=blocked` and `visibleRenderingPixelSamplingBlocker=visible-rendering-pixel-sampling-blocker.json`. Review `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, and the visible-rendering blocker artifacts as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
+Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and the visible-rendering seam status. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `visibleRenderingPixelTargetStatus`. Visible-rendering pass requires `outcome=passed` with `visibleRenderingPixelSamplingStatus=observed`; until sampling exists, target-ready runs record `outcome=blocked`, `visibleRenderingPixelSamplingStatus=blocked`, `visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`, and `visibleRenderingPixelSamplingBlocker=world-canvas-pixel-sampling-not-implemented`. Review `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, and the visible-rendering blocker artifacts as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
 
 To review the latest run directory without changing it:
 
@@ -360,7 +360,7 @@ python3 -m json.tool \
   "$run_dir/post-open-runtime-display-accessibility-evidence.json"
 ```
 
-Accept this slice only as blocked at the rendered-pixel sampling seam when
+Accept the current slice only as blocked at the rendered-pixel sampling seam when
 `status.txt` records `outcome=blocked`,
 `runtimeDisplayAccessibilityStatus=observed`,
 `controlledDisplayPixelStatus=observed`, and
@@ -370,7 +370,9 @@ records `status=observed`, `blocker=none`,
 `runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, runtime/display candidate, target readiness, or
-rendered-pixel sampling is unavailable.
+rendered-pixel sampling is unavailable. Do not record or accept `outcome=passed`
+for visible rendering until the status file records
+`visibleRenderingPixelSamplingStatus=observed`.
 
 ## Prepare evidence for manual workflows
 

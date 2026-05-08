@@ -86,11 +86,40 @@ for name in ("reference", "howto", "tutorial", "qa_reference", "readme"):
     for required_status in (
         "runtime-display-accessibility-status.txt",
         "controlledDisplayPixelStatus",
+        "outcome=passed",
         "outcome=blocked",
         "visibleRenderingPixelSamplingStatus=blocked",
+        "visibleRenderingPixelSamplingStatus=observed",
+        "visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json",
     ):
         if required_status not in text:
             errors.append(f"{name} doc must document final/probe status contract: {required_status}")
+
+current_sampling_tokens = [
+    "visible-rendering-world-canvas-pixel-sampling",
+    "target-ready-sampling-not-observed",
+    "world-canvas-pixel-sampling-not-implemented",
+    "sample-run-window-world-canvas-pixels",
+    "renderedWorldPixelsObserved=false",
+]
+for name in ("reference", "readme", "scenario"):
+    text = texts[name]
+    for token in current_sampling_tokens:
+        if token not in text:
+            errors.append(f"{name} must use current pixel-sampling blocker contract token: {token}")
+
+stale_sampling_tokens = [
+    "world-canvas-pixel-sampling-after-target-readiness",
+    "rendered-world-pixel-sampling-not-implemented",
+    "reliable-rendered-world-pixel-observation",
+    "renderedPixelsAvailable",
+    "renderedPixelsSampled",
+    "renderedPixelsChecked",
+]
+for name, text in texts.items():
+    for token in stale_sampling_tokens:
+        if token in text:
+            errors.append(f"{name} must not use stale PR 359 pixel-sampling token: {token}")
 
 reference_text = texts["reference"]
 for field in decision_fields:

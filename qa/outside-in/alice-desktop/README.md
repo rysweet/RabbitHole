@@ -152,9 +152,9 @@ proof. `status=blocked` means `visible-rendering-pixel-target-blocker.json`
 names the exact missing target and next unblocker.
 Target readiness is the handoff to the next seam, not rendered-world proof. The
 runner writes `visible-rendering-pixel-sampling-blocker.json` after target
-readiness to record that rendered-world pixels are unavailable, unsampled, and
-unchecked, so visible rendered-world correctness remains blocked with
-`sampleCount=0`.
+readiness to record that rendered-world pixels were not observed or sampled, so
+visible rendered-world correctness remains blocked with
+`renderedWorldPixelsObserved=false` and `sampleCount=0`.
 `geometryStatus=ambiguous-candidates` is reserved for more than
 one visible/showing candidate with valid positive screen-coordinate extents; a
 larger raw candidate count with missing, zero, negative, malformed, or otherwise
@@ -256,7 +256,7 @@ The runner records evidence under
 | `select-project-window.json` | Exact `Select Project` title, class, process, and geometry; widget labels remain resource-contract evidence until a live Swing accessibility/Jemmy probe exists. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, screenshot dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget`, and explicit unsupported claims. |
 | `visible-rendering-pixel-target-blocker.json` | Machine-readable blocker for world-canvas pixel target readiness when the Run-window target is missing, invalid, or ambiguous. |
-| `visible-rendering-pixel-sampling-blocker.json` | Machine-readable blocker for the post-target-readiness rendered-pixel sampling seam. It records that target readiness is not rendered-world proof and keeps `renderedPixelsAvailable=false`, `renderedPixelsSampled=false`, `renderedPixelsChecked=false`, and `sampleCount=0` until real rendered pixels are observed and checked. |
+| `visible-rendering-pixel-sampling-blocker.json` | Machine-readable blocker for the next seam after target readiness when rendered-world pixels have not been sampled and checked. It records `blocker=world-canvas-pixel-sampling-not-implemented`, `claimScope=visible-rendering-world-canvas-pixel-sampling`, `claimScopeDetail=target-ready-sampling-not-observed`, `renderedWorldPixelsObserved=false`, and `sampleCount=0` until real rendered pixels are observed and checked. |
 
 The controlled-display screenshot-consistency artifact does not assert Alice
 world rendering correctness.
@@ -270,12 +270,12 @@ accessibility tree.
 | Artifact | Role |
 | --- | --- |
 | `post-open-runtime-display-accessibility-evidence.json` | Runtime/display accessibility decision artifact. Observed requires `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, at least one runtime/display candidate, and `blocker=none`. |
-| `status.txt` | Final scenario status. This slice records `outcome=blocked` when target readiness is followed by the rendered-pixel sampling blocker; it records `runtimeDisplayAccessibilityStatus`, `controlledDisplayPixelStatus`, `visibleRenderingPixelTargetStatus`, `visibleRenderingPixelTargetArtifact`, and `visibleRenderingPixelSamplingStatus=blocked` when that seam is reached. |
+| `status.txt` | Final scenario status. Visible-rendering pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`, and `visibleRenderingPixelSamplingStatus=observed`; until sampling exists, target-ready runs record `outcome=blocked`, `visibleRenderingPixelSamplingStatus=blocked`, and `visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`. |
 | `runtime-display-accessibility-status.txt` | Probe-local status written before final scenario status; useful for debugging, not the final pass/fail artifact. |
 | `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, target-ready or blocked `worldCanvasPixelTarget`, and unsupported claims. Controlled-display blockers keep final `outcome=blocked`; the rendered-pixel sampling blocker blocks the visible rendered-world claim after target readiness. |
 | `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the exact next unblocker for missing, invalid, or ambiguous world-canvas pixel target readiness. Ambiguous means more than one visible/showing candidate has valid extents, not merely more than one raw candidate. |
-| `visible-rendering-pixel-sampling-blocker.json` | Blocker artifact naming `reliable-rendered-world-pixel-observation` as the next unblocker after target readiness. Target-ready metadata alone must not be accepted as sampled or checked rendered pixels. |
+| `visible-rendering-pixel-sampling-blocker.json` | Blocker artifact naming `sample-run-window-world-canvas-pixels` as the next unblocker after target readiness. Target-ready metadata alone must not be accepted as sampled or checked rendered pixels. |
 
 If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
 `python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, screenshot

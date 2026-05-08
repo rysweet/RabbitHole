@@ -28,7 +28,7 @@ active Save behavior, active Select Project behavior, or decoder behavior.
 - [Evidence API](#evidence-api)
 - [Controlled-display screenshot-consistency API](#controlled-display-screenshot-consistency-api)
 - [World-canvas pixel target readiness API](#world-canvas-pixel-target-readiness-api)
-- [World-canvas pixel sampling after target readiness API](#world-canvas-pixel-sampling-after-target-readiness-api)
+- [World-canvas pixel sampling blocker API](#world-canvas-pixel-sampling-blocker-api)
 - [Review workflow](#review-workflow)
 - [Examples](#examples)
 - [Review rules](#review-rules)
@@ -161,7 +161,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 | Automation mode | `xvfb-real-alice` |
 | Launch path | Existing Alice IDE Maven launch path with the AT-SPI wrapper execution. |
 | Decision artifact | `post-open-runtime-display-accessibility-evidence.json` |
-| Final status artifact | `status.txt` with `outcome=blocked` for this slice because target readiness is not rendered-world proof and rendered pixels are not sampled or checked. It records `visibleRenderingPixelTargetStatus` and points `visibleRenderingPixelTargetArtifact` to the controlled-display artifact for `target-ready` or to the blocker artifact when blocked. |
+| Final status artifact | `status.txt`. Visible-rendering pass requires `outcome=passed` with `visibleRenderingPixelSamplingStatus=observed`; until sampling exists, target-ready runs record `outcome=blocked` and point `visibleRenderingPixelSamplingArtifact` to the blocker artifact. It records `visibleRenderingPixelTargetStatus` and points `visibleRenderingPixelTargetArtifact` to the controlled-display artifact for `target-ready` or to the blocker artifact when blocked. |
 | Probe-local status artifact | `runtime-display-accessibility-status.txt`, written by the probe before the runner writes final scenario status. Use it for debugging the probe result, not as the final pass/fail decision. |
 | Screenshot-consistency artifact | `controlled-display-pixel-observation.json` with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget`, and explicit unsupported claims. |
 | World-pixel blocker artifact | `visible-rendering-pixel-target-blocker.json`, written only when target identification is missing, invalid, or ambiguous. |
@@ -195,7 +195,8 @@ controlledDisplayPixelBlocker=<blocker>
 visibleRenderingPixelTargetStatus=<target-ready|blocked>
 visibleRenderingPixelTargetArtifact=<controlled-display-pixel-observation.json|visible-rendering-pixel-target-blocker.json>
 visibleRenderingPixelSamplingStatus=blocked
-visibleRenderingPixelSamplingBlocker=visible-rendering-pixel-sampling-blocker.json
+visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json
+visibleRenderingPixelSamplingBlocker=<blocker>
 ```
 
 `visibleRenderingPixelTargetBlocker=visible-rendering-pixel-target-blocker.json`
@@ -712,7 +713,7 @@ Both examples are blockers. Neither example is a substitute for a pixel sampler,
 visible-rendering proof, rendered-world oracle, or world-canvas pixel
 correctness claim.
 
-## World-canvas pixel sampling after target readiness API
+## World-canvas pixel sampling blocker API
 
 The rendered-pixel sampling artifact is:
 
@@ -720,12 +721,13 @@ The rendered-pixel sampling artifact is:
 visible-rendering-pixel-sampling-blocker.json
 ```
 
-The runner writes this artifact only after target readiness exists. Its purpose
-is to prevent the target-ready handoff from becoming success-shaped rendering
-evidence. The artifact is metadata-only: it records the seam, target source,
-blocked status, boolean sampling facts, count fields, and unsupported claims. It
-must not include screenshots, raw pixels, full logs, user paths, window titles,
-environment dumps, or image diffs.
+The artifact is intentionally blocked until the runner samples pixels inside the
+target-ready `screenExtents` region and checks them against an explicit
+rendered-world expectation. Its purpose is to prevent the target-ready handoff
+from becoming success-shaped rendering evidence. The artifact is metadata-only:
+it records the seam, target source, blocked status, sampling facts, count
+fields, and unsupported claims. It must not include screenshots, raw pixels,
+full logs, user paths, window titles, environment dumps, or image diffs.
 
 The artifact shape is:
 
@@ -733,25 +735,17 @@ The artifact shape is:
 {
   "schemaVersion": 1,
   "status": "blocked",
-  "blocker": "rendered-world-pixel-sampling-not-implemented",
-  "blockerDetail": "World-canvas target readiness was observed, but no reliable rendered-pixel sampler has observed and checked pixels inside the target bounds.",
-  "claimScope": "world-canvas-pixel-sampling-after-target-readiness",
+  "blocker": "world-canvas-pixel-sampling-not-implemented",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-ready-sampling-not-observed",
   "sourceArtifact": "controlled-display-pixel-observation.json",
-  "targetSourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
-  "targetReadinessStatus": "target-ready",
-  "exactNextUnblocker": "reliable-rendered-world-pixel-observation",
-  "renderedPixelsAvailable": false,
-  "renderedPixelsSampled": false,
-  "renderedPixelsChecked": false,
-  "renderedPixelsFresh": false,
-  "renderedPixelsConclusive": false,
+  "prerequisiteTargetStatus": "target-ready",
+  "exactNextUnblocker": "sample-run-window-world-canvas-pixels",
+  "renderedWorldPixelsObserved": false,
   "sampleCount": 0,
-  "comparisonStatus": "not-run",
   "worldCanvasPixelTarget": {
     "identified": true,
     "status": "target-ready",
-    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
-    "geometryStatus": "available",
     "screenExtents": {
       "coordinateType": "screen",
       "x": 144,
@@ -760,38 +754,39 @@ The artifact shape is:
       "height": 642
     }
   },
+  "pixelSampling": {
+    "status": "blocked",
+    "blocker": "world-canvas-pixel-sampling-not-implemented",
+    "pixelsSampled": false,
+    "sampleCount": 0,
+    "samplingMethod": null
+  },
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
-    "full-ui-automation",
-    "world-execution",
-    "grading",
-    "save-behavior",
-    "first-lesson-completion"
+    "rendered-world-correctness"
   ]
 }
 ```
 
-The blocker is valid only when all rendered-pixel booleans are false,
-`sampleCount=0`, `comparisonStatus=not-run`, and `status=blocked`. Missing,
-unavailable, unsampled, unchecked, stale, or inconclusive rendered pixels are all
-blocked outcomes. Reviewers must not upgrade this artifact to success because a
-target is ready, a screenshot exists, or the screenshot contains non-black
-pixels.
+If target selection is blocked, the same artifact uses
+`blocker=world-canvas-pixel-target-not-ready` and
+`prerequisiteTargetStatus=blocked` or `unavailable`. In both cases,
+`renderedWorldPixelsObserved=false`, `pixelsSampled=false`, and `sampleCount=0`
+are required. Do not treat the controlled-display screenshot or target-ready
+geometry as rendered-world pixel evidence.
 
 Any future success-shaped rendered-world artifact must satisfy all of these
 requirements before it can claim visible rendered-world correctness:
 
 1. `status=observed` or another reviewed non-blocked status.
-2. `renderedPixelsAvailable=true`.
-3. `renderedPixelsSampled=true`.
-4. `renderedPixelsChecked=true`.
-5. `renderedPixelsFresh=true` with freshness bound to the target coordinates and
+2. `renderedWorldPixelsObserved=true`.
+3. `pixelSampling.pixelsSampled=true`.
+4. `sampleCount > 0`.
+5. Freshness must be bound to the target coordinates and
    the same run artifact set.
-6. `renderedPixelsConclusive=true`.
-7. `sampleCount > 0`.
-8. A reviewed comparison or expectation status that is not `not-run`,
-   `unchecked`, `stale`, or `inconclusive`.
+6. A reviewed comparison or expectation status must not be unchecked, stale, or
+   inconclusive.
 
 Until every future success requirement is implemented and covered by a behavior
 contract, target readiness remains only a sampling handoff and must not be used
@@ -820,23 +815,19 @@ Use this review sequence for every run:
      `exactNextUnblocker=reliable-run-window-world-canvas-pixel-sampling-target`.
 5. If `worldCanvasPixelTarget.status=target-ready`, treat it only as the
      sampling handoff. Require `visible-rendering-pixel-sampling-blocker.json`
-     with blocked rendered-pixel sampling fields.
+     as the honest next blocker unless `visibleRenderingPixelSamplingStatus=observed`
+     is implemented in a future slice.
 6. Review `tab-click-observation.json` and
      `post-project-open-observation.json` to understand the supporting project-open
      setup.
-7. Accept the implemented runtime/display/sampling run only when `status.txt`
-      records `outcome=blocked`, `runtimeDisplayAccessibilityStatus=observed`,
-      `controlledDisplayPixelStatus=observed`, and
-      `visibleRenderingPixelSamplingStatus=blocked`; the decision artifact records
-      `status=observed`, `blocker=none`,
-      `postOpenRuntimeDisplayAccessibilityObserved=true`,
-      `runtimeDisplayCandidateCount` greater than zero, and the evidence directory
-      contains target-ready metadata plus
-      `visible-rendering-pixel-sampling-blocker.json` with
-      `status=blocked`, `targetReadinessStatus=target-ready`,
-      `renderedPixelsAvailable=false`, `renderedPixelsSampled=false`,
-      `renderedPixelsChecked=false`, `sampleCount=0`, and
-      `exactNextUnblocker=reliable-rendered-world-pixel-observation`.
+7. Accept the implemented runtime/display and screenshot-consistency setup only
+     when `runtimeDisplayAccessibilityStatus=observed`,
+     `controlledDisplayPixelStatus=observed`, and the decision artifact records
+     `status=observed`, `blocker=none`,
+     `postOpenRuntimeDisplayAccessibilityObserved=true`, and
+     `runtimeDisplayCandidateCount` greater than zero. Treat the visible-rendering
+     result as blocked until `visibleRenderingPixelSamplingStatus=observed` is
+     implemented and recorded with `outcome=passed`.
 
 If the decision artifact is `status=blocked`, preserve it as the run result. A
 blocked artifact is useful evidence about the missing prerequisite or missing
@@ -878,7 +869,7 @@ controlledDisplayPixelBlocker=none
 visibleRenderingPixelTargetStatus=target-ready
 visibleRenderingPixelTargetArtifact=controlled-display-pixel-observation.json
 visibleRenderingPixelSamplingStatus=blocked
-visibleRenderingPixelSamplingBlocker=visible-rendering-pixel-sampling-blocker.json
+visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json
 ```
 
 and the JSON artifact records:
@@ -897,9 +888,8 @@ the project-open setup and run environment. Review
 `controlled-display-pixel-observation.json` for screenshot-consistency evidence
 and the embedded `worldCanvasPixelTarget`. If the target is blocked, review
 `visible-rendering-pixel-target-blocker.json` for the exact next unblocker.
-If the target is ready, do not infer rendered-world correctness. Review
-`visible-rendering-pixel-sampling-blocker.json` for the exact rendered-pixel
-sampling limitation.
+If the target is ready, review `visible-rendering-pixel-sampling-blocker.json`
+and confirm `renderedWorldPixelsObserved=false`.
 
 ### Review a blocked run
 
@@ -957,14 +947,13 @@ Accept the artifact only as blocked evidence when it records:
 ```text
 schemaVersion=1
 status=blocked
-claimScope=world-canvas-pixel-sampling-after-target-readiness
-targetReadinessStatus=target-ready
-renderedPixelsAvailable=false
-renderedPixelsSampled=false
-renderedPixelsChecked=false
+claimScope=visible-rendering-world-canvas-pixel-sampling
+claimScopeDetail=target-ready-sampling-not-observed
+prerequisiteTargetStatus=target-ready
+renderedWorldPixelsObserved=false
+pixelSampling.pixelsSampled=false
 sampleCount=0
-comparisonStatus=not-run
-exactNextUnblocker=reliable-rendered-world-pixel-observation
+exactNextUnblocker=sample-run-window-world-canvas-pixels
 ```
 
 Do not accept target readiness, a captured screenshot, or non-black
@@ -973,9 +962,10 @@ controlled-display pixels as visible rendered-world correctness.
 ## Review rules
 
 1. The JSON artifact is the runtime/display decision artifact.
-2. Final scenario acceptance for this slice requires `status.txt` to record
-   `outcome=blocked`, because target-ready evidence is followed by a blocked
-   pixel-sampling seam until rendered pixels are observed and checked.
+2. Final visible-rendering acceptance requires `status.txt` to record
+   `outcome=passed`, `controlledDisplayPixelStatus=observed`, and
+   `visibleRenderingPixelSamplingStatus=observed`; until then, target-ready runs
+   remain blocked at the pixel-sampling seam.
 3. `status=observed` is accepted only with `blocker=none` and at least one
    runtime/display candidate.
 4. `controlled-display-pixel-observation.json` is accepted only as
@@ -988,8 +978,7 @@ controlled-display pixels as visible rendered-world correctness.
    blocked and the exact unblocker is
    `reliable-run-window-world-canvas-pixel-sampling-target`.
 7. `visible-rendering-pixel-sampling-blocker.json` means target readiness was not
-   enough for rendered-world proof; actual rendered pixels remain unavailable,
-   unsampled, unchecked, and non-conclusive.
+   enough to prove visible rendering; no rendered-world pixels were sampled.
 8. `status=blocked` is an honest blocked result, not a failed documentation
    claim and not a success substitute.
 9. `tab-click-observation.json`, `post-project-open-observation.json`, launch,
@@ -1039,4 +1028,5 @@ pixel-sampling blocker.
 | `screenshot-capture-failed`, `screenshot-captured-uniform-black`, or `screenshot-pixel-analysis-unavailable` | Controlled-display pixel evidence is unavailable, so `outcome=passed` is not valid even if the runtime/display JSON is observed. | Review `controlled-display-pixel-observation.json`, `screenshot.log`, and the screenshot artifact. |
 | `screenshot-metadata-unavailable` | The runner captured a screenshot but could not safely read dimensions from that same artifact. | Preserve `controlled-display-pixel-observation.json` with a non-observed status and review `visible-rendering-pixel-target-blocker.json`; do not invent dimensions. |
 | `reliable-run-window-world-canvas-pixel-sampling-target` | The implementation has not identified a stable Run-window/world-canvas pixel target. | Treat `visible-rendering-pixel-target-blocker.json` as the exact next blocker for target readiness. |
-| `reliable-rendered-world-pixel-observation` | The implementation has target readiness but no reliable rendered-pixel sampler/checker. | Treat `visible-rendering-pixel-sampling-blocker.json` as the exact next blocker; do not claim visible rendered-world correctness from target readiness. |
+| `world-canvas-pixel-sampling-not-implemented` | Target readiness exists, but the runner has not sampled pixels inside the target region. | Preserve `visible-rendering-pixel-sampling-blocker.json`; do not claim rendered-world correctness until sampled pixels are checked. |
+| `sample-run-window-world-canvas-pixels` | The next unblocker after target readiness. | Implement and review a sampler that observes pixels inside the target-ready Run-window/world-canvas region before claiming visible rendering. |
