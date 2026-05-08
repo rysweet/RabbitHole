@@ -44,7 +44,7 @@ evidence:
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - license-dialog.json recording not-observed.
-    - x-window-inventory.json naming visible X window title, class, process, and geometry; selectProjectWaitStatus=select-project-window-found confirms the Select Project window was specifically awaited.
+    - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry; selectProjectWaitStatus=select-project-window-found confirms the Select Project window was specifically awaited.
     - select-project-window.json recording observed Select Project title/class/process/geometry.
     - tab-click-observation.json recording status=observed with toggleTabNodeCount=5 (Blank Slates, Starters, My Projects, Recent, File System), tabClickAttempts all success, projectOpenObserved=true with listItemClick.item naming the selected Starters project and projectOpenDetail confirming Select Project frame dismissed.
     - Screenshot of the Alice desktop state.

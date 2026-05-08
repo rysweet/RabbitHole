@@ -41,7 +41,7 @@ evidence:
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - license-dialog.json recording not-observed or an exact blocker.
-    - x-window-inventory.json naming visible X window title, class, process, and geometry.
+    - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry.
     - tab-click-observation.json from existing project-open setup.
     - post-project-open-observation.json recording postOpenWindowObserved=true.
     - post-open-runtime-display-accessibility-evidence.json recording claim=post-open-runtime-display-accessibility-evidence, status, blocker, postOpenRuntimeDisplayAccessibilityObserved, runtimeDisplayCandidateCount, and runtimeDisplayCandidates.

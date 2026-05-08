@@ -42,7 +42,7 @@ evidence:
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - license-dialog.json recording not-observed.
-    - x-window-inventory.json naming visible X window title, class, process, and geometry.
+    - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry.
     - tab-click-observation.json recording projectOpenObserved=true (prerequisite from alice-desktop-select-project-tab-click-exec).
     - post-project-open-observation.json recording status=observed, postOpenWindowObserved=true, mainFrameNames with at least one non-Select-Project entry, and mainFrameChildCounts confirming widget presence.
     - Screenshot of the Alice desktop state after project load.

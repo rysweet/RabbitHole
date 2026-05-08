@@ -627,6 +627,40 @@ def process_name(pid):
         return ""
 
 
+def parent_pid(pid):
+    if not pid:
+        return None
+    stat = Path("/proc") / str(pid) / "stat"
+    try:
+        content = stat.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        return int(content.rsplit(")", 1)[1].split()[1])
+    except (IndexError, ValueError):
+        return None
+
+
+def process_descends_from(pid, ancestor_pid):
+    if not pid or not ancestor_pid:
+        return False
+    try:
+        current = int(pid)
+        ancestor = int(ancestor_pid)
+    except ValueError:
+        return False
+    seen = set()
+    while current > 1 and current not in seen:
+        if current == ancestor:
+            return True
+        seen.add(current)
+        next_pid = parent_pid(current)
+        if next_pid is None:
+            return False
+        current = next_pid
+    return False
+
+
 def window_class_for(window_id):
     window_class = command_output(["xdotool", "getwindowclassname", window_id])
     if window_class:
@@ -683,13 +717,26 @@ for window_id in window_ids:
         reasons.append("class-contains-alice")
     if "alice" in proc_name.lower():
         reasons.append("process-name-contains-alice")
-    if reasons:
-        alice_candidate_count += 1
     java_process = proc_name == "java"
     java_reasons = []
     if java_process:
-        java_window_count += 1
         java_reasons.append("process-name-java")
+    if process_descends_from(pid, alice_launch_pid):
+        reasons.append("descends-from-alice-launch")
+    known_alice_title = title in {
+        "Alice 3",
+        "Select Project",
+        "Application Root Error",
+        "License Agreement (Part 1 of 2): Alice 3",
+        "License Agreement (Part 2 of 2): The Sims (TM) 2 Art Assets",
+    }
+    if known_alice_title:
+        reasons.append("known-alice-window-title")
+    if not reasons:
+        continue
+    alice_candidate_count += 1
+    if java_process:
+        java_window_count += 1
     windows.append(
         {
             "id": window_id,
@@ -708,11 +755,11 @@ for window_id in window_ids:
 if windows:
     status = "observed"
     blocker = "none"
-    detail = f"Enumerated {len(windows)} visible X window(s) on {display}; inspect windows[] for exact title/class/process/geometry."
+    detail = f"Enumerated {len(windows)} Alice-related visible X window(s) on {display}; inspect windows[] for exact title/class/process/geometry."
 else:
     status = "blocked"
-    blocker = "no-visible-x-windows"
-    detail = "xdotool could not enumerate any visible X windows after the launch readiness wait."
+    blocker = "no-alice-related-x-windows"
+    detail = "xdotool did not identify any Alice-related visible X windows after the launch readiness wait."
     if search_stderr:
         detail = f"{detail} xdotool stderr: {search_stderr}"
 
@@ -800,6 +847,8 @@ write_post_open_runtime_display_blocker() {
   local automation_mode=$3
   local blocker=$4
   local blocker_detail=$5
+  local display=${6:-}
+  local timeout_seconds=${7:-}
 
   RUNTIME_DISPLAY_SCENARIO="$scenario_id" \
   RUNTIME_DISPLAY_AUTOMATION_MODE="$automation_mode" \
@@ -828,6 +877,21 @@ with open(sys.argv[1], "w", encoding="utf-8") as stream:
     json.dump(payload, stream, indent=2, sort_keys=True)
     stream.write("\n")
 PY
+
+  {
+    printf 'scenario=%s\n' "$scenario_id"
+    printf 'automationMode=%s\n' "$automation_mode"
+    if [ -n "$display" ]; then
+      printf 'display=%s\n' "$display"
+    fi
+    printf 'outcome=blocked\n'
+    printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
+    printf 'runtimeDisplayAccessibilityStatus=blocked\n'
+    printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$blocker"
+    if [ -n "$timeout_seconds" ]; then
+      printf 'timeoutSeconds=%s\n' "$timeout_seconds"
+    fi
+  } > "$run_dir/status.txt"
 }
 
 write_post_open_runtime_display_probe() {
@@ -845,32 +909,6 @@ write_post_open_runtime_display_probe() {
     --status-file "$status_path" \
     --scenario-id "$scenario_id" \
     --automation-mode "$automation_mode"
-}
-
-write_post_open_runtime_display_status() {
-  local run_dir=$1
-  local scenario_id=$2
-  local automation_mode=$3
-  local outcome=$4
-  local status=$5
-  local blocker=$6
-  local display=${7:-}
-  local timeout_seconds=${8:-}
-
-  {
-    printf 'scenario=%s\n' "$scenario_id"
-    printf 'automationMode=%s\n' "$automation_mode"
-    if [ -n "$display" ]; then
-      printf 'display=%s\n' "$display"
-    fi
-    printf 'outcome=%s\n' "$outcome"
-    printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
-    printf 'runtimeDisplayAccessibilityStatus=%s\n' "$status"
-    printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$blocker"
-    if [ -n "$timeout_seconds" ]; then
-      printf 'timeoutSeconds=%s\n' "$timeout_seconds"
-    fi
-  } > "$run_dir/status.txt"
 }
 
 select_display() {
@@ -1031,14 +1069,7 @@ run_xvfb_real_alice() {
         "$scenario_id" \
         "$automation_mode" \
         x-server-unavailable \
-        "Xvfb executable is not available on PATH; no X server exists for post-open runtime/display accessibility evidence."
-      write_post_open_runtime_display_status \
-        "$run_dir" \
-        "$scenario_id" \
-        "$automation_mode" \
-        blocked \
-        blocked \
-        x-server-unavailable \
+        "Xvfb executable is not available on PATH; no X server exists for post-open runtime/display accessibility evidence." \
         "" \
         "$run_timeout"
     fi
@@ -1086,14 +1117,7 @@ run_xvfb_real_alice() {
         "$scenario_id" \
         "$automation_mode" \
         display-allocation-unavailable \
-        "No free X display could be selected; no display exists for post-open runtime/display accessibility evidence."
-      write_post_open_runtime_display_status \
-        "$run_dir" \
-        "$scenario_id" \
-        "$automation_mode" \
-        blocked \
-        blocked \
-        display-allocation-unavailable \
+        "No free X display could be selected; no display exists for post-open runtime/display accessibility evidence." \
         "" \
         "$run_timeout"
     fi
@@ -1242,14 +1266,7 @@ JSON
           "$scenario_id" \
           "$automation_mode" \
           license-acceptance-prep-failed \
-          "Alice first-run license acceptance prep failed before post-open runtime/display accessibility evidence could be collected."
-        write_post_open_runtime_display_status \
-          "$run_dir" \
-          "$scenario_id" \
-          "$automation_mode" \
-          blocked \
-          blocked \
-          license-acceptance-prep-failed \
+          "Alice first-run license acceptance prep failed before post-open runtime/display accessibility evidence could be collected." \
           "$display" \
           "$run_timeout"
       fi
@@ -1329,14 +1346,7 @@ JSON
         "$scenario_id" \
         "$automation_mode" \
         x-server-start-failed \
-        "Xvfb exited before Alice launch; post-open runtime/display accessibility evidence could not be collected."
-      write_post_open_runtime_display_status \
-        "$run_dir" \
-        "$scenario_id" \
-        "$automation_mode" \
-        blocked \
-        blocked \
-        x-server-start-failed \
+        "Xvfb exited before Alice launch; post-open runtime/display accessibility evidence could not be collected." \
         "$display" \
         "$run_timeout"
     fi
@@ -1590,7 +1600,7 @@ JSON
   elif [ "$ready_status" != alice-window-found ]; then
     observation_status=blocked
     observation_blocker=alice-window-not-found
-    observation_detail="Xvfb was reachable, but xdotool did not find a visible Alice window before screenshot capture; readyStatus=$ready_status. Inspect x-window-inventory.json for exact visible X window title/class/process/geometry."
+    observation_detail="Xvfb was reachable, but xdotool did not find a visible Alice window before screenshot capture; readyStatus=$ready_status. Inspect x-window-inventory.json for exact Alice-related visible X window title/class/process/geometry."
     pixels_observed=false
     observation_claim=no-visible-pixel-proof
   elif [ "$screenshot_pixel_status" = uniform-black ]; then

@@ -11,6 +11,7 @@ claim rendering correctness.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import json
 import time
 from pathlib import Path
@@ -34,7 +35,11 @@ RUNTIME_ROLE_TOKENS = (
     "viewport",
     "layered pane",
 )
-VISIBLE_STATE_NAMES = ("showing", "visible")
+ALICE_APP_REGISTRY_ATTEMPTS = 5
+MAX_DESKTOP_APPS = 50
+MAX_ACCESSIBLES_TO_VISIT = 250
+MAX_CHILDREN_PER_ACCESSIBLE = 80
+MAX_ACCESSIBLE_DEPTH = 8
 
 
 def read_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
@@ -119,16 +124,22 @@ def state_names(accessible: Any) -> list[str]:
     return sorted(set(states))
 
 
-def has_visible_state(pyatspi: Any, accessible: Any) -> bool:
+def visible_state_constants(pyatspi: Any) -> tuple[Any, ...]:
+    return tuple(
+        state
+        for state in (
+            getattr(pyatspi, "STATE_SHOWING", None),
+            getattr(pyatspi, "STATE_VISIBLE", None),
+        )
+        if state is not None
+    )
+
+
+def has_visible_state(accessible: Any, visible_constants: tuple[Any, ...]) -> bool:
     try:
         state_set = accessible.getState()
     except Exception as exc:
         raise RuntimeError(f"failed to read visibility state: {exc}") from exc
-    visible_constants = [
-        getattr(pyatspi, "STATE_SHOWING", None),
-        getattr(pyatspi, "STATE_VISIBLE", None),
-    ]
-    visible_constants = [state for state in visible_constants if state is not None]
     if not visible_constants:
         return True
     try:
@@ -150,14 +161,18 @@ def accessible_summary(accessible: Any, path: str) -> dict[str, Any]:
         child_count = int(accessible.childCount)
     except Exception as exc:
         raise RuntimeError(f"{path}: failed to read childCount: {exc}") from exc
-    states = state_names(accessible)
     return {
         "name": name,
         "role": role,
         "path": path,
         "childCount": child_count,
-        "states": states,
     }
+
+
+def add_state_summary(summary: dict[str, Any], accessible: Any) -> dict[str, Any]:
+    candidate = dict(summary)
+    candidate["states"] = state_names(accessible)
+    return candidate
 
 
 def is_select_project_surface(summary: dict[str, Any]) -> bool:
@@ -184,13 +199,13 @@ def find_alice_app(pyatspi: Any, java_pid: int) -> tuple[Any | None, int, list[s
     traversal_errors: list[str] = []
     desktop = pyatspi.Registry.getDesktop(0)
     app_count = 0
-    for _attempt in range(5):
+    for attempt in range(ALICE_APP_REGISTRY_ATTEMPTS):
         try:
             app_count = int(desktop.childCount)
         except Exception as exc:
             traversal_errors.append(f"desktop childCount unavailable: {exc}")
             app_count = 0
-        for index in range(min(app_count, 50)):
+        for index in range(min(app_count, MAX_DESKTOP_APPS)):
             try:
                 app = desktop.getChildAtIndex(index)
             except Exception as exc:
@@ -205,18 +220,20 @@ def find_alice_app(pyatspi: Any, java_pid: int) -> tuple[Any | None, int, list[s
                 app_pid = None
             if app_pid == java_pid:
                 return app, app_count, traversal_errors
-        time.sleep(1)
+        if attempt < ALICE_APP_REGISTRY_ATTEMPTS - 1:
+            time.sleep(1)
     return None, app_count, traversal_errors
 
 
 def collect_candidates(pyatspi: Any, alice_app: Any) -> tuple[list[dict[str, Any]], list[str]]:
     candidates: list[dict[str, Any]] = []
     traversal_errors: list[str] = []
-    queue: list[tuple[Any, str, int]] = [(alice_app, "application", 0)]
+    queue: deque[tuple[Any, str, int]] = deque([(alice_app, "application", 0)])
+    visible_constants = visible_state_constants(pyatspi)
     visited = 0
 
-    while queue and visited < 250:
-        accessible, path, depth = queue.pop(0)
+    while queue and visited < MAX_ACCESSIBLES_TO_VISIT:
+        accessible, path, depth = queue.popleft()
         visited += 1
         try:
             summary = accessible_summary(accessible, path)
@@ -225,17 +242,20 @@ def collect_candidates(pyatspi: Any, alice_app: Any) -> tuple[list[dict[str, Any
             continue
 
         try:
-            visible = has_visible_state(pyatspi, accessible)
+            visible = has_visible_state(accessible, visible_constants)
         except RuntimeError as exc:
             traversal_errors.append(f"{path}: {exc}")
             visible = False
 
         if visible and is_runtime_display_candidate(summary):
-            candidates.append(summary)
+            try:
+                candidates.append(add_state_summary(summary, accessible))
+            except RuntimeError as exc:
+                traversal_errors.append(str(exc))
 
-        if depth >= 8:
+        if depth >= MAX_ACCESSIBLE_DEPTH:
             continue
-        child_count = min(int(summary.get("childCount", 0)), 80)
+        child_count = min(int(summary.get("childCount", 0)), MAX_CHILDREN_PER_ACCESSIBLE)
         for index in range(child_count):
             try:
                 child = accessible.getChildAtIndex(index)
