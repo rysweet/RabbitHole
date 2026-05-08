@@ -44,6 +44,7 @@ Build the coverage as a compatibility safety net, not as a decoder redesign.
 | --- | --- | --- |
 | Tweedle parser | `TweedleUnlinkedParser.parseType(String)` | `core/tweedle/src/test/java/org/alice/tweedle/unlinked/TweedleParseTest.java` |
 | Tweedle AST decoder | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
+| Tweedle resource field initializer boundary | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
 | Project archive round trip | `IoUtilities.writeProject(File, Project)`, `IoUtilities.readProject(File)`, and structural `IoUtilities.exportProject(File, Project)` output | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Player archive decode | `IoUtilities.readProject(File)` for `.a3w` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Type archive decode | `IoUtilities.readType(File)` for `.a3c` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
@@ -55,6 +56,8 @@ The intended coverage covers successful decode behavior and known edge behavior:
 - unsupported Tweedle declarations, unsupported superclasses, and unsupported
   adjacent method-call forms around the zero-argument `this.method()`
   slice;
+- resource fields initialized to `null`, plus explicit fail-fast diagnostics for
+  non-null resource field initializers that require archive binding context;
 - same-type zero-argument `this.method()` calls decoded to Alice
   `MethodInvocation` statements in method and constructor bodies;
 - missing or malformed Tweedle entries in player archives;
@@ -130,10 +133,50 @@ The decoder API is intentionally narrow. It supports the currently implemented
 class-declaration subset and reports unsupported Tweedle explicitly instead of
 silently inventing AST nodes.
 
-Resource field initializers are intentionally limited. `null` resource
-initializers decode, but non-null resource initializers fail fast because the
-direct Tweedle decoder does not have archive resource manifest or binding
-context.
+#### Resource field initializer boundary
+
+Resource field initializer support is intentionally limited to the direct
+decoder shapes that can be represented without archive resource binding context.
+
+Supported Tweedle source:
+
+```java
+class SyntheticType {
+  ImageResource picture <- null;
+}
+```
+
+The decoded `NamedUserType` has one `UserField` named `picture`, the field type
+is `ImageResource`, and the field initializer is a `NullLiteral`.
+
+Unsupported Tweedle source:
+
+```java
+class SyntheticType {
+  ImageResource picture <- someImage;
+}
+```
+
+```java
+class SyntheticType {
+  AudioResource sound <- sound0;
+}
+```
+
+These non-null resource initializers fail with
+`UnsupportedTweedleDecodeException`. The diagnostic must identify the construct
+as a Tweedle resource field initializer with a non-null value and include the
+field name, the resource type, and the missing archive resource manifest or
+binding context. The decoder must not silently coerce the initializer to `null`,
+invent a resource object, read archive entries, resolve filenames, or perform
+manifest lookup from `core/ast`.
+
+When the same unsupported Tweedle appears inside JSON player or type archives,
+the archive readers keep their existing unsupported-Tweedle behavior: direct
+decoder calls throw `UnsupportedTweedleDecodeException`, while JSON archive
+reader paths leave the unsupported program/type undecoded as documented for
+unsupported Tweedle. Manifest-backed image and audio resources still decode
+through the resource reader when they are independent archive resources.
 
 For the focused method-call slice, see
 [Zero-Argument This-Method Call Decode Reference](./zero-argument-this-method-call-decode.md).
@@ -239,10 +282,11 @@ cannot produce an AST type.
 
 ### Resource decode
 
-JSON resource decode coverage is manifest-backed. Tests should create the
-manifest resource reference and the corresponding archive entry, then read
-through `IoUtilities`. XML project and type resource coverage uses the legacy
-`resources.xml` entry plus the referenced resource data entries.
+JSON resource decode coverage is manifest-backed archive resource reading, not
+Tweedle field-initializer binding. Tests should create the manifest resource
+reference and the corresponding archive entry, then read through `IoUtilities`.
+XML project and type resource coverage uses the legacy `resources.xml` entry plus
+the referenced resource data entries.
 
 Documented behavior:
 
@@ -338,10 +382,20 @@ Run commands from the repository root.
 Focused decode characterization:
 
 ```bash
-mvn -pl core/tweedle,core/ast,core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/tweedle,core/ast,core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.tweedle.unlinked.TweedleParseTest,org.alice.serialization.tweedle.TweedleEncoderDecoderTest,org.lgna.project.io.IoUtilitiesTest \
+  test
+```
+
+Focused AST decoder gate for resource initializer work:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest \
   test
 ```
 
@@ -403,6 +457,57 @@ public void jsonPlayerReaderReportsMissingTweedleTypeEntry() throws Exception {
 The archive is synthetic, but the decode path is real because the assertion is
 made after `IoUtilities.readProject(File)` selects and runs the production
 reader.
+
+## Example: characterize resource field initializer decode
+
+Use this pattern when changing direct Tweedle field initializer handling for
+resource types. Keep the test in `TweedleEncoderDecoderTest` because the direct
+decoder owns this boundary.
+
+1. Add or update a positive `null` initializer test:
+
+   ```java
+   NamedUserType type =
+       decodeUserType("class SyntheticType { ImageResource picture <- null; }");
+
+   UserField field = type.getDeclaredFields().get(0);
+   assertEquals("picture", field.getName());
+   assertSame(JavaType.getInstance(ImageResource.class), field.getValueType());
+   assertTrue(field.initializer.getValue() instanceof NullLiteral);
+   ```
+
+2. Add a non-null image-resource failure test:
+
+   ```java
+   UnsupportedTweedleDecodeException thrown =
+       assertThrows(
+           UnsupportedTweedleDecodeException.class,
+           () -> coder.decode(
+               "class SyntheticType { ImageResource picture <- someImage; }"));
+
+   assertTrue(thrown.getMessage().contains("resource field initializer"));
+   assertTrue(thrown.getMessage().contains("non-null"));
+   assertTrue(thrown.getMessage().contains("manifest"));
+   assertTrue(thrown.getMessage().contains("picture"));
+   ```
+
+3. Add the same failure shape for at least one audio resource field:
+
+   ```java
+   UnsupportedTweedleDecodeException thrown =
+       assertThrows(
+           UnsupportedTweedleDecodeException.class,
+           () -> coder.decode(
+               "class SyntheticType { AudioResource sound <- sound0; }"));
+
+   assertTrue(thrown.getMessage().contains("AudioResource"));
+   assertTrue(thrown.getMessage().contains("sound"));
+   ```
+
+These tests document that `null` resource field initializers are safe to decode
+as AST literals, while non-null resource identifiers are intentionally outside
+the direct decoder because no archive manifest or resource binding context is
+available.
 
 ## Example: characterize unsupported player-program superclass decode
 
@@ -520,6 +625,9 @@ or pull request.
 | Unknown Tweedle superclass reports unsupported decode context. | `TweedleEncoderDecoderTest.decodeUnknownSuperclassReportsUnsupportedTweedle` |
 | Malformed Tweedle superclass reports parser decode context. | `TweedleEncoderDecoderTest.decodeMalformedSuperclassReportsMalformedTweedle` |
 | Supported Tweedle fields, supported method declarations, expressions, while loops, and returns decode through the AST decoder. | `TweedleEncoderDecoderTest` focused field, method, expression, while-loop, and return tests. |
+| Resource fields initialized to `null` decode to resource-typed fields with `NullLiteral` initializers. | `TweedleEncoderDecoderTest.decodeClassWithResourceNullInitializedFieldCreatesNullLiteralInitializer` |
+| Non-null image resource field initializers fail fast with unsupported resource-binding context instead of being coerced or resolved. | `TweedleEncoderDecoderTest.decodeClassWithResourceIdentifierInitializedFieldReportsUnsupportedBoundary` |
+| Non-null audio resource field initializers fail fast with the same unsupported resource-binding boundary. | `TweedleEncoderDecoderTest.decodeClassWithAudioResourceIdentifierInitializedFieldReportsUnsupportedBoundary` |
 | Same-type zero-argument `this.method()` calls decode to Alice `MethodInvocation` statements after same-type methods are registered before body decode. | `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeCreatesMethodInvocation`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeCreatesMethodInvocation` |
 | Argument-bearing calls, unknown methods, and non-`this` targets remain unsupported next to the zero-argument this-method slice. | `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsUnknownMethod`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsNonThisTarget`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsArgumentBearingCall`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsUnknownMethod`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsNonThisTarget` |
 | Non-class and empty Tweedle source are rejected by the AST decoder. | `TweedleEncoderDecoderTest.decodeEnumReportsOnlyClassDeclarationsSupported`; `TweedleEncoderDecoderTest.decodeEmptySourceReportsOnlyClassDeclarationsSupported` |
