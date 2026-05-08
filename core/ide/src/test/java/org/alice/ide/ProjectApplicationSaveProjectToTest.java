@@ -182,6 +182,10 @@ public class ProjectApplicationSaveProjectToTest {
     }
 
     @Override
+    protected void updateTitle() {
+    }
+
+    @Override
     protected BufferedImage createThumbnail() {
       return new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
     }

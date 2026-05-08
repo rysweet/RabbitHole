@@ -119,9 +119,7 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
     this.projectFileUtilities = new ProjectFileUtilities(this);
     this.projectDocumentFrame = projectDocumentFrame;
     this.projectHistoryListener = createProjectHistoryListener();
-    if (this.projectDocumentFrame != null) {
-      this.updateTitle();
-    }
+    this.updateTitle();
   }
 
   private HistoryListener createProjectHistoryListener() {
@@ -293,15 +291,11 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
 
   protected abstract IdeFrameTitleGenerator createFrameTitleGenerator();
 
-  protected final void updateTitle() {
-    ProjectDocumentFrame documentFrame = this.getDocumentFrame();
-    if (documentFrame == null) {
-      return;
-    }
+  protected void updateTitle() {
     if (frameTitleGenerator == null) {
       this.frameTitleGenerator = this.createFrameTitleGenerator();
     }
-    documentFrame.getFrame().setTitle(this.frameTitleGenerator.generateTitle(uriProjectLoader, isProjectUpToDateWithFile()));
+    this.getDocumentFrame().getFrame().setTitle(this.frameTitleGenerator.generateTitle(uriProjectLoader, isProjectUpToDateWithFile()));
   }
 
   private ProjectDocument getDocument() {
