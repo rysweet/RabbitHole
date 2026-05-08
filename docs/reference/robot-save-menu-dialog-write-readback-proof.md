@@ -228,14 +228,14 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
 }
 ```
 
-### Planned headless blocker artifact
+### Headless blocker artifact
 
 ```json
 {
   "schema_version": "eatme.alice-desktop-robot-save-menu-dialog-write-readback-proof/v1",
   "status": "blocked",
   "proofTarget": "Robot File menu Save activation joined to dialog/write/readback evidence",
-  "reporting_summary": "Robot File menu Save dialog/write/readback proof requires a non-headless AWT display before it can be proven",
+  "reporting_summary": "Robot File menu Save dialog/write/readback path was not proven; see blocker.kind for the exact missing or unsafe precondition",
   "blocker": {
     "kind": "headless_awt",
     "observed": "No available non-headless AWT display",
@@ -248,30 +248,52 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   },
   "observed_dialog": {
     "dialogType": "Swing JFileChooser",
+    "dialog_class": null,
+    "dialog_showing": false,
     "chooser_observed": false,
     "approved_selection": false,
-    "ambiguous_chooser_discovery": false
+    "ambiguous_chooser_discovery": false,
+    "poll_count": 0
+  },
+  "selected_file": {
+    "normalized_selected_file": null,
+    "expected_file": "projects/robot-save-menu-proof.a3p",
+    "selected_file_verified": false,
+    "selected_file_matches_expected": false,
+    "target_inside_proof_root": false
   },
   "written_artifact": {
+    "target_file": "projects/robot-save-menu-proof.a3p",
     "file_written": false,
-    "file_nonempty": false
+    "file_nonempty": false,
+    "file_extension": "a3p",
+    "file_has_expected_extension": true,
+    "file_size_bytes": 0
   },
   "readback": {
     "project_readable": false,
     "expected_marker": "robotSaveMenuRoundTripMarker",
     "marker_present": false
   },
+  "baselinePreserved": [
+    "StageIdeSaveMenuDoClickToWriteProofTest",
+    "ProjectApplicationSaveProjectToTest",
+    "JMenuBarRobotClickSaveProofTest"
+  ],
   "requiresNextEvidence": [
-    "Run RobotSaveMenuDialogWriteReadbackProofTest under xvfb-run -a or an equivalent desktop session",
-    "Collect robot-save-menu-dialog-write-readback-proof.json with status proven"
+    "Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related",
+    "Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed"
   ],
   "doesNotClaim": [
-    "Robot Save menu activation",
-    "chooser approval",
-    "project file write",
-    "project readback",
-    "marker verification",
-    "full desktop Save completion"
+    "full desktop Save completion",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage",
+    "all Save variants",
+    "Save As coverage"
   ]
 }
 ```

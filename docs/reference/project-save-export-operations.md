@@ -11,7 +11,7 @@ This reference describes the `core/ide` project Save, Save As, and Export operat
 - [API reference](#api-reference)
 - [Testing notes](#testing-notes)
 - [Save menu dialog write proof](#save-menu-dialog-write-proof)
-- [Planned Robot Save menu dialog write/readback proof](#planned-robot-save-menu-dialog-writereadback-proof)
+- [Robot Save menu dialog write/readback proof](#robot-save-menu-dialog-writereadback-proof)
 - [Configuration](#configuration)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
