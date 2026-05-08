@@ -708,9 +708,23 @@ The next seam after target readiness is:
 visible-rendering-pixel-sampling-blocker.json
 ```
 
-The artifact is intentionally blocked until the runner samples pixels inside the
+The artifact is intentionally blocked until the runner samples pixels inside a
 target-ready `screenExtents` region and checks them against an explicit
-rendered-world expectation. A target-ready blocker has this shape:
+rendered-world expectation. Its source artifact is always
+`controlled-display-pixel-observation.json`; target metadata inside that source
+is a prerequisite for sampling, not proof that rendered-world pixels were
+observed.
+
+The executable contract treats the source artifact as untrusted input. Missing,
+unreadable, malformed, non-object, or semantically invalid source JSON must
+produce a blocked pixel-sampling artifact, never a success-shaped rendering
+claim. A controlled-display artifact with `worldCanvasPixelTarget.status`
+`target-ready` can only move the blocker to
+`world-canvas-pixel-sampling-not-implemented`. It cannot set
+`renderedWorldPixelsObserved=true`, increase `sampleCount`, or name a
+`samplingMethod`.
+
+A target-ready blocker has this shape:
 
 ```json
 {
@@ -750,12 +764,48 @@ rendered-world expectation. A target-ready blocker has this shape:
 }
 ```
 
+The minimum decision fields for accepting this blocker proof are:
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "blocked",
+  "blocker": "world-canvas-pixel-sampling-not-implemented",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-ready-sampling-not-observed",
+  "sourceArtifact": "controlled-display-pixel-observation.json",
+  "prerequisiteTargetStatus": "target-ready",
+  "renderedWorldPixelsObserved": false,
+  "sampleCount": 0,
+  "pixelSampling": {
+    "status": "blocked",
+    "pixelsSampled": false,
+    "sampleCount": 0,
+    "samplingMethod": null
+  },
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness"
+  ]
+}
+```
+
 If target selection is blocked, the same artifact uses
 `blocker=world-canvas-pixel-target-not-ready` and
 `prerequisiteTargetStatus=blocked` or `unavailable`. In both cases,
 `renderedWorldPixelsObserved=false`, `pixelsSampled=false`, and `sampleCount=0`
 are required. Do not treat the controlled-display screenshot or target-ready
 geometry as rendered-world pixel evidence.
+
+When the source artifact is malformed or absent, the runner records
+`prerequisiteTargetStatus=unavailable`, preserves
+`sourceArtifact=controlled-display-pixel-observation.json`, and keeps the same
+non-claim fields: `renderedWorldPixelsObserved=false`,
+`pixelSampling.pixelsSampled=false`, `sampleCount=0`, and
+`pixelSampling.samplingMethod=null`. Reviewers should treat that artifact as the
+exact blocker for the source-artifact boundary, not as evidence that the world
+canvas is invisible or incorrectly rendered.
 
 ## Review workflow
 
@@ -909,8 +959,9 @@ substitute for target-ready evidence.
 6. `visible-rendering-pixel-target-blocker.json` means target readiness is
    blocked and the exact unblocker is
    `reliable-run-window-world-canvas-pixel-sampling-target`.
-7. `visible-rendering-pixel-sampling-blocker.json` means target readiness was
-   not enough to prove visible rendering; no rendered-world pixels were sampled.
+7. `visible-rendering-pixel-sampling-blocker.json` means the source artifact was
+   read only as a sampling prerequisite and target readiness was not enough to
+   prove visible rendering; no rendered-world pixels were sampled.
 8. `status=blocked` is an honest blocked result, not a failed documentation
    claim and not a success substitute.
 9. `tab-click-observation.json`, `post-project-open-observation.json`, launch,
@@ -937,9 +988,10 @@ The current contract tests cover schema/validator/runner parity, the
 runtime/display artifact name, status fields, blocked fallback behavior,
 runtime/display candidate summaries, and the narrow runtime/display claim token.
 The visible-rendering evidence contract test covers the screenshot-consistency
-artifact fields, `target-ready` shape, exact target-blocker shape,
-pixel-sampling blocker shape, geometry metadata, blocked fallback behavior,
-forbidden overclaiming language, and narrow screenshot-consistency claim tokens.
+artifact fields, `target-ready` shape, exact target-blocker shape, the
+pixel-sampling blocker/source-artifact boundary, geometry metadata, blocked
+fallback behavior, forbidden overclaiming language, and narrow
+screenshot-consistency claim tokens.
 
 ## Troubleshooting
 

@@ -267,6 +267,11 @@ The controlled-display screenshot-consistency artifact does not assert Alice
 world rendering correctness. The pixel-sampling blocker also does not assert
 correctness; it preserves `renderedWorldPixelsObserved=false` until a future
 sampler observes and checks pixels inside the target-ready region.
+The runner treats `controlled-display-pixel-observation.json` as the fixed source
+artifact for that blocker. Target-ready metadata from the source artifact is only
+a sampling prerequisite; missing, malformed, non-object, blocked, or
+target-ready source data still leaves `pixelSampling.pixelsSampled=false`,
+`sampleCount=0`, and `pixelSampling.samplingMethod=null`.
 
 The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
 goes one step beyond launch, window, and pixel evidence. It uses the existing
@@ -282,7 +287,7 @@ accessibility tree.
 | `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, target-ready or blocked `worldCanvasPixelTarget`, and unsupported claims. Pixel blockers keep final `outcome=blocked`. |
 | `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the exact next unblocker for missing, invalid, or ambiguous world-canvas pixel target readiness. Ambiguous means more than one visible/showing candidate has valid extents, not merely more than one raw candidate. |
-| `visible-rendering-pixel-sampling-blocker.json` | Blocker artifact for the next seam after target readiness when rendered-world pixels have not been sampled and checked. |
+| `visible-rendering-pixel-sampling-blocker.json` | Blocker artifact for the next seam after target readiness when rendered-world pixels have not been sampled and checked. It cites `controlled-display-pixel-observation.json` as `sourceArtifact`, preserves `prerequisiteTargetStatus`, and keeps `renderedWorldPixelsObserved=false`, `sampleCount=0`, `pixelSampling.pixelsSampled=false`, and `pixelSampling.samplingMethod=null`. |
 
 If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
 `python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, screenshot
