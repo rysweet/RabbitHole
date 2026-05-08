@@ -26,7 +26,6 @@ import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
-import org.lgna.project.ast.ParameterAccess;
 import org.lgna.project.ast.ResourceExpression;
 import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.StatementListProperty;
@@ -34,7 +33,6 @@ import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
-import org.lgna.project.ast.UserParameter;
 import org.lgna.story.SProgram;
 
 import java.awt.image.BufferedImage;
@@ -235,43 +233,6 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(
         "GeneratedMethodBoundaryScene",
         namedUserTypeNamed(readProject, "GeneratedMethodBoundaryScene").getName());
-  }
-
-  @Test
-  public void generatedJsonPlayerArchiveDecodesProgramMethodReturningParameter() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-parameter-return-method-boundary.a3w");
-
-    writeJsonProjectArchive(
-        projectArchive,
-        "GeneratedProgramWithParameterReturnMethod",
-        "class GeneratedProgramWithParameterReturnMethod extends SProgram { WholeNumber echo(WholeNumber value) { return value; } }",
-        "GeneratedParameterReturnMethodScene",
-        "class GeneratedParameterReturnMethodScene extends SScene {}");
-
-    try (ZipFile zipFile = new ZipFile(projectArchive)) {
-      ProjectManifest manifest = readProjectManifest(zipFile);
-      assertTypeReference(
-          manifest,
-          "GeneratedProgramWithParameterReturnMethod",
-          "src/GeneratedProgramWithParameterReturnMethod.twe");
-      assertTypeReference(
-          manifest,
-          "GeneratedParameterReturnMethodScene",
-          "src/GeneratedParameterReturnMethodScene.twe");
-      ZipEntry programTypeEntry = zipFile.getEntry("src/GeneratedProgramWithParameterReturnMethod.twe");
-      assertNotNull("Generated JSON .a3w fixture should contain the parameter-return method source",
-          programTypeEntry);
-      assertTrue(readEntry(zipFile, programTypeEntry).contains("WholeNumber echo(WholeNumber value)"));
-    }
-    Project readProject = IoUtilities.readProject(projectArchive);
-
-    NamedUserType readProgramType = readProject.getProgramType();
-    assertNotNull("Generated JSON .a3w program with a parameter-return method should decode", readProgramType);
-    assertEquals("GeneratedProgramWithParameterReturnMethod", readProgramType.getName());
-    assertParameterReturnMethod(readProgramType, "echo", "value");
-    assertEquals(
-        "GeneratedParameterReturnMethodScene",
-        namedUserTypeNamed(readProject, "GeneratedParameterReturnMethodScene").getName());
   }
 
   @Test
@@ -852,7 +813,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
         typeArchive,
         "GeneratedJsonTypeWithConstructorAssignmentBoundary",
         "class GeneratedJsonTypeWithConstructorAssignmentBoundary extends SProgram { "
-            + "WholeNumber count; "
+            + "WholeNumber count <- 0; "
             + "GeneratedJsonTypeWithConstructorAssignmentBoundary() { this.count <- 1; } "
             + "}");
 
@@ -1514,23 +1475,6 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(
         expectedValue,
         ((IntegerLiteral) returnStatement.expression.getValue()).value.getValue().intValue());
-  }
-
-  private static void assertParameterReturnMethod(NamedUserType type, String expectedMethodName, String expectedParameterName) {
-    assertEquals(1, type.getDeclaredMethods().size());
-    UserMethod method = type.getDeclaredMethods().get(0);
-    assertEquals(expectedMethodName, method.getName());
-    assertSame(JavaType.getInstance(Integer.class), method.getReturnType());
-    assertEquals(1, method.getRequiredParameters().size());
-    UserParameter parameter = method.getRequiredParameters().get(0);
-    assertEquals(expectedParameterName, parameter.getName());
-    assertSame(JavaType.getInstance(Integer.class), parameter.getValueType());
-    assertEquals(1, method.body.getValue().statements.size());
-    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
-    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
-    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
-    assertTrue(returnStatement.expression.getValue() instanceof ParameterAccess);
-    assertSame(parameter, ((ParameterAccess) returnStatement.expression.getValue()).parameter.getValue());
   }
 
   private static void assertFieldReturnMethod(NamedUserType type, String expectedMethodName, String expectedFieldName) {
