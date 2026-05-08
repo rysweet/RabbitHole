@@ -158,6 +158,33 @@ public class SourceCodeGeneratorTest {
   }
 
   @Test
+  public void characterizesConditionalAndInfixExpression() {
+    assertEquals(
+        "true&&false",
+        generate(new ConditionalInfixExpression(
+            new BooleanLiteral(true), ConditionalInfixExpression.Operator.AND, new BooleanLiteral(false))));
+  }
+
+  @Test
+  public void characterizesConditionalOrInfixExpression() {
+    assertEquals(
+        "true||false",
+        generate(new ConditionalInfixExpression(
+            new BooleanLiteral(true), ConditionalInfixExpression.Operator.OR, new BooleanLiteral(false))));
+  }
+
+  @Test
+  public void characterizesLogicalOrPrecedenceOverAnd() {
+    assertEquals(
+        "true&&false||true",
+        generate(new ConditionalInfixExpression(
+            new ConditionalInfixExpression(
+                new BooleanLiteral(true), ConditionalInfixExpression.Operator.AND, new BooleanLiteral(false)),
+            ConditionalInfixExpression.Operator.OR,
+            new BooleanLiteral(true))));
+  }
+
+  @Test
   public void characterizesArrayAccess() {
     UserLocal items = new UserLocal("items", String[].class, false);
     assertEquals(
