@@ -1481,6 +1481,20 @@ public class TweedleEncoderDecoderTest {
     assertConditionalInfix(ret.expression.getValue(), ConditionalInfixExpression.Operator.AND);
   }
 
+  @Test
+  public void decodeClassWithAndReturnTypeMismatchReportsTypeError() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              TextString bad(Boolean a, Boolean b) { return a && b; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("not assignable to"));
+    assertTrue(thrown.getMessage().contains("bad"));
+  }
+
   // --- Logical || (ConditionalInfixExpression.OR) ---
 
   @Test
@@ -1494,6 +1508,20 @@ public class TweedleEncoderDecoderTest {
     UserMethod method = type.getDeclaredMethods().get(0);
     ReturnStatement ret = (ReturnStatement) method.body.getValue().statements.get(0);
     assertConditionalInfix(ret.expression.getValue(), ConditionalInfixExpression.Operator.OR);
+  }
+
+  @Test
+  public void decodeClassWithOrReturnTypeMismatchReportsTypeError() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              TextString bad(Boolean a, Boolean b) { return a || b; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("not assignable to"));
+    assertTrue(thrown.getMessage().contains("bad"));
   }
 
   // --- Logical ! (LogicalComplement) ---
@@ -1540,6 +1568,20 @@ public class TweedleEncoderDecoderTest {
     UserMethod method = type.getDeclaredMethods().get(0);
     ReturnStatement ret = (ReturnStatement) method.body.getValue().statements.get(0);
     assertLogicalComplement(ret.expression.getValue());
+  }
+
+  @Test
+  public void decodeClassWithNotReturnTypeMismatchReportsTypeError() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              TextString bad(Boolean a) { return !a; }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("not assignable to"));
+    assertTrue(thrown.getMessage().contains("bad"));
   }
 
   private NamedUserType decodeUserType(String source) throws Exception {
