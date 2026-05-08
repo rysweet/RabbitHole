@@ -489,6 +489,22 @@ public class ModelResourceExporter {
     this.boundingBoxes.put(modelName, boundingBox);
   }
 
+  AxisAlignedBox getBoundingBox(String modelName) {
+    return this.boundingBoxes.get(modelName);
+  }
+
+  boolean hasBoundingBox(String modelName) {
+    return this.boundingBoxes.containsKey(modelName);
+  }
+
+  AxisAlignedBox computeBoundingBoxUnion() {
+    AxisAlignedBox superBox = AxisAlignedBox.NaN;
+    for (AxisAlignedBox boundingBox : this.boundingBoxes.values()) {
+      superBox = superBox.union(boundingBox);
+    }
+    return superBox;
+  }
+
   //  public void addThumbnail( String modelName, String textureName, String resourceType, String attributionName, String attributionYear, Image thumbnail )
   //  {
   //    this.thumbnails.put( new ModelSubResourceExporter( modelName, textureName, resourceType, attributionName, attributionYear ), thumbnail );
@@ -527,10 +543,6 @@ public class ModelResourceExporter {
 
   boolean isPlaceOnGround() {
     return this.placeOnGround;
-  }
-
-  Map<String, AxisAlignedBox> getBoundingBoxes() {
-    return this.boundingBoxes;
   }
 
   List<String> getTags() {
@@ -1216,8 +1228,8 @@ public class ModelResourceExporter {
 
   File createXMLFile(String root, boolean forceRebuild) throws IOException {
     File outputFile = getXMLFile(root);
+    ensureOutputFile(outputFile, "XML resource");
     if (!forceRebuild && (this.xmlFile != null) && this.xmlFile.exists()) {
-      ensureOutputFile(outputFile, "XML resource");
       FileUtilities.copyFile(this.xmlFile, outputFile);
       return outputFile;
     } else {
@@ -1227,7 +1239,6 @@ public class ModelResourceExporter {
 
       //This path does indenting
       String xmlString = this.createXMLString();
-      ensureOutputFile(outputFile, "XML resource");
       try (FileWriter fw = new FileWriter(outputFile)) {
         fw.write(xmlString);
       }

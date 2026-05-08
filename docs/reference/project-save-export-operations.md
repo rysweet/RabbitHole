@@ -10,6 +10,7 @@ This reference describes the `core/ide` project Save, Save As, and Export operat
 - [User-visible behavior](#user-visible-behavior)
 - [API reference](#api-reference)
 - [Testing notes](#testing-notes)
+- [Save menu dialog write proof](#save-menu-dialog-write-proof)
 - [Configuration](#configuration)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
@@ -169,6 +170,21 @@ Flow-level tests use the package-private `SaveOperationFlow` seam so they can av
 | Prompted current-project retry | `SaveOperationFlowTest` prompts first, fails the selected destination, and asserts retry keeps the current project base name. |
 | Prompted no-current-file retry cancellation | `SaveOperationFlowTest` prompts first, fails the selected destination, and asserts retry cancellation keeps no suggested base name. |
 
+## Save menu dialog write proof
+
+The planned canonical bounded desktop proof is `StageIdeSaveMenuDoClickToWriteProofTest`. Its target contract proves one path only: production Save menu item `doClick()`, live Swing `JFileChooser` approval, and a non-empty `.a3p` write under the JUnit temp directory.
+
+This proof target is stronger than direct operation tests and flow-seam tests because it starts from the Save menu item and reaches the real dialog/write boundary. It is still intentionally narrow and does not claim full Save coverage.
+
+| Proof boundary | Required observation |
+| --- | --- |
+| Menu activation | The Save menu item is created through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)` and activated with `doClick()`. |
+| Dialog control | Exactly one expected Swing `JFileChooser` is observed, receives the normalized temp-directory `.a3p` target, and is approved. |
+| Write result | The target `.a3p` exists and has non-zero size after `ProjectApplication.saveProjectTo(File)` returns. |
+| Evidence | The planned `stageide-save-menu-doclick-write-proof.json` artifact reports the dialog type as `Swing JFileChooser` and sets `wroteFile` to `true` only after the file assertions pass. |
+
+See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the planned evidence schema, non-claims, and focused validation command.
+
 ## Configuration
 
 There is no runtime configuration flag for Save, Save As, or Export routing. The behavior is fixed by the operation classes and the Alice project save and export constants.
@@ -179,6 +195,17 @@ Developer validation uses the existing Maven configuration:
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl core/ide -am \
   -DfailIfNoTests=false \
+  test
+```
+
+Run the bounded Save menu/dialog/write proof with a usable display:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest \
   test
 ```
 

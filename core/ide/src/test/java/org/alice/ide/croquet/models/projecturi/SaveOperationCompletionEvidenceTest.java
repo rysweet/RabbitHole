@@ -42,6 +42,78 @@ public class SaveOperationCompletionEvidenceTest {
   }
 
   @Test
+  public void completedSaveDialogWriteEvidenceNamesSwingChooserAndNarrowClaims() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("dialog-write-evidence"));
+    File savedFile = Files.writeString(testDir.resolve("classroom.a3p"), "project").toFile();
+    SaveOperationFlow.Result result = new SaveOperationFlow.Result(true, false, 1, 1, savedFile);
+
+    Path artifact = SaveOperationCompletionEvidence.write(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        result);
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"dialogType\": \"Swing JFileChooser\""));
+    assertTrue(json, json.contains("\"wroteFile\": true"));
+    assertTrue(json, json.contains("\"fileExtension\": \"a3p\""));
+    assertTrue(json, json.contains("\"claim\": \"Save control/dialog approval reached a non-empty .a3p project file write\""));
+    assertTrue(json, json.contains("\"full lesson completion\""));
+    assertTrue(json, json.contains("\"visible rendering correctness\""));
+    assertTrue(json, json.contains("\"grading correctness\""));
+    assertTrue(json, json.contains("\"broad UI automation coverage\""));
+    assertTrue(json, json.contains("\"native dialog coverage\""));
+  }
+
+  @Test
+  public void redactsAbsoluteSavedFileOutsideWorkspaceInEvidence() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("redacted-path-evidence"));
+    Path externalSavedFile = Files.createTempFile("alice-save-evidence-", ".a3p");
+    try {
+      Files.writeString(externalSavedFile, "project");
+      File savedFile = externalSavedFile.toFile();
+      Path artifact = SaveOperationCompletionEvidence.write(
+          evidenceDir,
+          "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+          "a3p",
+          new SaveOperationFlow.Result(true, false, 1, 1, savedFile));
+
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("\"saved_file\": \"[redacted]/" + savedFile.getName() + "\""));
+      assertFalse(json, json.contains(SaveOperationCompletionEvidence.escapeJson(externalSavedFile.getParent().toString())));
+      assertTrue(json, json.contains("\"saved_file_exists\": true"));
+      assertTrue(json, json.contains("\"wroteFile\": true"));
+    } finally {
+      Files.deleteIfExists(externalSavedFile);
+    }
+  }
+
+  @Test
+  public void wroteFileIsFalseUntilSavedA3pExistsAndIsNonEmpty() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("empty-file-evidence"));
+    File emptyFile = Files.createFile(testDir.resolve("empty.a3p")).toFile();
+    SaveOperationFlow.Result result = new SaveOperationFlow.Result(true, false, 1, 1, emptyFile);
+
+    Path artifact = SaveOperationCompletionEvidence.write(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        result);
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"saved_file_exists\": true"));
+    assertTrue(json, json.contains("\"saved_file_size_bytes\": 0"));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("\"claim\""));
+    assertFalse(json, json.contains("Save control/dialog approval reached a non-empty .a3p project file write"));
+    assertTrue(json, json.contains("\"reporting_summary\": \"Save operation evidence recorded status finished without proving a non-empty .a3p project file write\""));
+  }
+
+  @Test
   public void recordIsOptIn() throws Exception {
     Path evidenceDir = Files.createDirectories(newTestDir().resolve("disabled-evidence"));
     String previousEvidenceDir = System.getProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY);
@@ -82,6 +154,10 @@ public class SaveOperationCompletionEvidenceTest {
       assertTrue(json, json.contains("\"saved_file\": null"));
       assertTrue(json, json.contains("\"saved_file_exists\": null"));
       assertTrue(json, json.contains("\"saved_file_size_bytes\": null"));
+      assertTrue(json, json.contains("\"wroteFile\": false"));
+      assertFalse(json, json.contains("\"claim\""));
+      assertFalse(json, json.contains("Save control/dialog approval reached a non-empty .a3p project file write"));
+      assertTrue(json, json.contains("\"reporting_summary\": \"Save operation evidence recorded status canceled without proving a non-empty .a3p project file write\""));
 
       Path dialogArtifact = evidenceDir.resolve(SaveOperationCompletionEvidence.DIALOG_CONTROL_ARTIFACT);
       assertTrue(Files.size(dialogArtifact) > 0);
@@ -89,6 +165,8 @@ public class SaveOperationCompletionEvidenceTest {
       assertTrue(dialogJson, dialogJson.contains("\"schema_version\": \"eatme.alice-desktop-save-dialog-control-target/v1\""));
       assertTrue(dialogJson, dialogJson.contains("\"status\": \"blocked\""));
       assertTrue(dialogJson, dialogJson.contains("\"prompt_count\": 1"));
+      assertTrue(dialogJson, dialogJson.contains("\"swing_file_chooser\""));
+      assertFalse(dialogJson, dialogJson.contains("\"native_chooser\""));
       assertTrue(dialogJson, dialogJson.contains("org.lgna.croquet.DocumentFrame#showSaveFileDialog(File,String,String)"));
       assertTrue(dialogJson, dialogJson.contains("edu.cmu.cs.dennisc.java.awt.FileDialogUtilities#showSaveFileDialog(Component,File,String,String)"));
       assertTrue(dialogJson, dialogJson.contains("desktop Save dialog control"));

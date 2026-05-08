@@ -1,8 +1,9 @@
 # Desktop Procedure Edit and Save Automation
 
-This reference starts the desktop-side automation path for editing a procedure and
-then saving the project. It describes the checked-in hook points, the next small
-hooks to add, and the behavior that is still not proven.
+This reference describes the desktop-side automation path for editing a procedure and
+then saving the project. It names the checked-in hook points, the bounded
+Save proof for a real dialog/write path, and the behavior that remains outside this
+slice.
 
 ## Current checked-in hook points
 
@@ -15,6 +16,7 @@ hooks to add, and the behavior that is still not proven.
 | Save the current project | `org.alice.ide.croquet.models.projecturi.SaveProjectOperation` | Keeps the user-facing Save command, prompt rule, icon, and toolbar behavior. |
 | Run the save flow | `org.alice.ide.croquet.models.projecturi.SaveOperationFlow` | Covers prompt, cancel, retry, wait cursor, error, finish, and save-callback behavior without Swing dialogs. Returns whether the flow finished or canceled, how many prompts and save attempts ran, and which file saved after `saveProjectTo(File)` returned. |
 | Connect Save to live Alice objects | `org.alice.ide.croquet.models.projecturi.AbstractSaveOperation` | Adapts the active `StageIDE`, `ProjectDocumentFrame`, Croquet `UserActivity`, wait cursor, and `ProjectApplication.saveProjectTo(File)` to `SaveOperationFlow`. |
+| Prove Save menu/dialog/write path | `org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest` | Canonical shard for activating the real Save menu item with `doClick()`, controlling exactly one expected live Swing `JFileChooser`, approving a normalized temp-directory `.a3p` target, and asserting a non-empty project file write. |
 
 `ProcedureTabSelection` is intentionally small. It does not edit code. It gives a
 desktop automation runner one stable place to ask, "which real Croquet operation
@@ -38,15 +40,9 @@ Add these in order, each with a focused test before changing behavior:
    only after the code editor exposes a real command for the intended edit. The
    hook should invoke that command; it should not call the implementation command
    a desktop edit.
-4. Add a Save command observation test that fires `SaveProjectOperation` only in
-    a prepared desktop run where the current project file is writable, so no save
-    dialog is expected. Observe `UserActivity.finish()` and the project file's
-    write time or size after `ProjectApplication.saveProjectTo(File)` returns.
-    `SaveOperationFlow.Result` is the checked-in completion seam for collecting
-    the non-dialog save outcome.
-5. Add a prompted Save test later, with an explicit dialog-control plan for
-   `ProjectDocumentFrame.showSaveFileDialog(...)`. Do not mark Save-menu
-   completion done until that dialog path is controlled and observed.
+4. Use `StageIdeSaveMenuDoClickToWriteProofTest` as the bounded Save proof shard
+    for menu activation, Swing chooser approval, and `.a3p` write evidence. Keep
+    procedure-edit automation separate from this Save proof.
 
 ## Test plan
 
@@ -84,17 +80,32 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-When `org.alice.eatme.saveOperationEvidenceDir` is set, Save operation evidence
-also writes `desktop-save-dialog-control-target.json`. This artifact names the
-exact dialog seams that still require desktop control evidence and reports
+Run the bounded Save menu/dialog/write proof only when a usable display is
+prepared:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest \
+  test
+```
+
+The intended executable display-precondition blocker is `No available non-headless AWT display`.
+
+When `org.alice.eatme.saveOperationEvidenceDir` is set for flow-seam-only Save
+runs, Save operation evidence also writes
+`desktop-save-dialog-control-target.json`. This artifact names the dialog seams
+that the canonical Save menu/dialog/write proof exercises and reports
 `unsupported` when no Save dialog was requested.
 
 When `org.alice.eatme.saveDialogDiscoveryEvidenceDir` is set,
 `FileDialogUtilities.showSaveFileDialog(Component,File,String,String)` also
-writes `desktop-save-dialog-discovery-target.json` before displaying the native
-Save dialog. In headless or rootless tests this is a machine-readable no-go
-artifact; in a real desktop it can only prove owner/root target resolution, not
-dialog display or control.
+writes `desktop-save-dialog-discovery-target.json` before displaying the Swing
+Save chooser. In headless or rootless tests this is a machine-readable no-go
+artifact; in a real desktop it records owner/root target resolution before the
+bounded Save proof controls the chooser.
 
 Run the outside-in desktop scenario only when a real display is prepared:
 
@@ -112,6 +123,5 @@ This slice does not prove any of the following:
   selection helper.
 - The code editor can perform the requested procedure edit through a desktop
   command.
-- `SaveProjectOperation` completes through the menu in a live desktop run.
 - Save dialogs can be controlled for Save As, backup saves, or unwritable files.
 - First-lesson completion, grading, visual rendering, or creative assessment.
