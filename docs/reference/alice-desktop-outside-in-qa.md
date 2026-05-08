@@ -87,11 +87,15 @@ by the runner as behavior.
 
 The selected boundary scenario is
 `alice-desktop-instructor-student-setup`. Its generated
-`manual-evidence-checklist.txt` includes an `Assessment boundary` section that
-states manual evidence required, setup/open/save evidence review only, no
-automated grading, no rubric scoring, no correctness scoring, and no creative
-assessment. See [Learner-world assessment boundary](./learner-world-assessment-boundary.md)
-for the artifact fields, checklist text, review workflow, and extension rules.
+`manual-evidence-checklist.txt` currently contains the standard manual sections:
+preconditions, user actions, expected outcomes, required evidence, fallback
+notes, and completion status. The planned implementation will add an
+`Assessment boundary` section that states manual evidence required,
+setup/open/save evidence review only, no automated grading, no rubric scoring,
+no correctness scoring, and no creative assessment. See
+[Learner-world assessment boundary](./learner-world-assessment-boundary.md) for
+the current artifact fields, planned checklist text, review workflow, and
+extension rules.
 
 ### Boundary artifact
 
@@ -103,20 +107,19 @@ runner input, or assessment engine.
 | --- | --- | --- |
 | `id` | string | Stable artifact identifier. Current value: `learner-world-assessment-boundary`. |
 | `scope` | string | The bounded QA area: instructor/student learner-world setup, open, and save evidence. |
-| `selectedScenario` | string | The manual scenario that surfaces this boundary: `alice-desktop-instructor-student-setup`. |
-| `automationMode` | string | The boundary mode: `manual-evidence-required`. |
 | `currentCapability` | string | The current capability statement. It is limited to collecting evidence for setup, open, and save workflow review. |
-| `supportedEvidence` | string array | The supported evidence areas: instructor setup, student open, and student save. |
-| `assessmentLimits` | string array | User-facing limits, including no automated grading, no rubric scoring, no correctness scoring, and no creative assessment. |
 | `nonCapabilities` | string array | Capabilities not claimed by this lane: learner-work grading, rubric scoring, correctness assessment, and creativity assessment. |
-| `blocker.id` | string | The required blocker before future assessment work can be claimed. Current value: `define-reviewed-assessment-contract`. |
-| `blocker.description` | string | Human-readable explanation that learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping exist. |
 | `nextBlocker.id` | string | The next required blocker before future assessment work can be claimed. Current value: `define-reviewed-assessment-contract`. |
 | `nextBlocker.description` | string | Human-readable explanation that a reviewed assessment contract and evidence mapping are required before learner-work grading, rubric scoring, correctness assessment, or creativity assessment can be claimed. |
 
 Documentation, scenarios, and review notes may point to this artifact when they
 need a stable boundary reference. Runners must not treat it as configuration
 without a separate reviewed change.
+
+The planned boundary implementation will add `selectedScenario`,
+`automationMode`, `supportedEvidence`, `assessmentLimits`, and `blocker` fields
+to this artifact while keeping `nextBlocker` for compatibility. That change must
+land with the runner checklist generation and tests that consume those fields.
 
 ## Runner commands
 
@@ -417,7 +420,7 @@ Manual scenario preparation includes:
 | --- | --- |
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
 | `status.txt` | Scenario ID, automation mode, generated checklist name, and `manual-evidence-required` outcome. |
-| `manual-evidence-checklist.txt` | Scenario preconditions, actions, outcomes, required evidence, fallback notes, and any declared assessment boundary section. This file prepares the work; it is not proof that the workflow has been executed. |
+| `manual-evidence-checklist.txt` | Scenario preconditions, actions, outcomes, required evidence, fallback notes, and completion status. Planned assessment-boundary extensions may add a generated boundary section. This file prepares the work; it is not proof that the workflow has been executed. |
 
 Gated command smoke preparation includes:
 
@@ -475,11 +478,12 @@ Early `xvfb-real-alice` fallback attempts may not produce the full launch artifa
 
 Manual scenarios are complete only after a human performs the workflow and places the required artifacts in the same timestamped run directory. Every accepted manual run must include `review-notes.txt` with the scenario ID, run directory, evidence files reviewed, observed result, deviations from the checklist, and an explicit accept or reject decision.
 
-For `alice-desktop-instructor-student-setup`, the manual checklist must include
-an `Assessment boundary` section. The section keeps the run artifact aligned
-with the checked-in boundary contract: setup/open/save evidence review only,
-manual evidence required, no automated grading, no rubric scoring, no
-correctness scoring, no creative assessment, and blocker
+For `alice-desktop-instructor-student-setup`, the current manual checklist is a
+standard manual checklist. The planned boundary implementation must add an
+`Assessment boundary` section that keeps the run artifact aligned with the
+checked-in boundary contract: setup/open/save evidence review only, manual
+evidence required, no automated grading, no rubric scoring, no correctness
+scoring, no creative assessment, and blocker
 `define-reviewed-assessment-contract` before learner-world state extraction for
 grading or creative assessment can be claimed.
 

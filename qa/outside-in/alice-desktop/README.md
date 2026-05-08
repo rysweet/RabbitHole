@@ -48,12 +48,14 @@ the next blocker, `define-reviewed-assessment-contract`, and is not consumed by
 the runner as behavior.
 
 The generated `manual-evidence-checklist.txt` for
-`alice-desktop-instructor-student-setup` includes an `Assessment boundary`
-section. It states manual evidence required, setup/open/save evidence review
-only, no automated grading, no rubric scoring, no correctness scoring, and no
-creative assessment. Learner-world state extraction for grading or creative
-assessment is blocked until the reviewed assessment contract and evidence
-mapping exist.
+`alice-desktop-instructor-student-setup` currently uses the standard manual
+checklist sections. It does not yet include a generated `Assessment boundary`
+section. The planned boundary implementation will add that section so generated
+evidence states manual evidence required, setup/open/save evidence review only,
+no automated grading, no rubric scoring, no correctness scoring, and no creative
+assessment. Learner-world state extraction for grading or creative assessment is
+blocked until the reviewed assessment contract, evidence mapping, generated
+checklist section, and expanded boundary record exist.
 
 Do not use learner-world QA evidence to claim learner-work grading, rubric
 scoring, correctness assessment, or creativity assessment. Any future

@@ -14,7 +14,8 @@ You will:
 6. Review post-open runtime/display accessibility evidence.
 7. Generate a save/load evidence checklist.
 8. Review the learner-world setup/open/save boundary.
-9. Add user-visible evidence to the generated run directory.
+9. Prepare a gated command smoke.
+10. Keep evidence out of commits.
 
 ## Before you start
 
@@ -242,9 +243,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 Open the generated run directory and review `manual-evidence-checklist.txt`,
 `environment.txt`, and `status.txt`. The checklist describes the manual evidence
 needed for instructor starter-project setup, student open, and student save
-review. It also includes an `Assessment boundary` section with manual evidence
-required, setup/open/save evidence review only, no automated grading, no rubric
-scoring, no correctness scoring, and no creative assessment. Checklist
+review. It does not yet include a generated `Assessment boundary` section; use
+the checked-in boundary record while reviewing the manual run. Checklist
 generation does not complete the scenario.
 
 Before accepting the run, add the instructor launch log, starter project
@@ -266,11 +266,12 @@ The record is documentation for the current boundary. It names
 `define-reviewed-assessment-contract` as the next blocker before any future
 learner-work grading, rubric scoring, correctness assessment, or creativity
 assessment capability can be claimed. Learner-world state extraction for grading
-or creative assessment remains blocked until a reviewed assessment contract and
-evidence mapping exist. The full contract is documented in
+or creative assessment remains blocked until a reviewed assessment contract,
+evidence mapping, generated checklist section, and expanded boundary record
+exist. The full current and planned contract is documented in
 [Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
-## Step 9: Prepare a gated command smoke
+## Step 10: Prepare a gated command smoke
 
 Prepare gated smoke evidence without enabling heavy execution:
 
@@ -288,7 +289,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
   --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
 ```
 
-## Step 10: Keep evidence out of commits
+## Step 11: Keep evidence out of commits
 
 Evidence files are local run artifacts. Keep them for review or attach them to the relevant review record, but do not commit them.
 

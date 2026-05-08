@@ -1,15 +1,16 @@
 # Learner-world assessment boundary
 
-This reference describes the finished learner-world assessment boundary for the
-Alice desktop outside-in QA lane. The boundary makes instructor/student
-setup/open/save evidence review explicit without claiming assessment features
-that the runner does not implement.
+This reference describes the current learner-world assessment boundary and the
+planned implementation that will make that boundary explicit in generated
+evidence. The boundary keeps instructor/student setup/open/save evidence review
+separate from assessment features that the runner does not implement.
 
 ## Contents
 
 - [Current behavior](#current-behavior)
-- [Generated run artifacts](#generated-run-artifacts)
-- [Boundary artifact fields](#boundary-artifact-fields)
+- [Current generated run artifacts](#current-generated-run-artifacts)
+- [Current boundary artifact fields](#current-boundary-artifact-fields)
+- [Planned boundary implementation](#planned-boundary-implementation)
 - [Scenario configuration](#scenario-configuration)
 - [Manual review workflow](#manual-review-workflow)
 - [Examples](#examples)
@@ -39,7 +40,7 @@ The runner treats any unavailable learner-world state extraction for assessment
 as blocked. It does not synthesize rubric inputs, infer learner intent, score
 world correctness, or assess creativity from setup/open/save artifacts.
 
-## Generated run artifacts
+## Current generated run artifacts
 
 Running the selected scenario creates:
 
@@ -53,8 +54,52 @@ Running the selected scenario creates:
 `status.txt` records `automationMode=manual-evidence-required` and points to the
 generated checklist. It does not record an assessment pass or score.
 
-`manual-evidence-checklist.txt` includes an `Assessment boundary` section. That
-section states the conservative boundary in user-facing terms:
+`manual-evidence-checklist.txt` currently includes the standard manual sections:
+preconditions, user actions, expected outcomes, required evidence, fallback
+notes, and completion status. It does not yet include a generated `Assessment
+boundary` section.
+
+Until the planned checklist extension lands, reviewers should pair the generated
+checklist with the checked-in boundary record:
+
+```text
+qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
+```
+
+## Current boundary artifact fields
+
+The boundary record is a declarative contract, not runner configuration and not
+an assessment engine. It is stored at:
+
+```text
+qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
+```
+
+The current record exposes these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable identifier: `learner-world-assessment-boundary`. |
+| `scope` | Instructor/student learner-world setup/open/save evidence. |
+| `currentCapability` | Collects manual evidence for setup, open, and save workflow review. |
+| `nonCapabilities` | Unsupported learner-work grading, rubric scoring, correctness assessment, and creativity assessment claims. |
+| `nextBlocker.id` | Blocking requirement for future assessment work: `define-reviewed-assessment-contract`. |
+| `nextBlocker.description` | User-facing explanation that a reviewed assessment contract and evidence mapping are required before grading or creative assessment work can be claimed. |
+
+Consumers may display these fields in documentation or review tooling. They must
+not treat this file as executable assessment behavior without a separate
+reviewed implementation change.
+
+## Planned boundary implementation
+
+The feature we will build expands the boundary from a passive declarative record
+into explicit generated evidence while preserving the same conservative claim
+limit.
+
+### Planned generated checklist section
+
+`manual-evidence-checklist.txt` for `alice-desktop-instructor-student-setup`
+will include this generated section:
 
 ```text
 Assessment boundary
@@ -69,22 +114,11 @@ Assessment boundary
   until define-reviewed-assessment-contract is resolved.
 ```
 
-The checklist may also list the declarative boundary record:
+### Planned boundary record fields
 
-```text
-qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
-```
-
-## Boundary artifact fields
-
-The boundary record is a declarative contract, not runner configuration and not
-an assessment engine. It is stored at:
-
-```text
-qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
-```
-
-The finished record exposes these fields for documentation, tests, and review:
+The planned record will add fields that make the selected scenario, automation
+mode, supported evidence, limits, and blocker easier for docs and review tools to
+read:
 
 | Field | Meaning |
 | --- | --- |
@@ -100,9 +134,9 @@ The finished record exposes these fields for documentation, tests, and review:
 | `blocker.description` | User-facing explanation that a reviewed assessment contract and evidence mapping are required before grading or creative assessment work can be claimed. |
 | `nextBlocker` | Compatibility alias for the same blocker when older readers expect that field. |
 
-Consumers may display these fields in documentation or review tooling. They must
-not treat this file as executable assessment behavior without a separate
-reviewed implementation change.
+The same implementation change must update the JSON record, generated checklist,
+schema or validator expectations, and tests together so the docs do not outrun
+the runner again.
 
 ## Scenario configuration
 
@@ -115,9 +149,12 @@ workflow: instructor-student-setup
 automationMode: manual-evidence-required
 ```
 
-Its metadata can reference the boundary with user-facing wording such as:
+The current scenario schema does not accept an `assessmentBoundary` field. A
+future schema extension can reference the boundary with user-facing wording such
+as:
 
 ```yaml
+# Planned schema extension; not accepted by the current validator.
 assessmentBoundary:
   mode: manual-evidence-required
   supportedEvidence:
@@ -132,7 +169,7 @@ assessmentBoundary:
   blocker: define-reviewed-assessment-contract
 ```
 
-If scenario metadata fields are added, the JSON Schema, dependency-free
+If this scenario metadata field is added, the JSON Schema, dependency-free
 validator, runner checklist generation, and shell workflow contract test must be
 updated together so schema and validator behavior do not drift.
 
