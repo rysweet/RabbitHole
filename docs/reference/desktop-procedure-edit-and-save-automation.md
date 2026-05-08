@@ -2,9 +2,9 @@
 
 This reference describes the desktop-side automation path for observing a
 procedure target, editing a procedure, and then saving the project. It names the
-checked-in hook points, the live first-lesson procedure target
-observation shard, the bounded Save proof for a real dialog/write path, and the
-behavior that remains outside this slice.
+checked-in hook points, the live first-lesson procedure target action
+seam, the bounded Save proof for a real dialog/write path, and the behavior that
+remains outside this slice.
 
 ## Current checked-in hook points
 
@@ -24,21 +24,22 @@ desktop automation runner one stable place to ask, "which real Croquet operation
 selects this procedure tab?" The helper refuses to fire the operation until a
 live Alice IDE is active, because the tab change creates the desktop code view.
 
-## Live target observation and proposed next hooks
+## Live target action seam and proposed next hooks
 
-The live target observation shard owns the smallest unevidenced transition after
-Select Project opens the configured first-lesson flow starter:
+The live target action seam owns the smallest unevidenced transition
+after Select Project opens the configured first-lesson flow starter:
 
 ```text
 Select Project opened first-lesson project
   -> live Alice desktop post-open
   -> procedure tab or code-editor target for scene.eatmeFirstLesson observable
+  -> target classified as edit-ready or blocked by the named edit-action contract gap
 ```
 
 The runner contract is documented in [First-Lesson Live Procedure Target
-Observation](./first-lesson-live-procedure-target-observation.md). It is now a
-supported read-only scenario and may be used only as observed-or-blocked target
-evidence for the next desktop edit shard.
+Action Seam](./first-lesson-live-procedure-target-observation.md). Use that
+contract as the implementation target for edit-ready-or-named-blocker evidence
+for the next desktop edit shard.
 
 The command shape is:
 
@@ -51,12 +52,17 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-The decision artifact is `first-lesson-live-procedure-target-observation.json`.
-`status=observed` means a stable target was found for the next desktop edit
-shard. `status=blocked` means the artifact names the exact missing target or
-display/accessibility prerequisite. In both cases the shard is read-only: it
-does not mutate the procedure, save the project, assert rendering correctness,
-assess learner work, or claim full first-lesson completion.
+The decision artifact is
+`first-lesson-live-procedure-target-observation.json`. `status=edit-ready` means
+a stable `scene.eatmeFirstLesson` target was found and has a public desktop edit
+invocation contract for the next proof. The only accepted action-seam no-go is
+`blocker.kind=missing-desktop-edit-action-contract` with
+`blocker.message=missing public CodeEditor/CodeComposite edit invocation
+contract`. Display, AT-SPI, and target-not-found blockers are structured run
+failures, not accepted action-seam proof. In every case the shard remains
+read-only: it does not mutate the procedure, save the project, assert rendering
+correctness, assess learner work, assess creative quality, or claim full
+first-lesson completion.
 
 Add the remaining hooks in order, each with a focused test before changing
 behavior:
@@ -144,9 +150,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-The first-lesson live procedure target observation shard is for reviews about
-the live desktop target after Select Project opens the configured first-lesson
-flow starter. Its runner command is:
+The first-lesson live procedure target action seam shard is for reviews
+about the live desktop target and edit-action readiness after Select Project
+opens the configured first-lesson flow starter. Its runner command is:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -157,9 +163,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-Use its evidence only for the procedure tab/code-editor target observation seam;
-do not cite it as edit, Save, rendering, learner assessment, or full
-first-lesson completion proof.
+Use its evidence only for the procedure tab/code-editor target action
+seam; do not cite it as edit, Save, rendering, learner assessment, creative
+assessment, or full first-lesson completion proof.
 
 ## Still unproven
 

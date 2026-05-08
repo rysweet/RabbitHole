@@ -55,7 +55,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
-| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Observes whether the post-Select-Project live desktop exposes a stable `scene.eatmeFirstLesson` procedure tab or code-editor target, or writes a precise blocker. |
+| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Action-seam contract for observing the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and recording either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -67,12 +67,13 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
-The first-lesson live procedure target observation seam is an active read-only
-scenario. It records only whether the live desktop exposes a stable procedure
-tab or code-editor target for `scene.eatmeFirstLesson`; it does not perform a
-desktop edit, Save, rendering correctness check, learner assessment, or full
-first-lesson completion proof. See [First-Lesson Live Procedure Target
-Observation](./first-lesson-live-procedure-target-observation.md).
+The first-lesson live procedure target action seam is a read-only contract. It
+records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
+procedure/code-editor target and whether that target is ready for a public
+desktop edit action; it does not perform a desktop edit, Save, rendering
+correctness check, learner assessment, creative assessment, or full first-lesson
+completion proof. See [First-Lesson Live Procedure Target Action
+Seam](./first-lesson-live-procedure-target-observation.md).
 
 ## Learner-world boundary
 
@@ -218,7 +219,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-This command uses the existing Alice launch/open path and the same Xvfb/AT-SPI infrastructure as the live Swing probes. The runner invokes `post-open-runtime-display-probe.py` after the supported project-open setup and writes `post-open-runtime-display-accessibility-evidence.json` plus probe-local `runtime-display-accessibility-status.txt`. The current visible-rendering slice remains blocked even when runtime/display and controlled-display evidence are observed, because target readiness is followed by `visible-rendering-pixel-sampling-blocker.json` rather than sampled and checked rendered pixels. Missing runtime/display, display, screenshot/pixel, root-directory, license, AT-SPI prerequisites, or rendered-pixel sampling are recorded as structured blockers. For the dedicated usage, configuration, artifact API, examples, and review boundaries, see [Post-open runtime/display accessibility evidence](./post-open-runtime-display-accessibility-evidence.md).
+This command uses the existing Alice launch/open path and the same Xvfb/AT-SPI infrastructure as the live Swing probes. The runner invokes `post-open-runtime-display-probe.py` after the supported project-open setup and writes `post-open-runtime-display-accessibility-evidence.json` plus probe-local `runtime-display-accessibility-status.txt`. Final success means `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and the JSON artifact found at least one live runtime/display accessibility candidate after project open. Failure or missing runtime/display, display, screenshot/pixel, root-directory, license, or AT-SPI prerequisites are recorded as structured blockers. For the dedicated usage, configuration, artifact API, examples, and review boundaries, see [Post-open runtime/display accessibility evidence](./post-open-runtime-display-accessibility-evidence.md).
 
 ### Prepare a gated smoke without execution
 
@@ -450,27 +451,12 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
 | `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
-| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency evidence with `worldCanvasPixelTarget` target-ready or blocked metadata. Target readiness is only a sampling handoff, not visible rendered-world proof. |
-| `visible-rendering-pixel-target-blocker.json` | Exact blocker when the runner cannot identify one valid Run-window/world-canvas screen-coordinate target. |
-| `visible-rendering-pixel-sampling-blocker.json` | Exact blocker after target readiness when rendered-world pixels have not been sampled and checked. The blocker keeps `renderedWorldPixelsObserved=false`, `sampleCount=0`, and does not claim visible rendered-world correctness. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
 For launch runs, `status.txt` records whether the process stayed alive, whether a visible window was detected when a detector is available, whether window inventory was captured, and whether screenshot capture succeeded. Acceptance still requires reviewing the generated evidence, especially `x-window-inventory.json` and `launch.log`; the runner does not currently scan the log for every possible uncaught application exception.
 
-For post-open runtime/display accessibility runs, `status.txt` records
-`runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`,
-`runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`,
-`controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and
-`visibleRenderingPixelTargetStatus`. `runtime-display-accessibility-status.txt`
-is probe-local; use `status.txt` for the final scenario decision because it also
-accounts for controlled-display pixel status, target readiness, and the
-post-target-readiness pixel-sampling blocker. Visible-rendering pass requires
-`outcome=passed` with `visibleRenderingPixelSamplingStatus=observed`; until
-sampling exists, target-ready runs record `outcome=blocked`,
-`visibleRenderingPixelSamplingStatus=blocked`, and
-`visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`.
-The JSON artifact is the runtime/display machine-readable contract:
+For post-open runtime/display accessibility runs, `status.txt` records `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. `runtime-display-accessibility-status.txt` is probe-local; use `status.txt` for the final scenario decision because it also accounts for controlled-display pixel status. The JSON artifact is the runtime/display machine-readable contract:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -487,15 +473,7 @@ The JSON artifact is the runtime/display machine-readable contract:
 | `status` | enum | `observed` or `blocked`. |
 | `traversalErrors` | array | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
 
-The artifact must not include environment variables, credentials, process dumps,
-unrelated desktop windows, saved project contents, decoder output, grading
-state, lesson state, or world execution traces. Acceptance requires both the
-JSON runtime/display artifact and final `status.txt`: JSON `status=observed`
-alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted,
-and JSON `status=blocked` remains the machine-readable runtime/display gap
-report. Target-ready metadata is also not enough for visible rendered-world
-proof; `visible-rendering-pixel-sampling-blocker.json` is the expected
-rendered-pixel decision for this slice when target readiness exists.
+The artifact must not include environment variables, credentials, process dumps, unrelated desktop windows, saved project contents, decoder output, grading state, lesson state, or world execution traces. Acceptance requires both the JSON runtime/display artifact and final `status.txt`: JSON `status=observed` alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted, and JSON `status=blocked` remains the machine-readable runtime/display gap report.
 
 Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, most scenarios do not write `status.txt` because launch did not reach the evidence-capture phase. The post-open runtime/display accessibility scenario is the exception: it writes `post-open-runtime-display-accessibility-evidence.json` and `status.txt` with a blocked runtime/display accessibility outcome when an early prerequisite prevents collection.
 
@@ -515,11 +493,12 @@ grading or creative assessment can be claimed.
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
-| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt`. Visible-rendering pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`, and `visibleRenderingPixelSamplingStatus=observed`; until sampling exists, target-ready runs record `outcome=blocked`, `visibleRenderingPixelSamplingStatus=blocked`, and `visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `visible-rendering-pixel-sampling-blocker.json` when target readiness exists, `visible-rendering-pixel-target-blocker.json` when target readiness is blocked, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. Target readiness alone must not be treated as visible rendered-world proof; `visible-rendering-pixel-sampling-blocker.json` records the fail-closed rendered-pixel limitation when target readiness exists but rendered pixels are unavailable or unchecked. |
+| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt` with `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. |
 | Select Project tab-click smoke | `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened`, matching `openedStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`, or existing `blocker`/`blockerDetail` fields plus structured target-specific `nextBlocker` details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |
 | Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. It must be gated by prior `tab-click-observation.json` Africa Full evidence with `evidenceStatus=opened`, matching target/opened metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`; generic main-window presence is not Africa Full proof. |
+| First-lesson live procedure target action seam | `first-lesson-live-procedure-target-observation.json` with either `status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`, `desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the exact no-go blocker `missing-desktop-edit-action-contract` in both nested and top-level blocker objects. Supporting artifacts include `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, and Java/Maven/display environment summary. Target-only observation and display, AT-SPI, or target-not-found blockers are structured run failures, not accepted action-seam proof. |
 | Procedure edit seam smoke | `status.txt`, `command.log`, focused test output naming `editsSceneProcedureAndWritesEatmeProofArtifacts`, and procedure edit artifacts named by the focused test. |
 | Procedure edit handoff smoke | `status.txt`, `command.log`, focused test output naming `chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff`, and handoff evidence recording `placed-project.a3p` as the procedure edit input project artifact. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. This workflow is setup/open/save evidence only; pair it with `contracts/learner-world-assessment-boundary.json` when reviewing the current learner-world claim boundary. |
@@ -554,13 +533,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 9. Uses only the supported YAML subset: mappings, nested mappings, scalar values, and scalar lists with spaces for indentation.
 10. Uses `automation.argv` rather than a shell command string; only the allowlisted Alice QA argv set is accepted.
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
-12. Keeps post-open runtime/display evidence narrow: do not use that scenario to
-    claim full rendering correctness, full world execution, grading, lesson
-    completion, deployed installer success, Save behavior, active Select Project
-    behavior, or decoder behavior. A visible rendered-world success claim
-    requires actual rendered pixels to be sampled and checked; missing,
-    unavailable, unsampled, unchecked, stale, or inconclusive pixels remain
-    blocked evidence.
+12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
 13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-work grading, rubric scoring, correctness assessment, or creativity assessment.
 
 ## Extension rules

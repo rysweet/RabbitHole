@@ -18,15 +18,26 @@ from typing import Any
 
 SCHEMA_VERSION = "eatme.first-lesson-live-procedure-target-observation/v1"
 WORKFLOW = "first-lesson-live-procedure-target-observation"
-SEAM = "live-first-lesson-project-open-to-procedure-target-observable"
-DOWNSTREAM_BLOCKED_STEP = "desktop-procedure-edit"
+SEAM = "live-first-lesson-procedure-target-to-desktop-edit-action"
+DOWNSTREAM_BLOCKED_STEP = "desktop-procedure-edit-action-proof"
+DESKTOP_EDIT_ACTION_BLOCKER_KIND = "missing-desktop-edit-action-contract"
+DESKTOP_EDIT_ACTION_BLOCKER_MESSAGE = "missing public CodeEditor/CodeComposite edit invocation contract"
 OUT_OF_SCOPE = [
     "desktop procedure edit mutation",
     "Save",
     "rendering correctness",
     "learner assessment",
+    "creative assessment",
     "full first-lesson completion",
 ]
+RUN_FAILURE_BLOCKER_MESSAGES = {
+    "select-project-open-not-observed": "Select Project did not open the configured first-lesson starter",
+    "post-open-window-not-observed": "post-open Alice main window was not observed",
+    "procedure-target-not-found": "scene.eatmeFirstLesson procedure/code-editor target was not found",
+    "procedure-target-not-stable": "scene.eatmeFirstLesson target was not reacquirable through a stable automation path",
+    "at-spi-or-atk-unavailable": "AT-SPI/ATK accessibility infrastructure was unavailable",
+    "display-prerequisite-unavailable": "Xvfb display prerequisite was unavailable",
+}
 MAX_DESKTOP_APPS = 50
 MAX_ACCESSIBLES_TO_VISIT = 350
 MAX_CHILDREN_PER_ACCESSIBLE = 80
@@ -55,11 +66,12 @@ def base_payload(
     target_repo_path: str,
     procedure_selector: str,
     status: str,
-    blocker: str,
+    blocker: dict[str, str],
     blocker_detail: str,
     opened_via_select_project: bool = False,
     post_open_window_observed: bool = False,
     observed_target: dict[str, Any] | None = None,
+    desktop_edit_action: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "schemaVersion": SCHEMA_VERSION,
@@ -75,15 +87,41 @@ def base_payload(
             "postOpenWindowObserved": post_open_window_observed,
         },
         "requiredTarget": {
-            "procedureSelector": procedure_selector,
-            "targetKind": "procedure-tab-or-code-editor",
+            "procedureName": procedure_selector,
+            "kind": "procedure-or-code-editor-target",
             "minimumStableAutomationTarget": "reacquirable live desktop procedure tab or code-editor target",
         },
         "observedTarget": observed_target,
+        "desktopEditAction": desktop_edit_action,
         "blocker": blocker,
         "blockerDetail": blocker_detail,
         "downstreamBlockedStep": DOWNSTREAM_BLOCKED_STEP,
         "outOfScope": OUT_OF_SCOPE,
+    }
+
+
+def blocker_payload(kind: str, message: str) -> dict[str, str]:
+    return {
+        "kind": kind,
+        "message": message,
+    }
+
+
+def desktop_edit_action_payload(
+    *,
+    procedure_selector: str,
+    status: str,
+    ready_for_edit_action: bool,
+    blocker: dict[str, str],
+    invocation_contract: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "readyForDesktopEditAction": ready_for_edit_action,
+        "targetSelector": procedure_selector,
+        "invocationContract": invocation_contract,
+        "blocker": blocker,
+        "doesNotClaim": OUT_OF_SCOPE,
     }
 
 
@@ -258,26 +296,34 @@ def observed_payload(
     target_repo_path: str,
     candidate: dict[str, Any],
 ) -> dict[str, Any]:
+    blocker = blocker_payload(DESKTOP_EDIT_ACTION_BLOCKER_KIND, DESKTOP_EDIT_ACTION_BLOCKER_MESSAGE)
     observed = {
-        "targetKind": candidate["targetKind"],
-        "procedureSelector": args.procedure_selector,
+        "kind": candidate["targetKind"],
+        "procedureName": args.procedure_selector,
         "accessibleName": candidate.get("accessibleName"),
         "accessibleRole": candidate.get("accessibleRole"),
         "automationPath": candidate["automationPath"],
-        "readyForDesktopEditAction": True,
+        "readyForDesktopEditAction": False,
     }
+    desktop_edit_action = desktop_edit_action_payload(
+        procedure_selector=args.procedure_selector,
+        status="blocked",
+        ready_for_edit_action=False,
+        blocker=blocker,
+    )
     return base_payload(
         scenario_id=args.scenario_id,
         automation_mode=args.automation_mode,
         target_display_name=target_display_name,
         target_repo_path=target_repo_path,
         procedure_selector=args.procedure_selector,
-        status="observed",
-        blocker="none",
+        status="blocked",
+        blocker=blocker,
         blocker_detail="",
         opened_via_select_project=True,
         post_open_window_observed=True,
         observed_target=observed,
+        desktop_edit_action=desktop_edit_action,
     )
 
 
@@ -291,6 +337,7 @@ def blocked_payload(
     opened_via_select_project: bool = False,
     post_open_window_observed: bool = False,
 ) -> dict[str, Any]:
+    blocker_object = blocker_payload(blocker, RUN_FAILURE_BLOCKER_MESSAGES.get(blocker, detail))
     return base_payload(
         scenario_id=args.scenario_id,
         automation_mode=args.automation_mode,
@@ -298,11 +345,17 @@ def blocked_payload(
         target_repo_path=target_repo_path,
         procedure_selector=args.procedure_selector,
         status="blocked",
-        blocker=blocker,
+        blocker=blocker_object,
         blocker_detail=detail,
         opened_via_select_project=opened_via_select_project,
         post_open_window_observed=post_open_window_observed,
         observed_target=None,
+        desktop_edit_action=desktop_edit_action_payload(
+            procedure_selector=args.procedure_selector,
+            status="blocked",
+            ready_for_edit_action=False,
+            blocker=blocker_object,
+        ),
     )
 
 

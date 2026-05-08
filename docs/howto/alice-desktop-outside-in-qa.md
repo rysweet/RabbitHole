@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, first-lesson live procedure target observation, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -219,15 +219,16 @@ If the probe cannot safely prove target-specific selection/opening, it must pres
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 
-## Observe the first-lesson live procedure target
+## Observe the first-lesson live procedure target action seam
 
-The first-lesson live procedure target observation scenario verifies only
+The first-lesson live procedure target action seam contract verifies only
 whether a post-open live desktop exposes a stable procedure tab or code-editor
-target for `scene.eatmeFirstLesson`. It reuses the Select Project and
-post-project-open evidence path, then writes either an observed target or a
-machine-readable blocker. It does not prove desktop editing, Save behavior,
-rendering correctness, learner assessment, grading, creative assessment, or full
-first-lesson completion.
+target for `scene.eatmeFirstLesson`, then classifies that target as edit-ready or
+blocked by the missing public CodeEditor/CodeComposite edit invocation contract.
+It reuses the Select Project and post-project-open evidence path, then writes a
+machine-readable action-seam decision. It does not prove desktop editing, Save
+behavior, rendering correctness, learner assessment, grading, creative
+assessment, or full first-lesson completion.
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -240,11 +241,18 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Review `first-lesson-live-procedure-target-observation.json`, `status.txt`,
 `tab-click-observation.json`, and `post-project-open-observation.json`. Accept
-the shard only when the decision artifact records `status=observed` and
-`observedTarget.readyForDesktopEditAction=true`. A `status=blocked` artifact is
-the correct next-blocker evidence when the stable live desktop target is missing.
+the action-seam proof only when the decision artifact records either
+`status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`,
+`desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the
+exact no-go blocker in both `desktopEditAction.blocker.kind` and top-level
+`blocker.kind`: `missing-desktop-edit-action-contract` with
+`blocker.message=missing public CodeEditor/CodeComposite edit invocation
+contract`. Treat target-only observation, display, AT-SPI, and target-not-found
+blockers as implementation or run-prerequisite gaps, not accepted action-seam
+proof.
+
 For the artifact API, configuration, examples, and claim boundaries, see
-[First-Lesson Live Procedure Target Observation](../reference/first-lesson-live-procedure-target-observation.md).
+[First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
 
 ## Collect post-open runtime/display accessibility evidence
 
@@ -346,7 +354,7 @@ If an implementation or environment prerequisite is missing, the runner still wr
 }
 ```
 
-Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and the visible-rendering seam status. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `visibleRenderingPixelTargetStatus`. Visible-rendering pass requires `outcome=passed` with `visibleRenderingPixelSamplingStatus=observed`; until sampling exists, target-ready runs record `outcome=blocked`, `visibleRenderingPixelSamplingStatus=blocked`, `visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json`, and `visibleRenderingPixelSamplingBlocker=world-canvas-pixel-sampling-not-implemented`. Review `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, and the visible-rendering blocker artifacts as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
+Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus` and `controlledDisplayPixelBlocker`. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
 
 To review the latest run directory without changing it:
 
@@ -360,19 +368,14 @@ python3 -m json.tool \
   "$run_dir/post-open-runtime-display-accessibility-evidence.json"
 ```
 
-Accept the current slice only as blocked at the rendered-pixel sampling seam when
-`status.txt` records `outcome=blocked`,
-`runtimeDisplayAccessibilityStatus=observed`,
-`controlledDisplayPixelStatus=observed`, and
-`visibleRenderingPixelSamplingStatus=blocked`, and the JSON decision artifact
-records `status=observed`, `blocker=none`,
+Accept the run only when `status.txt` records `outcome=passed`,
+`runtimeDisplayAccessibilityStatus=observed`, and
+`controlledDisplayPixelStatus=observed`, and the JSON decision artifact records
+`status=observed`, `blocker=none`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, and
 `runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
-controlled-display pixels, runtime/display candidate, target readiness, or
-rendered-pixel sampling is unavailable. Do not record or accept `outcome=passed`
-for visible rendering until the status file records
-`visibleRenderingPixelSamplingStatus=observed`.
+controlled-display pixels, or runtime/display candidate is unavailable.
 
 ## Prepare evidence for manual workflows
 
