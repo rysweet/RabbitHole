@@ -127,6 +127,7 @@ public final class EatmeEditProcedure {
     ProcedureEdit edit = new ProcedureEdit(
         arguments.procedureSelector(),
         arguments.editSpec(),
+        arguments.project().getFileName().toString(),
         sceneType.getName(),
         methodName,
         createdMethod,
@@ -295,6 +296,7 @@ public final class EatmeEditProcedure {
         + "  \"schema_version\": \"eatme.alice-procedure-edit-artifact/v1\",\n"
         + "  \"procedure_selector\": \"" + escapeJson(edit.procedureSelector()) + "\",\n"
         + "  \"edit_spec\": \"" + escapeJson(edit.editSpec()) + "\",\n"
+        + "  \"input_project_artifact\": \"" + escapeJson(edit.inputProjectArtifact()) + "\",\n"
         + "  \"scene_type\": \"" + escapeJson(edit.sceneType()) + "\",\n"
         + "  \"method_name\": \"" + escapeJson(edit.methodName()) + "\",\n"
         + "  \"created_method\": " + edit.createdMethod() + ",\n"
@@ -495,6 +497,7 @@ public final class EatmeEditProcedure {
   record ProcedureEdit(
       String procedureSelector,
       String editSpec,
+      String inputProjectArtifact,
       String sceneType,
       String methodName,
       boolean createdMethod,

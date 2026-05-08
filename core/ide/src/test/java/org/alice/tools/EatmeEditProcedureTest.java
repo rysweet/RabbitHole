@@ -131,6 +131,76 @@ public class EatmeEditProcedureTest {
     assertEquals("eatme edit proof", ((Comment) statement).text.getValue());
   }
 
+  @Test
+  public void chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff() throws Exception {
+    File starterProject = temporaryFolder.newFile("starter.a3p");
+    IoUtilities.writeProject(starterProject, projectWithScene());
+    Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+    ByteArrayOutputStream placementStdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream placementStderr = new ByteArrayOutputStream();
+
+    int placementStatus = EatmePlaceObject.run(
+        new String[] {
+            "--project", starterProject.getAbsolutePath(),
+            "--object", "alice-gallery://animals/bunny",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(placementStdout),
+        new PrintStream(placementStderr));
+
+    assertEquals(placementStderr.toString(StandardCharsets.UTF_8), 0, placementStatus);
+    String placementResult = placementStdout.toString(StandardCharsets.UTF_8);
+    assertTrue(placementResult, placementResult.contains("\"schema_version\":\"eatme.alice-object-placement-result/v1\""));
+    assertTrue(placementResult, placementResult.contains("\"status\":\"placed\""));
+    assertNonEmptyFile(evidenceDir.resolve("placed-project.a3p"));
+    assertNonEmptyFile(evidenceDir.resolve("placement.json"));
+    assertNonEmptyFile(evidenceDir.resolve("scene.diff.json"));
+
+    Project placedProject = IoUtilities.readProject(evidenceDir.resolve("placed-project.a3p").toFile());
+    NamedUserType placedSceneType = sceneType(placedProject);
+    assertNotNull("placed project should contain the bunny field before editing",
+        findField(placedSceneType, "bunny"));
+
+    ByteArrayOutputStream editStdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream editStderr = new ByteArrayOutputStream();
+    int editStatus = EatmeEditProcedure.run(
+        new String[] {
+            "--project", evidenceDir.resolve("placed-project.a3p").toString(),
+            "--procedure-selector", "scene.eatmeFirstLesson",
+            "--edit-spec", "append-comment:eatme placement to procedure proof",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(editStdout),
+        new PrintStream(editStderr));
+
+    assertEquals(editStderr.toString(StandardCharsets.UTF_8), 0, editStatus);
+    String editResult = editStdout.toString(StandardCharsets.UTF_8);
+    assertTrue(editResult, editResult.contains("\"schema_version\":\"eatme.alice-procedure-edit-result/v1\""));
+    assertTrue(editResult, editResult.contains("\"status\":\"edited\""));
+    assertNonEmptyFile(evidenceDir.resolve("edited-project.a3p"));
+    assertNonEmptyFile(evidenceDir.resolve("procedure-edit.json"));
+    assertNonEmptyFile(evidenceDir.resolve("procedure-edit-command.json"));
+    assertNonEmptyFile(evidenceDir.resolve("procedure.diff.json"));
+    assertNonEmptyFile(evidenceDir.resolve("procedure-tab-selection.json"));
+
+    Project editedProject = IoUtilities.readProject(evidenceDir.resolve("edited-project.a3p").toFile());
+    NamedUserType editedSceneType = sceneType(editedProject);
+    assertNotNull("edited project should retain the placed bunny field",
+        findField(editedSceneType, "bunny"));
+    UserMethod method = findMethod(editedSceneType, "eatmeFirstLesson");
+    assertNotNull("edited project should contain the selected method", method);
+    assertEquals(1, method.body.getValue().statements.size());
+    Statement statement = method.body.getValue().statements.get(0);
+    assertTrue("chained edit proof should be a comment statement", statement instanceof Comment);
+    assertEquals("eatme placement to procedure proof", ((Comment) statement).text.getValue());
+
+    String editArtifact = Files.readString(evidenceDir.resolve("procedure-edit.json"));
+    assertTrue("procedure edit artifact should record the placed-project handoff",
+        editArtifact.contains("\"input_project_artifact\": \"placed-project.a3p\""));
+  }
+
   private static String jsonSection(String json, String fieldName) {
     int fieldStart = json.indexOf("\"" + fieldName + "\"");
     assertTrue(fieldName + " field should exist", fieldStart >= 0);
@@ -317,11 +387,34 @@ public class EatmeEditProcedureTest {
 
   private static Project projectWithSceneMethod(String methodName) {
     Project project = projectWithScene();
-    NamedUserType sceneType = (NamedUserType) project.getProgramType()
+    NamedUserType sceneType = sceneType(project);
+    sceneType.methods.add(new UserMethod(methodName, JavaType.VOID_TYPE, new UserParameter[0], new BlockStatement(new Comment("existing"))));
+    return project;
+  }
+
+  private static NamedUserType sceneType(Project project) {
+    return (NamedUserType) project.getProgramType()
         .getDeclaredFields()
         .get(0)
         .getValueType();
-    sceneType.methods.add(new UserMethod(methodName, JavaType.VOID_TYPE, new UserParameter[0], new BlockStatement(new Comment("existing"))));
-    return project;
+  }
+
+  private static UserField findField(NamedUserType sceneType, String fieldName) {
+    return sceneType.getDeclaredFields().stream()
+        .filter(field -> fieldName.equals(field.getName()))
+        .findFirst()
+        .orElse(null);
+  }
+
+  private static UserMethod findMethod(NamedUserType sceneType, String methodName) {
+    return sceneType.getDeclaredMethods().stream()
+        .filter(method -> methodName.equals(method.getName()))
+        .findFirst()
+        .orElse(null);
+  }
+
+  private static void assertNonEmptyFile(Path path) throws Exception {
+    assertTrue(path.getFileName() + " should exist", Files.isRegularFile(path));
+    assertTrue(path.getFileName() + " should not be empty", Files.size(path) > 0);
   }
 }
