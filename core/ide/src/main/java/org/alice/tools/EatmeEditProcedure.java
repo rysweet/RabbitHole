@@ -359,7 +359,8 @@ public final class EatmeEditProcedure {
         + "    \"full Alice UI automation\",\n"
         + "    \"visible rendering correctness\",\n"
         + "    \"first-lesson completion\",\n"
-        + "    \"grading\"\n"
+        + "    \"grading\",\n"
+        + "    \"creative assessment\"\n"
         + "  ]\n"
         + "}\n";
   }

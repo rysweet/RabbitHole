@@ -241,6 +241,7 @@ public class EatmeEditProcedureTest {
     assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("visible rendering correctness"));
     assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("first-lesson completion"));
     assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("grading"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("creative assessment"));
 
     String uiDoesNotClaim = jsonSection(uiActionNoGo, "doesNotClaim");
     assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("desktop UI action invoked"));
