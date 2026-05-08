@@ -59,6 +59,26 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desk
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
 
+To collect the narrow post-open runtime/display accessibility evidence:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-post-open-runtime-display-accessibility-evidence \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/post-open-runtime-display \
+  --timeout-seconds 300
+```
+
+Review `post-open-runtime-display-accessibility-evidence.json` as the decision
+artifact and `tab-click-observation.json` plus
+`post-project-open-observation.json` as supporting setup artifacts. An observed
+result is limited to a live post-open runtime/display accessibility signal; a
+blocked result remains a precise blocker and does not prove visible rendering
+correctness, deployed installer success, full world execution, grading, lesson
+completion, active Save behavior, active Select Project behavior, or decoder
+behavior.
+
 The Gadugi exported launcher evidence scenario is a separate CLI scenario under
 `gadugi/`, not a custom Alice scenario under `scenarios/`. Validate and run it
 with `gadugi-test` installed on `PATH`:

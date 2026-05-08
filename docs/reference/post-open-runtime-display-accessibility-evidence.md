@@ -15,7 +15,9 @@ behavior.
 - [Scope](#scope)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [Scenario interface](#scenario-interface)
 - [Evidence API](#evidence-api)
+- [Review workflow](#review-workflow)
 - [Examples](#examples)
 - [Review rules](#review-rules)
 - [Validation commands](#validation-commands)
@@ -94,6 +96,39 @@ Runtime prerequisites:
 | `python3-pyatspi` | Lets the probe read the AT-SPI accessibility tree. |
 | `/usr/share/java/java-atk-wrapper.jar` | Makes Swing accessibility data visible to AT-SPI for the spawned Java process. |
 | AT-SPI2 accessibility bus | Provides the live accessibility registry for the user session. |
+
+## Scenario interface
+
+The public runner interface is intentionally small and fixed:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-post-open-runtime-display-accessibility-evidence \
+  [--evidence-dir <directory>] \
+  [--timeout-seconds <seconds>]
+```
+
+The same scenario may also be addressed by its checked-in YAML file:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  qa/outside-in/alice-desktop/scenarios/post-open-runtime-display-accessibility-evidence.yaml
+```
+
+| Contract | Value |
+| --- | --- |
+| Scenario ID | `alice-desktop-post-open-runtime-display-accessibility-evidence` |
+| Workflow | `post-open-runtime-display-accessibility-evidence` |
+| Automation mode | `xvfb-real-alice` |
+| Launch path | Existing Alice IDE Maven launch path with the AT-SPI wrapper execution. |
+| Decision artifact | `post-open-runtime-display-accessibility-evidence.json` |
+| Supporting setup artifacts | `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and environment summary. |
+| Default evidence root | `qa/outside-in/alice-desktop/evidence/` unless `--evidence-dir` is supplied. |
+
+Callers provide only runner flags and environment variables. Scenario YAML is
+declarative input; it never supplies shell fragments. The schema, validator, and
+runner keep workflow names and argv values allowlisted so the lane fails closed
+when scenario wiring drifts.
 
 ## Evidence API
 
@@ -222,6 +257,29 @@ The full artifact fields are:
 The artifact must stay small and safe: no credentials, environment dumps,
 arbitrary process dumps, unrelated desktop windows, saved project contents,
 decoder output, grading state, lesson state, or world execution traces.
+
+## Review workflow
+
+Use this review sequence for every run:
+
+1. Open `status.txt` and confirm it points to
+   `post-open-runtime-display-accessibility-evidence.json`.
+2. Open the JSON decision artifact and read `status`, `blocker`,
+   `postOpenRuntimeDisplayAccessibilityObserved`,
+   `runtimeDisplayCandidateCount`, and `runtimeDisplayCandidates`.
+3. Review `tab-click-observation.json` and
+   `post-project-open-observation.json` to understand the supporting project-open
+   setup.
+4. Accept the run only when the decision artifact is `status=observed`,
+   `blocker=none`, `postOpenRuntimeDisplayAccessibilityObserved=true`, and
+   `runtimeDisplayCandidateCount` is greater than zero.
+
+If the decision artifact is `status=blocked`, preserve it as the run result. A
+blocked artifact is useful evidence about the missing prerequisite or missing
+runtime/display candidate; it is not a manual substitute for visible rendering
+correctness, deployed installer success, full world execution, grading, lesson
+completion, active Save behavior, active Select Project behavior, or decoder
+behavior.
 
 ## Examples
 

@@ -90,7 +90,8 @@ export NODE_OPTIONS=--max-old-space-size=32768
 ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   alice-desktop-post-open-runtime-display-accessibility-evidence \
-  --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
+  --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs \
+  --timeout-seconds 300
 ```
 
 Open the generated run directory and review:
@@ -104,6 +105,15 @@ x-window-inventory.json
 launch.log
 xvfb.log
 screenshot.png or screenshot.xwd
+```
+
+Review the decision artifact without modifying the run:
+
+```bash
+python3 -m json.tool \
+  <run-directory>/post-open-runtime-display-accessibility-evidence.json
+
+sed -n '1,120p' <run-directory>/status.txt
 ```
 
 Accept this tutorial step only when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. Use `tab-click-observation.json` and `post-project-open-observation.json` to understand the supporting project-open setup, especially if the blocker is `post-open-window-not-observed`. If the artifact records `status=blocked`, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).

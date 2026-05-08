@@ -229,7 +229,8 @@ export NODE_OPTIONS=--max-old-space-size=32768
 ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   alice-desktop-post-open-runtime-display-accessibility-evidence \
-  --evidence-dir qa/outside-in/alice-desktop/evidence/post-open-runtime-display
+  --evidence-dir qa/outside-in/alice-desktop/evidence/post-open-runtime-display \
+  --timeout-seconds 300
 ```
 
 The runner writes these artifacts in the timestamped run directory when execution reaches evidence capture:
@@ -316,6 +317,24 @@ If an implementation or environment prerequisite is missing, the runner still wr
 ```
 
 Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json` and `post-project-open-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed`.
+
+To review the latest run directory without changing it:
+
+```bash
+run_dir=$(find qa/outside-in/alice-desktop/evidence/post-open-runtime-display \
+  -path '*/alice-desktop-post-open-runtime-display-accessibility-evidence/*' \
+  -type d | sort | tail -n 1)
+
+sed -n '1,120p' "$run_dir/status.txt"
+python3 -m json.tool \
+  "$run_dir/post-open-runtime-display-accessibility-evidence.json"
+```
+
+Accept the run only when the JSON decision artifact records `status=observed`,
+`blocker=none`, `postOpenRuntimeDisplayAccessibilityObserved=true`, and
+`runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
+the correct machine-readable gap report when the environment, post-open setup,
+or runtime/display candidate is unavailable.
 
 ## Prepare evidence for manual workflows
 
