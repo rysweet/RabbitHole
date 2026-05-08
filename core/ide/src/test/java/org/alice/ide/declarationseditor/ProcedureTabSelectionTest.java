@@ -6,6 +6,7 @@ import org.lgna.croquet.Application;
 import org.lgna.croquet.DocumentFrame;
 import org.lgna.croquet.Operation;
 import org.lgna.croquet.history.UserActivity;
+import org.lgna.project.ast.AbstractCode;
 import org.lgna.project.ast.AstUtilities;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.JavaType;
@@ -37,6 +38,8 @@ public class ProcedureTabSelectionTest {
     assertEquals("eatmeFirstLesson", operation.getImp().getName());
     assertSame(IDE.DOCUMENT_UI_GROUP, operation.getGroup());
     assertNull(ProcedureTabSelection.getSelectedProcedure(editor));
+    assertNull(ProcedureTabSelection.getSelectedProcedureCodeComposite(editor));
+    assertNull(ProcedureTabSelection.getSelectedCodeEditorCode(editor));
   }
 
   @Test
@@ -66,6 +69,30 @@ public class ProcedureTabSelectionTest {
 
     assertSame(procedure, selected[0]);
     assertSame(procedure, ProcedureTabSelection.getSelectedProcedure(editor));
+  }
+
+  @Test
+  public void selectProcedureLandsOnCodeEditorBackedByExpectedMethodCode() throws Exception {
+    DeclarationsEditorComposite editor = new DeclarationsEditorComposite();
+    UserMethod procedure = sceneProcedure("eatmeFirstLesson");
+    CodeComposite expectedComposite = CodeComposite.getInstance(procedure);
+    ensureCroquetApplication();
+    editor.getTabState().getData().internalSetAllItems(List.of(expectedComposite));
+    UserMethod[] selected = new UserMethod[1];
+    CodeComposite[] selectedComposite = new CodeComposite[1];
+    AbstractCode[] selectedCodeEditorCode = new AbstractCode[1];
+
+    SwingUtilities.invokeAndWait(() -> {
+      selected[0] = ProcedureTabSelection.selectProcedureInEditor(editor, procedure, null);
+      selectedComposite[0] = ProcedureTabSelection.getSelectedProcedureCodeComposite(editor);
+      selectedCodeEditorCode[0] = ProcedureTabSelection.getSelectedCodeEditorCode(editor);
+    });
+
+    assertSame(procedure, selected[0]);
+    assertSame(procedure, ProcedureTabSelection.getSelectedProcedure(editor));
+    assertSame(expectedComposite, selectedComposite[0]);
+    assertSame(procedure, selectedComposite[0].getDeclaration());
+    assertSame(procedure, selectedCodeEditorCode[0]);
   }
 
   @Test(expected = IllegalArgumentException.class)
