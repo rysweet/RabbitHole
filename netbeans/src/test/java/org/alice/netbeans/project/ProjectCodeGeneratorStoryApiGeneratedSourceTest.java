@@ -88,30 +88,22 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
         "generated-story-api-speed-runtime-src");
 
     Path programPath = sourceDirectory.resolve("Program.java");
-    String programSource = Files.readString(programPath);
-    assertTrue(programSource.contains("void configureStory()"));
-    assertTrue(programSource, programSource.contains("this.setSimulationSpeedFactor(1.5);"));
-
-    Path classesDirectory = compileAllGeneratedSources(
-        "generated-story-api-speed-runtime-classes",
-        sourceDirectory);
-    try (URLClassLoader classLoader = new URLClassLoader(
-        new URL[] {classesDirectory.toUri().toURL()},
-        Thread.currentThread().getContextClassLoader())) {
+    Path classesDirectory = temporaryFolder.newFolder("generated-story-api-speed-runtime-classes").toPath();
+    compileJavaSources(classesDirectory, programPath);
+    try (GeneratedProgramClassLoader classLoader = new GeneratedProgramClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()})) {
       Class<?> programClass = Class.forName("Program", true, classLoader);
       var constructor = programClass.getDeclaredConstructor();
       constructor.setAccessible(true);
       ProgramImp.ACCEPTABLE_HACK_FOR_NOW_setClassForNextInstance(HeadlessProgramImp.class);
-      Object program = constructor.newInstance();
+      SProgram program = (SProgram) constructor.newInstance();
 
       // Direct configureStory invocation characterizes generated runtime state without launching rendering.
       var configureStory = programClass.getDeclaredMethod("configureStory");
       configureStory.setAccessible(true);
       configureStory.invoke(program);
 
-      var getSimulationSpeedFactor = programClass.getMethod("getSimulationSpeedFactor");
-      double speedFactor = ((Number) getSimulationSpeedFactor.invoke(program)).doubleValue();
-      assertEquals(1.5, speedFactor, 0.0);
+      assertEquals(1.5, program.getSimulationSpeedFactor(), 0.0);
     }
   }
 
@@ -690,5 +682,28 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     Path classesDirectory = temporaryFolder.newFolder(classesDirectoryName).toPath();
     compileJavaSources(classesDirectory, sources.toArray(Path[]::new));
     return classesDirectory;
+  }
+
+  private static class GeneratedProgramClassLoader extends URLClassLoader {
+    GeneratedProgramClassLoader(URL[] urls) {
+      super(urls, ProjectCodeGeneratorStoryApiGeneratedSourceTest.class.getClassLoader());
+    }
+
+    @Override
+    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+      if ("Program".equals(name)) {
+        synchronized (getClassLoadingLock(name)) {
+          Class<?> loadedClass = findLoadedClass(name);
+          if (loadedClass == null) {
+            loadedClass = findClass(name);
+          }
+          if (resolve) {
+            resolveClass(loadedClass);
+          }
+          return loadedClass;
+        }
+      }
+      return super.loadClass(name, resolve);
+    }
   }
 }

@@ -27,25 +27,24 @@ The implementation belongs in:
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
 ```
 
-The existing `generatedSyntheticStoryApiCallSourceCompiles` test already
-protects source generation and compilation for this synthetic fixture:
+The existing `generatedSyntheticStoryApiCallSourceCompiles` test protects
+source generation and compilation for this synthetic fixture:
 
 ```java
 this.setSimulationSpeedFactor(1.5);
 ```
 
-The runtime-state characterization adds this check:
+The runtime-state characterization adds the direct runtime-state check:
 
 1. Build a deterministic synthetic `Program` AST in memory.
 2. Write the project to a temporary `.a3p` archive with
    `IoUtilities.writeProject`.
 3. Generate Java source with `ProjectCodeGenerator.generateCode(..., false)`.
-4. Assert that generated `Program.java` contains
-   `this.setSimulationSpeedFactor(1.5);`.
-5. Compile the generated Story API Java source.
-6. Load and instantiate the generated `Program` class from the compiled output.
-7. Invoke generated `configureStory()` directly.
-8. Assert that `getSimulationSpeedFactor()` returns `1.5`.
+4. Compile generated `Program.java`.
+5. Load and instantiate the generated `Program` class from the compiled
+   temporary output, requiring `Program` to resolve from that output.
+6. Invoke generated `configureStory()` directly.
+7. Assert that `getSimulationSpeedFactor()` returns `1.5`.
 
 This is a headless generated-runtime characterization. It is not a desktop,
 launcher, rendering, animation, event-loop, or full world execution test.
@@ -86,22 +85,22 @@ Class<?> programClass = Class.forName("Program", true, classLoader);
 var constructor = programClass.getDeclaredConstructor();
 constructor.setAccessible(true);
 ProgramImp.ACCEPTABLE_HACK_FOR_NOW_setClassForNextInstance(HeadlessProgramImp.class);
-Object program = constructor.newInstance();
+SProgram program = (SProgram) constructor.newInstance();
 
 var configureStory = programClass.getDeclaredMethod("configureStory");
 configureStory.setAccessible(true);
 configureStory.invoke(program);
 
-var getSimulationSpeedFactor = programClass.getMethod("getSimulationSpeedFactor");
-double speedFactor = ((Number) getSimulationSpeedFactor.invoke(program)).doubleValue();
-assertEquals(1.5, speedFactor, 0.0);
+assertEquals(1.5, program.getSimulationSpeedFactor(), 0.0);
 ```
 
 The `HeadlessProgramImp` injection uses the existing one-shot `ProgramImp`
 construction seam so generated `Program` instantiation does not create an
 onscreen render target. The direct `configureStory()` invocation is the runtime
-boundary. The test may compile `AliceJavaFXLauncher.java` when reusing existing
-generated-source helpers, but it must not launch or execute the JavaFX launcher.
+boundary. The test compiles generated `Program.java` only; it must not launch or
+execute the JavaFX launcher. The generated test class loader resolves `Program`
+from the compiled temporary output before delegating dependencies to the normal
+test classpath.
 
 ## Validation command
 
