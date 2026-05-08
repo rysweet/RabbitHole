@@ -39,7 +39,7 @@ evidence:
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution, or naming the exact missing distribution/Maven phase blocker.
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state used only when ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 is set.
     - license-dialog.json recording not-observed; if observed, it names the exact first-run License Agreement blocker.
-    - x-window-inventory.json naming visible X window title, class, process, and geometry after launch readiness wait.
+    - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry after launch readiness wait.
     - select-project-window.json recording observed Select Project title/class/process/geometry, or the exact missing-window blocker.
     - swing-widget-observation.json recording observed AT-SPI tab labels and widget roles for the Select Project frame, or the exact atk-wrapper-not-loaded or at-spi-registry-unavailable blocker with the exact JAVA_TOOL_OPTIONS and CLASSPATH needed to enable introspection.
     - Screenshot of the Alice desktop and Select Project chooser state.

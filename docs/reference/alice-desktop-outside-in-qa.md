@@ -31,8 +31,11 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 
 | Scenario ID | Workflow | Automation mode | Purpose |
 | --- | --- | --- | --- |
+| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers historical archive fixture availability used by decoder and migration characterization smokes. |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
 | `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
+| `alice-desktop-select-project-widget-introspection` | `select-project-widget-introspection-smoke` | `xvfb-real-alice` | Enumerates live Select Project Swing widgets through AT-SPI when the ATK wrapper is active. |
+| `alice-desktop-select-project-atk-exec` | `select-project-atk-exec-smoke` | `xvfb-real-alice` | Launches Alice through the AT-SPI exec:exec path and records live Swing widget evidence or exact blockers. |
 | `alice-desktop-select-project-tab-click-exec` | `select-project-tab-click-smoke` | `xvfb-real-alice` | Uses the AT-SPI exec:exec launch path to activate Select Project tabs. The target-specific feature contract will bind this scenario to `Africa Full` and either prove target-specific selection/opening or record the exact blocker. |
 | `alice-desktop-post-project-open-window-state` | `post-project-open-window-state-smoke` | `xvfb-real-alice` | Characterizes the Alice main-window AT-SPI frame state after project open. Under the target-specific feature contract, it must be gated by prior Africa Full Select Project evidence. |
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
@@ -45,12 +48,15 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
+| `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
+| `alice-desktop-save-menu-dialog-write-proof` | `save-menu-dialog-write-proof` | `gated-command-smoke` | Covers bounded Save menu/dialog/write proof at the existing test seam. |
 | `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` | `gated-command-smoke` | Covers unsupported adjacent Tweedle method-call boundaries for the narrow decoder slice. |
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
+| `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
 
 ## Runner commands
 
@@ -110,14 +116,17 @@ This path form resolves the top-level `id` in the YAML file, validates that ID t
 ### Run through the branch-installable wrapper
 
 ```bash
-uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa-outside-in \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa list
 
-uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa-outside-in \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-The `amplihack alice-qa` wrapper is intentionally thin. It must be run from an Alice checkout, locates the repository root from the current working directory, and delegates to the checked-out shell runners.
+Replace `<branch>` with the PR branch or commit you are reviewing. The
+`amplihack alice-qa` wrapper is intentionally thin. It must be run from an Alice
+checkout, locates the repository root from the current working directory, and
+delegates to the checked-out shell runners.
 
 ### Run with a custom evidence directory
 
@@ -134,6 +143,19 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
 ```
 
 `--timeout-seconds` applies to `xvfb-real-alice` execution. Manual scenarios write checklists immediately.
+
+### Post-open runtime/display accessibility evidence
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-post-open-runtime-display-accessibility-evidence \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/post-open-runtime-display \
+  --timeout-seconds 300
+```
+
+This command uses the existing Alice launch/open path and the same Xvfb/AT-SPI infrastructure as the live Swing probes. The runner invokes `post-open-runtime-display-probe.py` after the supported project-open setup and writes `post-open-runtime-display-accessibility-evidence.json` plus probe-local `runtime-display-accessibility-status.txt`. Final success means `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and the JSON artifact found at least one live runtime/display accessibility candidate after project open. Failure or missing runtime/display, display, screenshot/pixel, root-directory, license, or AT-SPI prerequisites are recorded as structured blockers. For the dedicated usage, configuration, artifact API, examples, and review boundaries, see [Post-open runtime/display accessibility evidence](./post-open-runtime-display-accessibility-evidence.md).
 
 ### Prepare a gated smoke without execution
 
@@ -274,22 +296,31 @@ supportingEvidence:
 ### Workflow values
 
 ```text
-instructor-student-setup
-launch
+archive-fixture-smoke
+export
 exported-project-smoke
 failure-path-smoke
+file-loader-smoke
 future-ui-smoke
+instructor-student-setup
+launch
+menu-action-smoke
 netbeans-package-smoke
 open-load-save
 package-install-smoke
+post-open-runtime-display-accessibility-evidence
 post-project-open-window-state-smoke
 project-io-smoke
-scene-creation
 run-debug
 save-load
+save-menu-dialog-write-proof
+scene-creation
+select-project-atk-exec-smoke
 select-project-interaction-smoke
 select-project-tab-click-smoke
-export
+select-project-widget-introspection-smoke
+tweedle-decoder-boundary-smoke
+tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
 
@@ -340,7 +371,7 @@ Enabled gated command smoke execution also includes:
 | `command.log` | Captured stdout/stderr for the configured command. |
 | `status.txt` | Scenario ID, automation mode, command, working directory, timeout, command log name, exit code, and `outcome=passed` or `outcome=failed`. |
 
-Successful `xvfb-real-alice` evidence capture includes:
+Successful `xvfb-real-alice` evidence capture can include these common and scenario-specific artifacts:
 
 | Artifact | Description |
 | --- | --- |
@@ -348,14 +379,36 @@ Successful `xvfb-real-alice` evidence capture includes:
 | `launch.log` | Alice Maven launch output. |
 | `xvfb.log` | Xvfb output. |
 | `status.txt` | Scenario ID, automation mode, display, readiness status, process status, screenshot status, window inventory status, Select Project status when applicable, Alice candidate count, and timeout. |
-| `x-window-inventory.json` | Visible X window title, class, process, and geometry after launch readiness wait, or an explicit unsupported/blocker record. |
+| `x-window-inventory.json` | Alice-related visible X window title, class, process, and geometry after launch readiness wait, or an explicit unsupported/blocker record. |
 | `select-project-window.json` | Select Project title/class/process/geometry proof when the exact chooser window is observed; otherwise records the exact missing-window blocker. Widget labels are resource-contract evidence only and name `swing-widget-inventory-not-collected` until live Swing widget introspection exists. |
+| `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
+| `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
+| `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
 For launch runs, `status.txt` records whether the process stayed alive, whether a visible window was detected when a detector is available, whether window inventory was captured, and whether screenshot capture succeeded. Acceptance still requires reviewing the generated evidence, especially `x-window-inventory.json` and `launch.log`; the runner does not currently scan the log for every possible uncaught application exception.
 
-Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, `status.txt` is not written because the launch did not reach the evidence-capture phase.
+For post-open runtime/display accessibility runs, `status.txt` records `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. `runtime-display-accessibility-status.txt` is probe-local; use `status.txt` for the final scenario decision because it also accounts for controlled-display pixel status. The JSON artifact is the runtime/display machine-readable contract:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `automationMode` | string | Scenario automation mode, currently `xvfb-real-alice`. |
+| `blocker` | string | `none` on success, otherwise a precise blocker such as `x-server-unavailable`, `display-allocation-unavailable`, `pyatspi-not-installed`, `at-spi-registry-unavailable`, `atk-wrapper-not-loaded`, `post-open-window-not-observed`, `runtime-display-accessible-candidate-not-found`, `java-pid-not-in-inventory`, or `input-unreadable`. |
+| `blockerDetail` | string | Human-readable detail for the blocker. |
+| `claim` | string | Always `post-open-runtime-display-accessibility-evidence`. |
+| `javaPid` | integer or null | Alice Java process ID used for AT-SPI lookup, or `null` when unavailable. |
+| `postOpenRuntimeDisplayAccessibilityObserved` | boolean | `true` only when the post-open runtime/display candidate was observed. |
+| `postOpenWindowObserved` | boolean | `true` only when `post-project-open-observation.json` recorded the prerequisite post-open window signal. |
+| `runtimeDisplayCandidateCount` | integer | Number of accepted runtime/display candidates. |
+| `runtimeDisplayCandidates` | array | Bounded AT-SPI metadata for accepted candidates: child count, name, accessibility tree path, role, and visible/enabled state names. |
+| `scenario` | string | Always `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
+| `status` | enum | `observed` or `blocked`. |
+| `traversalErrors` | array | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
+
+The artifact must not include environment variables, credentials, process dumps, unrelated desktop windows, saved project contents, decoder output, grading state, lesson state, or world execution traces. Acceptance requires both the JSON runtime/display artifact and final `status.txt`: JSON `status=observed` alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted, and JSON `status=blocked` remains the machine-readable runtime/display gap report.
+
+Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, most scenarios do not write `status.txt` because launch did not reach the evidence-capture phase. The post-open runtime/display accessibility scenario is the exception: it writes `post-open-runtime-display-accessibility-evidence.json` and `status.txt` with a blocked runtime/display accessibility outcome when an early prerequisite prevents collection.
 
 Manual scenarios are complete only after a human performs the workflow and places the required artifacts in the same timestamped run directory. Every accepted manual run must include `review-notes.txt` with the scenario ID, run directory, evidence files reviewed, observed result, deviations from the checklist, and an explicit accept or reject decision.
 
@@ -365,7 +418,10 @@ Manual scenarios are complete only after a human performs the workflow and place
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
+| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt` with `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. |
 | Select Project tab-click smoke | Current tab activation/open evidence, then under the target-specific feature contract `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened` plus target selection/open evidence, or existing `blocker`/`blockerDetail` fields plus structured target-specific blocker details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
+| Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
+| Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |
 | Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. Under the target-specific feature contract it must be gated by prior `tab-click-observation.json` Africa Full evidence; generic main-window presence is not Africa Full proof. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
@@ -376,9 +432,12 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Exported project smoke | `status.txt`, `command.log`, generated source or exported project listing, launcher handoff, compile evidence, or [exported Ant runtime metadata evidence](./exported-netbeans-ant-project-behavior.md) such as `ANT_RUNTIME_CONFIGURATION_PROBE_OK`. |
 | NetBeans package smoke | `status.txt`, `command.log`, NetBeans target artifact listing or CI artifact link, representative jar/zip content listing. |
 | Package/install smoke | `status.txt`, `command.log`, package or installer artifact listing, disposable install log or explicit not-produced note. |
+| Archive fixture smoke | `status.txt`, `command.log`, archive fixture path or generated fixture notes, and focused test output proving the fixture seam. |
+| File loader smoke | `status.txt`, `command.log`, focused file-loader/recovery test output, and review notes for any generated fixture or failure-path metadata. |
 | Project save, reopen, edit, save again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for metadata and export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. |
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
+| Save menu dialog write proof | `status.txt`, `command.log`, focused Save menu/dialog/write proof test output, and the exact write-proof path or blocker named by the test. |
 | Wizard/palette/completion smoke | `status.txt`, `command.log`, focused test output for wizard validation, palette wiring, and completion resources; manual screenshot notes when desktop evidence is added. |
 
 ## Scenario authoring rules
@@ -396,6 +455,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 9. Uses only the supported YAML subset: mappings, nested mappings, scalar values, and scalar lists with spaces for indentation.
 10. Uses `automation.argv` rather than a shell command string; only the allowlisted Alice QA argv set is accepted.
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
+12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
 
 ## Extension rules
 

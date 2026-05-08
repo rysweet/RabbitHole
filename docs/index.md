@@ -25,6 +25,7 @@ repository.
 - [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - feature contract for running and reviewing the target-specific Select Project evidence path for the committed starter project.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
+- [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, and claim boundaries for the narrow runtime/display evidence lane.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - intended target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [First-Lesson Procedure/Edit Seam](./reference/first-lesson-procedure-edit-seam.md) - narrow executable proof that chains deterministic object placement into AST-level procedure editing.
 - [Tutorial: Trace the First-Lesson Procedure/Edit Seam](./tutorials/trace-first-lesson-procedure-edit-seam.md) - guided review of placement evidence, procedure-edit artifacts, and strict evidence boundaries.
