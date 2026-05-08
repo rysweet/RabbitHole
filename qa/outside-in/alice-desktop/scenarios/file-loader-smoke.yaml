@@ -1,0 +1,50 @@
+id: alice-desktop-file-loader-smoke
+title: Direct saved and corrupt project loader smoke
+workflow: file-loader-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - FileProjectLoader characterization tests are available in the checkout.
+userActions:
+  - Run the focused direct file-loader characterization smoke from the command line.
+  - Generate a temporary Alice project archive through the production project writer.
+  - Load the generated archive through the IDE file-loader boundary.
+  - Feed deterministic corrupt project bytes through the same loader boundary.
+expectedOutcomes:
+  - The direct file-loader smoke command exits successfully when the gate is enabled.
+  - A generated temporary a3p project loads with readable program metadata.
+  - A corrupt temporary a3p project is rejected safely instead of being treated as a successful load.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/ide
+    - -am
+    - -Dtest=org.alice.ide.uricontent.FileProjectLoaderTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the direct file-loader smoke command.
+    - Test output or surefire report naming FileProjectLoaderTest.savedTemporaryProjectLoadsAndCorruptTemporaryProjectIsRejected.
+    - Notes identifying the generated saved-project load and corrupt-project rejection assertions reviewed.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the focused Maven smoke is unavailable, attach the nearest direct loader characterization evidence.
+    - Keep the evidence at the saved/corrupt project loader boundary instead of claiming broad archive recovery coverage.
+supportingEvidence:
+  - alice-desktop-failure-path-smoke
+tags:
+  - project-io
+  - file-loader
+  - command-smoke

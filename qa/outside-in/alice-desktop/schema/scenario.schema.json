@@ -30,6 +30,7 @@
         "export",
         "exported-project-smoke",
         "failure-path-smoke",
+        "file-loader-smoke",
         "future-ui-smoke",
         "instructor-student-setup",
         "launch",
@@ -250,6 +251,43 @@
               "items": false,
               "minItems": 9,
               "maxItems": 9
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ide"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.alice.ide.uricontent.FileProjectLoaderTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
             },
             {
               "prefixItems": [
