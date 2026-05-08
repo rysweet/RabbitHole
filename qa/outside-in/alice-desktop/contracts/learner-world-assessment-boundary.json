@@ -1,0 +1,15 @@
+{
+  "id": "learner-world-assessment-boundary",
+  "scope": "instructor-student learner-world setup/open/save evidence",
+  "currentCapability": "collects evidence for setup, open, and save workflow review",
+  "nonCapabilities": [
+    "learner-work grading",
+    "rubric scoring",
+    "correctness assessment",
+    "creativity assessment"
+  ],
+  "nextBlocker": {
+    "id": "define-reviewed-assessment-contract",
+    "description": "A reviewed assessment contract and evidence mapping are required before any learner-work grading, rubric scoring, correctness assessment, or creativity assessment implementation can be claimed."
+  }
+}

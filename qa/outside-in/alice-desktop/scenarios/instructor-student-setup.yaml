@@ -18,6 +18,7 @@ expectedOutcomes:
   - The instructor can prepare and save a starter project without uncaught application errors.
   - The starter a3p file is available as an artifact for student use.
   - The student can open the starter project and save a separate copy.
+  - RabbitHole learner-world QA currently supports setup/open/save evidence review only.
 evidence:
   required:
     - Instructor launch log.
@@ -32,5 +33,6 @@ fallback:
   notes:
     - If Xvfb launch validation is unavailable, capture the failure log and provide screenshots from a supported desktop environment.
     - Manual notes must identify where the starter and student copy files were saved.
+    - Do not use this scenario to claim learner-work grading, rubric scoring, correctness assessment, or creativity assessment.
 supportingEvidence:
   - alice-desktop-launch

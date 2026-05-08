@@ -12,7 +12,8 @@ You will:
 4. Review the target-specific Select Project `Africa Full` proof.
 5. Review post-open runtime/display accessibility evidence.
 6. Generate a save/load evidence checklist.
-7. Add user-visible evidence to the generated run directory.
+7. Review the learner-world setup/open/save boundary.
+8. Add user-visible evidence to the generated run directory.
 
 ## Before you start
 
@@ -190,7 +191,44 @@ review-notes.txt
 
 The save/load scenario is complete only after the workflow has been performed in Alice and the required evidence, including `review-notes.txt`, has been added to the run directory.
 
-## Step 8: Prepare a gated command smoke
+## Step 8: Review the learner-world boundary
+
+RabbitHole learner-world QA currently supports setup/open/save evidence review
+only for this lane.
+
+Run the instructor/student setup scenario:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-instructor-student-setup \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
+```
+
+Open the generated run directory and review `manual-evidence-checklist.txt`,
+`environment.txt`, and `status.txt`. The checklist describes the manual evidence
+needed for instructor starter-project setup, student open, and student save
+review. Checklist generation does not complete the scenario.
+
+Before accepting the run, add the instructor launch log, starter project
+screenshot, saved starter `.a3p`, student launch or open log, loaded project
+screenshot, saved student copy `.a3p`, and `review-notes.txt`.
+`review-notes.txt` should identify the reviewed files and the setup/open/save
+decision only. Do not turn this evidence into learner-work grading, rubric
+scoring, correctness assessment, or creativity assessment.
+
+Review the checked-in blocker record:
+
+```bash
+python3 -m json.tool \
+  qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
+```
+
+The record is documentation for the current boundary. It names
+`define-reviewed-assessment-contract` as the next blocker before any future
+learner-work grading, rubric scoring, correctness assessment, or creativity
+assessment capability can be claimed.
+
+## Step 9: Prepare a gated command smoke
 
 Prepare gated smoke evidence without enabling heavy execution:
 
@@ -208,7 +246,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
   --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
 ```
 
-## Step 9: Keep evidence out of commits
+## Step 10: Keep evidence out of commits
 
 Evidence files are local run artifacts. Keep them for review or attach them to the relevant review record, but do not commit them.
 

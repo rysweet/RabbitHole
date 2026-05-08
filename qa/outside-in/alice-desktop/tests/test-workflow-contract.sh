@@ -8,7 +8,10 @@ VALIDATOR="$BASE_DIR/runners/validate-scenarios.sh"
 RUNNER="$BASE_DIR/runners/run-scenario.sh"
 SCHEMA="$BASE_DIR/schema/scenario.schema.json"
 QA_REFERENCE_DOC="$BASE_DIR/../../../docs/reference/alice-desktop-outside-in-qa.md"
+QA_HOWTO_DOC="$BASE_DIR/../../../docs/howto/alice-desktop-outside-in-qa.md"
+QA_TUTORIAL_DOC="$BASE_DIR/../../../docs/tutorials/alice-desktop-outside-in-qa.md"
 README_DOC="$BASE_DIR/README.md"
+LEARNER_WORLD_BOUNDARY="$BASE_DIR/contracts/learner-world-assessment-boundary.json"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 
@@ -23,7 +26,7 @@ assert_success "$status" "runner lists scenario catalog"
 status=$?
 assert_success "$status" "validator dumps scenario catalog for workflow checks"
 
-python3 - "$tmp_root/catalog.json" "$SCHEMA" "$VALIDATOR" "$QA_REFERENCE_DOC" "$README_DOC" >"$tmp_root/workflow-contract.out" 2>"$tmp_root/workflow-contract.err" <<'PY'
+python3 - "$tmp_root/catalog.json" "$SCHEMA" "$VALIDATOR" "$QA_REFERENCE_DOC" "$QA_HOWTO_DOC" "$QA_TUTORIAL_DOC" "$README_DOC" "$LEARNER_WORLD_BOUNDARY" >"$tmp_root/workflow-contract.out" 2>"$tmp_root/workflow-contract.err" <<'PY'
 from collections import Counter
 import json
 import re
@@ -35,7 +38,16 @@ with open(sys.argv[1], encoding="utf-8") as catalog_file:
 schema = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 validator_text = Path(sys.argv[3]).read_text(encoding="utf-8")
 qa_reference_text = Path(sys.argv[4]).read_text(encoding="utf-8")
-readme_text = Path(sys.argv[5]).read_text(encoding="utf-8")
+qa_howto_text = Path(sys.argv[5]).read_text(encoding="utf-8")
+qa_tutorial_text = Path(sys.argv[6]).read_text(encoding="utf-8")
+readme_text = Path(sys.argv[7]).read_text(encoding="utf-8")
+learner_world_boundary_path = Path(sys.argv[8])
+if learner_world_boundary_path.is_file():
+    learner_world_boundary_text = learner_world_boundary_path.read_text(encoding="utf-8")
+    learner_world_boundary = json.loads(learner_world_boundary_text)
+else:
+    learner_world_boundary_text = ""
+    learner_world_boundary = {}
 catalog = {scenario["id"]: scenario for scenario in catalog_list}
 workflow_counts = Counter(scenario["workflow"] for scenario in catalog_list)
 required_workflows = [
@@ -53,6 +65,8 @@ required_workflows = [
     "package-install-smoke",
     "post-open-runtime-display-accessibility-evidence",
     "post-project-open-window-state-smoke",
+    "procedure-edit-handoff-smoke",
+    "procedure-edit-seam-smoke",
     "project-io-smoke",
     "scene-creation",
     "run-debug",
@@ -82,6 +96,8 @@ gated_scenarios = [
     "alice-desktop-failure-path-smoke",
     "alice-desktop-future-ui-smoke",
     "alice-desktop-menu-action-smoke",
+    "alice-desktop-procedure-edit-handoff-smoke",
+    "alice-desktop-procedure-edit-seam-smoke",
     "alice-desktop-save-menu-dialog-write-proof",
     "alice-desktop-tweedle-decoder-boundary-smoke",
     "alice-desktop-tweedle-decoder-this-call-smoke",
@@ -143,6 +159,127 @@ for scenario_id in manual_scenarios:
         errors.append(f"{scenario_id} must require a durable artifact, log, or notes")
     if "review-notes.txt" not in evidence_text:
         errors.append(f"{scenario_id} must require review-notes.txt for manual acceptance")
+
+instructor_student = catalog.get("alice-desktop-instructor-student-setup")
+if instructor_student is None:
+    errors.append("catalog must contain alice-desktop-instructor-student-setup for learner-world boundary checks")
+else:
+    if instructor_student["automationMode"] != "manual-evidence-required":
+        errors.append("instructor/student learner-world setup must remain manual-evidence-required")
+    scenario_text = json.dumps(instructor_student, sort_keys=True).lower()
+    for required in (
+        "setup/open/save evidence review only",
+        "learner-work grading",
+        "rubric scoring",
+        "correctness assessment",
+        "creativity assessment",
+    ):
+        if required not in scenario_text:
+            errors.append(f"instructor/student scenario must preserve learner-world boundary wording: {required}")
+
+learner_world_next_blocker = "define-reviewed-assessment-contract"
+for name, text in (
+    ("README docs", readme_text),
+    ("QA reference docs", qa_reference_text),
+    ("QA how-to docs", qa_howto_text),
+    ("QA tutorial docs", qa_tutorial_text),
+):
+    lower = re.sub(r"\s+", " ", text.lower())
+    if "rabbithole learner-world qa currently supports setup/open/save evidence review" not in lower:
+        errors.append(f"{name} must document the learner-world setup/open/save-only boundary")
+    if learner_world_next_blocker not in text:
+        errors.append(f"{name} must name the learner-world assessment blocker artifact")
+
+if not learner_world_boundary_path.is_file():
+    errors.append("learner-world assessment boundary artifact must exist")
+else:
+    expected_boundary = {
+        "id": "learner-world-assessment-boundary",
+        "scope": "instructor-student learner-world setup/open/save evidence",
+        "currentCapability": "collects evidence for setup, open, and save workflow review",
+    }
+    for field, expected in expected_boundary.items():
+        if learner_world_boundary.get(field) != expected:
+            errors.append(f"learner-world boundary artifact field {field} must be {expected!r}")
+    non_capabilities = set(learner_world_boundary.get("nonCapabilities", []))
+    for required in (
+        "learner-work grading",
+        "rubric scoring",
+        "correctness assessment",
+        "creativity assessment",
+    ):
+        if required not in non_capabilities:
+            errors.append(f"learner-world boundary artifact must exclude {required}")
+    next_blocker = learner_world_boundary.get("nextBlocker", {})
+    if next_blocker.get("id") != learner_world_next_blocker:
+        errors.append("learner-world boundary artifact must name define-reviewed-assessment-contract as nextBlocker.id")
+    description = next_blocker.get("description", "")
+    if "reviewed assessment contract" not in description or "evidence mapping" not in description:
+        errors.append("learner-world boundary artifact must describe the reviewed assessment contract and evidence mapping blocker")
+    for required in (
+        "learner-work grading",
+        "rubric scoring",
+        "correctness assessment",
+        "creativity assessment",
+    ):
+        if required not in description:
+            errors.append(f"learner-world boundary artifact blocker description must name {required}")
+    forbidden_artifact_fields = {
+        "assessmentAlgorithm",
+        "gradingAlgorithm",
+        "rubricSchema",
+        "scoreSchema",
+        "runnerIntegration",
+    }
+    present_forbidden = forbidden_artifact_fields.intersection(learner_world_boundary)
+    if present_forbidden:
+        errors.append(f"learner-world boundary artifact must stay declarative; remove {sorted(present_forbidden)}")
+
+negation_markers = (
+    "does not",
+    "do not",
+    "must not",
+    "not ",
+    "no ",
+    "noncapabilities",
+    "future ",
+    "requires",
+    "required before",
+    "only",
+    "blocker",
+    "cannot currently",
+)
+overclaim_terms = (
+    "learner-work grading",
+    "learner work grading",
+    "automated grading",
+    "rubric scoring",
+    "correctness assessment",
+    "creativity assessment",
+    "creative assessment",
+    "assess creativity",
+)
+texts_for_overclaim_scan = (
+    ("instructor/student scenario", scenario_text if instructor_student else ""),
+    ("README docs", readme_text),
+    ("QA reference docs", qa_reference_text),
+    ("QA how-to docs", qa_howto_text),
+    ("QA tutorial docs", qa_tutorial_text),
+    ("learner-world boundary artifact", learner_world_boundary_text),
+)
+for name, text in texts_for_overclaim_scan:
+    normalized = re.sub(r"\n(?=\S)", " ", text)
+    paragraphs = re.split(r"\n\s*\n", normalized)
+    for paragraph in paragraphs:
+        lower = paragraph.lower()
+        matched_terms = [term for term in overclaim_terms if term in lower]
+        if not matched_terms:
+            continue
+        if not any(marker in lower for marker in negation_markers):
+            errors.append(
+                f"{name} has possible learner-world assessment overclaim for "
+                f"{', '.join(matched_terms)}: {paragraph[:160]}"
+            )
 
 for scenario_id in gated_scenarios:
     scenario = catalog.get(scenario_id)

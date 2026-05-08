@@ -13,6 +13,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
+- [Review the learner-world boundary](#review-the-learner-world-boundary)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
 - [Configure scenario and Xvfb runs](#configure-scenario-and-xvfb-runs)
 - [Review evidence](#review-evidence)
@@ -376,6 +377,55 @@ observedResult: The reopened project matched the saved scene and program state.
 deviations: None.
 decision: accept
 ```
+
+## Review the learner-world boundary
+
+Use `alice-desktop-instructor-student-setup` when you need learner-world evidence
+for an instructor starter project and a student copy:
+
+RabbitHole learner-world QA currently supports setup/open/save evidence review
+only for this lane.
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-instructor-student-setup \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
+```
+
+The runner prepares a manual checklist. A reviewer then uses Alice to collect the
+required setup/open/save artifacts in the generated run directory:
+
+```text
+manual-evidence-checklist.txt
+environment.txt
+status.txt
+instructor-launch.log
+starter-project-open.png
+starter-project.a3p
+student-open.log
+student-project-open.png
+student-copy.a3p
+review-notes.txt
+```
+
+Accept the manual run only as setup/open/save evidence. `review-notes.txt`
+should list the reviewed files, state whether the starter project was prepared,
+opened by the student, and saved as a separate copy, and end with `decision:
+accept` or `decision: reject`.
+
+The learner-world claim boundary is recorded in:
+
+```text
+qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
+```
+
+Treat that JSON file as documentation for the current boundary, not as runner
+configuration. Its `currentCapability` is setup/open/save workflow evidence, its
+`nonCapabilities` list excludes learner-work grading, rubric scoring,
+correctness assessment, and creativity assessment, and its `nextBlocker.id` is
+`define-reviewed-assessment-contract`. The blocker must be resolved with a
+reviewed assessment contract and evidence mapping before those capabilities can
+be claimed.
 
 ## Choose a custom evidence directory
 

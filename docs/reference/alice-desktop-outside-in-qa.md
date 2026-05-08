@@ -21,6 +21,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | --- | --- |
 | `qa/outside-in/alice-desktop/README.md` | Local entry point for the QA lane. |
 | `qa/outside-in/alice-desktop/scenarios/` | User-like acceptance scenario YAML files. |
+| `qa/outside-in/alice-desktop/contracts/` | Declarative boundary records for QA claims that are intentionally not runner behavior. |
 | `qa/outside-in/alice-desktop/gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools. |
 | `qa/outside-in/alice-desktop/schema/scenario.schema.json` | Published JSON Schema contract for the scenario model. |
 | `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` | Catalog validator and scenario JSON dumper. |
@@ -40,6 +41,8 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-select-project-atk-exec` | `select-project-atk-exec-smoke` | `xvfb-real-alice` | Launches Alice through the AT-SPI exec:exec path and records live Select Project widget evidence or exact blockers. |
 | `alice-desktop-select-project-tab-click-exec` | `select-project-tab-click-smoke` | `xvfb-real-alice` | Uses the AT-SPI exec:exec launch path to activate Select Project tabs, select/open the committed `Africa Full` starter, or record the exact blocker. |
 | `alice-desktop-post-project-open-window-state` | `post-project-open-window-state-smoke` | `xvfb-real-alice` | Characterizes the Alice main-window AT-SPI frame state after project open. It is gated by prior Africa Full Select Project evidence. |
+| `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic first-lesson procedure edit artifacts and the exact missing UI-action target at the command seam. |
+| `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers object-placement-to-procedure-edit handoff evidence at the command seam. |
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
 | `alice-desktop-scene-creation` | `scene-creation` | `manual-evidence-required` | Covers creating or selecting a starter scene and saving it as an Alice project. |
 | `alice-desktop-run-debug` | `run-debug` | `manual-evidence-required` | Covers program run controls plus the closest baseline debug-like control, such as fast-forward or statement execution. |
@@ -59,6 +62,36 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
+
+## Learner-world boundary
+
+RabbitHole learner-world QA currently supports setup/open/save evidence review
+only. It does not provide learner-work grading, rubric scoring, correctness
+assessment, or creativity assessment. Any future learner-world assessment
+capability beyond that evidence boundary requires a separate reviewed
+assessment contract and evidence mapping. The declarative blocker record is
+`qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`;
+it names next blocker `define-reviewed-assessment-contract` and is not consumed
+by the runner as behavior.
+
+### Boundary artifact
+
+`learner-world-assessment-boundary.json` is a checked-in declarative contract
+for the current learner-world claim boundary. It is not an executable scenario,
+runner input, or assessment engine.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Stable artifact identifier. Current value: `learner-world-assessment-boundary`. |
+| `scope` | string | The bounded QA area: instructor/student learner-world setup, open, and save evidence. |
+| `currentCapability` | string | The current capability statement. It is limited to collecting evidence for setup, open, and save workflow review. |
+| `nonCapabilities` | string array | Capabilities not claimed by this lane: learner-work grading, rubric scoring, correctness assessment, and creativity assessment. |
+| `nextBlocker.id` | string | The next required blocker before future assessment work can be claimed. Current value: `define-reviewed-assessment-contract`. |
+| `nextBlocker.description` | string | Human-readable explanation that a reviewed assessment contract and evidence mapping are required before learner-work grading, rubric scoring, correctness assessment, or creativity assessment can be claimed. |
+
+Documentation, scenarios, and review notes may point to this artifact when they
+need a stable boundary reference. Runners must not treat it as configuration
+without a separate reviewed change.
 
 ## Runner commands
 
@@ -312,6 +345,8 @@ open-load-save
 package-install-smoke
 post-open-runtime-display-accessibility-evidence
 post-project-open-window-state-smoke
+procedure-edit-handoff-smoke
+procedure-edit-seam-smoke
 project-io-smoke
 run-debug
 save-load
@@ -425,7 +460,9 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |
 | Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. It must be gated by prior `tab-click-observation.json` Africa Full evidence with `evidenceStatus=opened`, matching target/opened metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`; generic main-window presence is not Africa Full proof. |
-| Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
+| Procedure edit seam smoke | `status.txt`, `command.log`, focused test output naming `editsSceneProcedureAndWritesEatmeProofArtifacts`, and procedure edit artifacts named by the focused test. |
+| Procedure edit handoff smoke | `status.txt`, `command.log`, focused test output naming `chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff`, and handoff evidence recording `placed-project.a3p` as the procedure edit input project artifact. |
+| Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. This workflow is setup/open/save evidence only; pair it with `contracts/learner-world-assessment-boundary.json` when reviewing the current learner-world claim boundary. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
 | Run/debug | Screenshot before run, screenshot or screen capture during execution, notes naming run/debug-like controls in `review-notes.txt`, launch or run log, saved `.a3p`. |
 | Save/load | Save log or notes, saved `.a3p`, screenshot before saving, screenshot after reopening, comparison notes in `review-notes.txt`. |
@@ -458,6 +495,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 10. Uses `automation.argv` rather than a shell command string; only the allowlisted Alice QA argv set is accepted.
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
 12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
+13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-work grading, rubric scoring, correctness assessment, or creativity assessment.
 
 ## Extension rules
 

@@ -9,6 +9,7 @@ For user-facing instructions, see [Run Alice desktop outside-in QA](../../../doc
 | Area | Owns | Does not own |
 | --- | --- | --- |
 | `scenarios/` | User-like workflows, expected outcomes, evidence requirements, automation mode | Java implementation details or brittle internal UI assumptions |
+| `contracts/` | Declarative claim-boundary records, including the learner-world assessment blocker | Runner behavior or assessment implementation |
 | `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence contract checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `schema/` | Scenario structure and allowed field values | Business logic |
 | `runners/` | Thin wrappers around existing Maven/Alice commands | New build systems, hidden dependencies, or product behavior changes |
@@ -31,6 +32,25 @@ Each scenario uses the same fields:
 - `fallback`
 
 The target-specific Select Project scenario uses `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
+
+## Learner-world boundary
+
+RabbitHole learner-world QA currently supports setup/open/save evidence review only.
+The `alice-desktop-instructor-student-setup` scenario lets a reviewer collect
+instructor starter-project setup evidence, student open evidence, and student
+save evidence. It is a manual evidence workflow; checklist generation is not a
+pass result and does not evaluate the learner's work.
+
+The checked-in boundary record is
+`qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`.
+That file is declarative documentation for the current claim boundary. It names
+the next blocker, `define-reviewed-assessment-contract`, and is not consumed by
+the runner as behavior.
+
+Do not use learner-world QA evidence to claim learner-work grading, rubric
+scoring, correctness assessment, or creativity assessment. Any future
+assessment capability first needs a reviewed assessment contract, evidence
+mapping, privacy and audit controls, and a separate implementation change.
 
 Allowed `automationMode` values are:
 
@@ -55,6 +75,39 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh --dump-json
 qa/outside-in/alice-desktop/runners/run-scenario.sh list
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desktop/scenarios/launch.yaml
+```
+
+Use one of the supported workflows:
+
+```text
+archive-fixture-smoke
+export
+exported-project-smoke
+failure-path-smoke
+file-loader-smoke
+future-ui-smoke
+instructor-student-setup
+launch
+menu-action-smoke
+netbeans-package-smoke
+open-load-save
+package-install-smoke
+post-open-runtime-display-accessibility-evidence
+post-project-open-window-state-smoke
+procedure-edit-handoff-smoke
+procedure-edit-seam-smoke
+project-io-smoke
+run-debug
+save-load
+save-menu-dialog-write-proof
+scene-creation
+select-project-atk-exec-smoke
+select-project-interaction-smoke
+select-project-tab-click-smoke
+select-project-widget-introspection-smoke
+tweedle-decoder-boundary-smoke
+tweedle-decoder-this-call-smoke
+wizard-palette-completion-smoke
 ```
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.

@@ -17,7 +17,20 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         summarize_step = workflow.index("name: Summarize and gate line coverage")
 
         self.assertLess(generate_step, summarize_step)
-        self.assertIn("mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify", workflow)
+        coverage_command = re.search(
+            r"run: (?P<command>mvn .* -Pcoverage verify)",
+            workflow,
+        )
+        self.assertIsNotNone(coverage_command)
+        assert coverage_command is not None
+        for flag in (
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-Dmdep.skip=true",
+            "-Pcoverage",
+        ):
+            with self.subTest(flag=flag):
+                self.assertIn(flag, coverage_command.group("command"))
 
     def test_coverage_workflow_checkout_avoids_lfs_and_initializes_submodules(self) -> None:
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
