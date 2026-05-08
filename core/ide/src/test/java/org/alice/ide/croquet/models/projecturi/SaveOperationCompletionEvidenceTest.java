@@ -251,6 +251,53 @@ public class SaveOperationCompletionEvidenceTest {
     }
   }
 
+  @Test
+  public void saveActionInvocationReportsMissingProjectDocumentFrame() throws Exception {
+    Path evidenceDir = Files.createDirectories(newTestDir().resolve("missing-document-frame"));
+
+    Path artifact = SaveOperationCompletionEvidence.writeSaveActionInvocationProof(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        true,
+        false);
+
+    assertTrue(Files.size(artifact) > 0);
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"reason\": \"missing_project_document_frame\""));
+    assertTrue(json, json.contains("\"active_stage_ide_available\": true"));
+    assertTrue(json, json.contains("\"project_document_frame_available\": false"));
+    assertTrue(json, json.contains("StageIDE.getActiveInstance() resolved, but application.getDocumentFrame() returned null."));
+    assertTrue(json, json.contains("invoke SaveProjectOperation from an initialized Alice desktop with a ProjectDocumentFrame"));
+    assertTrue(json, json.contains("\"desktop Save menu item was clicked\""));
+    assertTrue(json, json.contains("\"Save dialog displayed\""));
+  }
+
+  @Test
+  public void saveActionInvocationReportsActionInvokedWhenDesktopOwnerIsAvailable() throws Exception {
+    Path evidenceDir = Files.createDirectories(newTestDir().resolve("action-owner-available"));
+
+    Path artifact = SaveOperationCompletionEvidence.writeSaveActionInvocationProof(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        true,
+        true);
+
+    assertTrue(Files.size(artifact) > 0);
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"action_invoked\""));
+    assertTrue(json, json.contains("\"reason\": \"save_action_invoked\""));
+    assertTrue(json, json.contains("\"active_stage_ide_available\": true"));
+    assertTrue(json, json.contains("\"project_document_frame_available\": true"));
+    assertTrue(json, json.contains("\"menu_item_dispatch\": false"));
+    assertTrue(json, json.contains("SaveProjectOperation.fire(UserActivity) reached AbstractSaveOperation.perform with an active StageIDE and ProjectDocumentFrame."));
+    assertTrue(json, json.contains("desktop Save dialog discovery artifact with target_resolved"));
+    assertTrue(json, json.contains("\"desktop Save menu item was clicked\""));
+    assertTrue(json, json.contains("\"saved file completed\""));
+  }
+
   private static Path newTestDir() throws Exception {
     return Files.createDirectories(Path.of(
         "target",
