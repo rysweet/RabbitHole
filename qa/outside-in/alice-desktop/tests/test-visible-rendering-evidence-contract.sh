@@ -661,7 +661,7 @@ fi
 source_boundary_root="$tmp_root/pixel-sampling-source-boundary"
 mkdir -p "$source_boundary_root"
 
-for source_case in missing malformed array scalar semantically-invalid-target-ready; do
+for source_case in missing malformed array scalar wrong-name-target-ready semantically-invalid-target-ready; do
   case_dir="$source_boundary_root/$source_case"
   source_path="$case_dir/$CONTROLLED_ARTIFACT"
   mkdir -p "$case_dir"
@@ -676,6 +676,33 @@ for source_case in missing malformed array scalar semantically-invalid-target-re
       ;;
     scalar)
       printf '"target-ready"\n' >"$source_path"
+      ;;
+    wrong-name-target-ready)
+      source_path="$case_dir/not-$CONTROLLED_ARTIFACT"
+      cat >"$source_path" <<'EOF'
+{
+  "schemaVersion": 1,
+  "status": "observed",
+  "claimScope": "controlled-display-screenshot-consistency",
+  "screenshotStatus": "screenshot-captured",
+  "screenshotPixelStatus": "non-black-pixels",
+  "worldCanvasPixelTarget": {
+    "identified": true,
+    "status": "target-ready",
+    "geometryStatus": "available",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents",
+    "candidateStates": ["visible", "showing"],
+    "screenExtents": {
+      "coordinateType": "screen",
+      "x": 144,
+      "y": 188,
+      "width": 996,
+      "height": 642
+    }
+  }
+}
+EOF
       ;;
     semantically-invalid-target-ready)
       cat >"$source_path" <<'EOF'
@@ -733,7 +760,7 @@ def require(condition, message):
         errors.append(message)
 
 
-for source_case in ("missing", "malformed", "array", "scalar", "semantically-invalid-target-ready"):
+for source_case in ("missing", "malformed", "array", "scalar", "wrong-name-target-ready", "semantically-invalid-target-ready"):
     payload_path = root / source_case / artifact_name
     require(payload_path.exists(), f"{source_case} source must produce a blocker artifact")
     if not payload_path.exists():
@@ -772,7 +799,7 @@ if errors:
     raise AssertionError("\n".join(errors))
 PY
 source_boundary_status=$?
-assert_success "$source_boundary_status" "pixel sampling blocker fails closed across malformed and semantically invalid source artifacts"
+assert_success "$source_boundary_status" "pixel sampling blocker fails closed across malformed, wrong-name, and semantically invalid source artifacts"
 
 target_blocked_dir="$tmp_root/target-blocked-fixture"
 mkdir -p "$target_blocked_dir"

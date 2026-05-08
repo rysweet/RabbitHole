@@ -802,9 +802,10 @@ If target selection is blocked, the same artifact uses
 are required. Do not treat the controlled-display screenshot or target-ready
 geometry as rendered-world pixel evidence.
 
-When the source artifact is malformed, absent, non-object, or semantically
-invalid for the controlled-display screenshot-consistency contract, the runner
-records `prerequisiteTargetStatus=unavailable`, preserves
+When the source artifact is malformed, absent, non-object, named differently
+from `controlled-display-pixel-observation.json`, or semantically invalid for
+the controlled-display screenshot-consistency contract, the runner records
+`prerequisiteTargetStatus=unavailable`, preserves
 `sourceArtifact=controlled-display-pixel-observation.json`, and keeps the same
 non-claim fields: `renderedWorldPixelsObserved=false`,
 `pixelSampling.pixelsSampled=false`, `sampleCount=0`, and

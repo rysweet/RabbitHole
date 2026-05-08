@@ -269,8 +269,8 @@ correctness; it preserves `renderedWorldPixelsObserved=false` until a future
 sampler observes and checks pixels inside the target-ready region.
 The runner treats `controlled-display-pixel-observation.json` as the fixed source
 artifact for that blocker. Target-ready metadata from the source artifact is only
-a sampling prerequisite; missing, malformed, non-object, semantically invalid,
-blocked, or target-ready source data still leaves
+a sampling prerequisite; missing, malformed, non-object, differently named,
+semantically invalid, blocked, or target-ready source data still leaves
 `pixelSampling.pixelsSampled=false`, `sampleCount=0`, and
 `pixelSampling.samplingMethod=null`.
 

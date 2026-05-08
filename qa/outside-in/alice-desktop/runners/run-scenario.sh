@@ -1097,11 +1097,9 @@ unsupported_claims = [
 ]
 
 
-def relative_artifact_name(path):
-    return path.name if str(path) else SOURCE_ARTIFACT
-
-
 def read_controlled_display(path):
+    if path.name != SOURCE_ARTIFACT:
+        return None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -1161,7 +1159,7 @@ payload = {
     "blockerDetail": blocker_detail,
     "claimScope": "visible-rendering-world-canvas-pixel-sampling",
     "claimScopeDetail": claim_scope_detail,
-    "sourceArtifact": relative_artifact_name(controlled_display_path),
+    "sourceArtifact": SOURCE_ARTIFACT,
     "prerequisiteTargetStatus": prerequisite_status,
     "exactNextUnblocker": exact_next_unblocker,
     "renderedWorldPixelsObserved": False,
