@@ -15,6 +15,7 @@ import org.lgna.common.Resource;
 import org.lgna.common.resources.ImageResource;
 import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
+import org.lgna.project.ast.ArithmeticInfixExpression;
 import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.CrawlPolicy;
@@ -393,21 +394,48 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithComplexProgramInitializerIsRejectedWithoutPartialProgramDecode() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-complex-initializer-boundary.a3w");
+  public void generatedJsonPlayerArchiveDecodesProgramLiteralArithmeticFieldInitializer() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-arithmetic-initializer-program.a3w");
 
     writeJsonProjectArchive(
         projectArchive,
-        "GeneratedProgramWithComplexInitializerBoundary",
-        "class GeneratedProgramWithComplexInitializerBoundary extends SProgram { WholeNumber count <- 1 + 2; }",
-        "GeneratedComplexInitializerBoundaryScene",
-        "class GeneratedComplexInitializerBoundaryScene extends SScene {}");
+        "GeneratedProgramWithArithmeticInitializer",
+        "class GeneratedProgramWithArithmeticInitializer extends SProgram { WholeNumber count <- 1 + 2; }",
+        "GeneratedArithmeticInitializerScene",
+        "class GeneratedArithmeticInitializerScene extends SScene {}");
+
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with a literal arithmetic field initializer should decode", readProgramType);
+    assertEquals("GeneratedProgramWithArithmeticInitializer", readProgramType.getName());
+    assertArithmeticFieldInitializer(readProgramType, "count", ArithmeticInfixExpression.Operator.PLUS, 1, 2);
+    assertEquals(
+        "GeneratedArithmeticInitializerScene",
+        namedUserTypeNamed(readProject, "GeneratedArithmeticInitializerScene").getName());
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveWithMixedIdentifierProgramInitializerIsRejectedWithoutPartialProgramDecode() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-mixed-initializer-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithMixedInitializerBoundary",
+        """
+            class GeneratedProgramWithMixedInitializerBoundary extends SProgram {
+              WholeNumber seed <- 1;
+              WholeNumber count <- seed + 2;
+            }
+            """,
+        "GeneratedMixedInitializerBoundaryScene",
+        "class GeneratedMixedInitializerBoundaryScene extends SScene {}");
 
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
 
     assertTrue(thrown.getMessage().contains(
-        "Project archive manifest names program type 'GeneratedProgramWithComplexInitializerBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedComplexInitializerBoundaryScene]"));
+        "Project archive manifest names program type 'GeneratedProgramWithMixedInitializerBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedMixedInitializerBoundaryScene]"));
   }
 
   @Test
@@ -443,36 +471,76 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedJsonPlayerArchiveWithComplexInitializerSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-complex-initializer-sibling-boundary.a3w");
+  public void generatedJsonPlayerArchiveDecodesSiblingLiteralArithmeticFieldInitializer() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-arithmetic-initializer-sibling.a3w");
 
     writeJsonProjectArchive(
         projectArchive,
-        "GeneratedProgramWithComplexInitializerSiblingBoundary",
-        "class GeneratedProgramWithComplexInitializerSiblingBoundary extends SProgram { WholeNumber count; }",
-        "GeneratedComplexInitializerSiblingBoundaryScene",
-        "class GeneratedComplexInitializerSiblingBoundaryScene extends SScene { WholeNumber count <- 1 + 2; }");
+        "GeneratedProgramWithArithmeticInitializerSibling",
+        "class GeneratedProgramWithArithmeticInitializerSibling extends SProgram { WholeNumber count; }",
+        "GeneratedArithmeticInitializerSiblingScene",
+        "class GeneratedArithmeticInitializerSiblingScene extends SScene { WholeNumber count <- 1 + 2; }");
 
     try (ZipFile zipFile = new ZipFile(projectArchive)) {
       ProjectManifest manifest = readProjectManifest(zipFile);
       assertTypeReference(
           manifest,
-          "GeneratedProgramWithComplexInitializerSiblingBoundary",
-          "src/GeneratedProgramWithComplexInitializerSiblingBoundary.twe");
+          "GeneratedProgramWithArithmeticInitializerSibling",
+          "src/GeneratedProgramWithArithmeticInitializerSibling.twe");
       assertTypeReference(
           manifest,
-          "GeneratedComplexInitializerSiblingBoundaryScene",
-          "src/GeneratedComplexInitializerSiblingBoundaryScene.twe");
-      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedComplexInitializerSiblingBoundaryScene.twe");
+          "GeneratedArithmeticInitializerSiblingScene",
+          "src/GeneratedArithmeticInitializerSiblingScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedArithmeticInitializerSiblingScene.twe");
       assertNotNull(
-          "Generated JSON .a3w fixture should contain the complex-initializer sibling type source",
+          "Generated JSON .a3w fixture should contain the arithmetic-initializer sibling type source",
           siblingTypeEntry);
       assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count <- 1 + 2"));
+    }
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertEquals("GeneratedProgramWithArithmeticInitializerSibling", readProgramType.getName());
+    NamedUserType readSceneType = namedUserTypeNamed(readProject, "GeneratedArithmeticInitializerSiblingScene");
+    assertArithmeticFieldInitializer(readSceneType, "count", ArithmeticInfixExpression.Operator.PLUS, 1, 2);
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveWithMixedIdentifierInitializerSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-mixed-initializer-sibling-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithMixedInitializerSiblingBoundary",
+        "class GeneratedProgramWithMixedInitializerSiblingBoundary extends SProgram { WholeNumber count; }",
+        "GeneratedMixedInitializerSiblingBoundaryScene",
+        """
+            class GeneratedMixedInitializerSiblingBoundaryScene extends SScene {
+              WholeNumber seed <- 1;
+              WholeNumber count <- seed + 2;
+            }
+            """);
+
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+      assertTypeReference(
+          manifest,
+          "GeneratedProgramWithMixedInitializerSiblingBoundary",
+          "src/GeneratedProgramWithMixedInitializerSiblingBoundary.twe");
+      assertTypeReference(
+          manifest,
+          "GeneratedMixedInitializerSiblingBoundaryScene",
+          "src/GeneratedMixedInitializerSiblingBoundaryScene.twe");
+      ZipEntry siblingTypeEntry = zipFile.getEntry("src/GeneratedMixedInitializerSiblingBoundaryScene.twe");
+      assertNotNull(
+          "Generated JSON .a3w fixture should contain the mixed-initializer sibling type source",
+          siblingTypeEntry);
+      assertTrue(readEntry(zipFile, siblingTypeEntry).contains("WholeNumber count <- seed + 2"));
     }
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
 
     assertTrue(thrown.getMessage().contains(
-        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedComplexInitializerSiblingBoundaryScene]"));
+        "Project archive contains unsupported manifest-declared Tweedle type names [GeneratedMixedInitializerSiblingBoundaryScene]"));
   }
 
   @Test
@@ -1538,6 +1606,26 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
     assertTrue(returnStatement.expression.getValue() instanceof FieldAccess);
     assertSame(field, ((FieldAccess) returnStatement.expression.getValue()).field.getValue());
+  }
+
+  private static void assertArithmeticFieldInitializer(
+      NamedUserType type,
+      String expectedFieldName,
+      ArithmeticInfixExpression.Operator expectedOperator,
+      int expectedLeft,
+      int expectedRight) {
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals(expectedFieldName, field.getName());
+    assertSame(JavaType.getInstance(Integer.class), field.getValueType());
+    assertTrue(field.initializer.getValue() instanceof ArithmeticInfixExpression);
+    ArithmeticInfixExpression initializer = (ArithmeticInfixExpression) field.initializer.getValue();
+    assertSame(expectedOperator, initializer.operator.getValue());
+    assertSame(JavaType.getInstance(Integer.class), initializer.getType());
+    assertTrue(initializer.leftOperand.getValue() instanceof IntegerLiteral);
+    assertEquals(expectedLeft, ((IntegerLiteral) initializer.leftOperand.getValue()).value.getValue().intValue());
+    assertTrue(initializer.rightOperand.getValue() instanceof IntegerLiteral);
+    assertEquals(expectedRight, ((IntegerLiteral) initializer.rightOperand.getValue()).value.getValue().intValue());
   }
 
   private static NamedUserType namedUserTypeNamed(Project project, String name) {

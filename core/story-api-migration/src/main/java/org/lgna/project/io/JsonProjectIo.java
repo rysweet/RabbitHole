@@ -97,7 +97,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     public Project readProject(boolean makeVrReady) throws IOException {
       ProjectManifest manifest = readManifest(ProjectManifest.class);
       Set<Resource> resources = readResources(manifest);
-      TypeReadResult decodedTypes = readTypes(manifest);
+      TypeReadResult decodedTypes = readTypes(manifest, true);
       NamedUserType programType = decodedTypes.findByName(manifestName(manifest));
       if (programType == null) {
         if (canRecoverLegacyProjectResources(manifest, decodedTypes, resources)) {
@@ -115,7 +115,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     public TypeResourcesPair readType() throws IOException {
       TypeManifest manifest = readManifest(TypeManifest.class);
       Set<Resource> resources = readResources(manifest);
-      TypeReadResult decodedTypes = readTypes(manifest);
+      TypeReadResult decodedTypes = readTypes(manifest, false);
       NamedUserType type = decodedTypes.findByName(manifestName(manifest));
       if (type == null) {
         type = fallbackTypeForUnnamedManifest(manifest, decodedTypes);
@@ -223,7 +223,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       return null;
     }
 
-    private TypeReadResult readTypes(Manifest manifest) throws IOException {
+    private TypeReadResult readTypes(
+        Manifest manifest,
+        boolean allowLiteralArithmeticFieldInitializers) throws IOException {
       TypeReadResult result = new TypeReadResult();
       if (manifest == null) {
         return result;
@@ -233,7 +235,10 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         if (resourceReference instanceof TypeReference typeReference) {
           result.hasTypeReferences = true;
           try {
-            NamedUserType type = readTweedleType(typeReference, typeTerminals);
+            NamedUserType type = readTweedleType(
+                typeReference,
+                typeTerminals,
+                allowLiteralArithmeticFieldInitializers);
             if (type != null) {
               result.add(type);
             }
@@ -263,7 +268,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
     private NamedUserType readTweedleType(
         TypeReference typeReference,
-        Set<AbstractDeclaration> typeTerminals) throws IOException {
+        Set<AbstractDeclaration> typeTerminals,
+        boolean allowLiteralArithmeticFieldInitializers) throws IOException {
       if (!TWEEDLE_FORMAT.equals(typeReference.format)) {
         throw new IOException(
             "Unsupported type reference format '" + typeReference.format + "' for " + typeReferenceContext(typeReference));
@@ -277,7 +283,10 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
       try (InputStream typeStream = is) {
         byte[] typeBytes = InputStreamUtilities.getBytes(typeStream);
-        AbstractNode decoded = coder.decode(new String(typeBytes, StandardCharsets.UTF_8), typeTerminals);
+        AbstractNode decoded = coder.decode(
+            new String(typeBytes, StandardCharsets.UTF_8),
+            typeTerminals,
+            allowLiteralArithmeticFieldInitializers);
         if (decoded == null) {
           throw new IOException("Tweedle type entry " + typeReference.file + " decoded to null");
         }

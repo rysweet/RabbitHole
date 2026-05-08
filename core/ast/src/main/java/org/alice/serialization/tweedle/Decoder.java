@@ -85,6 +85,7 @@ public class Decoder {
   private static final String ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS =
       "argument-bearing explicit this method calls";
   private final Map<String, AbstractType<?, ?, ?>> terminalTypesByName;
+  private final boolean allowLiteralArithmeticFieldInitializers;
   private static final List<String> JAVA_TYPE_PACKAGES = List.of(
       "org.lgna.story.",
       "org.lgna.story.resources.",
@@ -98,6 +99,11 @@ public class Decoder {
       "Number", Number.class);
 
   Decoder(Set<AbstractDeclaration> terminals) {
+    this(terminals, true);
+  }
+
+  Decoder(Set<AbstractDeclaration> terminals, boolean allowLiteralArithmeticFieldInitializers) {
+    this.allowLiteralArithmeticFieldInitializers = allowLiteralArithmeticFieldInitializers;
     terminalTypesByName = terminals.stream()
         .filter(AbstractType.class::isInstance)
         .map(AbstractType.class::cast)
@@ -910,7 +916,42 @@ public class Decoder {
     if (initializer instanceof TweedlePrimitiveValue<?> primitiveValue) {
       return primitiveLiteral(primitiveValue.getPrimitiveValue());
     }
+    if (allowLiteralArithmeticFieldInitializers
+        && initializer instanceof BinaryNumericExpression<?> binaryNumeric
+        && isLiteralOnlyArithmeticExpression(binaryNumeric)) {
+      return decodeLiteralArithmeticFieldInitializer(property, valueType, binaryNumeric);
+    }
     throw unsupportedFieldInitializer(property);
+  }
+
+  private Expression decodeLiteralArithmeticFieldInitializer(
+      TweedleField property,
+      AbstractType<?, ?, ?> valueType,
+      BinaryNumericExpression<?> binaryNumeric) {
+    Expression expression = decodeBinaryNumericExpression(
+        property.getName(),
+        binaryNumeric,
+        new UserParameter[0],
+        List.of(),
+        List.of());
+    if (!valueType.isAssignableFrom(expression.getType())) {
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle field initializer type is not assignable to "
+              + valueType.getName() + ": " + property.getName());
+    }
+    return expression;
+  }
+
+  private boolean isLiteralOnlyArithmeticExpression(TweedleExpression expression) {
+    if (expression instanceof TweedlePrimitiveValue<?> primitiveValue) {
+      Object value = primitiveValue.getPrimitiveValue();
+      return value instanceof Integer || value instanceof Double;
+    }
+    if (expression instanceof BinaryNumericExpression<?> binaryNumeric) {
+      return isLiteralOnlyArithmeticExpression(binaryNumeric.getLhs())
+          && isLiteralOnlyArithmeticExpression(binaryNumeric.getRhs());
+    }
+    return false;
   }
 
   private Expression decodeArrayFieldInitializer(

@@ -115,12 +115,54 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithNonLiteralInitializedFieldReportsUnsupportedInitializer() {
+  public void decodeClassWithLiteralArithmeticInitializedFieldCreatesArithmeticInfix() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { WholeNumber count <- 1 + 2; }");
+
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals("count", field.getName());
+    assertSame(JavaType.getInstance(Integer.class), field.getValueType());
+    assertArithmeticInfix(field.initializer.getValue(),
+        ArithmeticInfixExpression.Operator.PLUS, JavaType.getInstance(Integer.class), 1, 2);
+  }
+
+  @Test
+  public void decodeClassWithIdentifierInitializedFieldReportsUnsupportedInitializer() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("class SyntheticType { WholeNumber count <- 1 + 2; }"));
+        () -> coder.decode("class SyntheticType { WholeNumber count <- seed; }"));
 
     assertTrue(thrown.getMessage().contains("initializers"));
+    assertTrue(thrown.getMessage().contains("count"));
+  }
+
+  @Test
+  public void decodeClassWithMixedIdentifierArithmeticInitializedFieldReportsUnsupportedInitializer() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber seed <- 1; WholeNumber count <- seed + 2; }"));
+
+    assertTrue(thrown.getMessage().contains("initializers"));
+    assertTrue(thrown.getMessage().contains("count"));
+  }
+
+  @Test
+  public void decodeClassWithThisFieldAccessInitializedFieldReportsUnsupportedBoundary() {
+    assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { WholeNumber seed <- 1; WholeNumber count <- this.seed; }"));
+  }
+
+  @Test
+  public void decodeClassWithMethodCallInitializedFieldReportsUnsupportedBoundary() {
+    assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              WholeNumber count <- this.getCount();
+              WholeNumber getCount() { return 1; }
+            }
+            """));
   }
 
   @Test
