@@ -184,6 +184,7 @@ public class EatmeEditProcedureTest {
     assertNonEmptyFile(evidenceDir.resolve("procedure-edit-command.json"));
     assertNonEmptyFile(evidenceDir.resolve("procedure.diff.json"));
     assertNonEmptyFile(evidenceDir.resolve("procedure-tab-selection.json"));
+    assertNonEmptyFile(evidenceDir.resolve("procedure-ui-action-no-go.json"));
 
     Project editedProject = IoUtilities.readProject(evidenceDir.resolve("edited-project.a3p").toFile());
     NamedUserType editedSceneType = sceneType(editedProject);
@@ -199,6 +200,63 @@ public class EatmeEditProcedureTest {
     String editArtifact = Files.readString(evidenceDir.resolve("procedure-edit.json"));
     assertTrue("procedure edit artifact should record the placed-project handoff",
         editArtifact.contains("\"input_project_artifact\": \"placed-project.a3p\""));
+  }
+
+  @Test
+  public void procedureEditArtifactsKeepClaimsScopedToProcedureEditSeam() throws Exception {
+    File projectFile = temporaryFolder.newFile("placed.a3p");
+    IoUtilities.writeProject(projectFile, projectWithScene());
+    Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.eatmeFirstLesson",
+            "--edit-spec", "append-comment:narrow claim proof",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(new ByteArrayOutputStream()));
+
+    assertEquals(0, status);
+    String tabSelection = Files.readString(evidenceDir.resolve("procedure-tab-selection.json"));
+    String editCommand = Files.readString(evidenceDir.resolve("procedure-edit-command.json"));
+    String uiActionNoGo = Files.readString(evidenceDir.resolve("procedure-ui-action-no-go.json"));
+
+    String tabDoesNotClaim = jsonSection(tabSelection, "doesNotClaim");
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("desktop UI action invoked"));
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("code editor/procedure action completion"));
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("full Alice UI automation"));
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("visible rendering correctness"));
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("first-lesson completion"));
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("grading"));
+    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("creative assessment"));
+
+    String commandDoesNotClaim = jsonSection(editCommand, "doesNotClaim");
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("desktop UI action invoked"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("desktop code editor command completion"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("Save-menu completion"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("full Alice UI automation"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("visible rendering correctness"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("first-lesson completion"));
+    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("grading"));
+
+    String uiDoesNotClaim = jsonSection(uiActionNoGo, "doesNotClaim");
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("desktop UI action invoked"));
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("code editor/procedure action completion"));
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("full Alice UI automation"));
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("visible rendering correctness"));
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("first-lesson completion"));
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("grading"));
+    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("creative assessment"));
+
+    String scopedArtifacts = tabSelection + editCommand + uiActionNoGo;
+    assertFalse(scopedArtifacts, scopedArtifacts.contains("full lesson completion"));
+    assertFalse(scopedArtifacts, scopedArtifacts.contains("launcher"));
+    assertFalse(scopedArtifacts, scopedArtifacts.contains("model exporter"));
+    assertFalse(scopedArtifacts, scopedArtifacts.contains("hotspot"));
+    assertFalse(scopedArtifacts, scopedArtifacts.contains("Select Project PID"));
   }
 
   private static String jsonSection(String json, String fieldName) {
