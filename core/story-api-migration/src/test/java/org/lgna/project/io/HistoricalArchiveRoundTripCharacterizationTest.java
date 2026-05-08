@@ -427,15 +427,19 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
         "class GeneratedArgumentThisCallBoundaryScene extends SScene {}");
 
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    String message = thrown.getMessage();
 
-    assertTrue(thrown.getMessage().contains(
+    assertTrue(message.contains(
         "Project archive manifest names program type 'GeneratedProgramWithArgumentThisCallBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedArgumentThisCallBoundaryScene]"));
-    assertTrue(thrown.getMessage().contains(
+    assertTrue(message.contains("decoded type names are [GeneratedArgumentThisCallBoundaryScene]"));
+    assertTrue(message.contains(
         "unsupported manifest-declared Tweedle type names are [GeneratedProgramWithArgumentThisCallBoundary]"));
-    assertTrue(thrown.getMessage().contains(
+    assertTrue(message.contains(
         "GeneratedProgramWithArgumentThisCallBoundary: Tweedle argument-bearing explicit this method calls"));
-    assertTrue(thrown.getMessage().contains("caller.this.helper"));
+    assertTrue(message.contains("caller.this.helper"));
+    assertFalse(message.contains("this.helper(value: 1)"));
+    assertFalse(message.contains("void helper(WholeNumber value)"));
+    assertFalse(message.contains("\n"));
   }
 
   @Test

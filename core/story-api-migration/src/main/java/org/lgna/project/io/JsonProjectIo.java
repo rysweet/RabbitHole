@@ -84,6 +84,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
   }
 
   private static class JsonProjectReader implements ProjectReader {
+    private static final int MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH = 512;
+
     private final ZipEntryContainer container;
     private final TweedleEncoderDecoder coder = new TweedleEncoderDecoder();
 
@@ -464,9 +466,17 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       private static String unsupportedTweedleDecodeReason(UnsupportedTweedleDecodeException e) {
         String message = e.getMessage();
         if ((message != null) && !message.isBlank()) {
-          return message;
+          return boundedSingleLineUnsupportedTweedleReason(message);
         }
         return e.getClass().getSimpleName();
+      }
+
+      private static String boundedSingleLineUnsupportedTweedleReason(String message) {
+        String singleLine = message.strip().replaceAll("\\s+", " ");
+        if (singleLine.length() <= MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH) {
+          return singleLine;
+        }
+        return singleLine.substring(0, MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH - 3) + "...";
       }
     }
 
