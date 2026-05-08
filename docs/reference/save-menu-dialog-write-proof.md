@@ -1,6 +1,6 @@
 # Save Menu Dialog Write Proof
 
-This reference describes the bounded desktop-safe proof shard for Alice project Save: actual Save menu item activation, Swing `JFileChooser` approval, and a real `.a3p` file write.
+This reference describes the bounded desktop-safe proof shard for Alice project Save: actual Save menu item activation, completed Swing `JFileChooser` approval, and a real `.a3p` file write.
 
 ## Contents
 
@@ -51,10 +51,13 @@ A successful run proves all of the following in one bounded path:
 | Required observation | Meaning |
 | --- | --- |
 | Save menu item `doClick()` ran | The proof starts from the production menu item dispatch path, not a direct `fire()` or `SaveOperationFlow` call. |
-| Exactly one expected Swing `JFileChooser` was controlled | The test reached the production dialog boundary and approved a selected file. |
+| Exactly one expected live Swing `JFileChooser` was controlled | The test reached the production dialog boundary without ambiguous chooser discovery. |
+| Chooser approval completed | `approved_selection` means the EDT callback verified the selected path and called `approveSelection()`; a queued approval is not enough. |
 | Selected path matched the normalized expected target | The proof writes only inside the JUnit temp directory. |
 | The target file exists, ends with `.a3p`, and is non-empty | The Save path reached the project write boundary. |
 | Canonical evidence reports `wroteFile: true` only after file assertions pass | Machine-readable evidence cannot report a success-shaped write without the real file. |
+
+Any unproven run fails closed. Preexisting target files, incomplete chooser observations, timeouts, path mismatches, canonicalization failures, and multiple live `JFileChooser` instances must not produce approval or write success claims.
 
 ### Executable blocker
 
@@ -89,7 +92,9 @@ The canonical proof artifact records:
 | `status` | `proven` only when menu activation, chooser approval, and file write assertions all pass. |
 | `dialogType` | `Swing JFileChooser` for the controlled Linux Swing chooser path. |
 | `wroteFile` | `true` only after the target exists inside the proof root, has `.a3p` extension, and has non-zero size. |
-| `selected_file.normalized_selected_file` | The temp-relative normalized approved path, so reviewer artifacts do not expose machine-specific absolute paths. |
+| `observed_dialog.approved_selection` | `true` only when the EDT approval callback completed after selected-file verification; scheduling approval does not set this claim. |
+| `selected_file.normalized_selected_file` | The proof-root-relative normalized approved path, or a redacted outside-root marker, so reviewer artifacts do not expose machine-specific absolute paths. |
+| `written_artifact.target_file` | The proof-root-relative target path, or a redacted outside-root marker; evidence must not store absolute machine paths. |
 | `written_artifact.target_inside_proof_root` | `true` only when the written target stayed inside the controlled proof root. |
 | `proof_chain` | The production Save menu path from `menuItem.doClick()` through `SaveProjectOperation`, `AbstractSaveOperation.perform`, dialog approval, and project write. |
 | `trigger.menu_item_doclick` | `true` for the production Save menu item activation path. |
@@ -104,6 +109,8 @@ desktop-save-dialog-discovery-target.json
 It is written when `org.alice.eatme.saveDialogDiscoveryEvidenceDir` is set and documents the `FileDialogUtilities.showSaveFileDialog(Component,File,String,String)` owner/root/selection target before the Swing chooser appears. Use this artifact to inspect dialog boundary discovery, not final file-write success.
 
 Evidence write failures are logged and do not change production Save behavior.
+
+Multiple live `JFileChooser` instances are an ambiguity blocker. The proof cancels candidate choosers where appropriate and leaves `wroteFile`, `observed_dialog.approved_selection`, and `written_artifact.file_written` false.
 
 ## API boundaries
 
@@ -164,7 +171,16 @@ To collect dialog-discovery evidence for this proof, set:
   "status": "proven",
   "dialogType": "Swing JFileChooser",
   "wroteFile": true,
+  "observed_dialog": {
+    "approved_selection": true,
+    "ambiguous_chooser_discovery": false
+  },
+  "selected_file": {
+    "normalized_selected_file": "projects/doclick-save-proof.a3p"
+  },
   "written_artifact": {
+    "target_file": "projects/doclick-save-proof.a3p",
+    "file_written": true,
     "file_extension": "a3p"
   },
   "doesNotClaim": [
@@ -177,13 +193,60 @@ To collect dialog-discovery evidence for this proof, set:
 }
 ```
 
+### Preexisting target without full proof
+
+A preexisting file at the expected target is not write proof. If the complete menu, chooser, approval, and write chain does not complete, success-shaped fields remain false even when a file is already present.
+
+```json
+{
+  "status": "not_proven",
+  "reason": "save_menu_doclick_e2e_not_completed",
+  "dialogType": "Swing JFileChooser",
+  "wroteFile": false,
+  "observed_dialog": {
+    "approved_selection": false,
+    "ambiguous_chooser_discovery": false
+  },
+  "written_artifact": {
+    "target_file": "projects/doclick-save-proof.a3p",
+    "file_written": false,
+    "file_nonempty": false
+  }
+}
+```
+
+### Ambiguous chooser blocker
+
+```json
+{
+  "status": "not_proven",
+  "reason": "ambiguous_swing_jfilechooser_discovery",
+  "dialogType": "Swing JFileChooser",
+  "wroteFile": false,
+  "observed_dialog": {
+    "approved_selection": false,
+    "ambiguous_chooser_discovery": true
+  },
+  "written_artifact": {
+    "file_written": false
+  }
+}
+```
+
 ### Display-precondition blocker
 
 ```json
 {
-  "status": "unsupported",
+  "status": "not_proven",
   "reason": "No available non-headless AWT display",
+  "blocker": "Display environment does not support the Swing Save proof.",
   "wroteFile": false,
+  "observed_dialog": {
+    "approved_selection": false
+  },
+  "written_artifact": {
+    "file_written": false
+  },
   "requiresNextEvidence": [
     "Run this proof shard under xvfb-run -a or an equivalent desktop session"
   ]
