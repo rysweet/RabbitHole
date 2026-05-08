@@ -206,9 +206,11 @@ final class SaveOperationCompletionEvidence {
     Path savedPath = savedFile == null ? null : savedFile.toPath();
     boolean savedFileExists = savedPath != null && Files.isRegularFile(savedPath);
     Long fileSizeBytes = savedFileExists ? savedFileSizeBytes(savedPath) : null;
+    boolean wroteFile = wroteFile(savedPath, fileSizeBytes, extension);
+    String resultStatus = status(result);
     return "{\n"
         + "  \"schema_version\": \"eatme.alice-desktop-save-operation-result/v1\",\n"
-        + "  \"status\": \"" + status(result) + "\",\n"
+        + "  \"status\": \"" + resultStatus + "\",\n"
         + "  \"source\": \"AbstractSaveOperation.perform\",\n"
         + "  \"operation\": \"" + escapeJson(nullToBlank(operationClass)) + "\",\n"
         + "  \"extension\": \"" + escapeJson(nullToBlank(extension)) + "\",\n"
@@ -221,9 +223,9 @@ final class SaveOperationCompletionEvidence {
         + "  \"saved_file_size_bytes\": " + savedFileSizeJson(fileSizeBytes) + ",\n"
         + "  \"dialogType\": \"Swing JFileChooser\",\n"
         + "  \"evidencePath\": \"Save dialog control/write path\",\n"
-        + "  \"wroteFile\": " + wroteFile(savedPath, fileSizeBytes, extension) + ",\n"
+        + "  \"wroteFile\": " + wroteFile + ",\n"
         + "  \"fileExtension\": \"" + escapeJson(nullToBlank(extension)) + "\",\n"
-        + "  \"claim\": \"Save control/dialog approval reached a non-empty .a3p project file write\",\n"
+        + resultClaimOrSummaryJson(wroteFile, resultStatus, extension)
         + "  \"doesNotClaim\": [\n"
         + "    \"desktop Save menu item was clicked\",\n"
         + "    \"full lesson completion\",\n"
@@ -235,6 +237,23 @@ final class SaveOperationCompletionEvidence {
         + "    \"native dialog coverage\"\n"
         + "  ]\n"
         + "}\n";
+  }
+
+  private static String resultClaimOrSummaryJson(boolean wroteFile, String resultStatus, String extension) {
+    String fileWrite = nonEmptyProjectFileWrite(extension);
+    if (wroteFile) {
+      return "  \"claim\": \"" + escapeJson("Save control/dialog approval reached " + fileWrite) + "\",\n";
+    }
+    return "  \"reporting_summary\": \""
+        + escapeJson("Save operation evidence recorded status " + resultStatus + " without proving " + fileWrite)
+        + "\",\n";
+  }
+
+  private static String nonEmptyProjectFileWrite(String extension) {
+    if (extension == null || extension.isBlank()) {
+      return "a non-empty project file write";
+    }
+    return "a non-empty ." + extension + " project file write";
   }
 
   private static String dialogControlTargetJson(String operationClass, String extension, SaveOperationFlow.Result result) {

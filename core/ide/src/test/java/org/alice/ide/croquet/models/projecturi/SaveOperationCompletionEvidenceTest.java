@@ -108,6 +108,9 @@ public class SaveOperationCompletionEvidenceTest {
     assertTrue(json, json.contains("\"saved_file_size_bytes\": 0"));
     assertTrue(json, json.contains("\"wroteFile\": false"));
     assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("\"claim\""));
+    assertFalse(json, json.contains("Save control/dialog approval reached a non-empty .a3p project file write"));
+    assertTrue(json, json.contains("\"reporting_summary\": \"Save operation evidence recorded status finished without proving a non-empty .a3p project file write\""));
   }
 
   @Test
@@ -151,6 +154,10 @@ public class SaveOperationCompletionEvidenceTest {
       assertTrue(json, json.contains("\"saved_file\": null"));
       assertTrue(json, json.contains("\"saved_file_exists\": null"));
       assertTrue(json, json.contains("\"saved_file_size_bytes\": null"));
+      assertTrue(json, json.contains("\"wroteFile\": false"));
+      assertFalse(json, json.contains("\"claim\""));
+      assertFalse(json, json.contains("Save control/dialog approval reached a non-empty .a3p project file write"));
+      assertTrue(json, json.contains("\"reporting_summary\": \"Save operation evidence recorded status canceled without proving a non-empty .a3p project file write\""));
 
       Path dialogArtifact = evidenceDir.resolve(SaveOperationCompletionEvidence.DIALOG_CONTROL_ARTIFACT);
       assertTrue(Files.size(dialogArtifact) > 0);
