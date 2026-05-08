@@ -1,6 +1,8 @@
 # Save Menu Dialog Written-Project Proof
 
-This reference describes the bounded desktop Save proof shard for Alice project Save: actual Save menu item activation, completed Swing `JFileChooser` approval, a real `.a3p` write, readable project round-trip, and verification that the saved project contains the expected synthetic marker.
+This reference is the target contract for the strengthened bounded desktop Save proof shard for Alice project Save. The feature to build must prove actual Save menu item activation, completed Swing `JFileChooser` approval, a real `.a3p` write, readable project round-trip, and verification that the saved project contains the expected synthetic marker.
+
+Implementation status: this document is a retcon spec for the strengthened proof, not evidence that the current shard already performs readback and marker verification. Until the test and artifact are updated to this contract, existing passing runs must be treated as bounded write proof only.
 
 ## Contents
 
@@ -15,7 +17,7 @@ This reference describes the bounded desktop Save proof shard for Alice project 
 
 ## Purpose
 
-The proof shard shows one real desktop Save menu path beyond the earlier bounded write-only seam. It does not attempt comprehensive Save coverage. The successful path is:
+The strengthened proof shard must show one real desktop Save menu path beyond the earlier bounded write-only seam. It does not attempt comprehensive Save coverage. The successful path is:
 
 ```text
 Save menu item doClick()
@@ -34,23 +36,23 @@ Linux Swing `JFileChooser` is the expected controlled dialog. The proof does not
 
 ## Canonical proof shard
 
-The canonical test target is:
+The canonical test target to strengthen is:
 
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/StageIdeSaveMenuDoClickToWriteProofTest.java
 ```
 
-The test creates a deterministic marked project, obtains the production Save menu item through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)`, activates it with `doClick()`, controls the live Swing `JFileChooser`, and asserts the approved target file is a non-empty `.a3p`.
+The strengthened test must create a deterministic marked project, obtain the production Save menu item through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)`, activate it with `doClick()`, control the live Swing `JFileChooser`, and assert the approved target file is a non-empty `.a3p`.
 
-The written file is then read back through `IoUtilities.readProject(targetFile)`. The readback project must be non-null and must contain the marker `saveMenuDoClickRoundTripMarker` through normal Alice project/domain APIs. A non-empty file alone is not enough for this proof.
+The strengthened implementation must then read the written file back through `IoUtilities.readProject(targetFile)`. The readback project must be non-null and must contain the marker `saveMenuDoClickRoundTripMarker` through normal Alice project/domain APIs. A non-empty file alone is not enough for this proof.
 
-The proof must not call `SaveOperationFlow` directly. `SaveOperationFlow` remains the production coordination layer reached through the menu operation.
+The strengthened proof must not call `SaveOperationFlow` directly. `SaveOperationFlow` remains the production coordination layer reached through the menu operation.
 
 ## Execution contract
 
 ### Success
 
-A successful run proves all of the following in one bounded path:
+A successful strengthened run must prove all of the following in one bounded path:
 
 | Required observation | Meaning |
 | --- | --- |
@@ -63,11 +65,11 @@ A successful run proves all of the following in one bounded path:
 | The readback project contains `saveMenuDoClickRoundTripMarker` | The written payload is the deterministic project created by the test, not an unrelated or stale project file. |
 | Canonical evidence reports `wroteFile: true` and `readback.marker_present: true` only after all assertions pass | Machine-readable evidence cannot report a success-shaped write or marker result without the real readable project. |
 
-Any unproven run fails closed. Preexisting target files, shortcut chooser/file signals without the recorded menu `doClick()` seam, incomplete chooser observations, timeouts, path mismatches, canonicalization failures, readback failures, missing markers, and multiple live `JFileChooser` instances must not produce trigger, approval, write, readback, or marker success claims.
+Any unproven strengthened run must fail closed. Preexisting target files, shortcut chooser/file signals without the recorded menu `doClick()` seam, incomplete chooser observations, timeouts, path mismatches, canonicalization failures, readback failures, missing markers, and multiple live `JFileChooser` instances must not produce trigger, approval, write, readback, or marker success claims.
 
 ### Unsupported display result
 
-If the proof cannot run because the JVM cannot create a non-headless desktop, the executable proof writes an unsupported-result artifact and returns without claiming success. The precise reason is:
+If the proof cannot run because the JVM cannot create a non-headless desktop, the strengthened executable proof must write an unsupported-result artifact and return without claiming success. The precise reason is:
 
 ```text
 No available non-headless AWT display
@@ -75,7 +77,7 @@ No available non-headless AWT display
 
 This blocker is the desktop-precondition blocker for the canonical shard. It means the environment must provide a display, such as Xvfb, before the Save dialog/control/write/readback/marker path can be exercised.
 
-The proof shard keeps result states distinct:
+The strengthened proof shard must keep result states distinct:
 
 | State | Meaning |
 | --- | --- |
@@ -84,7 +86,7 @@ The proof shard keeps result states distinct:
 | `unsupported` | The proof did not exercise the dialog path because no non-headless AWT display was available. |
 | `gated-not-run` | Outside-in QA wrapper state only; the gated command was not executed. |
 
-The Maven proof writes generated artifacts under its test target directory. It does not write directly to the outside-in QA evidence path. If a PR cannot provide the display-backed proof and needs persistent review evidence, copy the generated unsupported artifact to:
+The strengthened Maven proof must write generated artifacts under its test target directory. It must not write directly to the outside-in QA evidence path. After the strengthened unsupported artifact lands, if a PR cannot provide the display-backed proof and needs persistent review evidence, copy the generated unsupported artifact to:
 
 ```text
 qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof-blocker.json
@@ -94,7 +96,7 @@ That copied artifact remains an unsupported-result artifact. It must preserve th
 
 ## Evidence artifacts
 
-The reviewer-facing proof artifact is:
+The reviewer-facing proof artifact for the strengthened contract is:
 
 ```text
 stageide-save-menu-doclick-write-proof.json
@@ -106,9 +108,9 @@ The test-owned artifact location is under:
 core/ide/target/stageide-save-menu-doclick-write-proof-test/<run-id>/doclick-to-written-file/evidence/
 ```
 
-This artifact is separate from `SaveOperationCompletionEvidence`. `SaveOperationCompletionEvidence` records lower-level Save completion facts such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts. It is not the source for the full menu activation, chooser approval, selected-file, readable-project, or marker proof.
+This artifact must stay separate from `SaveOperationCompletionEvidence`. `SaveOperationCompletionEvidence` records lower-level Save completion facts such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts. It is not the source for the full menu activation, chooser approval, selected-file, readable-project, or marker proof.
 
-The canonical proof artifact records:
+The strengthened canonical proof artifact must record:
 
 | Field | Contract |
 | --- | --- |
@@ -127,7 +129,7 @@ The canonical proof artifact records:
 | `proof_chain` | The production Save menu path from `menuItem.doClick()` through `SaveProjectOperation`, `AbstractSaveOperation.perform`, dialog approval, project write, project readback, and marker verification. |
 | `doesNotClaim` | Explicit exclusions for full desktop Save completion, lesson completion, rendering, grading, physical user clicks, broad UI automation, native dialog coverage, and all Save variants. |
 
-The unsupported display artifact has this contract:
+The strengthened unsupported display artifact has this contract:
 
 | Field | Contract |
 | --- | --- |
@@ -153,11 +155,11 @@ It is written when `org.alice.eatme.saveDialogDiscoveryEvidenceDir` is set and d
 
 Evidence write failures are logged and do not change production Save behavior.
 
-Multiple live `JFileChooser` instances are an ambiguity blocker. The proof cancels candidate choosers where appropriate and leaves `wroteFile`, `observed_dialog.approved_selection`, `written_artifact.file_written`, `readback.project_readable`, and `readback.marker_present` false.
+Multiple live `JFileChooser` instances are an ambiguity blocker. The strengthened proof must cancel candidate choosers where appropriate and leave `wroteFile`, `observed_dialog.approved_selection`, `written_artifact.file_written`, `readback.project_readable`, and `readback.marker_present` false.
 
 ## API boundaries
 
-The proof observes production behavior through existing Save APIs and seams:
+The strengthened proof must observe production behavior through existing Save APIs and seams:
 
 | Component | Role in this proof |
 | --- | --- |
@@ -188,7 +190,7 @@ Set the memory option for large Maven runs:
 export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
-Run the focused proof with a display:
+Run the focused proof with a display after implementing the strengthened readback and marker contract:
 
 ```bash
 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -210,7 +212,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof
 ```
 
-Use the direct Maven command for the canonical proof artifact. Use the QA scenario when review also needs the standard outside-in `status.txt` and `command.log` wrapper evidence.
+Use the direct Maven command for the canonical proof artifact after the strengthened implementation lands. Use the QA scenario when review also needs the standard outside-in `status.txt` and `command.log` wrapper evidence.
 
 The QA scenario executes the checked-in Maven argv directly. It relies on the ambient process environment for a usable display and options such as `NODE_OPTIONS`; it does not prepend `xvfb-run` or set memory options itself.
 
@@ -222,7 +224,7 @@ To collect dialog-discovery evidence for this proof, set:
 
 ## Examples
 
-### Successful proof result
+### Target successful proof result
 
 ```json
 {
@@ -263,9 +265,9 @@ To collect dialog-discovery evidence for this proof, set:
 }
 ```
 
-### Preexisting target without full proof
+### Target preexisting target without full proof
 
-A preexisting file at the expected target is not write proof. If the complete menu, chooser, approval, write, readback, and marker chain does not complete, success-shaped fields remain false even when a file is already present.
+A preexisting file at the expected target is not write proof. In the strengthened contract, if the complete menu, chooser, approval, write, readback, and marker chain does not complete, success-shaped fields remain false even when a file is already present.
 
 ```json
 {
@@ -294,7 +296,7 @@ A preexisting file at the expected target is not write proof. If the complete me
 }
 ```
 
-### Ambiguous chooser blocker
+### Target ambiguous chooser blocker
 
 ```json
 {
@@ -317,7 +319,7 @@ A preexisting file at the expected target is not write proof. If the complete me
 }
 ```
 
-### Unsupported display result
+### Target unsupported display result
 
 ```json
 {
@@ -358,7 +360,7 @@ A preexisting file at the expected target is not write proof. If the complete me
 
 ## Non-claims
 
-This proof shard does not claim:
+This strengthened proof shard must not claim:
 
 1. Full desktop Save completion.
 2. Full lesson completion.
