@@ -1,6 +1,14 @@
-# Run the Robot Save Menu Dialog Write/Readback Proof
+# [PLANNED - Implementation Pending] Run the Robot Save Menu Dialog Write/Readback Proof
 
-Use this guide to run the focused proof that joins Robot File-menu Save activation to live Save dialog control, `.a3p` write, project readback, and marker verification.
+Use this guide after `RobotSaveMenuDialogWriteReadbackProofTest` is implemented to run the focused proof that joins Robot File-menu Save activation to live Save dialog control, `.a3p` write, project readback, and marker verification.
+
+## Implementation status
+
+This is document-driven guidance for the intended proof shard. The command becomes runnable when this file exists:
+
+```text
+core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
+```
 
 ## Prerequisites
 
@@ -23,7 +31,7 @@ Provide a non-headless AWT display. On Linux CI or a headless workstation, run t
 xvfb-run -a true
 ```
 
-## Run the focused proof
+## Run the focused proof after implementation
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -40,7 +48,7 @@ The proof writes `robot-save-menu-dialog-write-readback-proof.json` below:
 core/ide/target/save-menu-proofs/
 ```
 
-## Run the regression baseline set
+## Run the regression baseline set after implementation
 
 Run the joined Robot proof with the existing Save baselines before using the artifact in review:
 

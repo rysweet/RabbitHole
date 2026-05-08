@@ -1,6 +1,6 @@
-# Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof
+# [PLANNED - Implementation Pending] Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof
 
-This tutorial shows how to review the Robot-driven Save proof from command execution to machine-readable evidence.
+This tutorial shows how to review the intended Robot-driven Save proof from command execution to machine-readable evidence after `RobotSaveMenuDialogWriteReadbackProofTest` is implemented.
 
 ## Goal
 
@@ -16,7 +16,7 @@ Robot File -> Save
 
 This tutorial does not prove every Save variant or full desktop Save completion.
 
-## 1. Run the focused shard
+## 1. Run the focused shard after implementation
 
 From the repository root:
 

@@ -1,6 +1,6 @@
-# Robot Save Menu Dialog Write/Readback Proof
+# [PLANNED - Implementation Pending] Robot Save Menu Dialog Write/Readback Proof
 
-This reference documents the bounded Robot-driven Alice desktop Save proof. The proof activates File -> Save with AWT Robot mouse events, controls the live Swing Save dialog, writes a `.a3p` project file, reads the saved file back, and verifies the generated marker.
+This reference documents the intended bounded Robot-driven Alice desktop Save proof. The planned proof activates File -> Save with AWT Robot mouse events, controls the live Swing Save dialog, writes a `.a3p` project file, reads the saved file back, and verifies the generated marker.
 
 ## Contents
 
@@ -16,7 +16,7 @@ This reference documents the bounded Robot-driven Alice desktop Save proof. The 
 
 ## Purpose
 
-`RobotSaveMenuDialogWriteReadbackProofTest` is the next Save seam after the separate menu and write baselines:
+`RobotSaveMenuDialogWriteReadbackProofTest` is the planned next Save seam after the separate menu and write baselines:
 
 | Baseline | What it proves |
 | --- | --- |
@@ -24,17 +24,17 @@ This reference documents the bounded Robot-driven Alice desktop Save proof. The 
 | `StageIdeSaveMenuDoClickToWriteProofTest` | The real Save menu item can be activated with `doClick()`, can show and approve a live Swing `JFileChooser`, can write a non-empty `.a3p`, can read it back, and can verify the marker. |
 | `ProjectApplicationSaveProjectToTest` | `ProjectApplication.saveProjectTo(File)` writes readable projects, updates the active save target, records recents, handles save-as targets, and preserves failure behavior. |
 
-The Robot proof joins those seams in one executable path. A proven run means the Save action started from Robot File-menu activation, not from `doClick()`, `fire()`, `SaveOperationFlow`, or a direct save helper.
+The Robot proof will join those seams in one executable path. A future proven run means the Save action started from Robot File-menu activation, not from `doClick()`, `fire()`, `SaveOperationFlow`, or a direct save helper.
 
 ## Canonical proof shard
 
-The canonical proof shard is:
+The planned canonical proof shard is:
 
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
 ```
 
-The generated proof or blocker artifact is written below:
+The planned proof or blocker artifact is written below:
 
 ```text
 core/ide/target/save-menu-proofs/
@@ -48,7 +48,7 @@ robot-save-menu-dialog-write-readback-proof.json
 
 ## Proof chain
 
-A `status: "proven"` artifact means every step in this chain completed in order:
+A future `status: "proven"` artifact means every step in this chain completed in order:
 
 ```text
 rendered StageIDE/Croquet JMenuBar
@@ -67,11 +67,11 @@ rendered StageIDE/Croquet JMenuBar
   -> readback project contains robotSaveMenuRoundTripMarker
 ```
 
-The proof fails closed. It cannot report `status: "proven"` unless Robot menu activation, Save item click attribution, dialog observation, chooser approval, file write, project readback, and marker verification are all true in the same run.
+The planned proof fails closed. It cannot report `status: "proven"` unless Robot menu activation, Save item click attribution, dialog observation, chooser approval, file write, project readback, and marker verification are all true in the same run.
 
 ## Evidence artifact
 
-The artifact is the reviewable API for this proof. Consumers must inspect the JSON rather than infer proof status from Maven output alone.
+The planned artifact is the reviewable API for this proof. Consumers must inspect the JSON rather than infer proof status from Maven output alone.
 
 | Field | Contract |
 | --- | --- |
@@ -98,7 +98,7 @@ The artifact is the reviewable API for this proof. Consumers must inspect the JS
 
 ## Blocker artifact
 
-When the combined proof is unsafe or environment-blocked, the executable test writes the same artifact with `status: "blocked"`. A blocked artifact is evidence of the exact missing precondition or unsafe ambiguity; it is not partial Save success.
+When the combined proof is unsafe or environment-blocked, the executable test should write the same artifact with `status: "blocked"`. A blocked artifact is evidence of the exact missing precondition or unsafe ambiguity; it is not partial Save success.
 
 Allowed blocker kinds are fixed strings:
 
@@ -122,7 +122,7 @@ The blocker artifact must not include stack traces, environment dumps, local use
 
 ## API boundaries
 
-This proof is test-only. It does not add a public application API. The stable interface is the machine-readable artifact schema.
+This planned proof is test-only. It does not add a public application API. The stable interface is the machine-readable artifact schema.
 
 | Component | Role |
 | --- | --- |
@@ -138,7 +138,7 @@ Do not call `SaveOperationFlow` directly from this proof. Direct calls belong to
 
 ## Configuration
 
-Run from the repository root. Initialize the grammar submodule before Maven validation:
+After implementation, run from the repository root. Initialize the grammar submodule before Maven validation:
 
 ```bash
 git submodule update --init tweedle-lang
@@ -151,7 +151,7 @@ Use the saved memory option:
 export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
-Run the Robot proof under a usable display:
+Run the planned Robot proof under a usable display:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -162,7 +162,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-Run the Robot proof with the required baselines:
+Run the planned Robot proof with the required baselines:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -175,7 +175,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
 
 ## Examples
 
-### Proven artifact
+### Planned proven artifact
 
 ```json
 {
@@ -228,7 +228,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
 }
 ```
 
-### Headless blocker artifact
+### Planned headless blocker artifact
 
 ```json
 {
