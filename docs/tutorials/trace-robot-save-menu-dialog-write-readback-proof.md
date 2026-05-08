@@ -2,6 +2,8 @@
 
 This tutorial shows how to review the intended Robot-driven Save proof from command execution to machine-readable evidence after `RobotSaveMenuDialogWriteReadbackProofTest` is implemented.
 
+The examples below describe the intended artifact contract. They are not evidence until an implemented test generates them.
+
 ## Goal
 
 Confirm one bounded Alice desktop Save path:

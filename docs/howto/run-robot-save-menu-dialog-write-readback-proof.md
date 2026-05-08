@@ -10,6 +10,8 @@ This is document-driven guidance for the intended proof shard. The command becom
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
 ```
 
+Until that test exists, do not cite the commands or example artifacts in this guide as evidence. They define the post-implementation validation contract only.
+
 ## Prerequisites
 
 Run commands from the repository root. Initialize the Tweedle grammar submodule:
@@ -42,7 +44,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-The proof writes `robot-save-menu-dialog-write-readback-proof.json` below:
+After implementation, the proof must write `robot-save-menu-dialog-write-readback-proof.json` below:
 
 ```text
 core/ide/target/save-menu-proofs/
@@ -50,7 +52,7 @@ core/ide/target/save-menu-proofs/
 
 ## Run the regression baseline set after implementation
 
-Run the joined Robot proof with the existing Save baselines before using the artifact in review:
+After the test exists, run the joined Robot proof with the existing Save baselines before using the artifact in review:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -65,7 +67,7 @@ This command preserves the baseline evidence for menu-item `doClick()` write/rea
 
 ## Interpret the artifact
 
-Use the JSON artifact as the source of truth.
+After implementation, use the JSON artifact as the source of truth.
 
 | Status | Meaning |
 | --- | --- |

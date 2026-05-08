@@ -1,6 +1,6 @@
 # [PLANNED - Implementation Pending] Robot Save Menu Dialog Write/Readback Proof
 
-This reference documents the intended bounded Robot-driven Alice desktop Save proof. The planned proof activates File -> Save with AWT Robot mouse events, controls the live Swing Save dialog, writes a `.a3p` project file, reads the saved file back, and verifies the generated marker.
+This reference documents the intended bounded Robot-driven Alice desktop Save proof. The planned proof will activate File -> Save with AWT Robot mouse events, control the live Swing Save dialog, write a `.a3p` project file, read the saved file back, and verify the generated marker.
 
 ## Contents
 
@@ -34,7 +34,7 @@ The planned canonical proof shard is:
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
 ```
 
-The planned proof or blocker artifact is written below:
+The planned proof or blocker artifact will be written below:
 
 ```text
 core/ide/target/save-menu-proofs/
@@ -67,11 +67,11 @@ rendered StageIDE/Croquet JMenuBar
   -> readback project contains robotSaveMenuRoundTripMarker
 ```
 
-The planned proof fails closed. It cannot report `status: "proven"` unless Robot menu activation, Save item click attribution, dialog observation, chooser approval, file write, project readback, and marker verification are all true in the same run.
+The planned implementation must fail closed. It cannot report `status: "proven"` unless Robot menu activation, Save item click attribution, dialog observation, chooser approval, file write, project readback, and marker verification are all true in the same run.
 
 ## Evidence artifact
 
-The planned artifact is the reviewable API for this proof. Consumers must inspect the JSON rather than infer proof status from Maven output alone.
+The planned artifact schema is the reviewable API for this proof. Consumers must inspect the JSON rather than infer proof status from Maven output alone.
 
 | Field | Contract |
 | --- | --- |
@@ -98,7 +98,7 @@ The planned artifact is the reviewable API for this proof. Consumers must inspec
 
 ## Blocker artifact
 
-When the combined proof is unsafe or environment-blocked, the executable test should write the same artifact with `status: "blocked"`. A blocked artifact is evidence of the exact missing precondition or unsafe ambiguity; it is not partial Save success.
+When the combined proof is unsafe or environment-blocked, the implemented test must write the same artifact with `status: "blocked"`. A blocked artifact is evidence of the exact missing precondition or unsafe ambiguity; it is not partial Save success.
 
 Allowed blocker kinds are fixed strings:
 
@@ -122,7 +122,7 @@ The blocker artifact must not include stack traces, environment dumps, local use
 
 ## API boundaries
 
-This planned proof is test-only. It does not add a public application API. The stable interface is the machine-readable artifact schema.
+This planned proof will be test-only. It does not add a public application API. The stable interface is the machine-readable artifact schema.
 
 | Component | Role |
 | --- | --- |
@@ -134,7 +134,7 @@ This planned proof is test-only. It does not add a public application API. The s
 | `IoUtilities.readProject(File)` | Reads the saved `.a3p` back as an Alice project. |
 | Alice project/domain APIs | Verify that the readback project contains `robotSaveMenuRoundTripMarker`. |
 
-Do not call `SaveOperationFlow` directly from this proof. Direct calls belong to lower-level flow characterization and would bypass the Robot File-menu seam.
+Do not implement this proof by calling `SaveOperationFlow` directly. Direct calls belong to lower-level flow characterization and would bypass the Robot File-menu seam.
 
 ## Configuration
 
@@ -151,7 +151,7 @@ Use the saved memory option:
 export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
-Run the planned Robot proof under a usable display:
+After implementation, run the planned Robot proof under a usable display:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -162,7 +162,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-Run the planned Robot proof with the required baselines:
+After implementation, run the planned Robot proof with the required baselines:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
