@@ -184,6 +184,9 @@ field-initializer binding boundary.
 
 For the focused method-call slice, see
 [Zero-Argument This-Method Call Decode Reference](./zero-argument-this-method-call-decode.md).
+That slice supports explicit zero-argument `this.method()` calls only; explicit
+`this.method(arg...)` calls intentionally fail fast as unsupported
+argument-bearing explicit `this` method calls.
 
 ### Player `.a3w` archive decode
 

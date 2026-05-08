@@ -301,7 +301,7 @@ public class Decoder {
       throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
     }
     if (!methodCall.getArguments().isEmpty()) {
-      throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
+      throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
     }
     UserMethod targetMethod = zeroArgumentMethods.get(methodCall.getMethodName());
     if (targetMethod == null) {
@@ -1016,6 +1016,14 @@ public class Decoder {
     return new UnsupportedTweedleDecodeException(
         "Only explicit zero-argument this-method calls declared on the current Tweedle type "
             + "are supported by the AST decoder: "
+            + ownerName + "." + describeMethodCall(methodCall));
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedArgumentBearingExplicitThisMethodCall(
+      String ownerName,
+      MethodCallExpression methodCall) {
+    return new UnsupportedTweedleDecodeException(
+        "Tweedle argument-bearing explicit this method calls are not supported by the AST decoder: "
             + ownerName + "." + describeMethodCall(methodCall));
   }
 

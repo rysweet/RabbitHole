@@ -57,7 +57,7 @@ unsupported-Tweedle archive behavior.
 
 | Tweedle shape | Reason it is unsupported |
 | --- | --- |
-| `this.helper(1);` | Argument-bearing calls are outside the slice. |
+| `this.helper(1);` | Argument-bearing explicit `this` method calls intentionally fail fast. |
 | `this.missing();` | Unknown same-type methods are not invented or late-bound. |
 | `other.helper();` | Non-`this` targets are outside the slice. |
 | `helper();` | Implicit targets are outside the slice. |
@@ -117,6 +117,7 @@ Negative tests cover adjacent unsupported syntax without implying general
 method-call support:
 
 ```text
+decodeClassWithArgumentBearingExplicitThisMethodCallReportsUnsupportedBoundary
 zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall
 zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod
 zeroArgumentThisMethodCallDecodeRejectsUnknownMethod
@@ -146,4 +147,5 @@ chained calls, overloads, optional arguments, named arguments, or runtime
 dispatch.
 
 Keep new docs, tests, and exception messages scoped to zero-argument
-`this.method()` decode.
+`this.method()` decode and the named unsupported boundary for argument-bearing
+explicit `this.method(arg...)` calls.
