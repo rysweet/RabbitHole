@@ -1125,8 +1125,8 @@ run_xvfb_real_alice() {
     alice-desktop-select-project-tab-click-exec|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO")
       needs_tab_click_probe=1
       mapfile -t target_fields < <(target_starter_fields "$scenario_json")
-      target_starter_display_name=${target_fields[0]:-}
-      target_starter_repo_path=${target_fields[1]:-}
+      target_starter_display_name=${target_fields[0]:?}
+      target_starter_repo_path=${target_fields[1]:?}
       ;;
     *)
       target_starter_display_name=

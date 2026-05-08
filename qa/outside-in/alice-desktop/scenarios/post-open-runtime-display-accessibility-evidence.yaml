@@ -2,6 +2,9 @@ id: alice-desktop-post-open-runtime-display-accessibility-evidence
 title: Post-open runtime/display accessibility evidence
 workflow: post-open-runtime-display-accessibility-evidence
 automationMode: xvfb-real-alice
+targetStarter:
+  displayName: Africa Full
+  repositoryPath: core/resources/src/application/resources/starter-projects/AfricaFull.a3p
 preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
@@ -14,7 +17,7 @@ preconditions:
   - alice-ide/pom.xml declares the alice-ide-atk exec:exec execution with the Java ATK wrapper.
 userActions:
   - Launch Alice with the existing xvfb-real-alice AT-SPI Maven argv.
-  - Reuse the existing supported project-open setup from alice-desktop-post-project-open-window-state.
+  - Reuse the existing supported project-open setup from alice-desktop-post-project-open-window-state with the fixed Africa Full starter metadata.
   - After post-project-open-observation.json records postOpenWindowObserved=true, run post-open-runtime-display-probe.py against x-window-inventory.json and the post-open window observation.
   - Record only read-only runtime/display accessibility evidence in post-open-runtime-display-accessibility-evidence.json and status.txt.
 expectedOutcomes:
@@ -43,7 +46,7 @@ evidence:
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - license-dialog.json recording not-observed or an exact blocker.
     - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry.
-    - tab-click-observation.json from existing project-open setup.
+    - tab-click-observation.json from existing project-open setup, including targetStarter displayName Africa Full and targetStarter repositoryPath core/resources/src/application/resources/starter-projects/AfricaFull.a3p.
     - post-project-open-observation.json recording postOpenWindowObserved=true.
     - post-open-runtime-display-accessibility-evidence.json recording claim=post-open-runtime-display-accessibility-evidence, status, blocker, postOpenRuntimeDisplayAccessibilityObserved, runtimeDisplayCandidateCount, and runtimeDisplayCandidates.
     - runtime-display-accessibility-status.txt recording the probe-local runtime/display accessibility status before final scenario status is assembled.

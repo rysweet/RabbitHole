@@ -11,6 +11,8 @@ SCENARIO_ID=alice-desktop-post-open-runtime-display-accessibility-evidence
 WORKFLOW=post-open-runtime-display-accessibility-evidence
 SCENARIO_FILE="$BASE_DIR/scenarios/post-open-runtime-display-accessibility-evidence.yaml"
 ARTIFACT=post-open-runtime-display-accessibility-evidence.json
+TARGET_STARTER_DISPLAY_NAME="Africa Full"
+TARGET_STARTER_REPOSITORY_PATH="core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 
@@ -24,12 +26,27 @@ status=$?
 assert_success "$status" "validator dumps the post-open runtime/display scenario by id"
 
 if [ "$status" -eq 0 ]; then
-  python3 - "$tmp_root/scenario.json" "$SCENARIO_ID" "$WORKFLOW" "$ARTIFACT" >"$tmp_root/scenario-contract.out" 2>"$tmp_root/scenario-contract.err" <<'PY'
+  python3 - \
+    "$tmp_root/scenario.json" \
+    "$SCENARIO_ID" \
+    "$WORKFLOW" \
+    "$ARTIFACT" \
+    "$TARGET_STARTER_DISPLAY_NAME" \
+    "$TARGET_STARTER_REPOSITORY_PATH" \
+    >"$tmp_root/scenario-contract.out" \
+    2>"$tmp_root/scenario-contract.err" <<'PY'
 import json
 import re
 import sys
 
-scenario_path, expected_id, expected_workflow, expected_artifact = sys.argv[1:5]
+(
+    scenario_path,
+    expected_id,
+    expected_workflow,
+    expected_artifact,
+    expected_target_display_name,
+    expected_target_repository_path,
+) = sys.argv[1:7]
 scenario = json.load(open(scenario_path, encoding="utf-8"))
 errors = []
 
@@ -58,6 +75,15 @@ if not isinstance(automation.get("timeoutSeconds"), int) or automation["timeoutS
     errors.append("automation.timeoutSeconds must be a positive integer")
 if not isinstance(automation.get("readyWaitSeconds"), int) or automation["readyWaitSeconds"] < 1:
     errors.append("automation.readyWaitSeconds must be a positive integer")
+
+target_starter = scenario.get("targetStarter")
+if not isinstance(target_starter, dict):
+    errors.append("scenario must declare targetStarter so the reused post-open setup opens a fixed project")
+else:
+    if target_starter.get("displayName") != expected_target_display_name:
+        errors.append(f"targetStarter.displayName must be {expected_target_display_name!r}")
+    if target_starter.get("repositoryPath") != expected_target_repository_path:
+        errors.append(f"targetStarter.repositoryPath must be {expected_target_repository_path!r}")
 
 evidence_text = "\n".join(scenario.get("evidence", {}).get("required", []))
 expected_outcomes = "\n".join(scenario.get("expectedOutcomes", []))
@@ -150,6 +176,9 @@ assert_contains "$RUNNER" '^python_with_module\(\) \{' "runner can select a Pyth
 assert_contains "$RUNNER" 'python=\$\(python_with_module pyatspi\)' "runner uses a pyatspi-capable Python for AT-SPI probes"
 assert_contains "$RUNNER" '"\$python" "\$POST_PROJECT_OPEN_PROBE"' "post-open setup probe escapes uvx Python when needed"
 assert_contains "$RUNNER" '"\$python" "\$POST_OPEN_RUNTIME_DISPLAY_PROBE"' "runtime/display probe escapes uvx Python when needed"
+assert_contains "$VALIDATOR" '"alice-desktop-post-open-runtime-display-accessibility-evidence"' "validator requires targetStarter for runtime/display post-open setup"
+assert_contains "$RUNNER" 'target_starter_display_name=\$\{target_fields\[0\]:\?\}' "runner fails closed when runtime/display targetStarter display name is missing"
+assert_contains "$RUNNER" 'target_starter_repo_path=\$\{target_fields\[1\]:\?\}' "runner fails closed when runtime/display targetStarter repository path is missing"
 
 evidence_dir="$tmp_root/no-xvfb-evidence"
 ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$evidence_dir" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
