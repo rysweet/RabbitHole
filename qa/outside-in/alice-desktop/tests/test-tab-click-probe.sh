@@ -142,11 +142,14 @@ def load_probe(path):
     return module
 
 
-def make_tab(name, selected=False):
+def make_tab(name, selected=False, click_success=None):
     states = {"enabled", "visible", "showing"}
     if selected:
         states.add("selected")
-    return FakeNode(name, "toggle button", states=states)
+    actions = {}
+    if click_success is not None:
+        actions["click"] = lambda: click_success
+    return FakeNode(name, "toggle button", actions=actions, states=states)
 
 
 def make_fixture(
@@ -155,6 +158,7 @@ def make_fixture(
     target_action=True,
     target_parent_selection=True,
     hidden_target_outside_starters=False,
+    starters_tab_click_success=True,
 ):
     counters = {"wonderland": 0, "africa": 0, "ok": 0}
     app = FakeNode("", "application", process_id=2468)
@@ -202,7 +206,7 @@ def make_fixture(
         "frame",
         children=[
             make_tab("Blank Slates"),
-            make_tab("Starters", selected=True),
+            make_tab("Starters", selected=True, click_success=starters_tab_click_success),
             make_tab("My Projects"),
             make_tab("Recent"),
             make_tab("File System"),
@@ -265,6 +269,8 @@ if success.get("openedStarter") != {
     raise AssertionError(f"openedStarter must record Africa Full, got {success.get('openedStarter')!r}")
 if success.get("projectOpenObserved") is not True:
     raise AssertionError("opened target evidence must still require projectOpenObserved=true")
+if success.get("projectOpenAttempt", {}).get("startersTabClick", {}).get("success") is not True:
+    raise AssertionError("target starter opening must confirm Starters tab activation before target search")
 if success_counters["wonderland"] != 0:
     raise AssertionError("probe must not click/open the first starter when it is not Africa Full")
 if success_counters["africa"] != 1:
@@ -290,6 +296,29 @@ if absent.get("targetStarterOpenAttempted") is not False:
 if absent_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when only a non-active/hidden Africa Full node was observed")
 assert_blocker_shape(absent)
+
+tab_blocked_counters = make_fixture(
+    active_starter_names=[TARGET_DISPLAY_NAME],
+    target_action=True,
+    target_parent_selection=True,
+    starters_tab_click_success=False,
+)
+tab_blocked = probe.probe_tab_click(2468)
+if tab_blocked.get("evidenceStatus") != "blocked":
+    raise AssertionError(f"expected evidenceStatus=blocked for Starters tab activation failure, got {tab_blocked.get('evidenceStatus')!r}")
+if tab_blocked.get("blocker") != "target-starter-tab-activation-failed":
+    raise AssertionError(f"expected target-starter-tab-activation-failed blocker, got {tab_blocked.get('blocker')!r}")
+if tab_blocked.get("targetStarterObserved") is not None:
+    raise AssertionError("targetStarterObserved must remain empty when Starters tab activation fails")
+if tab_blocked.get("targetStarterSelected") is not False:
+    raise AssertionError("targetStarterSelected must be false when Starters tab activation fails")
+if tab_blocked.get("targetStarterOpenAttempted") is not False:
+    raise AssertionError("OK/Open must not be attempted when Starters tab activation fails")
+if tab_blocked_counters["africa"] != 0:
+    raise AssertionError("probe must not select Africa Full when Starters tab activation fails")
+if tab_blocked_counters["ok"] != 0:
+    raise AssertionError("probe must not click OK/Open when Starters tab activation fails")
+assert_blocker_shape(tab_blocked)
 
 blocked_counters = make_fixture(
     active_starter_names=[TARGET_DISPLAY_NAME],
