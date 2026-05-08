@@ -400,9 +400,9 @@ the same focused Maven command allowed by the QA smoke scenario:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
   -Dtest=org.alice.ide.uricontent.FileProjectLoaderTest \
   test
 ```
