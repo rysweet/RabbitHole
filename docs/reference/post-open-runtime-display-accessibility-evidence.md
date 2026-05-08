@@ -791,6 +791,10 @@ The minimum decision fields for accepting this blocker proof are:
 }
 ```
 
+The `unsupportedClaims` values above are an include-at-least set. A valid
+artifact may list additional unsupported claims, but it must not omit these
+three exclusions while pixel sampling remains blocked.
+
 If target selection is blocked, the same artifact uses
 `blocker=world-canvas-pixel-target-not-ready` and
 `prerequisiteTargetStatus=blocked` or `unavailable`. In both cases,
