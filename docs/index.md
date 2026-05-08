@@ -28,6 +28,7 @@ repository.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, claim boundaries, and world-canvas pixel target readiness contract.
+- [First-Lesson Live Procedure Target Observation](./reference/first-lesson-live-procedure-target-observation.md) - planned live desktop shard contract for opening the first-lesson starter through Select Project and observing or blocking the procedure/code-editor target.
 - [First-Lesson Procedure/Edit Seam](./reference/first-lesson-procedure-edit-seam.md) - narrow executable proof that chains deterministic object placement into AST-level procedure editing.
 - [Run the First-Lesson Procedure/Edit Handoff Proof](./howto/run-first-lesson-procedure-edit-handoff.md) - how to run the focused Maven proof and QA command smoke for the procedure/edit handoff.
 - [Tutorial: Trace the First-Lesson Procedure/Edit Seam](./tutorials/trace-first-lesson-procedure-edit-seam.md) - guided review of asserted placement evidence, procedure-edit artifacts, and strict evidence boundaries.
@@ -52,9 +53,9 @@ repository.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
 - [Tutorial: Characterize ModelResourceExporter bounding-box state](./tutorials/model-resource-exporter-bounding-box-state.md) - guided example for protecting the intentional stateful XML bounding-box behavior.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
-- [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments.
-- [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice.
-- [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage without broadening decoder claims.
+- [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments and the argument-bearing explicit `this.method(label: value, ...)` fail-fast boundary.
+- [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice and named argument-bearing boundary.
+- [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage and unsupported-neighbor assertions without broadening decoder claims.
 
 ## Formal specification lane
 

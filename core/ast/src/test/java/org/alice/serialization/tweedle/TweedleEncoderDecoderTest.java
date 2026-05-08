@@ -1383,13 +1383,37 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithArgumentBearingExplicitThisMethodCallReportsUnsupportedBoundary() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              void caller() { this.helper(value: 1); }
+              void helper(WholeNumber value) { }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("argument-bearing explicit this method calls"));
+    assertTrue(thrown.getMessage().contains("caller.this.helper"));
+  }
+
+  @Test
   public void zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall() {
-    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
         class SyntheticType {
           void caller() { this.helper(value: 1); }
           void helper(WholeNumber value) { }
         }
-        """, "this.helper");
+        """, "caller.this.helper");
+  }
+
+  @Test
+  public void argumentBearingExplicitThisMethodCallReportsBoundaryBeforeMethodLookup() {
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.missing(value: 1); }
+        }
+        """, "caller.this.missing");
   }
 
   @Test
@@ -1492,7 +1516,7 @@ public class TweedleEncoderDecoderTest {
 
   @Test
   public void zeroArgumentThisMethodCallInConstructorDecodeRejectsArgumentBearingCall() {
-    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
         class SyntheticType {
           SyntheticType() { this.helper(value: 1); }
           void helper(WholeNumber value) { }
@@ -1924,6 +1948,15 @@ public class TweedleEncoderDecoderTest {
         () -> coder.decode(source));
 
     assertTrue(thrown.getMessage().contains("zero-argument this-method calls"));
+    assertTrue(thrown.getMessage().contains(expectedDetail));
+  }
+
+  private void assertUnsupportedArgumentBearingExplicitThisMethodCallDecode(String source, String expectedDetail) {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode(source));
+
+    assertTrue(thrown.getMessage().contains("argument-bearing explicit this method calls"));
     assertTrue(thrown.getMessage().contains(expectedDetail));
   }
 

@@ -1,9 +1,10 @@
 # Desktop Procedure Edit and Save Automation
 
-This reference describes the desktop-side automation path for editing a procedure and
-then saving the project. It names the checked-in hook points, the bounded
-Save proof for a real dialog/write path, and the behavior that remains outside this
-slice.
+This reference describes the desktop-side automation path for observing a
+procedure target, editing a procedure, and then saving the project. It names the
+checked-in hook points, the live first-lesson procedure target
+observation shard, the bounded Save proof for a real dialog/write path, and the
+behavior that remains outside this slice.
 
 ## Current checked-in hook points
 
@@ -23,24 +24,52 @@ desktop automation runner one stable place to ask, "which real Croquet operation
 selects this procedure tab?" The helper refuses to fire the operation until a
 live Alice IDE is active, because the tab change creates the desktop code view.
 
-## Proposed next hooks
+## Live target observation and proposed next hooks
 
-Add these in order, each with a focused test before changing behavior:
+The live target observation shard owns the smallest unevidenced transition after
+Select Project opens the configured first-lesson flow starter:
 
-1. Add a `ProcedureTabSelection` live-desktop test that starts Alice with a
-   display, obtains `StageIDE.getActiveInstance().getDocumentFrame()
-   .getDeclarationsEditorComposite()`, calls the guarded procedure selection
-   helper with a Croquet `UserActivity`, and observes
-   `ProcedureTabSelection.getSelectedProcedure(...)`.
-2. Add a narrow code-editor observation helper that accepts the active
-   `DeclarationsEditorComposite` and reports the selected `CodeComposite` and
-   `CodeEditor.getCode()` value. This should prove the procedure tab is active,
-   not that any visual layout is correct.
-3. Replace the implementation edit command with a desktop code-editor edit hook
+```text
+Select Project opened first-lesson project
+  -> live Alice desktop post-open
+  -> procedure tab or code-editor target for scene.eatmeFirstLesson observable
+```
+
+The runner contract is documented in [First-Lesson Live Procedure Target
+Observation](./first-lesson-live-procedure-target-observation.md). It is now a
+supported read-only scenario and may be used only as observed-or-blocked target
+evidence for the next desktop edit shard.
+
+The command shape is:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-first-lesson-live-procedure-target-observation \
+  --evidence-dir /tmp/alice-first-lesson-live-procedure-target \
+  --timeout-seconds 300
+```
+
+The decision artifact is `first-lesson-live-procedure-target-observation.json`.
+`status=observed` means a stable target was found for the next desktop edit
+shard. `status=blocked` means the artifact names the exact missing target or
+display/accessibility prerequisite. In both cases the shard is read-only: it
+does not mutate the procedure, save the project, assert rendering correctness,
+assess learner work, or claim full first-lesson completion.
+
+Add the remaining hooks in order, each with a focused test before changing
+behavior:
+
+1. Add or strengthen a narrow code-editor observation helper that accepts the
+   active `DeclarationsEditorComposite` and reports the selected `CodeComposite`
+   and `CodeEditor.getCode()` value. This should prove the procedure tab is
+   active, not that any visual layout is correct.
+2. Replace the implementation edit command with a desktop code-editor edit hook
    only after the code editor exposes a real command for the intended edit. The
    hook should invoke that command; it should not call the implementation command
    a desktop edit.
-4. Use `StageIdeSaveMenuDoClickToWriteProofTest` as the bounded Save proof shard
+3. Use `StageIdeSaveMenuDoClickToWriteProofTest` as the bounded Save proof shard
     for menu activation, Swing chooser approval, and `.a3p` write evidence. Keep
     procedure-edit automation separate from this Save proof.
 
@@ -115,12 +144,27 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
+The first-lesson live procedure target observation shard is for reviews about
+the live desktop target after Select Project opens the configured first-lesson
+flow starter. Its runner command is:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-first-lesson-live-procedure-target-observation \
+  --evidence-dir /tmp/alice-first-lesson-live-procedure-target \
+  --timeout-seconds 300
+```
+
+Use its evidence only for the procedure tab/code-editor target observation seam;
+do not cite it as edit, Save, rendering, learner assessment, or full
+first-lesson completion proof.
+
 ## Still unproven
 
 This slice does not prove any of the following:
 
-- A live Alice desktop can open `scene.eatmeFirstLesson` through the guarded
-  selection helper.
 - The code editor can perform the requested procedure edit through a desktop
   command.
 - Save dialogs can be controlled for Save As, backup saves, or unwritable files.

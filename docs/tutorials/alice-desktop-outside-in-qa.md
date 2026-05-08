@@ -1,6 +1,6 @@
 # Alice desktop outside-in QA tutorial
 
-This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review the target-specific Select Project proof, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
+This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review the target-specific Select Project proof, review the first-lesson procedure target observation, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
 
 ## What you will do
 
@@ -10,10 +10,11 @@ You will:
 2. List the executable scenario catalog.
 3. Run Alice under Xvfb for the launch workflow.
 4. Review the target-specific Select Project `Africa Full` proof.
-5. Review post-open runtime/display accessibility evidence.
-6. Generate a save/load evidence checklist.
-7. Review the learner-world setup/open/save boundary.
-8. Add user-visible evidence to the generated run directory.
+5. Review the first-lesson live procedure target observation.
+6. Review post-open runtime/display accessibility evidence.
+7. Generate a save/load evidence checklist.
+8. Review the learner-world setup/open/save boundary.
+9. Add user-visible evidence to the generated run directory.
 
 ## Before you start
 
@@ -49,6 +50,7 @@ Confirm the output includes the scenario IDs used later in this tutorial:
 ```text
 alice-desktop-launch
 alice-desktop-select-project-tab-click-exec
+alice-desktop-first-lesson-live-procedure-target-observation
 alice-desktop-post-open-runtime-display-accessibility-evidence
 alice-desktop-save-load
 ```
@@ -111,7 +113,40 @@ screenshot.png or screenshot.xwd
 
 Accept this tutorial step only when `tab-click-observation.json` records `evidenceStatus=opened`, exact `Africa Full` `targetStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, and `projectOpenObserved=true`. A blocked artifact is still useful when it preserves `blocker` and `blockerDetail` and provides one structured `nextBlocker` with the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. Do not convert either result into a full Alice UI automation, visible rendering, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher, or unrelated decoder claim.
 
-## Step 5: Review post-open runtime/display accessibility evidence
+## Step 5: Review the first-lesson live procedure target
+
+Run the read-only first-lesson procedure target observation:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-first-lesson-live-procedure-target-observation \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs \
+  --timeout-seconds 300
+```
+
+Open the generated run directory and review:
+
+```text
+first-lesson-live-procedure-target-observation.json
+status.txt
+tab-click-observation.json
+post-project-open-observation.json
+x-window-inventory.json
+launch.log
+xvfb.log
+```
+
+Accept this tutorial step only when the decision artifact records
+`status=observed`, `blocker=none`, and an `observedTarget` for
+`scene.eatmeFirstLesson` with a non-empty stable `automationPath`. If it records
+`status=blocked`, keep it as the next-blocker artifact for the missing procedure
+tab/code-editor target. Do not convert either result into a desktop edit, Save,
+rendering, learner assessment, grading, creative assessment, or full
+first-lesson completion claim.
+
+## Step 6: Review post-open runtime/display accessibility evidence
 
 Run the bounded post-open scenario:
 
@@ -150,7 +185,7 @@ sed -n '1,120p' <run-directory>/status.txt
 
 Accept this tutorial step only when `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. `runtime-display-accessibility-status.txt` is probe-local; use final `status.txt` for the overall pass/block decision. Use `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` to understand the supporting project-open and controlled-display setup. If the artifact or final status records a blocker, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
-## Step 6: Generate a save/load checklist
+## Step 7: Generate a save/load checklist
 
 Run:
 
@@ -167,7 +202,7 @@ Open:
 qa/outside-in/alice-desktop/evidence/tutorial-runs/alice-desktop-save-load/<timestamp>/manual-evidence-checklist.txt
 ```
 
-## Step 7: Perform the save/load workflow
+## Step 8: Perform the save/load workflow
 
 Follow the checklist in Alice:
 
@@ -191,7 +226,7 @@ review-notes.txt
 
 The save/load scenario is complete only after the workflow has been performed in Alice and the required evidence, including `review-notes.txt`, has been added to the run directory.
 
-## Step 8: Review the learner-world boundary
+## Step 9: Review the learner-world boundary
 
 RabbitHole learner-world QA currently supports setup/open/save evidence review
 only for this lane.

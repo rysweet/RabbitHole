@@ -13,9 +13,13 @@ SWING_WIDGET_PROBE="$SCRIPT_DIR/swing-widget-probe.py"
 TAB_CLICK_PROBE="$SCRIPT_DIR/tab-click-probe.py"
 POST_PROJECT_OPEN_PROBE="$SCRIPT_DIR/post-project-open-probe.py"
 POST_OPEN_RUNTIME_DISPLAY_PROBE="$SCRIPT_DIR/post-open-runtime-display-probe.py"
+FIRST_LESSON_PROCEDURE_TARGET_PROBE="$SCRIPT_DIR/first-lesson-procedure-target-probe.py"
 POST_OPEN_RUNTIME_DISPLAY_SCENARIO=alice-desktop-post-open-runtime-display-accessibility-evidence
 POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
 VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER=visible-rendering-pixel-target-blocker.json
+FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
+FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
+FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
 
 usage() {
   cat <<'EOF'
@@ -1456,6 +1460,125 @@ write_post_open_runtime_display_probe() {
     --automation-mode "$automation_mode"
 }
 
+write_first_lesson_procedure_target_blocker() {
+  local run_dir=$1
+  local scenario_id=$2
+  local automation_mode=$3
+  local blocker=$4
+  local blocker_detail=$5
+  local target_display_name=${6:-}
+  local target_repo_path=${7:-}
+  local opened_via_select_project=${8:-false}
+  local post_open_window_observed=${9:-false}
+
+  FIRST_LESSON_PROCEDURE_TARGET_SCENARIO_ID="$scenario_id" \
+  FIRST_LESSON_PROCEDURE_TARGET_AUTOMATION_MODE="$automation_mode" \
+  FIRST_LESSON_PROCEDURE_TARGET_BLOCKER="$blocker" \
+  FIRST_LESSON_PROCEDURE_TARGET_BLOCKER_DETAIL="$blocker_detail" \
+  FIRST_LESSON_PROCEDURE_TARGET_DISPLAY_NAME="$target_display_name" \
+  FIRST_LESSON_PROCEDURE_TARGET_REPO_PATH="$target_repo_path" \
+  FIRST_LESSON_PROCEDURE_TARGET_OPENED="$opened_via_select_project" \
+  FIRST_LESSON_PROCEDURE_TARGET_POST_OPEN="$post_open_window_observed" \
+  FIRST_LESSON_PROCEDURE_TARGET_WORKFLOW="first-lesson-live-procedure-target-observation" \
+  FIRST_LESSON_PROCEDURE_TARGET_SEAM="live-first-lesson-project-open-to-procedure-target-observable" \
+  FIRST_LESSON_PROCEDURE_SELECTOR="$FIRST_LESSON_PROCEDURE_SELECTOR" \
+  python3 - "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+output_path = Path(sys.argv[1])
+if output_path.exists() and output_path.is_symlink():
+    print(f"refusing to overwrite symlink artifact: {output_path}", file=sys.stderr)
+    sys.exit(2)
+
+payload = {
+    "schemaVersion": "eatme.first-lesson-live-procedure-target-observation/v1",
+    "scenario": os.environ["FIRST_LESSON_PROCEDURE_TARGET_SCENARIO_ID"],
+    "workflow": os.environ["FIRST_LESSON_PROCEDURE_TARGET_WORKFLOW"],
+    "automationMode": os.environ["FIRST_LESSON_PROCEDURE_TARGET_AUTOMATION_MODE"],
+    "status": "blocked",
+    "seam": os.environ["FIRST_LESSON_PROCEDURE_TARGET_SEAM"],
+    "project": {
+        "targetStarterDisplayName": os.environ.get("FIRST_LESSON_PROCEDURE_TARGET_DISPLAY_NAME", ""),
+        "targetStarterRepositoryPath": os.environ.get("FIRST_LESSON_PROCEDURE_TARGET_REPO_PATH", ""),
+        "openedViaSelectProject": os.environ.get("FIRST_LESSON_PROCEDURE_TARGET_OPENED") == "true",
+        "postOpenWindowObserved": os.environ.get("FIRST_LESSON_PROCEDURE_TARGET_POST_OPEN") == "true",
+    },
+    "requiredTarget": {
+        "procedureSelector": os.environ["FIRST_LESSON_PROCEDURE_SELECTOR"],
+        "targetKind": "procedure-tab-or-code-editor",
+        "minimumStableAutomationTarget": "reacquirable live desktop procedure tab or code-editor target",
+    },
+    "observedTarget": None,
+    "blocker": os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER"],
+    "blockerDetail": os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER_DETAIL"],
+    "downstreamBlockedStep": "desktop-procedure-edit",
+    "outOfScope": [
+        "desktop procedure edit mutation",
+        "Save",
+        "rendering correctness",
+        "learner assessment",
+        "full first-lesson completion",
+    ],
+}
+
+output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+}
+
+write_first_lesson_procedure_target_status() {
+  local run_dir=$1
+  local scenario_id=$2
+  local automation_mode=$3
+  local outcome=$4
+  local status=$5
+  local blocker=$6
+  local display=${7:-}
+  local timeout_seconds=${8:-}
+
+  {
+    printf 'scenario=%s\n' "$scenario_id"
+    printf 'automationMode=%s\n' "$automation_mode"
+    if [ -n "$display" ]; then
+      printf 'display=%s\n' "$display"
+    fi
+    printf 'outcome=%s\n' "$outcome"
+    printf 'procedureTargetObservationEvidence=%s\n' "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT"
+    printf 'procedureTargetObservationStatus=%s\n' "$status"
+    printf 'procedureTargetObservationBlocker=%s\n' "$blocker"
+    printf 'downstreamBlockedStep=desktop-procedure-edit\n'
+    if [ -n "$timeout_seconds" ]; then
+      printf 'timeoutSeconds=%s\n' "$timeout_seconds"
+    fi
+  } > "$run_dir/status.txt"
+}
+
+write_first_lesson_procedure_target_probe() {
+  local inventory_path=$1
+  local tab_click_path=$2
+  local post_open_path=$3
+  local output_path=$4
+  local scenario_id=$5
+  local automation_mode=$6
+  local target_display_name=$7
+  local target_repo_path=$8
+  local python
+
+  python=$(python_with_module pyatspi)
+  "$python" "$FIRST_LESSON_PROCEDURE_TARGET_PROBE" \
+    --inventory "$inventory_path" \
+    --tab-click-observation "$tab_click_path" \
+    --post-open-window-observation "$post_open_path" \
+    --output "$output_path" \
+    --scenario-id "$scenario_id" \
+    --automation-mode "$automation_mode" \
+    --target-starter-display-name "$target_display_name" \
+    --target-starter-repository-path "$target_repo_path" \
+    --procedure-selector "$FIRST_LESSON_PROCEDURE_SELECTOR"
+}
+
 select_display() {
   if [ -n "${ALICE_QA_DISPLAY:-}" ]; then
     printf '%s\n' "$ALICE_QA_DISPLAY"
@@ -1568,12 +1691,12 @@ run_xvfb_real_alice() {
   automation_mode=${automation_fields[4]}
   mapfile -d '' -t argv < <(json_list_nul "$scenario_json" "automation.argv")
   case "$scenario_id" in
-    alice-desktop-select-project-*|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO")
+    alice-desktop-select-project-*|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO"|"$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO")
       needs_select_project_wait=1
       ;;
   esac
   case "$scenario_id" in
-    alice-desktop-select-project-tab-click-exec|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO")
+    alice-desktop-select-project-tab-click-exec|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO"|"$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO")
       needs_tab_click_probe=1
       mapfile -t target_fields < <(target_starter_fields "$scenario_json")
       target_starter_display_name=${target_fields[0]:?}
@@ -1640,6 +1763,27 @@ run_xvfb_real_alice() {
         "" \
         "$run_timeout"
     fi
+    if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+      write_first_lesson_procedure_target_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        display-prerequisite-unavailable \
+        "Xvfb executable is not available on PATH; no live desktop display exists for first-lesson procedure target observation." \
+        "$target_starter_display_name" \
+        "$target_starter_repo_path" \
+        false \
+        false
+      write_first_lesson_procedure_target_status \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        blocked \
+        blocked \
+        display-prerequisite-unavailable \
+        "" \
+        "$run_timeout"
+    fi
     printf 'Xvfb is not available; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -1685,6 +1829,27 @@ run_xvfb_real_alice() {
         "$automation_mode" \
         display-allocation-unavailable \
         "No free X display could be selected; no display exists for post-open runtime/display accessibility evidence." \
+        "" \
+        "$run_timeout"
+    fi
+    if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+      write_first_lesson_procedure_target_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        display-prerequisite-unavailable \
+        "No free X display could be selected; no live desktop display exists for first-lesson procedure target observation." \
+        "$target_starter_display_name" \
+        "$target_starter_repo_path" \
+        false \
+        false
+      write_first_lesson_procedure_target_status \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        blocked \
+        blocked \
+        display-prerequisite-unavailable \
         "" \
         "$run_timeout"
     fi
@@ -1760,6 +1925,18 @@ JSON
         "$root_directory_prep_blocker" \
         "Alice rootDirectory launch preparation failed before post-open runtime/display accessibility evidence could be collected."
     fi
+    if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+      write_first_lesson_procedure_target_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        display-prerequisite-unavailable \
+        "Alice rootDirectory launch preparation failed before first-lesson procedure target observation could be collected." \
+        "$target_starter_display_name" \
+        "$target_starter_repo_path" \
+        false \
+        false
+    fi
     {
       printf 'scenario=%s\n' "$scenario_id"
       printf 'automationMode=%s\n' "$automation_mode"
@@ -1782,6 +1959,13 @@ JSON
         printf 'visibleRenderingPixelTargetStatus=blocked\n'
         printf 'visibleRenderingPixelTargetArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
         printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
+      fi
+      if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+        printf 'outcome=blocked\n'
+        printf 'procedureTargetObservationEvidence=%s\n' "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT"
+        printf 'procedureTargetObservationStatus=blocked\n'
+        printf 'procedureTargetObservationBlocker=display-prerequisite-unavailable\n'
+        printf 'downstreamBlockedStep=desktop-procedure-edit\n'
       fi
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     } > "$run_dir/status.txt"
@@ -1839,6 +2023,27 @@ JSON
           "$automation_mode" \
           license-acceptance-prep-failed \
           "Alice first-run license acceptance prep failed before post-open runtime/display accessibility evidence could be collected." \
+          "$display" \
+          "$run_timeout"
+      fi
+      if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+        write_first_lesson_procedure_target_blocker \
+          "$run_dir" \
+          "$scenario_id" \
+          "$automation_mode" \
+          display-prerequisite-unavailable \
+          "Alice first-run license acceptance prep failed before first-lesson procedure target observation could be collected." \
+          "$target_starter_display_name" \
+          "$target_starter_repo_path" \
+          false \
+          false
+        write_first_lesson_procedure_target_status \
+          "$run_dir" \
+          "$scenario_id" \
+          "$automation_mode" \
+          blocked \
+          blocked \
+          display-prerequisite-unavailable \
           "$display" \
           "$run_timeout"
       fi
@@ -1919,6 +2124,27 @@ JSON
         "$automation_mode" \
         x-server-start-failed \
         "Xvfb exited before Alice launch; post-open runtime/display accessibility evidence could not be collected." \
+        "$display" \
+        "$run_timeout"
+    fi
+    if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+      write_first_lesson_procedure_target_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        display-prerequisite-unavailable \
+        "Xvfb exited before Alice launch; first-lesson procedure target observation could not be collected." \
+        "$target_starter_display_name" \
+        "$target_starter_repo_path" \
+        false \
+        false
+      write_first_lesson_procedure_target_status \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        blocked \
+        blocked \
+        display-prerequisite-unavailable \
         "$display" \
         "$run_timeout"
     fi
@@ -2045,13 +2271,28 @@ JSON
   fi
   local post_open_status=not-requested post_open_blocker=not-requested
   if [ "$scenario_id" = alice-desktop-post-project-open-window-state ] \
-      || [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+      || [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] \
+      || [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
     write_post_project_open_probe \
       "$run_dir/x-window-inventory.json" \
       "$run_dir/tab-click-observation.json" \
       "$run_dir/post-project-open-observation.json"
     post_open_status=$(inventory_json_field "$run_dir/post-project-open-observation.json" status)
     post_open_blocker=$(inventory_json_field "$run_dir/post-project-open-observation.json" blocker)
+  fi
+  local procedure_target_status=not-requested procedure_target_blocker=not-requested
+  if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+    write_first_lesson_procedure_target_probe \
+      "$run_dir/x-window-inventory.json" \
+      "$run_dir/tab-click-observation.json" \
+      "$run_dir/post-project-open-observation.json" \
+      "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" \
+      "$scenario_id" \
+      "$automation_mode" \
+      "$target_starter_display_name" \
+      "$target_starter_repo_path"
+    procedure_target_status=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" status)
+    procedure_target_blocker=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" blocker)
   fi
   local runtime_display_status=not-requested runtime_display_blocker=not-requested
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
@@ -2142,6 +2383,14 @@ JSON
     fi
     printf 'runtimeDisplayAccessibilityStatus=%s\n' "$runtime_display_status"
     printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$runtime_display_blocker"
+    if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+      printf 'procedureTargetObservationEvidence=%s\n' "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT"
+    else
+      printf 'procedureTargetObservationEvidence=not-requested\n'
+    fi
+    printf 'procedureTargetObservationStatus=%s\n' "$procedure_target_status"
+    printf 'procedureTargetObservationBlocker=%s\n' "$procedure_target_blocker"
+    printf 'downstreamBlockedStep=desktop-procedure-edit\n'
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
@@ -2277,6 +2526,19 @@ JSON
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi
+  if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
+    scenario_outcome=blocked
+    if [ "$observation_status" = observed ] && [ "$procedure_target_status" = observed ]; then
+      scenario_outcome=passed
+    fi
+    {
+      cat "$run_dir/status.txt"
+      printf 'outcome=%s\n' "$scenario_outcome"
+      printf 'controlledDisplayPixelStatus=%s\n' "$observation_status"
+      printf 'controlledDisplayPixelBlocker=%s\n' "$observation_blocker"
+    } > "$run_dir/status.txt.tmp"
+    mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
+  fi
 
   if [ "$screenshot_status" != screenshot-captured ]; then
     printf 'Screenshot capture failed; see %s/screenshot.log\n' "$run_dir" >&2
@@ -2300,6 +2562,10 @@ JSON
   fi
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] && [ "$runtime_display_status" != observed ]; then
     printf 'Post-open runtime/display accessibility evidence blocked: %s; see %s/%s\n' "$runtime_display_blocker" "$run_dir" "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" >&2
+    return 2
+  fi
+  if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ] && [ "$procedure_target_status" != observed ]; then
+    printf 'First-lesson procedure target observation blocked: %s; see %s/%s\n' "$procedure_target_blocker" "$run_dir" "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" >&2
     return 2
   fi
 

@@ -1,12 +1,14 @@
-# Zero-Argument This-Method Call Decode Feature Contract
+# Zero-Argument This-Method Call Decode and Argument-Bearing Boundary
 
-This page defines the narrow Tweedle AST decoder feature contract:
+This page defines the narrow Tweedle AST decoder feature contract for
 `this.someMethod()` where `someMethod` is a zero-argument `UserMethod` declared
-on the same decoded `NamedUserType`.
+on the same decoded `NamedUserType`, and the adjacent fail-fast boundary for
+argument-bearing explicit `this.method(label: value, ...)` calls.
 
-The feature is limited to same-type calls on explicit `this`. It is not a
-general Tweedle method-resolution system, and this document should not be read
-as a claim that broader method-call decode already exists.
+The feature is limited to same-type zero-argument calls on explicit `this`.
+Argument-bearing explicit `this` calls are intentionally unsupported. This is
+not a general Tweedle method-resolution system, and this document should not be
+read as a claim that broader method-call decode already exists.
 
 ## API behavior
 
@@ -57,7 +59,7 @@ unsupported-Tweedle archive behavior.
 
 | Tweedle shape | Reason it is unsupported |
 | --- | --- |
-| `this.helper(1);` | Argument-bearing calls are outside the slice. |
+| `this.helper(value: 1);` | Argument-bearing explicit `this` method calls intentionally fail fast. Current Tweedle argument syntax uses labels. |
 | `this.missing();` | Unknown same-type methods are not invented or late-bound. |
 | `other.helper();` | Non-`this` targets are outside the slice. |
 | `helper();` | Implicit targets are outside the slice. |
@@ -71,6 +73,53 @@ argument-bearing `this` calls, unknown same-type methods, and non-`this`
 targets. They also protect selected adjacent non-goals that currently route
 through this decoder boundary, including optional-parameter targets, duplicate
 zero-argument method names, static targets, chained calls, and implicit targets.
+
+## Argument-bearing explicit this boundary
+
+Argument-bearing explicit `this` calls are the named unsupported shard next to
+the supported zero-argument call form. Current Tweedle represents this shape
+with labeled arguments such as `this.method(value: 1)`. The decoder rejects this
+syntax before decoding the argument expressions or attempting semantic method
+binding.
+
+```java
+class Program {
+  void helper(WholeNumber value) {
+  }
+
+  void run() {
+    this.helper(value: 1);
+  }
+}
+```
+
+Direct calls to `TweedleEncoderDecoder.decode(String source)` throw
+`UnsupportedTweedleDecodeException`. The diagnostic must contain:
+
+```text
+argument-bearing explicit this method calls
+```
+
+That message is the public boundary label for this shard. It is intentionally
+generic: it does not log the argument values, source file path, full project
+source, or user content.
+
+This boundary does not support:
+
+| Non-goal | Reason |
+| --- | --- |
+| Argument-expression decode | No argument AST is produced for this unsupported call. |
+| Labeled or optional arguments | Parameter binding is outside this slice. |
+| Overload resolution | The decoder does not choose among methods by argument shape. |
+| Positional arguments | Current Tweedle argument syntax uses labels; this slice does not add positional-argument support. |
+| Implicit receivers | `helper(value: 1)` remains outside this explicit-`this` boundary. |
+| Non-`this` receivers | `other.helper(value: 1)` remains outside this boundary. |
+| Chained calls | `this.helper(value: 1).again()` remains outside this boundary. |
+| Static-style calls | `Program.helper(value: 1)` remains outside this boundary. |
+
+Archive readers preserve the existing unsupported decode behavior: unsupported
+manifest-declared Tweedle fails through the archive reader's fail-closed path
+rather than becoming partial player decode support.
 
 ## Configuration
 
@@ -107,16 +156,24 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am \
 
 ## Characterization tests
 
-The focused positive test uses a name that states the narrow behavior:
+The focused positive test uses a name that states the narrow supported behavior:
 
 ```text
 zeroArgumentThisMethodCallDecodeCreatesMethodInvocation
 ```
 
-Negative tests cover adjacent unsupported syntax without implying general
-method-call support:
+The selected argument-bearing explicit `this` boundary uses a name that states
+the unsupported shard:
 
 ```text
+decodeClassWithArgumentBearingExplicitThisMethodCallReportsUnsupportedBoundary
+```
+
+Additional negative tests cover adjacent unsupported syntax without implying
+general method-call support:
+
+```text
+decodeClassWithArgumentBearingExplicitThisMethodCallReportsUnsupportedBoundary
 zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall
 zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod
 zeroArgumentThisMethodCallDecodeRejectsUnknownMethod
@@ -142,8 +199,9 @@ core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest
 
 This feature must not decode general Tweedle calls, inherited calls, static
 calls, object construction calls, implicit receiver calls, external targets,
-chained calls, overloads, optional arguments, named arguments, or runtime
+chained calls, overloads, optional arguments, labeled arguments, or runtime
 dispatch.
 
 Keep new docs, tests, and exception messages scoped to zero-argument
-`this.method()` decode.
+`this.method()` decode and the named unsupported boundary for argument-bearing
+explicit `this.method(label: value, ...)` calls.

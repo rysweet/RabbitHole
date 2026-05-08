@@ -38,12 +38,14 @@ TARGET_STARTER_SCENARIO_IDS = {
     "alice-desktop-select-project-tab-click-exec",
     "alice-desktop-post-project-open-window-state",
     "alice-desktop-post-open-runtime-display-accessibility-evidence",
+    "alice-desktop-first-lesson-live-procedure-target-observation",
 }
 workflow_values = {
     "archive-fixture-smoke",
     "exported-project-smoke",
     "failure-path-smoke",
     "file-loader-smoke",
+    "first-lesson-live-procedure-target-observation",
     "future-ui-smoke",
     "instructor-student-setup",
     "launch",

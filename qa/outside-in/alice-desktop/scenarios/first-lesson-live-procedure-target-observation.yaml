@@ -1,0 +1,70 @@
+id: alice-desktop-first-lesson-live-procedure-target-observation
+title: First-lesson live procedure target observation
+workflow: first-lesson-live-procedure-target-observation
+automationMode: xvfb-real-alice
+targetStarter:
+  displayName: Africa Full
+  repositoryPath: core/resources/src/application/resources/starter-projects/AfricaFull.a3p
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Controlled QA license acceptance is explicitly enabled with an isolated java.util.prefs.userRoot when first-run license dialogs would otherwise block automation.
+  - Xvfb is available for a controlled display session.
+  - python3-pyatspi is installed.
+  - libatk-wrapper-java is installed at /usr/share/java/java-atk-wrapper.jar.
+  - The AT-SPI2 accessibility bus is running for the current user session.
+  - The current Select Project shard opens the configured first-lesson flow starter through the existing AT-SPI path before this observation begins.
+userActions:
+  - Launch Alice with the existing xvfb-real-alice AT-SPI Maven argv.
+  - Reuse the supported Select Project path to select and open the configured first-lesson flow starter.
+  - After tab-click-observation.json records the configured target starter opened and post-project-open-observation.json records postOpenWindowObserved=true, run the read-only first-lesson procedure target probe.
+  - Observe only whether the live desktop exposes a stable procedure tab or code-editor target for scene.eatmeFirstLesson.
+expectedOutcomes:
+  - status.txt records procedureTargetObservationEvidence=first-lesson-live-procedure-target-observation.json.
+  - status.txt records procedureTargetObservationStatus and procedureTargetObservationBlocker.
+  - first-lesson-live-procedure-target-observation.json records seam=live-first-lesson-project-open-to-procedure-target-observable.
+  - first-lesson-live-procedure-target-observation.json records requiredTarget.procedureSelector=scene.eatmeFirstLesson and requiredTarget.targetKind=procedure-tab-or-code-editor.
+  - If status=observed, observedTarget names a stable procedure tab or code-editor automationPath for the next desktop edit shard.
+  - If status=blocked, blockerDetail names the exact missing display, Select Project, post-open, AT-SPI, or procedure target condition.
+  - The shard is observation-only and does not perform a desktop procedure edit, Save, rendering correctness check, learner assessment, grading, creative assessment, or full first-lesson completion.
+automation:
+  cwd: alice-ide
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -Dcheckstyle.skip
+    - -DskipTests
+    - compile
+    - exec:exec@alice-ide-atk
+  timeoutSeconds: 300
+  readyWaitSeconds: 60
+evidence:
+  required:
+    - status.txt recording scenario, automationMode, outcome, procedureTargetObservationEvidence, procedureTargetObservationStatus, procedureTargetObservationBlocker, and downstreamBlockedStep=desktop-procedure-edit.
+    - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
+    - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
+    - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry.
+    - tab-click-observation.json recording the configured targetStarter displayName Africa Full, targetStarter repositoryPath core/resources/src/application/resources/starter-projects/AfricaFull.a3p, evidenceStatus=opened, openedStarter matching the target, and projectOpenObserved=true.
+    - post-project-open-observation.json recording postOpenWindowObserved=true before procedure target observation.
+    - first-lesson-live-procedure-target-observation.json recording status, seam, project, requiredTarget, observedTarget or blockerDetail, downstreamBlockedStep, and outOfScope.
+    - Screenshot of the Alice desktop state for controlled-display context only, not rendering correctness.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the configured target starter cannot be opened through Select Project, write blocker=select-project-open-not-observed and do not claim procedure target observation.
+    - If the post-open Alice main window is not observed, write blocker=post-open-window-not-observed and do not claim procedure target observation.
+    - If AT-SPI or the ATK wrapper is unavailable, write blocker=at-spi-or-atk-unavailable with the exact prerequisite detail.
+    - If no stable procedure tab or code-editor target for scene.eatmeFirstLesson is found, write blocker=procedure-target-not-found or procedure-target-not-stable.
+    - Do not mutate the procedure, click a desktop edit control, Save, Run, assert rendering correctness, perform learner assessment, grading, creative assessment, or claim full first-lesson completion.
+supportingEvidence:
+  - alice-desktop-select-project-tab-click-exec
+  - alice-desktop-post-project-open-window-state
+  - alice-desktop-procedure-edit-seam-smoke
+  - alice-desktop-save-menu-dialog-write-proof
+  - alice-desktop-post-open-runtime-display-accessibility-evidence
+tags:
+  - first-lesson
+  - procedure-target
+  - observation-only
