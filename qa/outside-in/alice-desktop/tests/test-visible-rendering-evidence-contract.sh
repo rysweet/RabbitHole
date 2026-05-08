@@ -904,6 +904,28 @@ EOF
 
 bash -c '
   . "$1"
+  write_controlled_display_pixel_observation \
+    "$2" \
+    observed \
+    none \
+    "" \
+    ":99" \
+    true \
+    controlled-display-pixels-observed-rendering-not-asserted \
+    "" \
+    alice-window-found \
+    running \
+    screenshot-captured \
+    "$2/screenshot.png" \
+    /usr/bin/Xvfb \
+    import \
+    non-black-pixels \
+    "Screenshot is 640x480 with non-black pixel data." \
+    after-readiness-wait \
+    observed \
+    x-window-inventory.json \
+    2 \
+    "$2/post-open-runtime-display-accessibility-evidence.json"
   write_visible_rendering_pixel_target_blocker \
     "$2" \
     observed \
@@ -917,21 +939,34 @@ status=$?
 assert_success "$status" "runner can fail closed when multiple valid runtime/display targets are ambiguous"
 
 if [ "$status" -eq 0 ]; then
-  python3 - "$target_ambiguous_dir/$BLOCKER_ARTIFACT" <<'PY'
+  python3 - \
+    "$target_ambiguous_dir/$CONTROLLED_ARTIFACT" \
+    "$target_ambiguous_dir/$BLOCKER_ARTIFACT" \
+    >"$tmp_root/target-ambiguous-contract.out" \
+    2>"$tmp_root/target-ambiguous-contract.err" <<'PY'
 import json
 import sys
 
-blocker = json.load(open(sys.argv[1], encoding="utf-8"))
-target = blocker.get("worldCanvasPixelTarget") or {}
+controlled = json.load(open(sys.argv[1], encoding="utf-8"))
+blocker = json.load(open(sys.argv[2], encoding="utf-8"))
+
+for label, payload in (("controlled", controlled), ("blocker", blocker)):
+    target = payload.get("worldCanvasPixelTarget") or {}
+    if target.get("geometryStatus") != "ambiguous-candidates":
+        raise AssertionError(f"{label} target must preserve geometryStatus=ambiguous-candidates")
+    if target.get("identified") is not False:
+        raise AssertionError(f"{label} target must fail closed without identifying a target")
+    if target.get("status") != "blocked":
+        raise AssertionError(f"{label} target must remain blocked when multiple valid targets exist")
+    if target.get("runtimeDisplayCandidateCount") != 2:
+        raise AssertionError(f"{label} target must preserve candidate count")
 if blocker.get("geometryStatus") != "ambiguous-candidates":
     raise AssertionError("ambiguous blocker must use geometryStatus=ambiguous-candidates")
-if target.get("geometryStatus") != "ambiguous-candidates":
-    raise AssertionError("ambiguous target must preserve geometryStatus=ambiguous-candidates")
-if blocker.get("runtimeDisplayCandidateCount") != 2:
-    raise AssertionError("ambiguous blocker must preserve candidate count")
+if controlled.get("claim") != "controlled-display-pixels-observed-rendering-not-asserted":
+    raise AssertionError("controlled artifact may keep only screenshot-consistency claim")
 PY
   target_ambiguous_status=$?
-  assert_success "$target_ambiguous_status" "ambiguous target writer output preserves fail-closed geometry status"
+  assert_success "$target_ambiguous_status" "ambiguous target writers preserve fail-closed geometry status"
 fi
 
 assert_contains "$RUNNER" 'screenshot-pixels\.txt\.raw' "runner derives screenshot dimensions from the existing screenshot analysis artifact"
