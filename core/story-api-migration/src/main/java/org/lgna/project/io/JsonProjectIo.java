@@ -84,6 +84,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
   }
 
   private static class JsonProjectReader implements ProjectReader {
+    private static final int MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH = 512;
+
     private final ZipEntryContainer container;
     private final TweedleEncoderDecoder coder = new TweedleEncoderDecoder();
 
@@ -236,7 +238,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
               result.add(type);
             }
           } catch (UnsupportedTweedleDecodeException e) {
-            result.addUnsupportedTweedleType(typeReference);
+            result.addUnsupportedTweedleType(typeReference, e);
           }
         }
       }
@@ -348,7 +350,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         throw new IOException(
             archiveKind + " manifest names " + expectedNameRole + "'" + expectedName
                 + "' but decoded type names are " + decodedTypeNames(decodedTypes.types)
-                + unsupportedTypeNamesClause(decodedTypes));
+                + unsupportedTypeNamesClause(decodedTypes)
+                + unsupportedDecodeReasonsClause(decodedTypes));
       }
       throw new IOException(
           archiveKind + " manifest for '" + expectedName + "' does not contain " + missingReferenceDescription);
@@ -360,7 +363,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       if (decodedTypes.hasUnsupportedTweedleTypes()) {
         throw new IOException(
             archiveKind + " contains unsupported manifest-declared Tweedle type names "
-                + decodedTypes.unsupportedTweedleTypeNames());
+                + decodedTypes.unsupportedTweedleTypeNames()
+                + unsupportedDecodeReasonsClause(decodedTypes));
       }
     }
 
@@ -383,6 +387,13 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       return "; unsupported manifest-declared Tweedle type names are " + decodedTypes.unsupportedTweedleTypeNames();
     }
 
+    private static String unsupportedDecodeReasonsClause(TypeReadResult decodedTypes) {
+      if (!decodedTypes.hasUnsupportedTweedleTypes()) {
+        return "";
+      }
+      return "; unsupported Tweedle decode reasons are " + decodedTypes.unsupportedTweedleDecodeReasons();
+    }
+
     private static String typeReferenceContext(TypeReference typeReference) {
       StringBuilder sb = new StringBuilder("type reference");
       if ((typeReference.name != null) && !typeReference.name.isEmpty()) {
@@ -401,7 +412,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private static class TypeReadResult {
       private final Set<NamedUserType> types = new LinkedHashSet<>();
       private final Map<String, NamedUserType> typesByName = new HashMap<>();
-      private final Set<String> unsupportedTweedleTypeNames = new HashSet<>();
+      private final Map<String, String> unsupportedTweedleDecodeReasonsByTypeName = new HashMap<>();
       private boolean hasTypeReferences;
 
       private void add(NamedUserType type) {
@@ -415,8 +426,10 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         return (name == null) ? null : typesByName.get(name);
       }
 
-      private void addUnsupportedTweedleType(TypeReference typeReference) {
-        unsupportedTweedleTypeNames.add(unsupportedTweedleTypeName(typeReference));
+      private void addUnsupportedTweedleType(TypeReference typeReference, UnsupportedTweedleDecodeException e) {
+        unsupportedTweedleDecodeReasonsByTypeName.putIfAbsent(
+            unsupportedTweedleTypeName(typeReference),
+            unsupportedTweedleDecodeReason(e));
       }
 
       private static String unsupportedTweedleTypeName(TypeReference typeReference) {
@@ -430,17 +443,40 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
 
       private boolean hasUnsupportedTweedleDecodeFor(String name) {
-        return (name != null) && unsupportedTweedleTypeNames.contains(name);
+        return (name != null) && unsupportedTweedleDecodeReasonsByTypeName.containsKey(name);
       }
 
       private boolean hasUnsupportedTweedleTypes() {
-        return !unsupportedTweedleTypeNames.isEmpty();
+        return !unsupportedTweedleDecodeReasonsByTypeName.isEmpty();
       }
 
       private String unsupportedTweedleTypeNames() {
-        return unsupportedTweedleTypeNames.stream()
+        return unsupportedTweedleDecodeReasonsByTypeName.keySet().stream()
             .sorted()
             .collect(Collectors.joining(", ", "[", "]"));
+      }
+
+      private String unsupportedTweedleDecodeReasons() {
+        return unsupportedTweedleDecodeReasonsByTypeName.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + ": " + entry.getValue())
+            .collect(Collectors.joining(", ", "[", "]"));
+      }
+
+      private static String unsupportedTweedleDecodeReason(UnsupportedTweedleDecodeException e) {
+        String message = e.getMessage();
+        if ((message != null) && !message.isBlank()) {
+          return boundedSingleLineUnsupportedTweedleReason(message);
+        }
+        return e.getClass().getSimpleName();
+      }
+
+      private static String boundedSingleLineUnsupportedTweedleReason(String message) {
+        String singleLine = message.strip().replaceAll("\\s+", " ");
+        if (singleLine.length() <= MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH) {
+          return singleLine;
+        }
+        return singleLine.substring(0, MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH - 3) + "...";
       }
     }
 

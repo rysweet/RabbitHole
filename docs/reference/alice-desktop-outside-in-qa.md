@@ -11,6 +11,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 - [Scenario schema](#scenario-schema)
 - [Automation modes](#automation-modes)
 - [Evidence contract](#evidence-contract)
+- [Learner-world boundary](#learner-world-boundary)
 - [Workflow evidence requirements](#workflow-evidence-requirements)
 - [Scenario authoring rules](#scenario-authoring-rules)
 - [Extension rules](#extension-rules)
@@ -54,7 +55,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
-| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Observes whether the post-Select-Project live desktop exposes a stable `scene.eatmeFirstLesson` procedure tab or code-editor target, or writes a precise blocker. |
+| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Action-seam contract for observing the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and recording either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -66,12 +67,13 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
-The first-lesson live procedure target observation seam is an active read-only
-scenario. It records only whether the live desktop exposes a stable procedure
-tab or code-editor target for `scene.eatmeFirstLesson`; it does not perform a
-desktop edit, Save, rendering correctness check, learner assessment, or full
-first-lesson completion proof. See [First-Lesson Live Procedure Target
-Observation](./first-lesson-live-procedure-target-observation.md).
+The first-lesson live procedure target action seam is a read-only contract. It
+records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
+procedure/code-editor target and whether that target is ready for a public
+desktop edit action; it does not perform a desktop edit, Save, rendering
+correctness check, learner assessment, creative assessment, or full first-lesson
+completion proof. See [First-Lesson Live Procedure Target Action
+Seam](./first-lesson-live-procedure-target-observation.md).
 
 ## Learner-world boundary
 
@@ -81,8 +83,20 @@ assessment, or creativity assessment. Any future learner-world assessment
 capability beyond that evidence boundary requires a separate reviewed
 assessment contract and evidence mapping. The declarative blocker record is
 `qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`;
-it names next blocker `define-reviewed-assessment-contract` and is not consumed
-by the runner as behavior.
+it names blocker `define-reviewed-assessment-contract` and supplies the generated
+manual checklist boundary wording.
+
+The selected boundary scenario is
+`alice-desktop-instructor-student-setup`. Its generated
+`manual-evidence-checklist.txt` contains the standard manual sections:
+preconditions, user actions, expected outcomes, required evidence, fallback
+notes, completion status, and an `Assessment boundary` section that states
+manual evidence required, setup/open/save evidence review only, no automated
+grading, no rubric scoring, no correctness scoring, and no creative assessment.
+See
+[Learner-world assessment boundary](./learner-world-assessment-boundary.md) for
+the current artifact fields, generated checklist text, review workflow, and
+extension rules.
 
 ### Boundary artifact
 
@@ -93,15 +107,20 @@ runner input, or assessment engine.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `id` | string | Stable artifact identifier. Current value: `learner-world-assessment-boundary`. |
+| `selectedScenario` | string | Scenario covered by the boundary: `alice-desktop-instructor-student-setup`. |
+| `automationMode` | string | Current mode for this boundary: `manual-evidence-required`. |
 | `scope` | string | The bounded QA area: instructor/student learner-world setup, open, and save evidence. |
 | `currentCapability` | string | The current capability statement. It is limited to collecting evidence for setup, open, and save workflow review. |
+| `supportedEvidence` | string array | Supported evidence categories, including setup/open/save evidence review only. |
+| `assessmentLimits` | string array | Explicit generated-evidence limits: no automated grading, no rubric scoring, no correctness scoring, and no creative assessment. |
 | `nonCapabilities` | string array | Capabilities not claimed by this lane: learner-work grading, rubric scoring, correctness assessment, and creativity assessment. |
 | `nextBlocker.id` | string | The next required blocker before future assessment work can be claimed. Current value: `define-reviewed-assessment-contract`. |
 | `nextBlocker.description` | string | Human-readable explanation that a reviewed assessment contract and evidence mapping are required before learner-work grading, rubric scoring, correctness assessment, or creativity assessment can be claimed. |
+| `blocker` | object | Runner checklist blocker: learner-world state extraction for grading or creative assessment is blocked until safe rubric inputs and limits are defined. |
 
-Documentation, scenarios, and review notes may point to this artifact when they
-need a stable boundary reference. Runners must not treat it as configuration
-without a separate reviewed change.
+Documentation, scenarios, generated checklists, and review notes may point to
+this artifact when they need a stable boundary reference. Runners must not treat
+it as grading, scoring, or creative-assessment behavior.
 
 ## Runner commands
 
@@ -402,7 +421,7 @@ Manual scenario preparation includes:
 | --- | --- |
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
 | `status.txt` | Scenario ID, automation mode, generated checklist name, and `manual-evidence-required` outcome. |
-| `manual-evidence-checklist.txt` | Scenario preconditions, actions, outcomes, required evidence, and fallback notes. This file prepares the work; it is not proof that the workflow has been executed. |
+| `manual-evidence-checklist.txt` | Scenario preconditions, actions, outcomes, required evidence, fallback notes, and completion status. Planned assessment-boundary extensions may add a generated boundary section. This file prepares the work; it is not proof that the workflow has been executed. |
 
 Gated command smoke preparation includes:
 
@@ -460,6 +479,14 @@ Early `xvfb-real-alice` fallback attempts may not produce the full launch artifa
 
 Manual scenarios are complete only after a human performs the workflow and places the required artifacts in the same timestamped run directory. Every accepted manual run must include `review-notes.txt` with the scenario ID, run directory, evidence files reviewed, observed result, deviations from the checklist, and an explicit accept or reject decision.
 
+For `alice-desktop-instructor-student-setup`, the manual checklist includes an
+`Assessment boundary` section that keeps the run artifact aligned with the
+checked-in boundary contract: setup/open/save evidence review only, manual
+evidence required, no automated grading, no rubric scoring, no correctness
+scoring, no creative assessment, and blocker
+`define-reviewed-assessment-contract` before learner-world state extraction for
+grading or creative assessment can be claimed.
+
 ## Workflow evidence requirements
 
 | Workflow | Required evidence |
@@ -471,6 +498,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |
 | Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. It must be gated by prior `tab-click-observation.json` Africa Full evidence with `evidenceStatus=opened`, matching target/opened metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`; generic main-window presence is not Africa Full proof. |
+| First-lesson live procedure target action seam | `first-lesson-live-procedure-target-observation.json` with either `status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`, `desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the exact no-go blocker `missing-desktop-edit-action-contract` in both nested and top-level blocker objects. Supporting artifacts include `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, and Java/Maven/display environment summary. Target-only observation and display, AT-SPI, or target-not-found blockers are structured run failures, not accepted action-seam proof. |
 | Procedure edit seam smoke | `status.txt`, `command.log`, focused test output naming `editsSceneProcedureAndWritesEatmeProofArtifacts`, and procedure edit artifacts named by the focused test. |
 | Procedure edit handoff smoke | `status.txt`, `command.log`, focused test output naming `chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff`, and handoff evidence recording `placed-project.a3p` as the procedure edit input project artifact. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. This workflow is setup/open/save evidence only; pair it with `contracts/learner-world-assessment-boundary.json` when reviewing the current learner-world claim boundary. |

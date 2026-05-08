@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, first-lesson live procedure target observation, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -219,15 +219,16 @@ If the probe cannot safely prove target-specific selection/opening, it must pres
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 
-## Observe the first-lesson live procedure target
+## Observe the first-lesson live procedure target action seam
 
-The first-lesson live procedure target observation scenario verifies only
+The first-lesson live procedure target action seam contract verifies only
 whether a post-open live desktop exposes a stable procedure tab or code-editor
-target for `scene.eatmeFirstLesson`. It reuses the Select Project and
-post-project-open evidence path, then writes either an observed target or a
-machine-readable blocker. It does not prove desktop editing, Save behavior,
-rendering correctness, learner assessment, grading, creative assessment, or full
-first-lesson completion.
+target for `scene.eatmeFirstLesson`, then classifies that target as edit-ready or
+blocked by the missing public CodeEditor/CodeComposite edit invocation contract.
+It reuses the Select Project and post-project-open evidence path, then writes a
+machine-readable action-seam decision. It does not prove desktop editing, Save
+behavior, rendering correctness, learner assessment, grading, creative
+assessment, or full first-lesson completion.
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -240,11 +241,18 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Review `first-lesson-live-procedure-target-observation.json`, `status.txt`,
 `tab-click-observation.json`, and `post-project-open-observation.json`. Accept
-the shard only when the decision artifact records `status=observed` and
-`observedTarget.readyForDesktopEditAction=true`. A `status=blocked` artifact is
-the correct next-blocker evidence when the stable live desktop target is missing.
+the action-seam proof only when the decision artifact records either
+`status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`,
+`desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the
+exact no-go blocker in both `desktopEditAction.blocker.kind` and top-level
+`blocker.kind`: `missing-desktop-edit-action-contract` with
+`blocker.message=missing public CodeEditor/CodeComposite edit invocation
+contract`. Treat target-only observation, display, AT-SPI, and target-not-found
+blockers as implementation or run-prerequisite gaps, not accepted action-seam
+proof.
+
 For the artifact API, configuration, examples, and claim boundaries, see
-[First-Lesson Live Procedure Target Observation](../reference/first-lesson-live-procedure-target-observation.md).
+[First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
 
 ## Collect post-open runtime/display accessibility evidence
 
@@ -436,10 +444,19 @@ student-copy.a3p
 review-notes.txt
 ```
 
+Open `manual-evidence-checklist.txt` before collecting the manual artifacts. The
+checklist describes the manual evidence required for setup/open/save review and
+includes a generated `Assessment boundary` section. Use that generated section
+and the checked-in boundary record while reviewing this run, and treat missing
+learner-world state extraction for grading or creative assessment as blocker
+`define-reviewed-assessment-contract`, not as a hidden fallback.
+
 Accept the manual run only as setup/open/save evidence. `review-notes.txt`
 should list the reviewed files, state whether the starter project was prepared,
 opened by the student, and saved as a separate copy, and end with `decision:
-accept` or `decision: reject`.
+accept` or `decision: reject`. Do not use the run notes to claim learner-work
+grading, rubric scoring, correctness assessment, correctness scoring, creativity
+assessment, or creative assessment.
 
 The learner-world claim boundary is recorded in:
 
@@ -448,12 +465,14 @@ qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 ```
 
 Treat that JSON file as documentation for the current boundary, not as runner
-configuration. Its `currentCapability` is setup/open/save workflow evidence, its
-`nonCapabilities` list excludes learner-work grading, rubric scoring,
-correctness assessment, and creativity assessment, and its `nextBlocker.id` is
-`define-reviewed-assessment-contract`. The blocker must be resolved with a
-reviewed assessment contract and evidence mapping before those capabilities can
-be claimed.
+configuration. The current artifact records `id`, `selectedScenario`,
+`automationMode`, `scope`, `currentCapability`, `supportedEvidence`,
+`assessmentLimits`, `nonCapabilities`, `nextBlocker`, and `blocker`. Its blocker
+is `define-reviewed-assessment-contract`, which must be resolved with a reviewed
+assessment contract and evidence mapping before learner-world state extraction
+for grading or creative assessment can be claimed. The complete current contract
+is described in
+[Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Choose a custom evidence directory
 

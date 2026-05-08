@@ -1,6 +1,6 @@
 # Alice desktop outside-in QA tutorial
 
-This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review the target-specific Select Project proof, review the first-lesson procedure target observation, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
+This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review the target-specific Select Project proof, review the first-lesson procedure target action seam, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
 
 ## What you will do
 
@@ -10,11 +10,12 @@ You will:
 2. List the executable scenario catalog.
 3. Run Alice under Xvfb for the launch workflow.
 4. Review the target-specific Select Project `Africa Full` proof.
-5. Review the first-lesson live procedure target observation.
+5. Review the first-lesson live procedure target action seam.
 6. Review post-open runtime/display accessibility evidence.
 7. Generate a save/load evidence checklist.
 8. Review the learner-world setup/open/save boundary.
-9. Add user-visible evidence to the generated run directory.
+9. Prepare a gated command smoke.
+10. Keep evidence out of commits.
 
 ## Before you start
 
@@ -115,7 +116,8 @@ Accept this tutorial step only when `tab-click-observation.json` records `eviden
 
 ## Step 5: Review the first-lesson live procedure target
 
-Run the read-only first-lesson procedure target observation:
+Run the read-only first-lesson procedure target action seam when implementing or
+reviewing the contract:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -138,13 +140,15 @@ launch.log
 xvfb.log
 ```
 
-Accept this tutorial step only when the decision artifact records
-`status=observed`, `blocker=none`, and an `observedTarget` for
-`scene.eatmeFirstLesson` with a non-empty stable `automationPath`. If it records
-`status=blocked`, keep it as the next-blocker artifact for the missing procedure
-tab/code-editor target. Do not convert either result into a desktop edit, Save,
-rendering, learner assessment, grading, creative assessment, or full
-first-lesson completion claim.
+Accept this tutorial step only when the decision artifact records either
+`status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`,
+`desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the
+exact no-go blocker in both `desktopEditAction.blocker.kind` and top-level
+`blocker.kind`: `missing-desktop-edit-action-contract` with
+`blocker.message=missing public CodeEditor/CodeComposite edit invocation
+contract`.
+Do not convert either result into a desktop edit, Save, rendering, learner
+assessment, grading, creative assessment, or full first-lesson completion claim.
 
 ## Step 6: Review post-open runtime/display accessibility evidence
 
@@ -242,14 +246,17 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 Open the generated run directory and review `manual-evidence-checklist.txt`,
 `environment.txt`, and `status.txt`. The checklist describes the manual evidence
 needed for instructor starter-project setup, student open, and student save
-review. Checklist generation does not complete the scenario.
+review. It includes a generated `Assessment boundary` section; use that section
+and the checked-in boundary record while reviewing the manual run. Checklist
+generation does not complete the scenario.
 
 Before accepting the run, add the instructor launch log, starter project
 screenshot, saved starter `.a3p`, student launch or open log, loaded project
 screenshot, saved student copy `.a3p`, and `review-notes.txt`.
 `review-notes.txt` should identify the reviewed files and the setup/open/save
 decision only. Do not turn this evidence into learner-work grading, rubric
-scoring, correctness assessment, or creativity assessment.
+scoring, correctness assessment, correctness scoring, creativity assessment, or
+creative assessment.
 
 Review the checked-in blocker record:
 
@@ -261,9 +268,13 @@ python3 -m json.tool \
 The record is documentation for the current boundary. It names
 `define-reviewed-assessment-contract` as the next blocker before any future
 learner-work grading, rubric scoring, correctness assessment, or creativity
-assessment capability can be claimed.
+assessment capability can be claimed. Learner-world state extraction for grading
+or creative assessment remains blocked until a reviewed assessment contract,
+evidence mapping, and reviewed implementation exist. The current contract is
+documented in
+[Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
-## Step 9: Prepare a gated command smoke
+## Step 10: Prepare a gated command smoke
 
 Prepare gated smoke evidence without enabling heavy execution:
 
@@ -281,7 +292,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
   --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
 ```
 
-## Step 10: Keep evidence out of commits
+## Step 11: Keep evidence out of commits
 
 Evidence files are local run artifacts. Keep them for review or attach them to the relevant review record, but do not commit them.
 

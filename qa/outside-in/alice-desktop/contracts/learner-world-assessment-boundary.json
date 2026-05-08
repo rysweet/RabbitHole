@@ -1,7 +1,22 @@
 {
   "id": "learner-world-assessment-boundary",
+  "selectedScenario": "alice-desktop-instructor-student-setup",
+  "automationMode": "manual-evidence-required",
   "scope": "instructor-student learner-world setup/open/save evidence",
   "currentCapability": "collects evidence for setup, open, and save workflow review",
+  "supportedEvidence": [
+    "setup/open/save evidence review only",
+    "instructor starter project artifact review",
+    "student open artifact review",
+    "student save artifact review",
+    "manual review-notes.txt acceptance decision"
+  ],
+  "assessmentLimits": [
+    "no automated grading",
+    "no rubric scoring",
+    "no correctness scoring",
+    "no creative assessment"
+  ],
   "nonCapabilities": [
     "learner-work grading",
     "rubric scoring",
@@ -11,5 +26,9 @@
   "nextBlocker": {
     "id": "define-reviewed-assessment-contract",
     "description": "A reviewed assessment contract and evidence mapping are required before any learner-work grading, rubric scoring, correctness assessment, or creativity assessment implementation can be claimed."
+  },
+  "blocker": {
+    "id": "define-reviewed-assessment-contract",
+    "description": "learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping define safe rubric inputs and limits."
   }
 }
