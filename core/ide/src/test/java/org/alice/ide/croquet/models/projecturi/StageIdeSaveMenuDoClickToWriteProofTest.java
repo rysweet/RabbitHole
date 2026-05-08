@@ -50,6 +50,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
 import static org.junit.Assert.assertFalse;
@@ -134,6 +136,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       assertTrue(json, json.contains("\"reason\": \"No available non-headless AWT display\""));
       assertTrue(json, json.contains("\"wroteFile\": false"));
       assertFalse(json, json.contains("\"wroteFile\": true"));
+      assertFalse(json, json.contains("approved the selected .a3p path"));
+      assertFalse(json, json.contains("wrote a non-empty project file"));
       return;
     }
 
@@ -272,6 +276,50 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"Save menu/control/dialog/write path\""));
     assertTrue(json, json.contains("\"requiresNextEvidence\""));
     assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("approved the selected .a3p path"));
+    assertFalse(json, json.contains("wrote a non-empty project file"));
+  }
+
+  @Test
+  public void incompleteArtifactDoesNotClaimChooserApprovalOrFileWrite() throws Exception {
+    Path testDir = newTestDir().resolve("incomplete-evidence");
+    Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
+    File targetFile = testDir.resolve("projects/doclick-save-proof.a3p").toAbsolutePath().toFile();
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetFile, testDir);
+
+    probe.writeResult(evidenceDir);
+
+    String json = Files.readString(probe.artifactPath(evidenceDir));
+    assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_e2e_not_completed\""));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"approved_selection\": false"));
+    assertTrue(json, json.contains("\"file_written\": false"));
+    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick write path was not proven; chooser approval and file writing remain unproven\""));
+    assertFalse(json, json.contains("approved the selected .a3p path"));
+    assertFalse(json, json.contains("wrote a non-empty project file"));
+    assertFalse(json, json.contains("approveSelection() called"));
+    assertFalse(json, json.contains("targetFile written to disk as non-empty .a3p"));
+  }
+
+  @Test
+  public void existingFileWithoutFullProofDoesNotClaimSaveWrite() throws Exception {
+    Path testDir = newTestDir().resolve("existing-file-without-proof");
+    Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
+    Path targetPath = Files.createDirectories(testDir.resolve("projects")).resolve("doclick-save-proof.a3p");
+    Files.writeString(targetPath, "preexisting", StandardCharsets.UTF_8);
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetPath.toAbsolutePath().toFile(), testDir);
+
+    probe.writeResult(evidenceDir);
+
+    String json = Files.readString(probe.artifactPath(evidenceDir));
+    assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"file_written\": false"));
+    assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("\"file_written\": true"));
+    assertFalse(json, json.contains("wrote a non-empty project file"));
+    assertFalse(json, json.contains("targetFile written to disk as non-empty .a3p"));
   }
 
   // ---- inner probe ----
@@ -288,14 +336,15 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private final Path proofRoot;
     private final String targetCanonicalPath;
     private volatile boolean chooserObserved;
-    private volatile boolean approvedSelection;
+    private final AtomicBoolean approvalScheduled = new AtomicBoolean(false);
+    private final AtomicBoolean approvedSelection = new AtomicBoolean(false);
     private volatile boolean selectedFileVerified;
     private volatile boolean ambiguousChooserDiscovery;
     private volatile boolean dialogShowing;
     private volatile String dialogClass;
     private volatile String normalizedSelectedFile;
     private volatile String failureReason;
-    private volatile int pollCount;
+    private final AtomicInteger pollCount = new AtomicInteger();
     private java.util.Timer bgTimer;
 
     SaveMenuDoClickProbe(File targetFile, Path proofRoot) throws java.io.IOException {
@@ -391,18 +440,41 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       boolean fileHasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
       boolean targetInsideProofRoot = proofContainsPath(this.targetCanonicalPath);
       boolean selectedFileMatchesExpected = this.targetCanonicalPath.equals(selectedCanonical);
-      boolean wroteFile = fileWritten && fileNonempty && fileHasExpectedExtension && targetInsideProofRoot;
+      boolean observedExpectedFile = fileWritten && fileNonempty && fileHasExpectedExtension && targetInsideProofRoot;
+      boolean chooserApproved = this.approvedSelection.get();
       boolean proven = this.chooserObserved
-          && this.approvedSelection
+          && chooserApproved
           && this.selectedFileVerified
           && selectedFileMatchesExpected
           && !this.ambiguousChooserDiscovery
-          && wroteFile
+          && observedExpectedFile
           && this.failureReason == null;
+      boolean claimedApprovedSelection = proven && chooserApproved;
+      boolean claimedWroteFile = proven && observedExpectedFile;
+      boolean claimedFileWritten = proven && fileWritten;
+      boolean claimedFileNonempty = proven && fileNonempty;
       String status = proven ? "proven" : "unsupported";
       String reason = proven
           ? "save_menu_doclick_approved_chooser_wrote_project_file"
           : this.failureReason == null ? "save_menu_doclick_e2e_not_completed" : this.failureReason;
+      String claim = proven
+          ? "Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file"
+          : "Save menu item doClick write path was not proven; chooser approval and file writing remain unproven";
+      String observedChooserStep = this.chooserObserved && !this.ambiguousChooserDiscovery
+          ? "JFileChooser observed in Window.getWindows() poll under Xvfb"
+          : "JFileChooser observation was not proven in this run";
+      String chooserApprovalStep = claimedApprovedSelection && this.selectedFileVerified
+          ? "JFileChooser.setSelectedFile(targetFile) + approveSelection() called by background probe via invokeLater"
+          : "JFileChooser approval was not proven in this run";
+      String approvedReturnStep = claimedApprovedSelection
+          ? "showSaveDialog returns APPROVE_OPTION; showSaveFileDialog returns targetFile"
+          : "showSaveDialog approval return was not proven in this run";
+      String saveActionStep = claimedWroteFile
+          ? "SaveOperationFlow calls saveAction.save(targetFile) -> application.saveProjectTo(targetFile)"
+          : "Save action write to the target file was not proven in this run";
+      String writtenArtifactStep = claimedWroteFile
+          ? "targetFile written to disk as non-empty .a3p"
+          : "Non-empty target .a3p write was not proven in this run";
       Files.createDirectories(evidenceDir);
       Files.writeString(
           artifactPath(evidenceDir),
@@ -410,9 +482,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "  \"schema_version\": \"eatme.alice-desktop-stageide-save-menu-doclick-write-proof/v1\",\n"
                + "  \"status\": \"" + status + "\",\n"
                + "  \"reason\": \"" + reason + "\",\n"
-              + "  \"dialogType\": \"Swing JFileChooser\",\n"
-              + "  \"wroteFile\": " + wroteFile + ",\n"
-              + "  \"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\",\n"
+               + "  \"dialogType\": \"Swing JFileChooser\",\n"
+               + "  \"wroteFile\": " + claimedWroteFile + ",\n"
+              + "  \"claim\": \"" + claim + "\",\n"
                + "  \"proof_chain\": {\n"
               + "    \"step1\": \"menuItem.doClick() on actual Save menu item (created via getMenuItemPrepModel().createMenuItemAndAddTo())\",\n"
               + "    \"step2\": \"Swing ActionEvent dispatched by doClick() → Croquet OperationSwingModel\",\n"
@@ -421,11 +493,11 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "    \"step5\": \"SaveOperationFlow.run() calls context.showSaveFileDialog()\",\n"
               + "    \"step6\": \"context.showSaveFileDialog() -> application.getDocumentFrame().showSaveFileDialog(dir, name, ext)\",\n"
               + "    \"step7\": \"DocumentFrame.showSaveFileDialog -> FileDialogUtilities -> JFileChooser.showSaveDialog(root)\",\n"
-              + "    \"step8\": \"JFileChooser observed in Window.getWindows() poll under Xvfb\",\n"
-              + "    \"step9\": \"JFileChooser.setSelectedFile(targetFile) + approveSelection() called by background probe via invokeLater\",\n"
-              + "    \"step10\": \"showSaveDialog returns APPROVE_OPTION; showSaveFileDialog returns targetFile\",\n"
-              + "    \"step11\": \"SaveOperationFlow calls saveAction.save(targetFile) -> application.saveProjectTo(targetFile)\",\n"
-              + "    \"step12\": \"targetFile written to disk as non-empty .a3p\"\n"
+              + "    \"step8\": \"" + observedChooserStep + "\",\n"
+              + "    \"step9\": \"" + chooserApprovalStep + "\",\n"
+              + "    \"step10\": \"" + approvedReturnStep + "\",\n"
+              + "    \"step11\": \"" + saveActionStep + "\",\n"
+              + "    \"step12\": \"" + writtenArtifactStep + "\"\n"
               + "  },\n"
               + "  \"trigger\": {\n"
               + "    \"menu_item_doclick\": true,\n"
@@ -437,8 +509,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
                + "    \"chooser_observed\": " + this.chooserObserved + ",\n"
               + "    \"dialogType\": \"Swing JFileChooser\",\n"
               + "    \"ambiguous_chooser_discovery\": " + this.ambiguousChooserDiscovery + ",\n"
-               + "    \"approved_selection\": " + this.approvedSelection + ",\n"
-               + "    \"poll_count\": " + this.pollCount + "\n"
+               + "    \"approved_selection\": " + claimedApprovedSelection + ",\n"
+               + "    \"poll_count\": " + this.pollCount.get() + "\n"
                + "  },\n"
                + "  \"selected_file\": {\n"
                + "    \"selected_file_verified\": " + this.selectedFileVerified + ",\n"
@@ -446,10 +518,10 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
                + "    \"expected_file\": " + stringJson(targetEvidencePath) + ",\n"
                + "    \"selected_file_matches_expected\": " + selectedFileMatchesExpected + "\n"
                + "  },\n"
-                + "  \"written_artifact\": {\n"
+               + "  \"written_artifact\": {\n"
                + "    \"target_file\": " + stringJson(targetEvidencePath) + ",\n"
-                + "    \"file_written\": " + fileWritten + ",\n"
-               + "    \"file_nonempty\": " + fileNonempty + ",\n"
+                 + "    \"file_written\": " + claimedFileWritten + ",\n"
+               + "    \"file_nonempty\": " + claimedFileNonempty + ",\n"
                + "    \"file_extension\": \"a3p\",\n"
                + "    \"file_has_expected_extension\": " + fileHasExpectedExtension + ",\n"
                + "    \"target_inside_proof_root\": " + targetInsideProofRoot + ",\n"
@@ -467,7 +539,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
 
     private void poll() {
-      int count = ++this.pollCount;
+      int count = this.pollCount.incrementAndGet();
       List<ChooserCandidate> candidates = findChooserCandidates();
       if (candidates.size() > 1) {
         this.chooserObserved = true;
@@ -483,7 +555,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         this.dialogShowing = candidate.dialog().isShowing();
         this.dialogClass = candidate.dialog().getClass().getName();
         this.bgTimer.cancel();
-        approveChooserOnEdt(candidate.chooser());
+        if (this.approvalScheduled.compareAndSet(false, true)) {
+          approveChooserOnEdt(candidate.chooser());
+        }
         return;
       }
       if (count >= MAX_POLLS) {
@@ -501,7 +575,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
           this.normalizedSelectedFile = selectedFile == null ? null : selectedFile.getCanonicalPath();
           this.selectedFileVerified = this.targetCanonicalPath.equals(this.normalizedSelectedFile);
           if (this.selectedFileVerified) {
-            this.approvedSelection = true;
+            this.approvedSelection.set(true);
             chooser.approveSelection();
           } else {
             this.failureReason = "selected_file_did_not_match_expected_target";
