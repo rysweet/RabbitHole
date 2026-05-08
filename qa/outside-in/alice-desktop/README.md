@@ -71,15 +71,17 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Review `post-open-runtime-display-accessibility-evidence.json` as the
-implemented runtime/display decision artifact. The visible-rendering shard will
-strengthen `controlled-display-pixel-observation.json` into the planned
-screenshot-consistency artifact. `tab-click-observation.json` and
+implemented runtime/display decision artifact. Review
+`controlled-display-pixel-observation.json` as the controlled-display
+screenshot-consistency artifact and
+`visible-rendering-pixel-target-blocker.json` as the exact blocker for true
+world-canvas pixel evidence. `tab-click-observation.json` and
 `post-project-open-observation.json` are supporting setup artifacts. An observed
-result is limited to a live post-open runtime/display accessibility signal and,
-after the visible-rendering shard lands, controlled-display screenshot
-consistency. It does not prove world-canvas pixel correctness, deployed
-installer success, full world execution, grading, lesson completion, active Save
-behavior, active Select Project behavior, or decoder behavior.
+result is limited to a live post-open runtime/display accessibility signal plus
+controlled-display screenshot consistency. It does not prove world-canvas pixel
+correctness, deployed installer success, full world execution, grading, lesson
+completion, active Save behavior, active Select Project behavior, or decoder
+behavior.
 
 To collect only the target-specific Select Project proof for the committed
 `Africa Full` starter:
@@ -167,10 +169,11 @@ The runner records evidence under
 | `application-root-error.json` | Exact `Application Root Error` window blocker, observed JVM `org.alice.ide.rootDirectory` condition, expected dialog text, and next invocation change. |
 | `license-dialog.json` and `license-acceptance.json` | Exact first-run License Agreement blocker details or the isolated `java.util.prefs.userRoot` state files under `.java/.userPrefs/` prepared when `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` is set. |
 | `select-project-window.json` | Exact `Select Project` title, class, process, and geometry; widget labels remain resource-contract evidence until a live Swing accessibility/Jemmy probe exists. |
-| `controlled-display-pixel-observation.json` | Current controlled-display pixel observation. `[PLANNED - Implementation Pending]` The visible-rendering shard will make this the screenshot-consistency artifact with `claimScope=controlled-display-screenshot-consistency-only`, relative screenshot path, screenshot dimensions, pixel-observation metadata, `worldCanvasPixelTarget.identified=false`, and explicit unsupported claims. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, screenshot dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget.identified=false`, and explicit unsupported claims. |
+| `visible-rendering-pixel-target-blocker.json` | Machine-readable next blocker for true world-canvas pixel evidence: `reliable-run-window-world-canvas-pixel-sampling-target`. |
 
-The planned controlled-display screenshot-consistency artifact will not assert
-Alice world rendering correctness.
+The controlled-display screenshot-consistency artifact does not assert Alice
+world rendering correctness.
 
 The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
 goes one step beyond launch, window, and pixel evidence. It uses the existing
@@ -181,25 +184,25 @@ accessibility tree.
 | Artifact | Role |
 | --- | --- |
 | `post-open-runtime-display-accessibility-evidence.json` | Runtime/display accessibility decision artifact. Observed requires `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, at least one runtime/display candidate, and `blocker=none`. |
-| `status.txt` | Final scenario status. Pass requires `outcome=passed` and `runtimeDisplayAccessibilityStatus=observed`; after the visible-rendering shard lands, pass also requires `controlledDisplayPixelStatus=observed`. |
+| `status.txt` | Final scenario status. Pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`; it also links `visibleRenderingPixelTargetBlocker=visible-rendering-pixel-target-blocker.json`. |
 | `runtime-display-accessibility-status.txt` | Probe-local status written before final scenario status; useful for debugging, not the final pass/fail artifact. |
 | `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
-| `controlled-display-pixel-observation.json` | Supporting controlled-display pixel artifact today. `[PLANNED - Implementation Pending]` The visible-rendering shard will make it a screenshot-consistency artifact with screenshot path, dimensions, pixel-observation metadata, `worldCanvasPixelTarget.identified=false`, and unsupported claims. Pixel blockers keep final `outcome=blocked` after that shard lands. |
-| `visible-rendering-pixel-target-blocker.json` | `[PLANNED - Implementation Pending]` Blocker artifact required for the `screenshot-metadata-unavailable` fallback and reused by the next rendered-world-pixel shard when it explicitly requires true world-canvas pixel evidence without a reliable Run-window/world-canvas pixel sampling target. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, `worldCanvasPixelTarget.identified=false`, and unsupported claims. Pixel blockers keep final `outcome=blocked`. |
+| `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the next unblocker for true world-canvas pixel evidence: a reliable Run-window/world-canvas pixel sampling target. |
 
 If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
 `python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, screenshot
 metadata, project-open setup, or the runtime/display candidate is unavailable,
 the JSON/status artifacts record `status=blocked` or `outcome=blocked` plus
 precise blocker fields; the runner must not silently pass. This evidence
-supports only a live post-open runtime/display accessibility signal and, after
-the visible-rendering shard lands, controlled-display screenshot consistency. It
-does not prove world-canvas pixel correctness, deployed installer success, full
-world execution, grading, lesson completion, active Save behavior, active Select
-Project behavior, or decoder behavior. True rendered-world pixel correctness
-remains blocked until the runner has a reliable Run-window/world-canvas pixel
-sampling target. The stable artifact API, planned visible-rendering contract,
-configuration, examples, and review rules are documented in [Post-open
+supports only a live post-open runtime/display accessibility signal and
+controlled-display screenshot consistency. It does not prove world-canvas pixel
+correctness, deployed installer success, full world execution, grading, lesson
+completion, active Save behavior, active Select Project behavior, or decoder
+behavior. True rendered-world pixel correctness remains blocked until the runner
+has a reliable Run-window/world-canvas pixel sampling target. The stable
+artifact API, visible-rendering blocker contract, configuration, examples, and
+review rules are documented in [Post-open
 runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
 
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
@@ -219,6 +222,39 @@ Early Xvfb fallback directories may contain only the diagnostics available befor
 The Select Project Africa Full scenario passes `targetStarter.displayName` and `targetStarter.repositoryPath` to the AT-SPI probe as `TARGET_STARTER_DISPLAY_NAME` and `TARGET_STARTER_REPO_PATH`. These variables are runner-managed evidence metadata, not user configuration knobs.
 
 ## Scenario authoring checklist
+
+Use one of the supported workflows:
+
+```text
+archive-fixture-smoke
+export
+exported-project-smoke
+failure-path-smoke
+file-loader-smoke
+future-ui-smoke
+instructor-student-setup
+launch
+menu-action-smoke
+netbeans-package-smoke
+open-load-save
+package-install-smoke
+post-open-runtime-display-accessibility-evidence
+post-project-open-window-state-smoke
+procedure-edit-handoff-smoke
+procedure-edit-seam-smoke
+project-io-smoke
+run-debug
+save-load
+save-menu-dialog-write-proof
+scene-creation
+select-project-atk-exec-smoke
+select-project-interaction-smoke
+select-project-tab-click-smoke
+select-project-widget-introspection-smoke
+tweedle-decoder-boundary-smoke
+tweedle-decoder-this-call-smoke
+wizard-palette-completion-smoke
+```
 
 Before adding or changing a scenario:
 

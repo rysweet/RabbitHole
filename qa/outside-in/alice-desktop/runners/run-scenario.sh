@@ -15,6 +15,7 @@ POST_PROJECT_OPEN_PROBE="$SCRIPT_DIR/post-project-open-probe.py"
 POST_OPEN_RUNTIME_DISPLAY_PROBE="$SCRIPT_DIR/post-open-runtime-display-probe.py"
 POST_OPEN_RUNTIME_DISPLAY_SCENARIO=alice-desktop-post-open-runtime-display-accessibility-evidence
 POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
+VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER=visible-rendering-pixel-target-blocker.json
 
 usage() {
   cat <<'EOF'
@@ -589,37 +590,164 @@ write_controlled_display_pixel_observation() {
 import json
 import os
 import sys
+from pathlib import Path
 
-path = sys.argv[1]
+path = Path(sys.argv[1])
 
 def value(name):
     return os.environ.get(name, "")
 
+def nullable_relative_path(raw_path):
+    if not raw_path:
+        return None
+    return Path(raw_path).name
+
+def parse_screenshot_dimensions(output_path):
+    raw_path = output_path.parent / "screenshot-pixels.txt.raw"
+    dimensions = {"width": None, "height": None}
+    if not raw_path.is_file():
+        return dimensions, None
+    values = {}
+    for line in raw_path.read_text(encoding="utf-8").splitlines():
+        if "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        values[key] = raw_value
+    for key in ("width", "height"):
+        raw_value = values.get(key, "")
+        if raw_value.isdigit():
+            dimensions[key] = int(raw_value)
+    return dimensions, "screenshot-pixels.txt.raw"
+
+pixels_observed = value("CONTROLLED_DISPLAY_PIXELS_OBSERVED") == "true"
+screenshot_status = value("CONTROLLED_DISPLAY_SCREENSHOT_STATUS")
+screenshot_file = nullable_relative_path(value("CONTROLLED_DISPLAY_SCREENSHOT_FILE"))
+screenshot_pixel_status = value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS")
+screenshot_dimensions, screenshot_metadata_source = parse_screenshot_dimensions(path)
+consistent_with_screenshot = (
+    pixels_observed
+    and screenshot_status == "screenshot-captured"
+    and screenshot_pixel_status == "non-black-pixels"
+    and screenshot_dimensions["width"] is not None
+    and screenshot_dimensions["height"] is not None
+    and screenshot_file is not None
+)
+
 payload = {
+    "schemaVersion": 1,
+    "claimScope": "controlled-display-screenshot-consistency",
     "status": value("CONTROLLED_DISPLAY_STATUS"),
     "blocker": value("CONTROLLED_DISPLAY_BLOCKER"),
     "blockerDetail": value("CONTROLLED_DISPLAY_BLOCKER_DETAIL"),
     "display": value("CONTROLLED_DISPLAY_DISPLAY"),
-    "pixelsObserved": value("CONTROLLED_DISPLAY_PIXELS_OBSERVED") == "true",
+    "pixelsObserved": pixels_observed,
     "claim": value("CONTROLLED_DISPLAY_CLAIM"),
     "readyStatus": value("CONTROLLED_DISPLAY_READY_STATUS"),
     "processStatus": value("CONTROLLED_DISPLAY_PROCESS_STATUS"),
-    "screenshotStatus": value("CONTROLLED_DISPLAY_SCREENSHOT_STATUS"),
+    "screenshotStatus": screenshot_status,
     "screenshotFile": value("CONTROLLED_DISPLAY_SCREENSHOT_FILE"),
     "xvfbExecutable": value("CONTROLLED_DISPLAY_XVFB_EXECUTABLE"),
     "screenshotTool": value("CONTROLLED_DISPLAY_SCREENSHOT_TOOL"),
-    "screenshotPixelStatus": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS"),
+    "screenshotPixelStatus": screenshot_pixel_status,
     "screenshotPixelDetail": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL"),
     "lifecyclePoint": value("CONTROLLED_DISPLAY_LIFECYCLE_POINT"),
     "windowInventoryStatus": value("CONTROLLED_DISPLAY_WINDOW_INVENTORY_STATUS"),
     "windowInventoryFile": value("CONTROLLED_DISPLAY_WINDOW_INVENTORY_FILE"),
     "aliceWindowCandidateCount": int(value("CONTROLLED_DISPLAY_ALICE_WINDOW_CANDIDATE_COUNT") or "0"),
+    "screenshot": {
+        "path": screenshot_file,
+        "status": screenshot_status,
+        "tool": value("CONTROLLED_DISPLAY_SCREENSHOT_TOOL") or None,
+        "dimensions": screenshot_dimensions,
+        "metadataSource": screenshot_metadata_source,
+    },
+    "pixelObservation": {
+        "status": screenshot_pixel_status,
+        "detail": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL"),
+        "pixelsObserved": pixels_observed,
+        "consistentWithScreenshot": consistent_with_screenshot,
+    },
+    "worldCanvasPixelTarget": {
+        "identified": False,
+        "status": "not-identified",
+        "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    },
+    "unsupportedClaims": [
+        "world-canvas-pixel-correctness",
+        "full-visible-rendering-correctness",
+        "full-ui-automation",
+        "world-execution",
+        "grading",
+        "save-behavior",
+        "first-lesson-completion",
+    ],
 }
 missing_executable = value("CONTROLLED_DISPLAY_MISSING_EXECUTABLE")
 if missing_executable:
     payload["missingExecutable"] = missing_executable
 
-with open(path, "w", encoding="utf-8") as stream:
+with path.open("w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
+write_visible_rendering_pixel_target_blocker() {
+  local run_dir=$1
+  local controlled_display_status=${2:-blocked}
+  local controlled_display_blocker=${3:-unknown}
+  local screenshot_file=${4:-}
+  local screenshot_status=${5:-not-attempted}
+  local screenshot_pixel_status=${6:-not-attempted}
+
+  VISIBLE_RENDERING_CONTROLLED_DISPLAY_STATUS="$controlled_display_status" \
+  VISIBLE_RENDERING_CONTROLLED_DISPLAY_BLOCKER="$controlled_display_blocker" \
+  VISIBLE_RENDERING_SCREENSHOT_FILE="$screenshot_file" \
+  VISIBLE_RENDERING_SCREENSHOT_STATUS="$screenshot_status" \
+  VISIBLE_RENDERING_SCREENSHOT_PIXEL_STATUS="$screenshot_pixel_status" \
+  python3 - "$run_dir/$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+output_path = Path(sys.argv[1])
+screenshot_file = os.environ.get("VISIBLE_RENDERING_SCREENSHOT_FILE", "")
+screenshot_path = Path(screenshot_file).name if screenshot_file else None
+unsupported_claims = [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion",
+]
+payload = {
+    "schemaVersion": 1,
+    "status": "blocked",
+    "blocker": "world-canvas-pixel-target-not-identified",
+    "blockerDetail": (
+        "No reliable Run-window/world-canvas pixel sampling target has been "
+        "identified. Controlled-display screenshots can support screenshot "
+        "consistency only; they cannot prove rendered-world pixel correctness."
+    ),
+    "claimScope": "visible-rendering-world-canvas-pixel-target",
+    "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    "sourceArtifact": "controlled-display-pixel-observation.json",
+    "controlledDisplayStatus": os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_STATUS", ""),
+    "controlledDisplayBlocker": os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_BLOCKER", ""),
+    "screenshotPath": screenshot_path,
+    "screenshotStatus": os.environ.get("VISIBLE_RENDERING_SCREENSHOT_STATUS", ""),
+    "screenshotPixelStatus": os.environ.get("VISIBLE_RENDERING_SCREENSHOT_PIXEL_STATUS", ""),
+    "worldCanvasPixelTarget": {
+        "identified": False,
+        "status": "not-identified",
+        "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    },
+    "unsupportedClaims": unsupported_claims,
+}
+with output_path.open("w", encoding="utf-8") as stream:
     json.dump(payload, stream, indent=2, sort_keys=True)
     stream.write("\n")
 PY
@@ -990,6 +1118,14 @@ write_post_open_runtime_display_blocker() {
   local display=${6:-}
   local timeout_seconds=${7:-}
 
+  write_visible_rendering_pixel_target_blocker \
+    "$run_dir" \
+    blocked \
+    "$blocker" \
+    "" \
+    not-attempted \
+    not-attempted
+
   RUNTIME_DISPLAY_SCENARIO="$scenario_id" \
   RUNTIME_DISPLAY_AUTOMATION_MODE="$automation_mode" \
   RUNTIME_DISPLAY_BLOCKER="$blocker" \
@@ -1030,6 +1166,7 @@ PY
     printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$blocker"
     printf 'controlledDisplayPixelStatus=blocked\n'
     printf 'controlledDisplayPixelBlocker=%s\n' "$blocker"
+    printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -1378,6 +1515,7 @@ JSON
         printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$root_directory_prep_blocker"
         printf 'controlledDisplayPixelStatus=blocked\n'
         printf 'controlledDisplayPixelBlocker=%s\n' "$root_directory_prep_blocker"
+        printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
       fi
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     } > "$run_dir/status.txt"
@@ -1834,6 +1972,13 @@ JSON
     "$alice_window_candidate_count"
 
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+    write_visible_rendering_pixel_target_blocker \
+      "$run_dir" \
+      "$observation_status" \
+      "$observation_blocker" \
+      "$screenshot_file" \
+      "$screenshot_status" \
+      "$screenshot_pixel_status"
     scenario_outcome=blocked
     if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ]; then
       scenario_outcome=passed
@@ -1843,6 +1988,7 @@ JSON
       printf 'outcome=%s\n' "$scenario_outcome"
       printf 'controlledDisplayPixelStatus=%s\n' "$observation_status"
       printf 'controlledDisplayPixelBlocker=%s\n' "$observation_blocker"
+      printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi
