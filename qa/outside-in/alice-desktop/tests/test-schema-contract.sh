@@ -218,6 +218,30 @@ expected_argv = {
         "--evidence-dir",
         "qa/outside-in/alice-desktop/evidence/future-ui-launch",
     ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/ide",
+        "-am",
+        "-Dtest=org.alice.tools.EatmeEditProcedureTest#editsSceneProcedureAndWritesEatmeProofArtifacts",
+        "test",
+    ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/ide",
+        "-am",
+        "-Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff",
+        "test",
+    ),
 }
 if allowed_argv != expected_argv:
     raise AssertionError("automation.argv must be restricted to the allowed Alice QA argv set")

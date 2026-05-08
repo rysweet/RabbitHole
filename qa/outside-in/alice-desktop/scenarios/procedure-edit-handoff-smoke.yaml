@@ -1,0 +1,51 @@
+id: alice-desktop-procedure-edit-handoff-smoke
+title: Object placement to procedure edit handoff smoke
+workflow: procedure-edit-handoff-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Focused Eat Me object placement and procedure edit handoff tests are available in the checkout.
+userActions:
+  - Enable gated smokes in a workspace prepared for core IDE module tests.
+  - Run the focused object-placement-to-procedure-edit handoff command smoke.
+  - Review command evidence for placed-project.a3p being consumed by the deterministic procedure edit seam.
+expectedOutcomes:
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
+  - When the gate is enabled, the focused handoff test exits successfully.
+  - Command evidence proves only the narrow handoff from object placement artifact to deterministic procedure edit artifact; it does not claim full lesson completion, grading, creative assessment, Save completion, or visible rendering correctness.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/ide
+    - -am
+    - -Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the focused object placement to procedure edit handoff command.
+    - Test output or surefire report naming chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff.
+    - Handoff evidence records placed-project.a3p as the procedure edit input project artifact.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If focused core IDE tests are unavailable, attach the nearest object placement plus deterministic procedure edit handoff evidence and record the missing assertion.
+    - Do not substitute active Save proof, model exporter/hotspot proof, Select Project PID proof, launcher/rendering proof, lesson completion, grading, or creative assessment evidence.
+supportingEvidence:
+  - alice-desktop-procedure-edit-seam-smoke
+tags:
+  - immediate-qa-backlog
+  - first-lesson
+  - object-placement
+  - procedure-edit
+  - command-smoke
