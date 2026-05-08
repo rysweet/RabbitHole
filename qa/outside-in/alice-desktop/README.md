@@ -44,18 +44,17 @@ pass result and does not evaluate the learner's work.
 The checked-in boundary record is
 `qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`.
 That file is declarative documentation for the current claim boundary. It names
-the next blocker, `define-reviewed-assessment-contract`, and is not consumed by
-the runner as behavior.
+the blocker, `define-reviewed-assessment-contract`, and supplies the generated
+manual checklist boundary wording.
 
 The generated `manual-evidence-checklist.txt` for
-`alice-desktop-instructor-student-setup` currently uses the standard manual
-checklist sections. It does not yet include a generated `Assessment boundary`
-section. The planned boundary implementation will add that section so generated
-evidence states manual evidence required, setup/open/save evidence review only,
-no automated grading, no rubric scoring, no correctness scoring, and no creative
+`alice-desktop-instructor-student-setup` uses the standard manual checklist
+sections and includes a generated `Assessment boundary` section. That section
+states manual evidence required, setup/open/save evidence review only, no
+automated grading, no rubric scoring, no correctness scoring, and no creative
 assessment. Learner-world state extraction for grading or creative assessment is
-blocked until the reviewed assessment contract, evidence mapping, generated
-checklist section, and expanded boundary record exist.
+blocked until the reviewed assessment contract, evidence mapping, and reviewed
+implementation exist.
 
 Do not use learner-world QA evidence to claim learner-work grading, rubric
 scoring, correctness assessment, or creativity assessment. Any future

@@ -1,9 +1,9 @@
 # Learner-world assessment boundary
 
-This reference describes the current learner-world assessment boundary and the
-planned implementation that will make that boundary explicit in generated
-evidence. The boundary keeps instructor/student setup/open/save evidence review
-separate from assessment features that the runner does not implement.
+This reference describes the current learner-world assessment boundary and how
+the runner makes that boundary explicit in generated evidence. The boundary
+keeps instructor/student setup/open/save evidence review separate from
+assessment features that the runner does not implement.
 
 ## Contents
 
@@ -54,13 +54,11 @@ Running the selected scenario creates:
 `status.txt` records `automationMode=manual-evidence-required` and points to the
 generated checklist. It does not record an assessment pass or score.
 
-`manual-evidence-checklist.txt` currently includes the standard manual sections:
+`manual-evidence-checklist.txt` includes the standard manual sections:
 preconditions, user actions, expected outcomes, required evidence, fallback
-notes, and completion status. It does not yet include a generated `Assessment
-boundary` section.
-
-Until the planned checklist extension lands, reviewers should pair the generated
-checklist with the checked-in boundary record:
+notes, and completion status. For `alice-desktop-instructor-student-setup`, it
+also includes a generated `Assessment boundary` section from the checked-in
+boundary record:
 
 ```text
 qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
@@ -80,63 +78,47 @@ The current record exposes these fields:
 | Field | Meaning |
 | --- | --- |
 | `id` | Stable identifier: `learner-world-assessment-boundary`. |
+| `selectedScenario` | Scenario covered by the boundary: `alice-desktop-instructor-student-setup`. |
+| `automationMode` | Always `manual-evidence-required` for this boundary. |
 | `scope` | Instructor/student learner-world setup/open/save evidence. |
 | `currentCapability` | Collects manual evidence for setup, open, and save workflow review. |
+| `supportedEvidence` | Explicit list of supported evidence areas: setup/open/save evidence review only, instructor starter artifact review, student open artifact review, student save artifact review, and manual review-notes acceptance decision. |
+| `assessmentLimits` | Explicit limits: no automated grading, no rubric scoring, no correctness scoring, and no creative assessment. |
 | `nonCapabilities` | Unsupported learner-work grading, rubric scoring, correctness assessment, and creativity assessment claims. |
 | `nextBlocker.id` | Blocking requirement for future assessment work: `define-reviewed-assessment-contract`. |
 | `nextBlocker.description` | User-facing explanation that a reviewed assessment contract and evidence mapping are required before grading or creative assessment work can be claimed. |
+| `blocker` | User-facing blocker shown in generated evidence: learner-world state extraction for grading or creative assessment is blocked until the reviewed assessment contract and evidence mapping define safe rubric inputs and limits. |
 
 Consumers may display these fields in documentation or review tooling. They must
 not treat this file as executable assessment behavior without a separate
 reviewed implementation change.
 
-## Planned boundary implementation
-
-The feature we will build expands the boundary from a passive declarative record
-into explicit generated evidence while preserving the same conservative claim
-limit.
-
-### Planned generated checklist section
+## Generated checklist section
 
 `manual-evidence-checklist.txt` for `alice-desktop-instructor-student-setup`
-will include this generated section:
+includes this generated section:
 
 ```text
 Assessment boundary
-- RabbitHole learner-world QA currently supports setup/open/save evidence review only.
-- Manual evidence required.
-- Setup, open, save evidence review only.
-- No automated grading.
-- No rubric scoring.
-- No correctness scoring.
-- No creative assessment.
-- Learner-world state extraction for grading or creative assessment is blocked
-  until define-reviewed-assessment-contract is resolved.
+-------------------
+1. Manual evidence required.
+2. Scope: instructor-student learner-world setup/open/save evidence.
+3. Supported evidence: setup/open/save evidence review only.
+4. Supported evidence: instructor starter project artifact review.
+5. Supported evidence: student open artifact review.
+6. Supported evidence: student save artifact review.
+7. Supported evidence: manual review-notes.txt acceptance decision.
+8. Assessment limit: no automated grading.
+9. Assessment limit: no rubric scoring.
+10. Assessment limit: no correctness scoring.
+11. Assessment limit: no creative assessment.
+12. Blocker: define-reviewed-assessment-contract.
+13. learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping define safe rubric inputs and limits.
 ```
 
-### Planned boundary record fields
-
-The planned record will add fields that make the selected scenario, automation
-mode, supported evidence, limits, and blocker easier for docs and review tools to
-read:
-
-| Field | Meaning |
-| --- | --- |
-| `id` | Stable identifier: `learner-world-assessment-boundary`. |
-| `selectedScenario` | Scenario covered by the boundary: `alice-desktop-instructor-student-setup`. |
-| `automationMode` | Always `manual-evidence-required` for this boundary. |
-| `scope` | Instructor/student learner-world setup/open/save evidence. |
-| `currentCapability` | Collects manual evidence for setup, open, and save workflow review. |
-| `supportedEvidence` | Explicit list of supported evidence areas: instructor setup, student open, and student save. |
-| `assessmentLimits` | Explicit list of unsupported capabilities, including no automated grading, no rubric scoring, no correctness scoring, and no creative assessment. |
-| `nonCapabilities` | Compatibility field naming unsupported learner-work grading, rubric scoring, correctness assessment, and creativity assessment claims. |
-| `blocker.id` | Blocking requirement for future assessment work: `define-reviewed-assessment-contract`. |
-| `blocker.description` | User-facing explanation that a reviewed assessment contract and evidence mapping are required before grading or creative assessment work can be claimed. |
-| `nextBlocker` | Compatibility alias for the same blocker when older readers expect that field. |
-
-The same implementation change must update the JSON record, generated checklist,
-schema or validator expectations, and tests together so the docs do not outrun
-the runner again.
+Future boundary changes must update the JSON record, generated checklist, schema
+or validator expectations, and tests together so the docs do not outrun the
+runner again.
 
 ## Scenario configuration
 

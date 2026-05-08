@@ -34,5 +34,6 @@ fallback:
     - If Xvfb launch validation is unavailable, capture the failure log and provide screenshots from a supported desktop environment.
     - Manual notes must identify where the starter and student copy files were saved.
     - Do not use this scenario to claim learner-work grading, rubric scoring, correctness assessment, or creativity assessment.
+    - Assessment limits are no automated grading, no rubric scoring, no correctness scoring, and no creative assessment.
 supportingEvidence:
   - alice-desktop-launch

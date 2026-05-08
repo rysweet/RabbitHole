@@ -26,7 +26,7 @@ repository.
 - [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - run and review the target-specific Select Project evidence path for the committed starter project.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
-- [Learner-world assessment boundary](./reference/learner-world-assessment-boundary.md) - reference for the current manual instructor/student setup evidence boundary, planned generated checklist wording, unsupported assessment claims, and next blocker.
+- [Learner-world assessment boundary](./reference/learner-world-assessment-boundary.md) - reference for the current manual instructor/student setup evidence boundary, generated checklist wording, unsupported assessment claims, and blocker.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, claim boundaries, and world-canvas pixel target readiness contract.
 - [First-Lesson Live Procedure Target Observation](./reference/first-lesson-live-procedure-target-observation.md) - planned live desktop shard contract for opening the first-lesson starter through Select Project and observing or blocking the procedure/code-editor target.

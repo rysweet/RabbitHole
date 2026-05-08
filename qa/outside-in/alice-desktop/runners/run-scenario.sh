@@ -20,6 +20,7 @@ VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER=visible-rendering-pixel-target-blocker.js
 FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
 FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
 FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
+LEARNER_WORLD_BOUNDARY_ARTIFACT="$BASE_DIR/contracts/learner-world-assessment-boundary.json"
 
 usage() {
   cat <<'EOF'
@@ -468,13 +469,14 @@ PY
 write_checklist() {
   local scenario_json=$1
   local run_dir=$2
-  SCENARIO_JSON="$scenario_json" RUN_DIR="$run_dir" python3 - <<'PY'
+  SCENARIO_JSON="$scenario_json" RUN_DIR="$run_dir" LEARNER_WORLD_BOUNDARY_ARTIFACT="$LEARNER_WORLD_BOUNDARY_ARTIFACT" python3 - <<'PY'
 import json
 import os
 from pathlib import Path
 
 scenario = json.loads(os.environ["SCENARIO_JSON"])
 run_dir = Path(os.environ["RUN_DIR"])
+boundary_path = Path(os.environ["LEARNER_WORLD_BOUNDARY_ARTIFACT"])
 path = run_dir / "manual-evidence-checklist.txt"
 
 def section(lines, title, values):
@@ -483,6 +485,50 @@ def section(lines, title, values):
     lines.append("-" * len(title))
     for index, value in enumerate(values, 1):
         lines.append(f"{index}. {value}")
+
+def require_string(value, field):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{boundary_path}: {field} must be a non-empty string")
+    return value
+
+def require_string_list(value, field):
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{boundary_path}: {field} must be a non-empty string list")
+    for index, item in enumerate(value, 1):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"{boundary_path}: {field}[{index}] must be a non-empty string")
+    return value
+
+def assessment_boundary_values():
+    if scenario["id"] != "alice-desktop-instructor-student-setup":
+        return []
+
+    boundary = json.loads(boundary_path.read_text(encoding="utf-8"))
+    selected_scenario = require_string(boundary.get("selectedScenario"), "selectedScenario")
+    if selected_scenario != scenario["id"]:
+        raise ValueError(
+            f"{boundary_path}: selectedScenario must match {scenario['id']} for generated manual evidence"
+        )
+    if require_string(boundary.get("automationMode"), "automationMode") != "manual-evidence-required":
+        raise ValueError(f"{boundary_path}: automationMode must be manual-evidence-required")
+
+    supported_evidence = require_string_list(boundary.get("supportedEvidence"), "supportedEvidence")
+    assessment_limits = require_string_list(boundary.get("assessmentLimits"), "assessmentLimits")
+    blocker = boundary.get("blocker")
+    if not isinstance(blocker, dict):
+        raise ValueError(f"{boundary_path}: blocker must be a mapping")
+    blocker_id = require_string(blocker.get("id"), "blocker.id")
+    blocker_description = require_string(blocker.get("description"), "blocker.description")
+
+    values = [
+        "Manual evidence required.",
+        f"Scope: {require_string(boundary.get('scope'), 'scope')}.",
+    ]
+    values.extend(f"Supported evidence: {item}." for item in supported_evidence)
+    values.extend(f"Assessment limit: {item}." for item in assessment_limits)
+    values.append(f"Blocker: {blocker_id}.")
+    values.append(blocker_description)
+    return values
 
 lines = [
     f"Scenario: {scenario['id']}",
@@ -495,6 +541,9 @@ section(lines, "User actions", scenario["userActions"])
 section(lines, "Expected outcomes", scenario["expectedOutcomes"])
 section(lines, "Required evidence", scenario["evidence"]["required"])
 section(lines, "Fallback notes", scenario["fallback"]["notes"])
+assessment_values = assessment_boundary_values()
+if assessment_values:
+    section(lines, "Assessment boundary", assessment_values)
 section(
     lines,
     "Completion status",

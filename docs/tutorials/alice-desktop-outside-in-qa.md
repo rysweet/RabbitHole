@@ -243,8 +243,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 Open the generated run directory and review `manual-evidence-checklist.txt`,
 `environment.txt`, and `status.txt`. The checklist describes the manual evidence
 needed for instructor starter-project setup, student open, and student save
-review. It does not yet include a generated `Assessment boundary` section; use
-the checked-in boundary record while reviewing the manual run. Checklist
+review. It includes a generated `Assessment boundary` section; use that section
+and the checked-in boundary record while reviewing the manual run. Checklist
 generation does not complete the scenario.
 
 Before accepting the run, add the instructor launch log, starter project
@@ -267,8 +267,8 @@ The record is documentation for the current boundary. It names
 learner-work grading, rubric scoring, correctness assessment, or creativity
 assessment capability can be claimed. Learner-world state extraction for grading
 or creative assessment remains blocked until a reviewed assessment contract,
-evidence mapping, generated checklist section, and expanded boundary record
-exist. The full current and planned contract is documented in
+evidence mapping, and reviewed implementation exist. The current contract is
+documented in
 [Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Step 10: Prepare a gated command smoke
