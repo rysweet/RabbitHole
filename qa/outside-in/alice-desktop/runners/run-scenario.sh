@@ -1462,19 +1462,38 @@ PY
 inventory_json_fields() {
   local inventory_path=$1
   shift
-  python3 - "$inventory_path" "$@" <<'PY'
+  python3 - "$inventory_path" "__alice_inventory_json_fields_end__" "$@" <<'PY'
 import json
 import sys
 
 with open(sys.argv[1], encoding="utf-8") as stream:
     root = json.load(stream)
 
-for field in sys.argv[2:]:
+for field in sys.argv[3:]:
     value = root
     for part in field.split("."):
         value = value.get(part, "") if isinstance(value, dict) else ""
     print(value)
+print(sys.argv[2])
 PY
+}
+
+read_inventory_json_fields() {
+  local -n fields_ref=$1
+  local inventory_path=$2
+  shift 2
+  local fields_output
+  local sentinel=__alice_inventory_json_fields_end__
+
+  fields_output=$(inventory_json_fields "$inventory_path" "$@")
+  mapfile -t fields_ref <<< "$fields_output"
+  local fields_count=${#fields_ref[@]}
+  local sentinel_index=$((fields_count - 1))
+  if [ "$fields_count" -eq 0 ] || [ "${fields_ref[$sentinel_index]}" != "$sentinel" ]; then
+    printf 'Failed to read expected JSON fields from %s\n' "$inventory_path" >&2
+    return 1
+  fi
+  unset "fields_ref[$sentinel_index]"
 }
 
 inventory_json_compact_field() {
@@ -2047,7 +2066,7 @@ run_xvfb_real_alice() {
     write_checklist "$scenario_json" "$run_dir" >/dev/null
     if [ -f "$run_dir/root-directory-prep.json" ]; then
       local -a failed_root_directory_prep_fields
-      mapfile -t failed_root_directory_prep_fields < <(inventory_json_fields "$run_dir/root-directory-prep.json" status blocker)
+      read_inventory_json_fields failed_root_directory_prep_fields "$run_dir/root-directory-prep.json" status blocker
       root_directory_prep_status=${failed_root_directory_prep_fields[0]}
       root_directory_prep_blocker=${failed_root_directory_prep_fields[1]}
     else
@@ -2156,7 +2175,7 @@ JSON
     return 2
   fi
   local -a root_directory_prep_fields
-  mapfile -t root_directory_prep_fields < <(inventory_json_fields "$run_dir/root-directory-prep.json" status blocker)
+  read_inventory_json_fields root_directory_prep_fields "$run_dir/root-directory-prep.json" status blocker
   root_directory_prep_status=${root_directory_prep_fields[0]}
   root_directory_prep_blocker=${root_directory_prep_fields[1]}
 
@@ -2242,7 +2261,7 @@ JSON
     license_jvm_option=
   fi
   local -a license_acceptance_fields
-  mapfile -t license_acceptance_fields < <(inventory_json_fields "$run_dir/license-acceptance.json" status blocker)
+  read_inventory_json_fields license_acceptance_fields "$run_dir/license-acceptance.json" status blocker
   license_acceptance_status=${license_acceptance_fields[0]}
   license_acceptance_blocker=${license_acceptance_fields[1]}
 
@@ -2421,7 +2440,7 @@ JSON
     sleep 3
     write_swing_widget_probe "$run_dir/x-window-inventory.json" "$run_dir/swing-widget-observation.json"
     local -a swing_widget_fields
-    mapfile -t swing_widget_fields < <(inventory_json_fields "$run_dir/swing-widget-observation.json" status blocker)
+    read_inventory_json_fields swing_widget_fields "$run_dir/swing-widget-observation.json" status blocker
     swing_widget_status=${swing_widget_fields[0]}
     swing_widget_blocker=${swing_widget_fields[1]}
   fi
@@ -2446,7 +2465,7 @@ JSON
       "$target_starter_display_name" \
       "$target_starter_repo_path"
     local -a tab_click_fields
-    mapfile -t tab_click_fields < <(inventory_json_fields \
+    read_inventory_json_fields tab_click_fields \
       "$run_dir/tab-click-observation.json" \
       status \
       blocker \
@@ -2456,7 +2475,7 @@ JSON
       openedStarter.displayName \
       openedStarter.repositoryPath \
       projectOpenObserved \
-      javaPid)
+      javaPid
     tab_click_status=${tab_click_fields[0]}
     tab_click_blocker=${tab_click_fields[1]}
     select_project_evidence_status=${tab_click_fields[2]}
@@ -2479,7 +2498,7 @@ JSON
       "$run_dir/tab-click-observation.json" \
       "$run_dir/post-project-open-observation.json"
     local -a post_open_fields
-    mapfile -t post_open_fields < <(inventory_json_fields "$run_dir/post-project-open-observation.json" status blocker)
+    read_inventory_json_fields post_open_fields "$run_dir/post-project-open-observation.json" status blocker
     post_open_status=${post_open_fields[0]}
     post_open_blocker=${post_open_fields[1]}
   fi
@@ -2495,7 +2514,7 @@ JSON
       "$target_starter_display_name" \
       "$target_starter_repo_path"
     local -a procedure_target_fields
-    mapfile -t procedure_target_fields < <(inventory_json_fields "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" status blocker)
+    read_inventory_json_fields procedure_target_fields "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" status blocker
     procedure_target_status=${procedure_target_fields[0]}
     procedure_target_blocker=${procedure_target_fields[1]}
   fi
@@ -2509,16 +2528,16 @@ JSON
       "$scenario_id" \
       "$automation_mode"
     local -a runtime_display_fields
-    mapfile -t runtime_display_fields < <(inventory_json_fields "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" status blocker)
+    read_inventory_json_fields runtime_display_fields "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" status blocker
     runtime_display_status=${runtime_display_fields[0]}
     runtime_display_blocker=${runtime_display_fields[1]}
   fi
   local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker license_dialog_status license_dialog_blocker select_project_status select_project_blocker select_project_interaction
   local -a window_inventory_fields application_root_error_fields license_dialog_fields select_project_fields
-  mapfile -t window_inventory_fields < <(inventory_json_fields "$run_dir/x-window-inventory.json" status aliceWindowCandidateCount)
-  mapfile -t application_root_error_fields < <(inventory_json_fields "$run_dir/application-root-error.json" status blocker)
-  mapfile -t license_dialog_fields < <(inventory_json_fields "$run_dir/license-dialog.json" status blocker)
-  mapfile -t select_project_fields < <(inventory_json_fields "$run_dir/select-project-window.json" status blocker interactionProof)
+  read_inventory_json_fields window_inventory_fields "$run_dir/x-window-inventory.json" status aliceWindowCandidateCount
+  read_inventory_json_fields application_root_error_fields "$run_dir/application-root-error.json" status blocker
+  read_inventory_json_fields license_dialog_fields "$run_dir/license-dialog.json" status blocker
+  read_inventory_json_fields select_project_fields "$run_dir/select-project-window.json" status blocker interactionProof
   window_inventory_status=${window_inventory_fields[0]}
   alice_window_candidate_count=${window_inventory_fields[1]}
   application_root_error_status=${application_root_error_fields[0]}
@@ -2726,7 +2745,7 @@ JSON
       "$run_dir" \
       "$run_dir/controlled-display-pixel-observation.json"
     local -a visible_rendering_pixel_sampling_fields
-    mapfile -t visible_rendering_pixel_sampling_fields < <(inventory_json_fields "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" status blocker)
+    read_inventory_json_fields visible_rendering_pixel_sampling_fields "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" status blocker
     visible_rendering_pixel_sampling_status=${visible_rendering_pixel_sampling_fields[0]}
     visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
     visible_rendering_pixel_sampling_blocker=${visible_rendering_pixel_sampling_fields[1]}

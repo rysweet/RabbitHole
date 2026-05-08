@@ -12,6 +12,23 @@ RUNNER="$BASE_DIR/runners/run-scenario.sh"
 tmp_root=$(create_scratch_root "$SCRIPT_DIR") || exit 1
 trap 'rm -rf "$tmp_root"' EXIT
 
+bash -c 'set -euo pipefail; source "$1"; read_inventory_json_fields fields "$2" status blocker; printf "unexpected-success\n"' \
+  bash "$RUNNER" "$tmp_root/missing-json-fields.json" \
+  >"$tmp_root/missing-json-fields.out" 2>"$tmp_root/missing-json-fields.err"
+status=$?
+assert_failure "$status" "batched JSON field reads fail closed when an artifact is missing"
+assert_not_contains "$tmp_root/missing-json-fields.out" 'unexpected-success' "missing JSON field read does not continue with empty values"
+
+printf '{"status":"observed","blocker":""}\n' > "$tmp_root/empty-json-field.json"
+bash -c 'set -euo pipefail; source "$1"; read_inventory_json_fields fields "$2" status blocker; printf "count=%s\nstatus=%s\nblocker=<%s>\n" "${#fields[@]}" "${fields[0]}" "${fields[1]}"' \
+  bash "$RUNNER" "$tmp_root/empty-json-field.json" \
+  >"$tmp_root/empty-json-field.out" 2>"$tmp_root/empty-json-field.err"
+status=$?
+assert_exit_code "$status" 0 "batched JSON field reads preserve empty trailing fields"
+assert_contains "$tmp_root/empty-json-field.out" '^count=2$' "empty trailing JSON field remains addressable"
+assert_contains "$tmp_root/empty-json-field.out" '^status=observed$' "batched JSON field read preserves populated fields"
+assert_contains "$tmp_root/empty-json-field.out" '^blocker=<>$' "batched JSON field read preserves empty field value"
+
 set_launch_cwd() {
   python3 - "$1" "$2" <<'PY'
 from pathlib import Path
