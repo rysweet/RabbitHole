@@ -1,16 +1,17 @@
 # Post-open runtime/display accessibility evidence
 
 This reference documents the Alice desktop outside-in QA scenario contract for
-post-open runtime/display accessibility evidence and controlled-display
-screenshot-consistency evidence.
+post-open runtime/display accessibility evidence and the planned
+controlled-display screenshot-consistency evidence contract.
 
-The scenario proves two narrow claims: after Alice opens a project through the
-existing supported launch/open path, the live accessibility tree exposes at
-least one runtime/display candidate, and the controlled-display screenshot
-artifact is internally consistent with the pixel metadata recorded for that same
-artifact. It does not prove world-canvas pixel correctness, deployed installer
-success, full world execution, grading, lesson completion, active Save behavior,
-active Select Project behavior, or decoder behavior.
+The scenario proves one implemented narrow claim today: after Alice opens a
+project through the existing supported launch/open path, the live accessibility
+tree exposes at least one runtime/display candidate. The visible-rendering shard
+will add a second narrow claim: the controlled-display screenshot artifact is
+internally consistent with the pixel metadata recorded for that same artifact.
+Neither claim proves world-canvas pixel correctness, deployed installer success,
+full world execution, grading, lesson completion, active Save behavior, active
+Select Project behavior, or decoder behavior.
 
 ## Contents
 
@@ -40,12 +41,13 @@ qa/outside-in/alice-desktop/schema/scenario.schema.json
 
 It reuses the existing real Alice launch/open path under Xvfb and AT-SPI. The
 runner starts Alice with the `alice-ide-atk` Maven execution, performs the
-supported project-open setup, captures a controlled-display screenshot, records
-screenshot-consistency metadata for that screenshot, then invokes the read-only
-runtime/display probe.
+supported project-open setup, captures a controlled-display screenshot, then
+invokes the read-only runtime/display probe. The planned visible-rendering shard
+will strengthen the controlled-display artifact so it records
+screenshot-consistency metadata for that same screenshot.
 
-The probe and screenshot-consistency step are observational. They do not click
-controls, save projects, select new starters, execute worlds, grade work,
+The probe and planned screenshot-consistency step are observational. They do not
+click controls, save projects, select new starters, execute worlds, grade work,
 inspect decoder output, mutate project data, or infer rendered-world correctness
 from a generic desktop screenshot.
 
@@ -60,8 +62,7 @@ NODE_OPTIONS=--max-old-space-size=32768 \
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 ```
 
-Collect post-open runtime/display accessibility and screenshot-consistency
-evidence:
+Collect post-open runtime/display accessibility evidence:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -82,10 +83,10 @@ qa/outside-in/alice-desktop/evidence/post-open-runtime-display/
 ```
 
 Generated evidence is local run output. Keep it uncommitted. Use
-`post-open-runtime-display-accessibility-evidence.json` for the
-runtime/display accessibility decision and
-`controlled-display-pixel-observation.json` for the screenshot-consistency
-decision.
+`post-open-runtime-display-accessibility-evidence.json` for the implemented
+runtime/display accessibility decision. The planned visible-rendering shard will
+also use `controlled-display-pixel-observation.json` for the strengthened
+screenshot-consistency decision.
 
 ## Configuration
 
@@ -133,10 +134,10 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 | Automation mode | `xvfb-real-alice` |
 | Launch path | Existing Alice IDE Maven launch path with the AT-SPI wrapper execution. |
 | Decision artifact | `post-open-runtime-display-accessibility-evidence.json` |
-| Final status artifact | `status.txt` with `outcome=passed` only when runtime/display accessibility and controlled-display pixel checks are both observed. |
+| Final status artifact | `status.txt` with `outcome=passed` only when required checks for the implemented lane are observed. After the visible-rendering shard lands, that also requires controlled-display screenshot consistency. |
 | Probe-local status artifact | `runtime-display-accessibility-status.txt`, written by the probe before the runner writes final scenario status. Use it for debugging the probe result, not as the final pass/fail decision. |
-| Screenshot-consistency artifact | `controlled-display-pixel-observation.json` |
-| World-pixel blocker artifact | `visible-rendering-pixel-target-blocker.json`, written when screenshot metadata cannot be read safely or when a world-canvas pixel target is required but unavailable. |
+| Screenshot-consistency artifact | `[PLANNED - Implementation Pending]` `controlled-display-pixel-observation.json` with the strengthened schema in this reference. |
+| World-pixel blocker artifact | `[PLANNED - Implementation Pending]` `visible-rendering-pixel-target-blocker.json`, written for the `screenshot-metadata-unavailable` fallback and reused by the next rendered-world-pixel shard when it requires a world-canvas pixel target. |
 | Supporting setup artifacts | `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and environment summary. |
 | Default evidence root | `qa/outside-in/alice-desktop/evidence/` unless `--evidence-dir` is supplied. |
 
@@ -302,21 +303,30 @@ decoder output, grading state, lesson state, or world execution traces.
 
 ## Controlled-display screenshot-consistency API
 
+`[PLANNED - Implementation Pending]`
+
+This section describes the finished visible-rendering shard contract to build.
+The current runner writes `controlled-display-pixel-observation.json`, but it
+does not yet emit every field below, including `schemaVersion`, `claimScope`,
+structured `screenshot`, structured `pixelObservation`, `worldCanvasPixelTarget`,
+or `unsupportedClaims`.
+
 The screenshot-consistency artifact is:
 
 ```text
 controlled-display-pixel-observation.json
 ```
 
-It is a controlled-display evidence artifact, not a rendered-world oracle. The
-runner derives screenshot dimensions and pixel-observation metadata from the
-same relative screenshot artifact named in the JSON. It never records absolute
-paths, hostnames, usernames, environment variables, credentials, or binary image
-data.
+It will be a controlled-display evidence artifact, not a rendered-world oracle.
+The runner will derive screenshot dimensions and pixel-observation metadata from
+the same relative screenshot artifact named in the JSON. It must not record
+absolute paths, hostnames, usernames, environment variables, credentials, or
+binary image data.
 
-### Observed screenshot-consistency artifact
+### Planned observed screenshot-consistency artifact
 
-An observed result emits these fields. Field order is not part of the contract.
+An observed result will emit these fields. Field order is not part of the
+contract.
 
 ```json
 {
@@ -364,7 +374,8 @@ An observed result emits these fields. Field order is not part of the contract.
 }
 ```
 
-The minimum decision fields for accepting screenshot-consistency evidence are:
+The minimum decision fields for accepting planned screenshot-consistency
+evidence are:
 
 ```json
 {
@@ -396,17 +407,17 @@ The minimum decision fields for accepting screenshot-consistency evidence are:
 }
 ```
 
-An observed screenshot-consistency result means only that the runner captured a
-controlled-display screenshot, read its dimensions, and recorded pixel metadata
-that points back to that same screenshot. It does not mean the runner identified
-the Run window's world canvas, sampled pixels inside that canvas, or validated
-rendered-world content.
+An observed screenshot-consistency result will mean only that the runner captured
+a controlled-display screenshot, read its dimensions, and recorded pixel
+metadata that points back to that same screenshot. It will not mean the runner
+identified the Run window's world canvas, sampled pixels inside that canvas, or
+validated rendered-world content.
 
-### Blocked screenshot-consistency artifact
+### Planned blocked screenshot-consistency artifact
 
 When screenshot metadata cannot be read safely, the controlled-display artifact
-records a blocked result and the runner also writes the world-pixel blocker
-artifact described below.
+will record a blocked result and the runner will also write the world-pixel
+blocker artifact described below.
 
 ```json
 {
@@ -448,7 +459,7 @@ artifact described below.
 }
 ```
 
-### World-canvas pixel target blocker
+### Planned world-canvas pixel target blocker
 
 The blocker artifact is:
 
@@ -456,8 +467,11 @@ The blocker artifact is:
 visible-rendering-pixel-target-blocker.json
 ```
 
-It is the machine-readable next blocker for true rendered-world pixel
-correctness:
+It will be the machine-readable next blocker for true rendered-world pixel
+correctness when screenshot metadata cannot be read safely. The next
+rendered-world-pixel shard should also use this shape when it explicitly
+requires world-canvas pixel evidence but lacks a reliable Run-window/world-canvas
+pixel sampling target:
 
 ```json
 {
@@ -486,9 +500,10 @@ correctness:
 }
 ```
 
-This artifact is not a failure to document. It is the accepted machine-readable
-blocker until the implementation has a reliable Run-window/world-canvas pixel
-sampling target. Do not replace it with generic screenshot evidence.
+This artifact will not be a failure to document. It is the planned
+machine-readable blocker until the implementation has a reliable
+Run-window/world-canvas pixel sampling target. Do not replace it with generic
+screenshot evidence.
 
 ## Review workflow
 
@@ -499,8 +514,9 @@ Use this review sequence for every run:
 2. Open the JSON decision artifact and read `status`, `blocker`,
    `postOpenRuntimeDisplayAccessibilityObserved`,
    `runtimeDisplayCandidateCount`, and `runtimeDisplayCandidates`.
-3. Open `controlled-display-pixel-observation.json` and confirm
-   `schemaVersion=1`, `status=observed`, `claim=controlled-display-screenshot-consistency`,
+3. After the visible-rendering shard lands, open
+   `controlled-display-pixel-observation.json` and confirm `schemaVersion=1`,
+   `status=observed`, `claim=controlled-display-screenshot-consistency`,
    `claimScope=controlled-display-screenshot-consistency-only`, a relative
    screenshot path, non-null screenshot dimensions,
    `pixelObservation.dimensionsConsistentWithScreenshot=true`,
@@ -511,12 +527,13 @@ Use this review sequence for every run:
 5. Review `tab-click-observation.json` and
    `post-project-open-observation.json` to understand the supporting project-open
    setup.
-6. Accept the run only when `status.txt` records `outcome=passed`,
-   `runtimeDisplayAccessibilityStatus=observed`, and
-   `controlledDisplayPixelStatus=observed`, and the decision artifact records
-   `status=observed`, `blocker=none`,
+6. Accept the implemented runtime/display run only when `status.txt` records
+   `outcome=passed` and `runtimeDisplayAccessibilityStatus=observed`, and the
+   decision artifact records `status=observed`, `blocker=none`,
    `postOpenRuntimeDisplayAccessibilityObserved=true`, and
-   `runtimeDisplayCandidateCount` greater than zero.
+   `runtimeDisplayCandidateCount` greater than zero. After the
+   visible-rendering shard lands, also require
+   `controlledDisplayPixelStatus=observed`.
 
 If the decision artifact is `status=blocked`, preserve it as the run result. A
 blocked artifact is useful evidence about the missing prerequisite or missing
@@ -540,12 +557,17 @@ python3 -m json.tool \
 sed -n '1,120p' "$run_dir/status.txt"
 ```
 
-Accept the run only when `status.txt` records:
+Accept the implemented runtime/display run only when `status.txt` records:
 
 ```text
 outcome=passed
 runtimeDisplayAccessibilityStatus=observed
 runtimeDisplayAccessibilityBlocker=none
+```
+
+After the visible-rendering shard lands, also require:
+
+```text
 controlledDisplayPixelStatus=observed
 controlledDisplayPixelBlocker=none
 ```
@@ -560,10 +582,11 @@ blocker=none
 ```
 
 Also review `tab-click-observation.json`,
-`post-project-open-observation.json`, `controlled-display-pixel-observation.json`,
-`launch.log`, `xvfb.log`, `x-window-inventory.json`, and the captured screenshot
-as supporting evidence for the project-open setup, screenshot consistency, and
-run environment.
+`post-project-open-observation.json`, `launch.log`, `xvfb.log`,
+`x-window-inventory.json`, and the captured screenshot as supporting evidence for
+the project-open setup and run environment. After the visible-rendering shard
+lands, also review `controlled-display-pixel-observation.json` for
+screenshot-consistency evidence.
 
 ### Review a blocked run
 
@@ -578,7 +601,7 @@ Treat `status=blocked` as a machine-readable gap report. Do not replace it with
 a manual claim that rendering, world execution, grading, lesson completion,
 Save, Select Project, installer success, or decoder behavior passed.
 
-### Review the screenshot-consistency artifact
+### Review the planned screenshot-consistency artifact
 
 ```bash
 run_dir=qa/outside-in/alice-desktop/evidence/post-open-runtime-display/\
@@ -587,7 +610,8 @@ alice-desktop-post-open-runtime-display-accessibility-evidence/<timestamp>
 python3 -m json.tool "$run_dir/controlled-display-pixel-observation.json"
 ```
 
-Accept the screenshot-consistency artifact only when it records:
+After the visible-rendering shard lands, accept the screenshot-consistency
+artifact only when it records:
 
 ```text
 schemaVersion=1
@@ -606,20 +630,25 @@ worldCanvasPixelTarget.missingUnblocker=reliable-run-window-world-canvas-pixel-s
 ```
 
 If `visible-rendering-pixel-target-blocker.json` is present, keep it with the
-run evidence. It is the precise next blocker for world-canvas pixel evidence,
-not a substitute for that evidence.
+run evidence. In this planned contract, it is required for the
+`screenshot-metadata-unavailable` fallback and is the precise next blocker for
+world-canvas pixel evidence, not a substitute for that evidence.
 
 ## Review rules
 
 1. The JSON artifact is the runtime/display decision artifact.
-2. Final scenario acceptance also requires `status.txt` to record
-   `outcome=passed` and `controlledDisplayPixelStatus=observed`.
+2. Final scenario acceptance requires `status.txt` to record `outcome=passed`.
+   After the visible-rendering shard lands, final acceptance also requires
+   `controlledDisplayPixelStatus=observed`.
 3. `status=observed` is accepted only with `blocker=none` and at least one
    runtime/display candidate.
-4. `controlled-display-pixel-observation.json` is accepted only as
-   screenshot-consistency evidence, with `claimScope=controlled-display-screenshot-consistency-only`.
-5. `worldCanvasPixelTarget.identified=false` means the runner has not proved
-   Run-window/world-canvas pixel correctness. The exact unblocker is
+4. `[PLANNED - Implementation Pending]`
+   `controlled-display-pixel-observation.json` is accepted only as
+   screenshot-consistency evidence, with
+   `claimScope=controlled-display-screenshot-consistency-only`.
+5. `[PLANNED - Implementation Pending]` `worldCanvasPixelTarget.identified=false`
+   means the runner has not proved Run-window/world-canvas pixel correctness.
+   The exact unblocker is
    `reliable-run-window-world-canvas-pixel-sampling-target`.
 6. `status=blocked` is an honest blocked result, not a failed documentation
    claim and not a success substitute.
@@ -638,14 +667,17 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
-bash qa/outside-in/alice-desktop/tests/test-visible-rendering-evidence-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-probe.sh
 ```
 
-The contract tests cover schema/validator/runner parity, the runtime/display
-artifact name, screenshot-consistency artifact fields, world-canvas blocker
-boundary, status fields, blocked fallback behavior, and the narrow claim tokens.
+The current contract tests cover schema/validator/runner parity, the
+runtime/display artifact name, status fields, blocked fallback behavior, and the
+narrow runtime/display claim token. The visible-rendering shard should add
+`bash qa/outside-in/alice-desktop/tests/test-visible-rendering-evidence-contract.sh`
+to cover the planned screenshot-consistency artifact fields, world-canvas blocker
+boundary, blocked fallback behavior, and narrow screenshot-consistency claim
+tokens.
 
 ## Troubleshooting
 
@@ -659,5 +691,5 @@ boundary, status fields, blocked fallback behavior, and the narrow claim tokens.
 | `root-directory-property-missing`, `core-resources-distribution-prep-failed`, or `core-resources-distribution-not-created` | Alice root-directory launch preparation failed. | Review `root-directory-prep.json` and `root-directory-prep.log`; initialize/build the resources distribution before rerunning. |
 | `license-acceptance-prep-failed` or `first-run-license-agreement-visible` | First-run license handling blocked launch automation. | Use `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` only in controlled QA launches and review `license-acceptance.json` plus `license-dialog.json`. |
 | `screenshot-capture-failed`, `screenshot-captured-uniform-black`, or `screenshot-pixel-analysis-unavailable` | Controlled-display pixel evidence is unavailable, so `outcome=passed` is not valid even if the runtime/display JSON is observed. | Review `controlled-display-pixel-observation.json`, `screenshot.log`, and the screenshot artifact. |
-| `screenshot-metadata-unavailable` | The runner captured a screenshot but could not safely read dimensions from that same artifact. | Preserve `controlled-display-pixel-observation.json` with `status=blocked` and review `visible-rendering-pixel-target-blocker.json`; do not invent dimensions. |
-| `reliable-run-window-world-canvas-pixel-sampling-target` | The implementation has not identified a stable Run-window/world-canvas pixel target. | Treat `visible-rendering-pixel-target-blocker.json` as the exact next blocker for true rendered-world pixel correctness. |
+| `screenshot-metadata-unavailable` | `[PLANNED - Implementation Pending]` The runner captured a screenshot but could not safely read dimensions from that same artifact. | Preserve `controlled-display-pixel-observation.json` with `status=blocked` and review `visible-rendering-pixel-target-blocker.json`; do not invent dimensions. |
+| `reliable-run-window-world-canvas-pixel-sampling-target` | `[PLANNED - Implementation Pending]` The implementation has not identified a stable Run-window/world-canvas pixel target. | Treat `visible-rendering-pixel-target-blocker.json` as the exact next blocker for true rendered-world pixel correctness. |
