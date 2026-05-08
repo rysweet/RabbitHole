@@ -102,6 +102,7 @@ public class JMenuBarRobotClickSaveProofTest {
     AtomicReference<JFrame> testFrameRef = new AtomicReference<>();
     AtomicReference<JMenu> fileMenuRef = new AtomicReference<>();
 
+    try {
     SwingUtilities.invokeAndWait(() -> {
       StageIDE ide = new StageIDE(new CrashDetector(JMenuBarRobotClickSaveProofTest.class));
       ide.initialize(new String[0]);
@@ -210,21 +211,7 @@ public class JMenuBarRobotClickSaveProofTest {
     // Allow ActionEvent dispatch and evidence write on the EDT before reading artifact.
     robot.delay(300);
 
-    // Step 8: Tear down.
-    SwingUtilities.invokeAndWait(() -> {
-      JFrame testFrame = testFrameRef.get();
-      if (testFrame != null) {
-        testFrame.dispose();
-      }
-      StageIDE ide = ideRef.get();
-      if (ide != null
-          && ide.getDocumentFrame() != null
-          && ide.getDocumentFrame().getFrame() != null) {
-        ide.getDocumentFrame().getFrame().release();
-      }
-    });
-
-    // Step 9: Assert evidence artifact contents.
+    // Step 8: Assert evidence artifact contents.
     Path artifact =
         evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_ACTION_INVOCATION_PROOF_ARTIFACT);
     assertTrue("Evidence artifact missing: " + artifact, Files.exists(artifact));
@@ -238,6 +225,26 @@ public class JMenuBarRobotClickSaveProofTest {
     assertTrue(json, json.contains("Save dialog displayed"));
     // No full save artifact: PROOF_ONLY mode cancels before SaveOperationFlow runs.
     assertFalse(Files.exists(evidenceDir.resolve(SaveOperationCompletionEvidence.ARTIFACT)));
+    } finally {
+      cleanupRobotProofResources(testFrameRef, ideRef);
+    }
+  }
+
+  private static void cleanupRobotProofResources(
+      AtomicReference<JFrame> testFrameRef,
+      AtomicReference<StageIDE> ideRef) throws Exception {
+    SwingUtilities.invokeAndWait(() -> {
+      JFrame testFrame = testFrameRef.getAndSet(null);
+      if (testFrame != null) {
+        testFrame.dispose();
+      }
+      StageIDE ide = ideRef.getAndSet(null);
+      if (ide != null
+          && ide.getDocumentFrame() != null
+          && ide.getDocumentFrame().getFrame() != null) {
+        ide.getDocumentFrame().getFrame().release();
+      }
+    });
   }
 
   private static FileMenuModel findFileMenuModel(StageIDE ide) {
