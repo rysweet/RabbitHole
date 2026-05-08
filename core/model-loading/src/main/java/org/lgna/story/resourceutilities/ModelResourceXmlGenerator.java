@@ -117,20 +117,14 @@ final class ModelResourceXmlGenerator {
         modelRoot.setAttribute("placeOnGround", "TRUE");
       }
       doc.appendChild(modelRoot);
-      AxisAlignedBox classBoundingBox = exporter.getBoundingBox(className);
-      if (classBoundingBox == null) {
-        classBoundingBox = exporter.computeBoundingBoxUnion();
-        exporter.setBoundingBox(className, classBoundingBox);
-      }
+      AxisAlignedBox classBoundingBox = persistComputedClassBoundingBoxIfMissing(exporter, className);
       modelRoot.appendChild(createBoundingBoxElement(doc, classBoundingBox));
       modelRoot.appendChild(createTagsElement(doc, tags));
       modelRoot.appendChild(createGroupTagsElement(doc, groupTags));
       modelRoot.appendChild(createThemeTagsElement(doc, themeTags));
 
       for (ModelSubResourceExporter subResource : subResources) {
-        if (!subResource.getModelName().equalsIgnoreCase(className) && exporter.hasBoundingBox(subResource.getModelName())) {
-          subResource.setBbox(exporter.getBoundingBox(subResource.getModelName()));
-        }
+        refreshSubResourceBoundingBoxFromExporterState(exporter, subResource, className);
         modelRoot.appendChild(createSubResourceElement(doc, subResource, exporter, tagSet, groupTagSet, themeTagSet));
       }
 
@@ -139,6 +133,22 @@ final class ModelResourceXmlGenerator {
       e.printStackTrace();
     }
     return null;
+  }
+
+  private static AxisAlignedBox persistComputedClassBoundingBoxIfMissing(ModelResourceExporter exporter, String className) {
+    AxisAlignedBox classBoundingBox = exporter.getBoundingBox(className);
+    if (classBoundingBox == null) {
+      classBoundingBox = exporter.computeBoundingBoxUnion();
+      exporter.setBoundingBox(className, classBoundingBox);
+    }
+    return classBoundingBox;
+  }
+
+  private static void refreshSubResourceBoundingBoxFromExporterState(ModelResourceExporter exporter, ModelSubResourceExporter subResource, String className) {
+    String modelName = subResource.getModelName();
+    if (!modelName.equalsIgnoreCase(className) && exporter.hasBoundingBox(modelName)) {
+      subResource.setBbox(exporter.getBoundingBox(modelName));
+    }
   }
 
   private static Element createBoundingBoxElement(Document doc, AxisAlignedBox bbox) {
