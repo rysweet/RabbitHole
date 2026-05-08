@@ -119,6 +119,8 @@ Documented behavior, including the zero-argument this-method slice:
 | Unknown superclass | Throws `UnsupportedTweedleDecodeException` with the missing superclass name in the message. |
 | Malformed superclass syntax | Throws `IllegalArgumentException` describing the parser boundary. |
 | Supported class fields and supported method declarations | Decodes supported fields and supported `UserMethod` declarations. |
+| Resource field initializer `ImageResource picture <- null` | Decodes as a resource-typed field with a `NullLiteral` initializer. |
+| Non-null resource field initializers such as `ImageResource picture <- someImage` or `AudioResource sound <- sound0` | Throws `UnsupportedTweedleDecodeException` describing the resource field initializer, the unsupported non-null value, and the missing archive resource manifest/binding context. This is a fail-fast boundary, not full resource binding support. |
 | Method or constructor body expression statement `this.helper();` where `helper` is a known same-type zero-argument method | Decodes to an `ExpressionStatement` containing a `MethodInvocation` that resolves to the declared `helper` `UserMethod`; the implementation registers same-type methods before decoding bodies so declaration order does not matter. |
 | Argument-bearing calls, unknown methods, non-`this` targets, implicit calls, static-style calls, object construction calls, or chained calls | Throws `UnsupportedTweedleDecodeException`; this is not general method-call support. Focused tests cover argument-bearing calls, unknown methods, and non-`this` targets; the remaining forms are documented non-goals unless a later slice routes them through this boundary. |
 | Non-class declarations such as enums | Throws `UnsupportedTweedleDecodeException` describing the class-only boundary. |
@@ -127,6 +129,11 @@ Documented behavior, including the zero-argument this-method slice:
 The decoder API is intentionally narrow. It supports the currently implemented
 class-declaration subset and reports unsupported Tweedle explicitly instead of
 silently inventing AST nodes.
+
+Resource field initializers are intentionally limited. `null` resource
+initializers decode, but non-null resource initializers fail fast because the
+direct Tweedle decoder does not have archive resource manifest or binding
+context.
 
 For the focused method-call slice, see
 [Zero-Argument This-Method Call Decode Reference](./zero-argument-this-method-call-decode.md).

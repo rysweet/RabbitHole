@@ -1,6 +1,7 @@
 package org.alice.serialization.tweedle;
 
 import org.junit.Test;
+import org.lgna.common.resources.AudioResource;
 import org.lgna.common.resources.ImageResource;
 import org.lgna.project.ast.AbstractNode;
 import org.lgna.project.ast.ArithmeticInfixExpression;
@@ -141,6 +142,25 @@ public class TweedleEncoderDecoderTest {
     assertEquals("picture", field.getName());
     assertSame(JavaType.getInstance(ImageResource.class), field.getValueType());
     assertTrue(field.initializer.getValue() instanceof NullLiteral);
+  }
+
+  @Test
+  public void decodeClassWithResourceIdentifierInitializedFieldReportsUnsupportedBoundary() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { ImageResource picture <- someImage; }"));
+
+    assertUnsupportedResourceFieldInitializer(thrown, "picture");
+  }
+
+  @Test
+  public void decodeClassWithAudioResourceIdentifierInitializedFieldReportsUnsupportedBoundary() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("class SyntheticType { AudioResource sound <- sound0; }"));
+
+    assertUnsupportedResourceFieldInitializer(thrown, "sound");
+    assertTrue(thrown.getMessage().contains("AudioResource"));
   }
 
   @Test
@@ -1894,6 +1914,16 @@ public class TweedleEncoderDecoderTest {
 
     assertTrue(thrown.getMessage().contains("zero-argument this-method calls"));
     assertTrue(thrown.getMessage().contains(expectedDetail));
+  }
+
+  private static void assertUnsupportedResourceFieldInitializer(
+      UnsupportedTweedleDecodeException thrown,
+      String expectedFieldName) {
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains("resource field initializer"));
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains("non-null"));
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains("not yet supported"));
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains("manifest or binding context"));
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains(expectedFieldName));
   }
 
   private static void assertIntegerInitializer(UserField field, String expectedName, int expectedValue) {
