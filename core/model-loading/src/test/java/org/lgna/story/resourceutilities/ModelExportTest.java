@@ -73,8 +73,10 @@ public class ModelExportTest {
     assertEquals("Alice Test", root.getAttribute("creator"));
     assertEquals("2026", root.getAttribute("creationYear"));
 
-    assertNoResourceAttribution(findResourceByModelName(xml, "MatchingAttributionProp"));
-    assertNoResourceAttribution(findResourceByModelName(xml, "BlankAttributionProp"));
+    NodeList resources = root.getElementsByTagName("Resource");
+    assertEquals(2, resources.getLength());
+    assertResourceWithoutAttribution(findResourceByModelName(resources, "MatchingAttributionProp"));
+    assertResourceWithoutAttribution(findResourceByModelName(resources, "BlankAttributionProp"));
   }
 
   @Test
@@ -307,13 +309,12 @@ public class ModelExportTest {
     assertEquals(expectedText, nodes.item(0).getTextContent());
   }
 
-  private static void assertNoResourceAttribution(Element resource) {
+  private static void assertResourceWithoutAttribution(Element resource) {
     assertFalse(resource.hasAttribute("creator"));
     assertFalse(resource.hasAttribute("creationYear"));
   }
 
-  private static Element findResourceByModelName(Document xml, String modelName) {
-    NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
+  private static Element findResourceByModelName(NodeList resources, String modelName) {
     for (int i = 0; i < resources.getLength(); i++) {
       Element resource = (Element) resources.item(i);
       if (modelName.equals(resource.getAttribute("modelName"))) {
