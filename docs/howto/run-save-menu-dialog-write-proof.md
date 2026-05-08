@@ -34,17 +34,30 @@ The proof is intentionally one path only. It does not run the full desktop QA la
 
 ## Read the result
 
-A passing final implementation means the test activated the production Save menu item with `doClick()`, controlled exactly one expected live Swing `JFileChooser`, completed approval on the EDT after verifying the normalized temp-directory `.a3p` target, and observed a non-empty `.a3p` file.
+A passing proof means the test activated the production Save menu item with `doClick()`, controlled exactly one expected live Swing `JFileChooser`, completed approval on the EDT after verifying the normalized temp-directory `.a3p` target, and observed a non-empty `.a3p` file.
 
 An unproven result is not partial success. Preexisting target files, multiple live `JFileChooser` instances, chooser timeouts, path mismatches, and unsupported display environments must leave approval and write success fields false.
 
-If the final implementation reports this blocker, the proof is executable but the environment is missing the required desktop precondition:
+If the proof reports this blocker, the shard is executable but the environment is missing the required desktop precondition:
 
 ```text
 No available non-headless AWT display
 ```
 
 Run the same command under Xvfb or another usable display to exercise the Save dialog/control/write path.
+
+## Run through the QA scenario wrapper
+
+Use the outside-in scenario wrapper when review needs standard QA evidence in addition to the focused Maven proof output:
+
+```bash
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-save-menu-dialog-write-proof \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof
+```
+
+The scenario is a gated command smoke. Without `ALICE_QA_RUN_GATED_SMOKES=1`, the runner records a gated-not-run result instead of executing the proof. The scenario does not expand the evidence scope beyond Save menu activation, Swing chooser approval, and a non-empty `.a3p` write.
 
 ## Collect evidence for review
 
@@ -77,3 +90,11 @@ Review `desktop-save-dialog-discovery-target.json` for owner/root/selection-targ
 | `doesNotClaim` | Includes lesson completion, rendering, grading, physical user click, broad UI automation, and native dialog exclusions. |
 
 Use `stageide-save-menu-doclick-write-proof.json` as the source for the full menu activation, completed chooser approval, selected path, and project-file write claim only when its status is `proven`. Stored path evidence must be proof-root-relative or redacted, not absolute. `SaveOperationCompletionEvidence` records Save completion fields such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts, but it does not by itself prove Save menu activation. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
+
+When the display precondition is the branch outcome, review the source-controlled blocker artifact instead:
+
+```text
+qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof-blocker.json
+```
+
+That JSON records exactly one next blocker, `No available non-headless AWT display`, with `wroteFile: false`. It is not a partial proof and does not claim chooser approval, file writing, native dialog coverage, full UI automation, visible rendering, grading, creative assessment, first-lesson completion, or full Save completion.

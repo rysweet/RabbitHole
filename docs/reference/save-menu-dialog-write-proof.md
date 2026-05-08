@@ -15,7 +15,7 @@ This reference describes the bounded desktop-safe proof shard for Alice project 
 
 ## Purpose
 
-The proof shard exists to show one real Save path beyond rendered File menu dispatch. It does not attempt comprehensive Save coverage. The intended successful path is:
+The proof shard shows one real Save path beyond rendered File menu dispatch. It does not attempt comprehensive Save coverage. The successful path is:
 
 ```text
 Save menu item doClick()
@@ -67,7 +67,15 @@ If the proof cannot run because the JVM cannot create a non-headless desktop, th
 No available non-headless AWT display
 ```
 
-This blocker is the intended desktop-precondition blocker for the canonical shard. It means the environment must provide a display, such as Xvfb, before the Save dialog/control/write path can be exercised.
+This blocker is the desktop-precondition blocker for the canonical shard. It means the environment must provide a display, such as Xvfb, before the Save dialog/control/write path can be exercised.
+
+When this blocker is the repo-recorded outcome for the shard, the machine-readable blocker artifact is:
+
+```text
+qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof-blocker.json
+```
+
+That artifact records exactly one next blocker, `No available non-headless AWT display`. It must not list multiple blockers, infer chooser behavior, or claim that a project file was written.
 
 ## Evidence artifacts
 
@@ -100,6 +108,16 @@ The canonical proof artifact records:
 | `proof_chain` | The production Save menu path from `menuItem.doClick()` through `SaveProjectOperation`, `AbstractSaveOperation.perform`, dialog approval, and project write. |
 | `trigger.menu_item_doclick` | `true` for the production Save menu item activation path. |
 | `doesNotClaim` | Explicit exclusions for lesson completion, rendering, grading, physical user clicks, broad UI automation, and native dialog coverage. |
+
+The source-controlled blocker artifact, when present, has this contract:
+
+| Field | Contract |
+| --- | --- |
+| `status` | `blocked`; never `proven`. |
+| `blocker` | Exactly `No available non-headless AWT display`. |
+| `nextBlocker` | The same single blocker string, used by automation that expects an explicit next action. |
+| `wroteFile` | `false`; the blocker artifact never represents a successful Save write. |
+| `doesNotClaim` | Explicitly excludes full UI automation, visible rendering, grading, creative assessment, first-lesson completion, native-dialog coverage, and full Save completion. |
 
 The dialog-discovery companion artifact is:
 
@@ -156,6 +174,17 @@ xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
 ```
 
 If the environment already has a usable non-headless AWT display, `xvfb-run -a` is optional.
+
+The outside-in QA scenario delegates to the same focused proof command and remains gated:
+
+```bash
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-save-menu-dialog-write-proof \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof
+```
+
+Use the direct Maven command for the canonical proof artifact. Use the QA scenario when review also needs the standard outside-in `status.txt` and `command.log` wrapper evidence.
 
 To collect dialog-discovery evidence for this proof, set:
 
@@ -242,9 +271,9 @@ A preexisting file at the expected target is not write proof. If the complete me
 
 ```json
 {
-  "status": "unsupported",
-  "reason": "No available non-headless AWT display",
-  "blocker": "Display environment does not support the Swing Save proof.",
+  "status": "blocked",
+  "blocker": "No available non-headless AWT display",
+  "nextBlocker": "No available non-headless AWT display",
   "wroteFile": false,
   "reporting_summary": "Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven",
   "observed_dialog": {
@@ -253,8 +282,14 @@ A preexisting file at the expected target is not write proof. If the complete me
   "written_artifact": {
     "file_written": false
   },
-  "requiresNextEvidence": [
-    "Run this proof shard under xvfb-run -a or an equivalent desktop session"
+  "doesNotClaim": [
+    "full Alice UI automation",
+    "visible rendering correctness",
+    "grading correctness",
+    "creative assessment",
+    "first-lesson completion",
+    "native dialog coverage",
+    "full Save completion"
   ]
 }
 ```

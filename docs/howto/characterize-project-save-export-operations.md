@@ -66,7 +66,7 @@ Start with the highest-value untested behavior in the operation layer:
 | Export always prompts and uses export extension | `ExportProjectOperation` |
 | Shared project extension | `AbstractSaveProjectOperation` as observed through Save and Save As operations |
 | Finish, cancel, wait cursor, and retry flow | `SaveOperationFlow` |
-| Planned Save menu item, live Save chooser approval, and `.a3p` write proof | `StageIdeSaveMenuDoClickToWriteProofTest` |
+| Save menu item, live Save chooser approval, and `.a3p` write proof | `StageIdeSaveMenuDoClickToWriteProofTest` |
 | Saved Alice project reopens, accepts an edit, saves again, reopens again with the edit, and exports | `IoUtilitiesTest` |
 
 Keep archive-content tests in lower-level classes that save Alice projects,
@@ -172,7 +172,7 @@ For prompted Save As or Export-style retries, characterize the existing suggesti
 
 ## Run the Save menu dialog write proof
 
-Use the planned canonical proof shard when the behavior must be proven beyond operation dispatch and flow seams. The completed shard starts from the production Save menu item, controls exactly one expected live Swing `JFileChooser`, verifies the normalized temp-directory `.a3p` target, and asserts a non-empty `.a3p` file write.
+Use the canonical proof shard when the behavior must be proven beyond operation dispatch and flow seams. The shard starts from the production Save menu item, controls exactly one expected live Swing `JFileChooser`, verifies the normalized temp-directory `.a3p` target, and asserts a non-empty `.a3p` file write.
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -183,7 +183,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-The intended executable blocker for an environment with no usable display is:
+The executable blocker for an environment with no usable display is:
 
 ```text
 No available non-headless AWT display

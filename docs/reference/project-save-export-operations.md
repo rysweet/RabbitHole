@@ -51,7 +51,7 @@ These areas stay outside direct operation tests:
 | Deferred scope | Reason |
 | --- | --- |
 | Archive content verification | Archive bytes and project serialization belong to lower-level tests that save Alice projects, reopen them, edit them, save again, reopen again, and export them, not operation-routing tests. |
-| New mocking framework | The intended feature should use existing JUnit 4 patterns and narrow production seams instead of PowerMock-style interception. |
+| New mocking framework | Save characterization uses existing JUnit 4 patterns and narrow production seams instead of PowerMock-style interception. |
 | Display-backed Swing/JavaFX testing | Desktop launch evidence belongs to the outside-in QA lane and Xvfb-backed scenarios. |
 
 ## Operation responsibilities
@@ -172,7 +172,7 @@ Flow-level tests use the package-private `SaveOperationFlow` seam so they can av
 
 ## Save menu dialog write proof
 
-The planned canonical bounded desktop proof is `StageIdeSaveMenuDoClickToWriteProofTest`. Its target contract proves one path only: production Save menu item `doClick()`, live Swing `JFileChooser` approval, and a non-empty `.a3p` write under the JUnit temp directory.
+The canonical bounded desktop proof is `StageIdeSaveMenuDoClickToWriteProofTest`. Its target contract proves one path only: production Save menu item `doClick()`, live Swing `JFileChooser` approval, and a non-empty `.a3p` write under the JUnit temp directory.
 
 This proof target is stronger than direct operation tests and flow-seam tests because it starts from the Save menu item and reaches the real dialog/write boundary. It is still intentionally narrow and does not claim full Save coverage.
 
@@ -181,9 +181,9 @@ This proof target is stronger than direct operation tests and flow-seam tests be
 | Menu activation | The Save menu item is created through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)` and activated with `doClick()`. |
 | Dialog control | Exactly one expected Swing `JFileChooser` is observed, receives the normalized temp-directory `.a3p` target, and is approved. |
 | Write result | The target `.a3p` exists and has non-zero size after `ProjectApplication.saveProjectTo(File)` returns. |
-| Evidence | The planned `stageide-save-menu-doclick-write-proof.json` artifact reports the dialog type as `Swing JFileChooser` and sets `wroteFile` to `true` only after the file assertions pass. |
+| Evidence | The `stageide-save-menu-doclick-write-proof.json` artifact reports the dialog type as `Swing JFileChooser` and sets `wroteFile` to `true` only after the file assertions pass. |
 
-See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the planned evidence schema, non-claims, and focused validation command.
+See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the evidence schema, blocker artifact contract, non-claims, and focused validation command.
 
 ## Configuration
 
