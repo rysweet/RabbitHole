@@ -54,6 +54,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
+| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Observes whether the post-Select-Project live desktop exposes a stable `scene.eatmeFirstLesson` procedure tab or code-editor target, or writes a precise blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -65,12 +66,12 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
-The first-lesson live procedure target observation seam is documented as a
-planned contract in [First-Lesson Live Procedure Target
-Observation](./first-lesson-live-procedure-target-observation.md). It is not an
-active scenario catalog entry, supported workflow value, or runner evidence
-contract until the scenario, schema/validator entries, runner support, and
-contract tests are implemented.
+The first-lesson live procedure target observation seam is an active read-only
+scenario. It records only whether the live desktop exposes a stable procedure
+tab or code-editor target for `scene.eatmeFirstLesson`; it does not perform a
+desktop edit, Save, rendering correctness check, learner assessment, or full
+first-lesson completion proof. See [First-Lesson Live Procedure Target
+Observation](./first-lesson-live-procedure-target-observation.md).
 
 ## Learner-world boundary
 
@@ -331,7 +332,7 @@ supportingEvidence:
 | `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec`. |
-| `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
+| `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario and first-lesson live target observation this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
 | `supportingEvidence` | string list | Scenario IDs or evidence sources that support this scenario. |
 | `tags` | string list | Additional scenario labels. |
 
@@ -345,6 +346,7 @@ export
 exported-project-smoke
 failure-path-smoke
 file-loader-smoke
+first-lesson-live-procedure-target-observation
 future-ui-smoke
 instructor-student-setup
 launch

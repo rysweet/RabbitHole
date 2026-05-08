@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the planned live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -85,6 +85,7 @@ export
 exported-project-smoke
 failure-path-smoke
 file-loader-smoke
+first-lesson-live-procedure-target-observation
 future-ui-smoke
 instructor-student-setup
 launch
@@ -109,6 +110,24 @@ tweedle-decoder-boundary-smoke
 tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
+
+To observe only the live first-lesson procedure/code-editor target after Select
+Project opens the configured starter:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-first-lesson-live-procedure-target-observation \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/first-lesson-procedure-target \
+  --timeout-seconds 300
+```
+
+Review `first-lesson-live-procedure-target-observation.json` as the
+observed-or-blocked decision artifact for the narrow
+`scene.eatmeFirstLesson` procedure tab/code-editor target. The shard is
+read-only; it does not edit the procedure, Save, prove rendering correctness,
+assess learner work, or claim full first-lesson completion.
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
 
@@ -258,16 +277,15 @@ artifact API, visible-rendering blocker contract, configuration, examples, and
 review rules are documented in [Post-open
 runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
 
-The first-lesson live procedure target observation seam is planned, not an
-active scenario in this catalog yet. Its contract will go one step beyond the
+The first-lesson live procedure target observation seam goes one step beyond the
 Select Project first-lesson open path by observing whether the live post-open
 desktop exposes a stable procedure tab or code-editor target for
 `scene.eatmeFirstLesson`, then writing
 `first-lesson-live-procedure-target-observation.json` with `status=observed` or
 an exact `status=blocked` reason. It must not mutate a procedure, Save, assert
 rendering correctness, assess learner work, or claim full first-lesson
-completion. The planned artifact API, configuration, examples, and review rules
-are documented in [First-Lesson Live Procedure Target
+completion. The artifact API, configuration, examples, and review rules are
+documented in [First-Lesson Live Procedure Target
 Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md).
 
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
