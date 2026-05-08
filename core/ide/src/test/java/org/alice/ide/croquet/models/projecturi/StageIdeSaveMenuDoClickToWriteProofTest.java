@@ -51,12 +51,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Proves the full Save menu item doClick → JFileChooser approved → project file written path.
@@ -323,7 +327,90 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertFalse(json, json.contains("targetFile written to disk as non-empty .a3p"));
   }
 
+  @Test
+  public void repeatedPollsApproveChooserOnlyOnceAndDoNotClaimIncompleteWriteProof() throws Exception {
+    assumeTrue("requires Xvfb or another headful AWT display",
+        SaveMenuDoClickProbe.isNonHeadlessAwtDisplayAvailable());
+    disposeAwtWindows();
+    Path testDir = newTestDir().resolve("poll-race-incomplete-proof");
+    Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
+    Path targetPath = Files.createDirectories(testDir.resolve("projects")).resolve("doclick-save-proof.a3p");
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetPath.toAbsolutePath().toFile(), testDir);
+    CountingFileChooser[] chooser = new CountingFileChooser[1];
+    JDialog[] dialog = new JDialog[1];
+    CountDownLatch edtBlocked = new CountDownLatch(1);
+    CountDownLatch releaseEdt = new CountDownLatch(1);
+
+    probe.start();
+    probe.stop();
+    try {
+      SwingUtilities.invokeAndWait(() -> {
+        chooser[0] = new CountingFileChooser();
+        dialog[0] = new JDialog();
+        dialog[0].add(chooser[0]);
+        dialog[0].pack();
+        dialog[0].setVisible(true);
+      });
+      SwingUtilities.invokeLater(() -> {
+        edtBlocked.countDown();
+        try {
+          if (!releaseEdt.await(5, TimeUnit.SECONDS)) {
+            throw new AssertionError("EDT release latch timed out");
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new AssertionError("Interrupted while holding EDT for poll race test", e);
+        }
+      });
+      assertTrue("EDT blocker must start", edtBlocked.await(5, TimeUnit.SECONDS));
+
+      probe.poll();
+      probe.poll();
+
+      releaseEdt.countDown();
+      SwingUtilities.invokeAndWait(() -> { /* drain queued approvals */ });
+      assertEquals("repeated poll callbacks must enqueue one chooser approval", 1, chooser[0].approvalCount());
+      assertEquals("each poll callback must be counted exactly once", 2, probe.pollCount.get());
+
+      probe.writeResult(evidenceDir);
+      String json = Files.readString(probe.artifactPath(evidenceDir));
+      assertTrue(json, json.contains("\"status\": \"unsupported\""));
+      assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_e2e_not_completed\""));
+      assertTrue(json, json.contains("\"poll_count\": 2"));
+      assertTrue(json, json.contains("\"approved_selection\": false"));
+      assertTrue(json, json.contains("\"wroteFile\": false"));
+      assertTrue(json, json.contains("\"file_written\": false"));
+      assertFalse(json, json.contains("\"approved_selection\": true"));
+      assertFalse(json, json.contains("\"wroteFile\": true"));
+      assertFalse(json, json.contains("\"file_written\": true"));
+      assertFalse(json, json.contains("approved the selected .a3p path"));
+      assertFalse(json, json.contains("wrote a non-empty project file"));
+    } finally {
+      releaseEdt.countDown();
+      SwingUtilities.invokeAndWait(() -> {
+        if (dialog[0] != null) {
+          dialog[0].dispose();
+        }
+      });
+      probe.stop();
+    }
+  }
+
   // ---- inner probe ----
+
+  private static class CountingFileChooser extends JFileChooser {
+    private final AtomicInteger approvalCount = new AtomicInteger();
+
+    @Override
+    public void approveSelection() {
+      this.approvalCount.incrementAndGet();
+      super.approveSelection();
+    }
+
+    int approvalCount() {
+      return this.approvalCount.get();
+    }
+  }
 
   /**
    * Background daemon timer that polls Window.getWindows(), finds the JFileChooser
