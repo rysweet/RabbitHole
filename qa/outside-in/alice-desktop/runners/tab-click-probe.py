@@ -1109,6 +1109,23 @@ def attempt_target_project_open(
     }
 
     record["startersTabClick"] = select_starters_tab(select_project_frame)
+    if not record["startersTabClick"]["success"]:
+        detail = record["startersTabClick"].get("detail") or "Starters tab click did not succeed."
+        blocker = target_blocker(
+            f"Starters tab activation failed before target search: {detail}",
+            "Activate the Starters tab before searching for the target starter.",
+            (
+                f"Expose the active Starters context, then locate {target_display_name!r}, "
+                "select it, and click OK/Open."
+            ),
+            "Target starter lookup stopped because the Starters tab was not confirmed active.",
+        )
+        return apply_target_blocker(
+            record,
+            blocker_name="target-starter-tab-activation-failed",
+            blocker=blocker,
+        )
+
     target_match, list_records = find_target_starter(select_project_frame, target_display_name)
     if target_match is None:
         observed_state = (
