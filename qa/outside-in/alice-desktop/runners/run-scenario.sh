@@ -515,6 +515,15 @@ def assessment_boundary_values():
 
     supported_evidence = require_string_list(boundary.get("supportedEvidence"), "supportedEvidence")
     assessment_limits = require_string_list(boundary.get("assessmentLimits"), "assessmentLimits")
+    next_boundary = require_string(boundary.get("nextBoundary"), "nextBoundary")
+    manual_limitation_summary = require_string(
+        boundary.get("manualLimitationSummary"),
+        "manualLimitationSummary",
+    )
+    required_contract_topics = require_string_list(
+        boundary.get("requiresReviewedAssessmentContractBefore"),
+        "requiresReviewedAssessmentContractBefore",
+    )
     blocker = boundary.get("blocker")
     if not isinstance(blocker, dict):
         raise ValueError(f"{boundary_path}: blocker must be a mapping")
@@ -526,7 +535,13 @@ def assessment_boundary_values():
         f"Scope: {require_string(boundary.get('scope'), 'scope')}.",
     ]
     values.extend(f"Supported evidence: {item}." for item in supported_evidence)
+    values.append(manual_limitation_summary)
     values.extend(f"Assessment limit: {item}." for item in assessment_limits)
+    values.append(f"Next boundary: {next_boundary}.")
+    values.extend(
+        f"Manual/unsupported until reviewed contract: {item}."
+        for item in required_contract_topics
+    )
     values.append(f"Blocker: {blocker_id}.")
     values.append(blocker_description)
     return values

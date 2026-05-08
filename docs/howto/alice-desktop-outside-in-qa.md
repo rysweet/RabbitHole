@@ -466,13 +466,12 @@ qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 Treat that JSON file as documentation for the current boundary, not as runner
 configuration. The current artifact records `id`, `selectedScenario`,
 `automationMode`, `scope`, `currentCapability`, `supportedEvidence`,
-`assessmentLimits`, `nonCapabilities`, `nextBlocker`, and `blocker`. The planned
-finished-state feature will add `nextBoundary`, `manualLimitationSummary`, and
-`requiresReviewedAssessmentContractBefore`, normalize the checklist wording to
-`correctness assessment`, and keep `define-reviewed-assessment-contract` as the
-required next boundary before learner-world grading, rubric scoring, correctness
-assessment, or creative assessment can be claimed. The current and planned
-contracts are described in
+`assessmentLimits`, `nonCapabilities`, `nextBoundary`,
+`manualLimitationSummary`, `requiresReviewedAssessmentContractBefore`,
+`nextBlocker`, and `blocker`. It keeps `define-reviewed-assessment-contract` as
+the required next boundary before learner-world grading, rubric scoring,
+correctness assessment, or creative assessment can be claimed. The boundary is
+described in
 [Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Choose a custom evidence directory

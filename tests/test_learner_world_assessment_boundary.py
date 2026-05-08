@@ -40,17 +40,21 @@ BOUNDARY_DOCS = [
 BOUNDARY_PHRASE = "rabbithole learner-world qa currently supports setup/open/save evidence review"
 NEXT_BLOCKER_ID = "define-reviewed-assessment-contract"
 NON_CAPABILITIES = [
-    "learner-work grading",
+    "learner-world grading",
     "rubric scoring",
     "correctness assessment",
-    "creativity assessment",
+    "creative assessment",
 ]
 ASSESSMENT_LIMITS = [
     "no automated grading",
     "no rubric scoring",
-    "no correctness scoring",
+    "no correctness assessment",
     "no creative assessment",
 ]
+MANUAL_LIMITATION_SUMMARY = (
+    "Learner-world grading, rubric scoring, correctness assessment, and creative "
+    "assessment remain manual/unsupported until a reviewed assessment contract exists."
+)
 OVERCLAIM_TERMS = [
     "learner-work grading",
     "learner work grading",
@@ -75,6 +79,7 @@ NEGATION_MARKERS = [
     "blocker",
     "cannot currently",
     "before any",
+    "manual/unsupported",
 ]
 
 
@@ -106,6 +111,12 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
         self.assertIn("setup/open/save evidence review only", boundary.get("supportedEvidence", []))
         self.assertEqual(ASSESSMENT_LIMITS, boundary.get("assessmentLimits"))
         self.assertEqual(NON_CAPABILITIES, boundary.get("nonCapabilities"))
+        self.assertEqual(NEXT_BLOCKER_ID, boundary.get("nextBoundary"))
+        self.assertEqual(MANUAL_LIMITATION_SUMMARY, boundary.get("manualLimitationSummary"))
+        self.assertEqual(
+            NON_CAPABILITIES,
+            boundary.get("requiresReviewedAssessmentContractBefore"),
+        )
         self.assertEqual(NEXT_BLOCKER_ID, boundary.get("nextBlocker", {}).get("id"))
         self.assertEqual(NEXT_BLOCKER_ID, boundary.get("blocker", {}).get("id"))
 
@@ -124,6 +135,7 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
             "gradingAlgorithm",
             "rubricSchema",
             "scoreSchema",
+            "creativeAssessmentEngine",
             "runnerIntegration",
         }
         self.assertFalse(
@@ -167,13 +179,22 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
 
         self.assertIn("assessment boundary", checklist_text)
         self.assertIn("manual evidence required", checklist_text)
+        self.assertIn(MANUAL_LIMITATION_SUMMARY.lower(), checklist_text)
         self.assertIn("setup/open/save evidence review only", checklist_text)
         self.assertIn("learner-world state extraction", checklist_text)
         self.assertIn("blocked", checklist_text)
+        self.assertIn(f"next boundary: {NEXT_BLOCKER_ID}", checklist_text)
         self.assertIn(NEXT_BLOCKER_ID, checklist_text)
+        self.assertNotIn("correctness scoring", checklist_text)
         for assessment_limit in ASSESSMENT_LIMITS:
             with self.subTest(assessment_limit=assessment_limit):
                 self.assertIn(assessment_limit, checklist_text)
+        for non_capability in NON_CAPABILITIES:
+            with self.subTest(non_capability=non_capability):
+                self.assertIn(
+                    f"manual/unsupported until reviewed contract: {non_capability}",
+                    checklist_text,
+                )
 
     def test_docs_name_boundary_and_blocker_without_overclaiming_assessment(self) -> None:
         for path in BOUNDARY_DOCS:

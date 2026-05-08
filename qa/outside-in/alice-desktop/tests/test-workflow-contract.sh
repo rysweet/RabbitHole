@@ -170,10 +170,10 @@ else:
     scenario_text = json.dumps(instructor_student, sort_keys=True).lower()
     for required in (
         "setup/open/save evidence review only",
-        "learner-work grading",
+        "learner-world grading",
         "rubric scoring",
         "correctness assessment",
-        "creativity assessment",
+        "creative assessment",
     ):
         if required not in scenario_text:
             errors.append(f"instructor/student scenario must preserve learner-world boundary wording: {required}")
@@ -211,20 +211,35 @@ else:
     for required in (
         "no automated grading",
         "no rubric scoring",
-        "no correctness scoring",
+        "no correctness assessment",
         "no creative assessment",
     ):
         if required not in assessment_limits:
             errors.append(f"learner-world boundary artifact assessmentLimits must include {required}")
     non_capabilities = set(learner_world_boundary.get("nonCapabilities", []))
     for required in (
-        "learner-work grading",
+        "learner-world grading",
         "rubric scoring",
         "correctness assessment",
-        "creativity assessment",
+        "creative assessment",
     ):
         if required not in non_capabilities:
             errors.append(f"learner-world boundary artifact must exclude {required}")
+    if learner_world_boundary.get("nextBoundary") != learner_world_next_blocker:
+        errors.append("learner-world boundary artifact must name define-reviewed-assessment-contract as nextBoundary")
+    expected_summary = (
+        "Learner-world grading, rubric scoring, correctness assessment, and creative "
+        "assessment remain manual/unsupported until a reviewed assessment contract exists."
+    )
+    if learner_world_boundary.get("manualLimitationSummary") != expected_summary:
+        errors.append("learner-world boundary artifact must expose the manual limitation summary")
+    if learner_world_boundary.get("requiresReviewedAssessmentContractBefore") != [
+        "learner-world grading",
+        "rubric scoring",
+        "correctness assessment",
+        "creative assessment",
+    ]:
+        errors.append("learner-world boundary artifact must list capabilities requiring a reviewed assessment contract")
     next_blocker = learner_world_boundary.get("nextBlocker", {})
     if next_blocker.get("id") != learner_world_next_blocker:
         errors.append("learner-world boundary artifact must name define-reviewed-assessment-contract as nextBlocker.id")
@@ -238,15 +253,16 @@ else:
     if "reviewed assessment contract" not in description or "evidence mapping" not in description:
         errors.append("learner-world boundary artifact must describe the reviewed assessment contract and evidence mapping blocker")
     for required in (
-        "learner-work grading",
+        "learner-world grading",
         "rubric scoring",
         "correctness assessment",
-        "creativity assessment",
+        "creative assessment",
     ):
         if required not in description:
             errors.append(f"learner-world boundary artifact blocker description must name {required}")
     forbidden_artifact_fields = {
         "assessmentAlgorithm",
+        "creativeAssessmentEngine",
         "gradingAlgorithm",
         "rubricSchema",
         "scoreSchema",
@@ -269,6 +285,7 @@ negation_markers = (
     "only",
     "blocker",
     "cannot currently",
+    "manual/unsupported",
 )
 overclaim_terms = (
     "learner-work grading",
@@ -341,10 +358,17 @@ assert_contains "$checklist" 'Human reviewer|human performs the workflow' "workf
 assert_contains "$checklist" '^Assessment boundary$' "workflow checklist includes assessment boundary section"
 assert_contains "$checklist" '[Mm]anual evidence required' "workflow checklist requires manual evidence for assessment boundary"
 assert_contains "$checklist" 'setup/open/save evidence review only' "workflow checklist limits learner-world scope to setup open save evidence"
+assert_contains "$checklist" 'Learner-world grading, rubric scoring, correctness assessment, and creative assessment remain manual/unsupported until a reviewed assessment contract exists\.' "workflow checklist renders manual limitation summary"
 assert_contains "$checklist" 'no automated grading' "workflow checklist rejects automated grading"
 assert_contains "$checklist" 'no rubric scoring' "workflow checklist rejects rubric scoring"
-assert_contains "$checklist" 'no correctness scoring' "workflow checklist rejects correctness scoring"
+assert_contains "$checklist" 'no correctness assessment' "workflow checklist rejects correctness assessment"
 assert_contains "$checklist" 'no creative assessment' "workflow checklist rejects creative assessment"
+assert_not_contains "$checklist" 'correctness scoring' "workflow checklist does not use scoring wording for correctness"
+assert_contains "$checklist" 'Next boundary: define-reviewed-assessment-contract' "workflow checklist names next assessment boundary"
+assert_contains "$checklist" 'Manual/unsupported until reviewed contract: learner-world grading' "workflow checklist keeps learner-world grading manual unsupported"
+assert_contains "$checklist" 'Manual/unsupported until reviewed contract: rubric scoring' "workflow checklist keeps rubric scoring manual unsupported"
+assert_contains "$checklist" 'Manual/unsupported until reviewed contract: correctness assessment' "workflow checklist keeps correctness assessment manual unsupported"
+assert_contains "$checklist" 'Manual/unsupported until reviewed contract: creative assessment' "workflow checklist keeps creative assessment manual unsupported"
 assert_contains "$checklist" '[Ll]earner-world state extraction.*blocked|blocked.*learner-world state extraction' "workflow checklist exposes learner-world extraction blocker"
 assert_contains "$checklist" 'define-reviewed-assessment-contract' "workflow checklist names assessment blocker artifact"
 

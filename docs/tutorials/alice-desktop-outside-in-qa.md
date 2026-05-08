@@ -264,17 +264,16 @@ python3 -m json.tool \
   qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 ```
 
-The record is documentation for the current boundary. Today it exposes
-`nextBlocker` and `blocker`; the planned finished-state feature will add
-`nextBoundary`, `manualLimitationSummary`, and
-`requiresReviewedAssessmentContractBefore`, then render matching
-manual/unsupported checklist lines. `define-reviewed-assessment-contract`
-remains the next boundary before any future learner-world grading, rubric
-scoring, correctness assessment, or creative assessment capability can be
-claimed. Learner-world state extraction for grading or creative assessment
-remains blocked until a reviewed assessment contract, evidence mapping, and
-reviewed implementation exist. The current and planned contracts are documented
-in
+The record is documentation for the current boundary. It exposes
+`nextBoundary`, `manualLimitationSummary`,
+`requiresReviewedAssessmentContractBefore`, `nextBlocker`, and `blocker`, then
+renders matching manual/unsupported checklist lines.
+`define-reviewed-assessment-contract` remains the next boundary before any
+future learner-world grading, rubric scoring, correctness assessment, or
+creative assessment capability can be claimed. Learner-world state extraction
+for grading or creative assessment remains blocked until a reviewed assessment
+contract, evidence mapping, and reviewed implementation exist. The current
+contract is documented in
 [Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Step 10: Prepare a gated command smoke

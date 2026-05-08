@@ -14,18 +14,26 @@
   "assessmentLimits": [
     "no automated grading",
     "no rubric scoring",
-    "no correctness scoring",
+    "no correctness assessment",
     "no creative assessment"
   ],
   "nonCapabilities": [
-    "learner-work grading",
+    "learner-world grading",
     "rubric scoring",
     "correctness assessment",
-    "creativity assessment"
+    "creative assessment"
+  ],
+  "nextBoundary": "define-reviewed-assessment-contract",
+  "manualLimitationSummary": "Learner-world grading, rubric scoring, correctness assessment, and creative assessment remain manual/unsupported until a reviewed assessment contract exists.",
+  "requiresReviewedAssessmentContractBefore": [
+    "learner-world grading",
+    "rubric scoring",
+    "correctness assessment",
+    "creative assessment"
   ],
   "nextBlocker": {
     "id": "define-reviewed-assessment-contract",
-    "description": "A reviewed assessment contract and evidence mapping are required before any learner-work grading, rubric scoring, correctness assessment, or creativity assessment implementation can be claimed."
+    "description": "A reviewed assessment contract and evidence mapping are required before any learner-world grading, rubric scoring, correctness assessment, or creative assessment implementation can be claimed."
   },
   "blocker": {
     "id": "define-reviewed-assessment-contract",
