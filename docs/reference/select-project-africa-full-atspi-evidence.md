@@ -53,7 +53,7 @@ The Select Project probe writes `tab-click-observation.json`. Existing tab inven
 | `targetStarter.displayName` | string | Scenario target display name. |
 | `targetStarter.repositoryPath` | string | Scenario target repository path. |
 | `javaPid` | integer or null | Alice Java process ID selected from the current Alice window inventory, or null when no safe PID is available. |
-| `targetStarterObserved` | object | AT-SPI discovery result for `Africa Full` in the active Starters context. |
+| `targetStarterObserved` | object or null | AT-SPI discovery result for `Africa Full` in the active Starters context. This must be non-null for `evidenceStatus=opened`. |
 | `targetStarterSelected` | boolean | `true` only when the probe has target-specific evidence that `Africa Full` was selected. |
 | `targetStarterOpenAttempted` | boolean | `true` only when OK/Open was attempted after target-specific selection evidence. |
 | `openedStarter` | object or null | Filled with the `Africa Full` target metadata only when the target-specific open path succeeds. |
@@ -115,9 +115,9 @@ If any step cannot provide target-specific evidence, the result must stop at `se
 
 | `evidenceStatus` | Required meaning |
 | --- | --- |
-| `opened` | `Africa Full` was observed, target-specific selection/open was attempted, `openedStarter` records the target metadata, `projectOpenObserved=true`, and the run has Alice Java/window PID context. |
+| `opened` | `Africa Full` was observed in the active Starters context, target-specific selection/open was attempted, `openedStarter` records matching target metadata, `projectOpenObserved=true`, and the run has Alice Java/window PID context. |
 | `selected` | `Africa Full` selection is supported by evidence, but opening did not complete. The blocker names the remaining open step. |
-| `blocked` | AT-SPI automation could not prove target-specific selection/opening. The blocker records the observed state and next action. |
+| `blocked` | AT-SPI automation could not prove target-specific selection/opening. The blocker records the observed state and `nextBlocker` action. |
 | `failed` | The probe or runtime failed before producing a normal AT-SPI capability result. The blocker records the failure boundary. |
 
 `status=observed` can coexist with `evidenceStatus=blocked` when the probe successfully collected AT-SPI state but could not complete a safe target-specific action.
@@ -154,6 +154,13 @@ Evidence and blocker payloads must stay scoped to safe AT-SPI state and scenario
 ```json
 {
   "evidenceStatus": "opened",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full"
+  },
   "targetStarterSelected": true,
   "targetStarterOpenAttempted": true,
   "openedStarter": {
@@ -164,9 +171,9 @@ Evidence and blocker payloads must stay scoped to safe AT-SPI state and scenario
 }
 ```
 
-If those fields are missing or inconsistent, `post-project-open-observation.json` must record a blocked result rather than converting generic main-window state into Africa Full proof.
+If any required target-starter field is missing, null, false, or inconsistent, `post-project-open-observation.json` must record a blocked result rather than converting generic main-window state into Africa Full proof.
 
-The Select Project completion proof does not require a separate downstream workflow. The tab-click proof is sufficient only when `tab-click-observation.json` records `evidenceStatus=opened` and `projectOpenObserved=true` for the committed `Africa Full` metadata.
+The Select Project completion proof does not require a separate downstream workflow. The tab-click proof is sufficient only when `tab-click-observation.json` records `evidenceStatus=opened`, matching `targetStarter` and `openedStarter` metadata for the committed `Africa Full` starter, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`.
 
 ## Contract test coverage
 
@@ -183,14 +190,14 @@ Use the existing QA contract test structure for this feature:
 
 ## Publishing boundary
 
-Publish only one of these default-workflow outcomes:
+Publish only one of these outcomes:
 
 | Outcome | Required published content |
 | --- | --- |
-| Opened | `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same metadata, `projectOpenObserved=true`, and the Alice Java/window PID context. |
-| Blocked | One blocker code and detail, current Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and the single next exact action. |
+| Opened | `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same metadata, `projectOpenObserved=true`, and the Alice Java/window PID context. |
+| Blocked | One blocker code and detail, current Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and one structured `nextBlocker`. |
 
-Do not publish Save proof, visible rendering correctness, grading, creative assessment, first-lesson completion, model exporter behavior, launcher behavior, archive fixture behavior, procedure/edit behavior, or coverage measurements from this lane.
+Do not publish full Alice UI automation, Save proof, visible rendering correctness, grading, creative assessment, first-lesson completion, model exporter behavior, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage measurements from this lane.
 
 ## Claim boundaries
 
@@ -201,4 +208,4 @@ This evidence lane proves only what its JSON artifacts state:
 - `blocked` proves a reproducible automation gap.
 - Main-window AT-SPI state proves accessible frame presence only.
 
-The lane does not prove visible rendering, full project interaction, grading, creative assessment, or lesson completion.
+The lane does not prove full Alice UI automation, visible rendering, full project interaction, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher behavior, unrelated decoder behavior, or lesson completion.

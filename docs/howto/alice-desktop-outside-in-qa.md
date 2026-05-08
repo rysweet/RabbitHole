@@ -211,9 +211,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
 ```
 
-Review `status.txt`, `x-window-inventory.json`, `select-project-window.json`, and `tab-click-observation.json`. Success requires `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same target metadata, `projectOpenObserved=true`, and Alice Java/window PID context from the same run.
+Review `status.txt`, `x-window-inventory.json`, `select-project-window.json`, and `tab-click-observation.json`. Success requires `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, a non-null `targetStarterObserved` record for the same target, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same target metadata, `projectOpenObserved=true`, and Alice Java/window PID context from the same run.
 
-If the probe cannot safely prove target-specific selection/opening, it must preserve the existing string `blocker` and `blockerDetail` fields, then add structured target-specific blocker detail naming the observed AT-SPI state, action attempted, expected next action, and reason progress stopped. A blocked result is the correct output when continuing would turn generic Select Project dismissal or main-window state into an unsupported Africa Full claim.
+If the probe cannot safely prove target-specific selection/opening, it must preserve the existing string `blocker` and `blockerDetail` fields, then add structured target-specific detail in `nextBlocker`, including the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. A blocked result is the correct output when continuing would turn generic Select Project dismissal or main-window state into an unsupported Africa Full claim.
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 

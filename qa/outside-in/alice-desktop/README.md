@@ -79,6 +79,26 @@ correctness, deployed installer success, full world execution, grading, lesson
 completion, active Save behavior, active Select Project behavior, or decoder
 behavior.
 
+To collect only the target-specific Select Project proof for the committed
+`Africa Full` starter:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-select-project-tab-click-exec \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
+```
+
+Review `tab-click-observation.json` as the Select Project decision artifact.
+An opened result requires `evidenceStatus=opened`, exact `Africa Full`
+`targetStarter` metadata, non-null `targetStarterObserved`, `targetStarterSelected=true`,
+`targetStarterOpenAttempted=true`, matching `openedStarter`, and
+`projectOpenObserved=true`. A blocked result preserves string `blocker` and
+`blockerDetail` fields and adds one structured `nextBlocker`; it is not a full
+Alice UI automation, visible rendering, grading, creative assessment, Save,
+first-lesson, launcher, or decoder claim.
+
 The Gadugi exported launcher evidence scenario is a separate CLI scenario under
 `gadugi/`, not a custom Alice scenario under `scenarios/`. Validate and run it
 with `gadugi-test` installed on `PATH`:

@@ -53,9 +53,10 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
+bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 ```
 
-These checks cover the scenario contract, Select Project window proof shape, and target-specific `Africa Full` opened/blocked evidence shape. They do not exercise Save, rendering, grading, lessons, model export, archive fixtures, procedure/edit, or coverage.
+These checks cover the scenario contract, Select Project window proof shape, target-specific `Africa Full` opened/blocked evidence shape, and the post-open gate that rejects incomplete target-starter evidence. They do not exercise Save, rendering, grading, lessons, model export, archive fixtures, procedure/edit, or coverage.
 
 ## Required action order
 
@@ -71,7 +72,7 @@ Do not convert a generic Select Project dismissal into Africa Full proof.
 
 ## Review successful evidence
 
-Open `status.txt`, then open `tab-click-observation.json` in the same run directory. Treat the Select Project step as proved only when the artifact contains target-specific starter evidence:
+Open `status.txt`, then open `tab-click-observation.json` in the same run directory. Treat the Select Project step as proved only when the artifact contains target-specific starter evidence with matching metadata:
 
 ```json
 {
@@ -93,7 +94,7 @@ Open `status.txt`, then open `tab-click-observation.json` in the same run direct
 }
 ```
 
-`evidenceStatus=opened` means only that AT-SPI evidence supports selecting/opening `Africa Full` and the Select Project frame was dismissed. It does not prove visible rendering, world interaction, grading, creative assessment, or lesson completion.
+`targetStarterObserved` must be non-null and must describe the observed `Africa Full` AT-SPI node in the active Starters context. `evidenceStatus=opened` means only that AT-SPI evidence supports selecting/opening `Africa Full` and the Select Project frame was dismissed. It does not prove full Alice UI automation, visible rendering, world interaction, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher behavior, or unrelated decoder behavior.
 
 The run must also include Alice Java/window context in `x-window-inventory.json` and `select-project-window.json`. The Select Project window context must be the current Java dialog from the same run, not a broad process list or unrelated window.
 
@@ -131,7 +132,7 @@ If AT-SPI can see the Select Project window but cannot complete target-specific 
 }
 ```
 
-A blocked artifact is an acceptable next-step result when it names the observed AT-SPI state, action attempted, expected next action, and reason progress stopped. Do not replace this with generic main-window evidence.
+A blocked artifact is an acceptable `nextBlocker` result when it names the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. Do not replace this with generic main-window evidence.
 
 When publishing a blocked result, report exactly one next blocker. Include the current Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, and OK/Open attempt state. Do not include a general status dump.
 
@@ -141,11 +142,11 @@ Evidence and blocker payloads must stay scoped to safe AT-SPI state and scenario
 
 ## Publish the narrow result
 
-Publish only the Select Project result through default-workflow:
+Publish only the Select Project result:
 
 | Result | Publish |
 | --- | --- |
-| Opened | `evidenceStatus=opened`, exact `Africa Full` target metadata, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, `projectOpenObserved=true`, and the Alice Java/window PID context. |
-| Blocked | One blocker code/detail plus Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and the single next exact action. |
+| Opened | `evidenceStatus=opened`, exact `Africa Full` target metadata, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, `projectOpenObserved=true`, and the Alice Java/window PID context. |
+| Blocked | One blocker code/detail plus Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and one structured `nextBlocker`. |
 
-Do not publish downstream claims from this proof. The lane does not prove Save completion, visible rendering correctness, grading, creative assessment, first-lesson completion, model export, launcher behavior, archive fixture behavior, procedure/edit behavior, or coverage.
+Do not publish downstream claims from this proof. The lane does not prove full Alice UI automation, Save completion, visible rendering correctness, grading, creative assessment, first-lesson completion, model export, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage.
