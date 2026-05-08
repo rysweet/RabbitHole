@@ -209,7 +209,10 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     // the probe approves the selection (or times out).
     try {
       final MenuItem item = capturedMenuItem[0];
-      SwingUtilities.invokeAndWait(item::doClick);
+      SwingUtilities.invokeAndWait(() -> {
+        probe.markMenuItemDoClickTriggered();
+        item.doClick();
+      });
     } finally {
       probe.stop();
     }
@@ -297,14 +300,81 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertFalse(json, json.contains("\"status\": \"unsupported\""));
     assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_e2e_not_completed\""));
     assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"menu_item_doclick\": false"));
     assertTrue(json, json.contains("\"approved_selection\": false"));
     assertTrue(json, json.contains("\"file_written\": false"));
     assertTrue(json, json.contains("\"reporting_summary\": \"Save menu item doClick write path was not proven; chooser approval and file writing remain unproven\""));
     assertFalse(json, json.contains("\"claim\""));
+    assertFalse(json, json.contains("\"menu_item_doclick\": true"));
     assertFalse(json, json.contains("approved the selected .a3p path"));
     assertFalse(json, json.contains("wrote a non-empty project file"));
     assertFalse(json, json.contains("approveSelection() called"));
     assertFalse(json, json.contains("targetFile written to disk as non-empty .a3p"));
+  }
+
+  @Test
+  public void chooserAndFileSignalsWithoutMenuDoClickDoNotProduceProvenArtifact() throws Exception {
+    Path testDir = newTestDir().resolve("shortcut-signals-without-menu-doclick");
+    Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
+    Path targetPath = Files.createDirectories(testDir.resolve("projects")).resolve("doclick-save-proof.a3p");
+    Files.writeString(targetPath, "preexisting file is not menu Save proof", StandardCharsets.UTF_8);
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetPath.toAbsolutePath().toFile(), testDir);
+    probe.chooserObserved = true;
+    probe.dialogShowing = true;
+    probe.dialogClass = JDialog.class.getName();
+    probe.normalizedSelectedFile = targetPath.toFile().getCanonicalPath();
+    probe.selectedFileVerified = true;
+    probe.approvedSelection.set(true);
+
+    probe.writeResult(evidenceDir);
+
+    String json = Files.readString(probe.artifactPath(evidenceDir));
+    assertTrue(json, json.contains("\"status\": \"not_proven\""));
+    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_not_recorded\""));
+    assertTrue(json, json.contains("\"menu_item_doclick\": false"));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"approved_selection\": false"));
+    assertTrue(json, json.contains("\"file_written\": false"));
+    assertTrue(json, json.contains("\"file_nonempty\": false"));
+    assertTrue(json, json.contains("\"file_size_bytes\": " + Files.size(targetPath)));
+    assertFalse(json, json.contains("\"status\": \"proven\""));
+    assertFalse(json, json.contains("\"claim\""));
+    assertFalse(json, json.contains("\"menu_item_doclick\": true"));
+    assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("\"approved_selection\": true"));
+    assertFalse(json, json.contains("\"file_written\": true"));
+    assertFalse(json, json.contains("approved the selected .a3p path"));
+    assertFalse(json, json.contains("wrote a non-empty project file"));
+  }
+
+  @Test
+  public void chooserAndFileSignalsWithMenuDoClickProduceProvenArtifact() throws Exception {
+    Path testDir = newTestDir().resolve("completed-signals-with-menu-doclick");
+    Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
+    Path targetPath = Files.createDirectories(testDir.resolve("projects")).resolve("doclick-save-proof.a3p");
+    Files.writeString(targetPath, "saved project file", StandardCharsets.UTF_8);
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetPath.toAbsolutePath().toFile(), testDir);
+    probe.markMenuItemDoClickTriggered();
+    probe.chooserObserved = true;
+    probe.dialogShowing = true;
+    probe.dialogClass = JDialog.class.getName();
+    probe.normalizedSelectedFile = targetPath.toFile().getCanonicalPath();
+    probe.selectedFileVerified = true;
+    probe.approvedSelection.set(true);
+
+    probe.writeResult(evidenceDir);
+
+    String json = Files.readString(probe.artifactPath(evidenceDir));
+    assertTrue(json, json.contains("\"status\": \"proven\""));
+    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_approved_chooser_wrote_project_file\""));
+    assertTrue(json, json.contains("\"menu_item_doclick\": true"));
+    assertTrue(json, json.contains("\"wroteFile\": true"));
+    assertTrue(json, json.contains("\"approved_selection\": true"));
+    assertTrue(json, json.contains("\"file_written\": true"));
+    assertTrue(json, json.contains("\"file_nonempty\": true"));
+    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\""));
+    assertFalse(json, json.contains("\"status\": \"not_proven\""));
+    assertFalse(json, json.contains("\"reporting_summary\""));
   }
 
   @Test
@@ -458,6 +528,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private volatile String normalizedSelectedFile;
     private volatile String failureReason;
     private final AtomicInteger pollCount = new AtomicInteger();
+    private final AtomicBoolean menuItemDoClickTriggered = new AtomicBoolean(false);
     private volatile java.util.Timer bgTimer;
 
     SaveMenuDoClickProbe(File targetFile, Path proofRoot) throws java.io.IOException {
@@ -479,6 +550,10 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     void stop() {
       cancelTimer();
+    }
+
+    void markMenuItemDoClickTriggered() {
+      this.menuItemDoClickTriggered.set(true);
     }
 
     Path artifactPath(Path evidenceDir) {
@@ -570,13 +645,15 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       boolean selectedFileMatchesExpected = this.targetCanonicalPath.equals(selectedCanonical);
       boolean observedExpectedFile = fileWritten && fileNonempty && fileHasExpectedExtension && targetInsideProofRoot;
       boolean chooserApproved = this.approvedSelection.get();
-      boolean proven = this.chooserObserved
+      boolean menuDoClickTriggered = this.menuItemDoClickTriggered.get();
+      boolean wouldBeProvenExceptMenu = this.chooserObserved
           && chooserApproved
           && this.selectedFileVerified
           && selectedFileMatchesExpected
           && !this.ambiguousChooserDiscovery
           && observedExpectedFile
           && this.failureReason == null;
+      boolean proven = menuDoClickTriggered && wouldBeProvenExceptMenu;
       boolean claimedApprovedSelection = proven && chooserApproved;
       boolean claimedWroteFile = proven && observedExpectedFile;
       boolean claimedFileWritten = proven && fileWritten;
@@ -584,7 +661,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       String status = proven ? "proven" : "not_proven";
       String reason = proven
           ? "save_menu_doclick_approved_chooser_wrote_project_file"
-          : this.failureReason == null ? "save_menu_doclick_e2e_not_completed" : this.failureReason;
+          : this.failureReason == null
+              ? wouldBeProvenExceptMenu ? "save_menu_doclick_not_recorded" : "save_menu_doclick_e2e_not_completed"
+              : this.failureReason;
       String claimOrSummaryJson = proven
           ? "Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file"
           : "Save menu item doClick write path was not proven; chooser approval and file writing remain unproven";
@@ -606,6 +685,12 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       String writtenArtifactStep = claimedWroteFile
           ? "targetFile written to disk as non-empty .a3p"
           : "Non-empty target .a3p write was not proven in this run";
+      String menuDoClickStep = menuDoClickTriggered
+          ? "menuItem.doClick() on actual Save menu item (created via getMenuItemPrepModel().createMenuItemAndAddTo())"
+          : "menuItem.doClick() was not recorded in this run";
+      String menuDoClickDescription = menuDoClickTriggered
+          ? "menuItem.doClick() on save MenuItem created by getMenuItemPrepModel().createMenuItemAndAddTo()"
+          : "menuItem.doClick() was not recorded before this evidence artifact was written";
       Files.createDirectories(evidenceDir);
       Files.writeString(
           artifactPath(evidenceDir),
@@ -617,7 +702,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
                + "  \"wroteFile\": " + claimedWroteFile + ",\n"
               + claimOrSummaryJson
                 + "  \"proof_chain\": {\n"
-              + "    \"step1\": \"menuItem.doClick() on actual Save menu item (created via getMenuItemPrepModel().createMenuItemAndAddTo())\",\n"
+              + "    \"step1\": \"" + menuDoClickStep + "\",\n"
               + "    \"step2\": \"Swing ActionEvent dispatched by doClick() → Croquet OperationSwingModel\",\n"
               + "    \"step3\": \"SaveProjectOperation.fire(UserActivity) called by Croquet\",\n"
               + "    \"step4\": \"AbstractSaveOperation.perform(activity) runs on EDT\",\n"
@@ -630,10 +715,10 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "    \"step11\": \"" + saveActionStep + "\",\n"
               + "    \"step12\": \"" + writtenArtifactStep + "\"\n"
               + "  },\n"
-              + "  \"trigger\": {\n"
-              + "    \"menu_item_doclick\": true,\n"
-              + "    \"trigger_description\": \"menuItem.doClick() on save MenuItem created by getMenuItemPrepModel().createMenuItemAndAddTo()\"\n"
-              + "  },\n"
+               + "  \"trigger\": {\n"
+               + "    \"menu_item_doclick\": " + menuDoClickTriggered + ",\n"
+               + "    \"trigger_description\": \"" + menuDoClickDescription + "\"\n"
+               + "  },\n"
               + "  \"observed_dialog\": {\n"
                + "    \"dialog_class\": " + stringJson(this.dialogClass) + ",\n"
                + "    \"dialog_showing\": " + this.dialogShowing + ",\n"

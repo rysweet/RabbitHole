@@ -83,6 +83,7 @@ Review `desktop-save-dialog-discovery-target.json` for owner/root/selection-targ
 | `dialogType` | `Swing JFileChooser` |
 | `wroteFile` | `true` |
 | `claim` | Present only when `status` is `proven`; unsupported or not-proven runs use `reporting_summary` instead. |
+| `trigger.menu_item_doclick` | `true`; incomplete or shortcut artifacts keep this false and cannot claim menu activation. |
 | `observed_dialog.approved_selection` | `true` only after EDT approval completes; scheduled approval is not enough. |
 | `observed_dialog.ambiguous_chooser_discovery` | `false`; multiple live `JFileChooser` instances are a blocker. |
 | `selected_file.normalized_selected_file` | Temp-relative `.a3p` path, for example `projects/doclick-save-proof.a3p` |
@@ -91,7 +92,7 @@ Review `desktop-save-dialog-discovery-target.json` for owner/root/selection-targ
 | `written_artifact.target_inside_proof_root` | `true` |
 | `doesNotClaim` | Includes lesson completion, rendering, grading, physical user click, broad UI automation, and native dialog exclusions. |
 
-Use `stageide-save-menu-doclick-write-proof.json` as the source for the full menu activation, completed chooser approval, selected path, and project-file write claim only when its status is `proven`. Stored path evidence must be proof-root-relative or redacted, not absolute. `SaveOperationCompletionEvidence` records Save completion fields such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts, but it does not by itself prove Save menu activation. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
+Use `stageide-save-menu-doclick-write-proof.json` as the source for the full menu activation, completed chooser approval, selected path, and project-file write claim only when its status is `proven` and `trigger.menu_item_doclick` is `true`. Stored path evidence must be proof-root-relative or redacted, not absolute. `SaveOperationCompletionEvidence` records Save completion fields such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts, but it does not by itself prove Save menu activation. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
 
 When the display precondition is the review outcome, the Maven proof writes an unsupported-result artifact under its target evidence directory. If a PR cannot provide a display-backed proof and needs persistent review evidence, copy that generated artifact to:
 

@@ -50,14 +50,14 @@ A successful run proves all of the following in one bounded path:
 
 | Required observation | Meaning |
 | --- | --- |
-| Save menu item `doClick()` ran | The proof starts from the production menu item dispatch path, not a direct `fire()` or `SaveOperationFlow` call. |
+| Save menu item `doClick()` ran | The proof starts from the production menu item dispatch path, not a direct `fire()` or `SaveOperationFlow` call, and the artifact records `trigger.menu_item_doclick: true`. |
 | Exactly one expected live Swing `JFileChooser` was controlled | The test reached the production dialog boundary without ambiguous chooser discovery. |
 | Chooser approval completed | `approved_selection` means the EDT callback verified the selected path and called `approveSelection()`; a queued approval is not enough. |
 | Selected path matched the normalized expected target | The proof writes only inside the JUnit temp directory. |
 | The target file exists, ends with `.a3p`, and is non-empty | The Save path reached the project write boundary. |
 | Canonical evidence reports `wroteFile: true` only after file assertions pass | Machine-readable evidence cannot report a success-shaped write without the real file. |
 
-Any unproven run fails closed. Preexisting target files, incomplete chooser observations, timeouts, path mismatches, canonicalization failures, and multiple live `JFileChooser` instances must not produce approval or write success claims.
+Any unproven run fails closed. Preexisting target files, shortcut chooser/file signals without the recorded menu `doClick()` seam, incomplete chooser observations, timeouts, path mismatches, canonicalization failures, and multiple live `JFileChooser` instances must not produce trigger, approval, or write success claims.
 
 ### Unsupported display result
 
@@ -115,7 +115,7 @@ The canonical proof artifact records:
 | `written_artifact.target_file` | The proof-root-relative target path, or a redacted outside-root marker; evidence must not store absolute machine paths. |
 | `written_artifact.target_inside_proof_root` | `true` only when the written target stayed inside the controlled proof root. |
 | `proof_chain` | The production Save menu path from `menuItem.doClick()` through `SaveProjectOperation`, `AbstractSaveOperation.perform`, dialog approval, and project write. |
-| `trigger.menu_item_doclick` | `true` for the production Save menu item activation path. |
+| `trigger.menu_item_doclick` | `true` only after the proof records `menuItem.doClick()` on the Save menu item created by `getMenuItemPrepModel().createMenuItemAndAddTo(...)`; incomplete or shortcut artifacts keep it `false`. |
 | `doesNotClaim` | Explicit exclusions for lesson completion, rendering, grading, physical user clicks, broad UI automation, and native dialog coverage. |
 
 The unsupported display artifact has this contract:
@@ -218,6 +218,9 @@ To collect dialog-discovery evidence for this proof, set:
   "dialogType": "Swing JFileChooser",
   "wroteFile": true,
   "claim": "Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file",
+  "trigger": {
+    "menu_item_doclick": true
+  },
   "observed_dialog": {
     "approved_selection": true,
     "ambiguous_chooser_discovery": false
@@ -252,6 +255,9 @@ A preexisting file at the expected target is not write proof. If the complete me
   "dialogType": "Swing JFileChooser",
   "wroteFile": false,
   "reporting_summary": "Save menu item doClick write path was not proven; chooser approval and file writing remain unproven",
+  "trigger": {
+    "menu_item_doclick": false
+  },
   "observed_dialog": {
     "approved_selection": false,
     "ambiguous_chooser_discovery": false
