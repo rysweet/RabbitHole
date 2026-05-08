@@ -17,6 +17,7 @@ FIRST_LESSON_PROCEDURE_TARGET_PROBE="$SCRIPT_DIR/first-lesson-procedure-target-p
 POST_OPEN_RUNTIME_DISPLAY_SCENARIO=alice-desktop-post-open-runtime-display-accessibility-evidence
 POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
 VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER=visible-rendering-pixel-target-blocker.json
+VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER=visible-rendering-pixel-sampling-blocker.json
 FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
 FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
 FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
@@ -1019,6 +1020,113 @@ with output_path.open("w", encoding="utf-8") as stream:
 PY
 }
 
+write_visible_rendering_pixel_sampling_blocker() {
+  local run_dir=$1
+  local controlled_display_artifact=${2:-}
+
+  VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT="$controlled_display_artifact" \
+  python3 - "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+output_path = Path(sys.argv[1])
+controlled_display_path = Path(os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT", ""))
+SOURCE_ARTIFACT = "controlled-display-pixel-observation.json"
+unsupported_claims = [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion",
+]
+
+
+def relative_artifact_name(path):
+    return path.name if str(path) else SOURCE_ARTIFACT
+
+
+def read_controlled_display(path):
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def screenshot_path(payload):
+    if not isinstance(payload, dict):
+        return None
+    screenshot = payload.get("screenshot")
+    if isinstance(screenshot, dict) and screenshot.get("path"):
+        return Path(str(screenshot["path"])).name
+    raw_path = payload.get("screenshotFile")
+    return Path(str(raw_path)).name if raw_path else None
+
+
+controlled = read_controlled_display(controlled_display_path)
+target = {}
+if isinstance(controlled, dict) and isinstance(controlled.get("worldCanvasPixelTarget"), dict):
+    target = controlled["worldCanvasPixelTarget"]
+
+target_ready = target.get("identified") is True and target.get("status") == "target-ready"
+if target_ready:
+    blocker = "world-canvas-pixel-sampling-not-implemented"
+    blocker_detail = (
+        "A single world-canvas pixel target is ready, but this runner does not yet "
+        "sample pixels inside screenExtents or compare sampled pixels to rendered-world expectations."
+    )
+    claim_scope_detail = "target-ready-sampling-not-observed"
+    prerequisite_status = "target-ready"
+    exact_next_unblocker = "sample-run-window-world-canvas-pixels"
+else:
+    blocker = "world-canvas-pixel-target-not-ready"
+    blocker_detail = (
+        "World-canvas pixel sampling requires worldCanvasPixelTarget.status=target-ready; "
+        "target selection is blocked or unavailable, so no rendered-world pixels were sampled."
+    )
+    claim_scope_detail = "target-selection-blocked"
+    prerequisite_status = str(target.get("status") or "unavailable")
+    exact_next_unblocker = str(
+        target.get("exactNextUnblocker") or "reliable-run-window-world-canvas-pixel-sampling-target"
+    )
+
+payload = {
+    "schemaVersion": 1,
+    "status": "blocked",
+    "blocker": blocker,
+    "blockerDetail": blocker_detail,
+    "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+    "claimScopeDetail": claim_scope_detail,
+    "sourceArtifact": relative_artifact_name(controlled_display_path),
+    "prerequisiteTargetStatus": prerequisite_status,
+    "exactNextUnblocker": exact_next_unblocker,
+    "renderedWorldPixelsObserved": False,
+    "sampleCount": 0,
+    "screenshotPath": screenshot_path(controlled),
+    "screenshotStatus": controlled.get("screenshotStatus") if isinstance(controlled, dict) else "",
+    "screenshotPixelStatus": controlled.get("screenshotPixelStatus") if isinstance(controlled, dict) else "",
+    "worldCanvasPixelTarget": target,
+    "pixelSampling": {
+        "status": "blocked",
+        "blocker": blocker,
+        "pixelsSampled": False,
+        "sampleCount": 0,
+        "samplingMethod": None,
+    },
+    "unsupportedClaims": unsupported_claims,
+}
+
+with output_path.open("w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
 write_x_window_inventory() {
   local run_dir=$1
   local status=$2
@@ -1391,6 +1499,9 @@ write_post_open_runtime_display_blocker() {
     "" \
     not-attempted \
     not-attempted
+  write_visible_rendering_pixel_sampling_blocker \
+    "$run_dir" \
+    "$run_dir/controlled-display-pixel-observation.json"
 
   RUNTIME_DISPLAY_SCENARIO="$scenario_id" \
   RUNTIME_DISPLAY_AUTOMATION_MODE="$automation_mode" \
@@ -1435,6 +1546,9 @@ PY
     printf 'visibleRenderingPixelTargetStatus=blocked\n'
     printf 'visibleRenderingPixelTargetArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
     printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
+    printf 'visibleRenderingPixelSamplingStatus=blocked\n'
+    printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
+    printf 'visibleRenderingPixelSamplingBlocker=world-canvas-pixel-target-not-ready\n'
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -2494,6 +2608,7 @@ JSON
 
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
     local visible_rendering_pixel_target_status visible_rendering_pixel_target_artifact
+    local visible_rendering_pixel_sampling_status visible_rendering_pixel_sampling_artifact visible_rendering_pixel_sampling_blocker
     visible_rendering_pixel_target_status=$(inventory_json_field "$run_dir/controlled-display-pixel-observation.json" worldCanvasPixelTarget.status)
     if [ "$visible_rendering_pixel_target_status" = target-ready ]; then
       visible_rendering_pixel_target_artifact=controlled-display-pixel-observation.json
@@ -2509,8 +2624,14 @@ JSON
         "$screenshot_pixel_status" \
         "$runtime_display_artifact_path"
     fi
+    write_visible_rendering_pixel_sampling_blocker \
+      "$run_dir" \
+      "$run_dir/controlled-display-pixel-observation.json"
+    visible_rendering_pixel_sampling_status=$(inventory_json_field "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" status)
+    visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
+    visible_rendering_pixel_sampling_blocker=$(inventory_json_field "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" blocker)
     scenario_outcome=blocked
-    if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ]; then
+    if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ] && [ "$visible_rendering_pixel_sampling_status" = observed ]; then
       scenario_outcome=passed
     fi
     {
@@ -2523,6 +2644,9 @@ JSON
       if [ "$visible_rendering_pixel_target_artifact" = "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER" ]; then
         printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
       fi
+      printf 'visibleRenderingPixelSamplingStatus=%s\n' "$visible_rendering_pixel_sampling_status"
+      printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$visible_rendering_pixel_sampling_artifact"
+      printf 'visibleRenderingPixelSamplingBlocker=%s\n' "$visible_rendering_pixel_sampling_blocker"
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi
@@ -2562,6 +2686,10 @@ JSON
   fi
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] && [ "$runtime_display_status" != observed ]; then
     printf 'Post-open runtime/display accessibility evidence blocked: %s; see %s/%s\n' "$runtime_display_blocker" "$run_dir" "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" >&2
+    return 2
+  fi
+  if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] && [ "${visible_rendering_pixel_sampling_status:-blocked}" != observed ]; then
+    printf 'World-canvas pixel sampling evidence blocked: %s; see %s/%s\n' "${visible_rendering_pixel_sampling_blocker:-world-canvas-pixel-sampling-not-observed}" "$run_dir" "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" >&2
     return 2
   fi
   if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ] && [ "$procedure_target_status" != observed ]; then
