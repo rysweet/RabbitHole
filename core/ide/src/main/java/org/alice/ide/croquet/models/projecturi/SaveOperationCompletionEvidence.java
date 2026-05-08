@@ -214,13 +214,20 @@ final class SaveOperationCompletionEvidence {
         + "  \"saved_file\": " + savedFileJson(result) + ",\n"
         + "  \"saved_file_exists\": " + savedFileExistsJson(result) + ",\n"
         + "  \"saved_file_size_bytes\": " + savedFileSizeJson(result) + ",\n"
+        + "  \"dialogType\": \"Swing JFileChooser\",\n"
+        + "  \"evidencePath\": \"Save dialog control/write path\",\n"
+        + "  \"wroteFile\": " + wroteFile(result, extension) + ",\n"
+        + "  \"fileExtension\": \"" + escapeJson(nullToBlank(extension)) + "\",\n"
+        + "  \"claim\": \"Save control/dialog approval reached a non-empty .a3p project file write\",\n"
         + "  \"doesNotClaim\": [\n"
         + "    \"desktop Save menu item was clicked\",\n"
-        + "    \"Save dialog control\",\n"
+        + "    \"full lesson completion\",\n"
         + "    \"full Alice UI automation\",\n"
         + "    \"first-lesson completion\",\n"
         + "    \"visible rendering correctness\",\n"
-        + "    \"grading\"\n"
+        + "    \"grading correctness\",\n"
+        + "    \"broad UI automation coverage\",\n"
+        + "    \"native dialog coverage\"\n"
         + "  ]\n"
         + "}\n";
   }
@@ -411,6 +418,33 @@ final class SaveOperationCompletionEvidence {
     } catch (IOException ioe) {
       return "null";
     }
+  }
+
+  private static boolean wroteFile(SaveOperationFlow.Result result, String extension) {
+    if (result.savedFile() == null) {
+      return false;
+    }
+    Path savedPath = result.savedFile().toPath();
+    if (!Files.isRegularFile(savedPath)) {
+      return false;
+    }
+    if (!hasExtension(savedPath, extension)) {
+      return false;
+    }
+    try {
+      return Files.size(savedPath) > 0;
+    } catch (IOException ioe) {
+      Logger.throwable(ioe, "eatme Save operation completion evidence could not measure saved file: " + savedPath);
+      return false;
+    }
+  }
+
+  private static boolean hasExtension(Path savedPath, String extension) {
+    if (extension == null || extension.isBlank()) {
+      return true;
+    }
+    Path fileName = savedPath.getFileName();
+    return fileName != null && fileName.toString().endsWith("." + extension);
   }
 
   private static String stringJson(String value) {

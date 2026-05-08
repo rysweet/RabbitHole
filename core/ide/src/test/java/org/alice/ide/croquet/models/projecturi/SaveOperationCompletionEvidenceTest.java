@@ -42,6 +42,51 @@ public class SaveOperationCompletionEvidenceTest {
   }
 
   @Test
+  public void completedSaveDialogWriteEvidenceNamesSwingChooserAndNarrowClaims() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("dialog-write-evidence"));
+    File savedFile = Files.writeString(testDir.resolve("classroom.a3p"), "project").toFile();
+    SaveOperationFlow.Result result = new SaveOperationFlow.Result(true, false, 1, 1, savedFile);
+
+    Path artifact = SaveOperationCompletionEvidence.write(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        result);
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"dialogType\": \"Swing JFileChooser\""));
+    assertTrue(json, json.contains("\"wroteFile\": true"));
+    assertTrue(json, json.contains("\"fileExtension\": \"a3p\""));
+    assertTrue(json, json.contains("\"claim\": \"Save control/dialog approval reached a non-empty .a3p project file write\""));
+    assertTrue(json, json.contains("\"full lesson completion\""));
+    assertTrue(json, json.contains("\"visible rendering correctness\""));
+    assertTrue(json, json.contains("\"grading correctness\""));
+    assertTrue(json, json.contains("\"broad UI automation coverage\""));
+    assertTrue(json, json.contains("\"native dialog coverage\""));
+  }
+
+  @Test
+  public void wroteFileIsFalseUntilSavedA3pExistsAndIsNonEmpty() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("empty-file-evidence"));
+    File emptyFile = Files.createFile(testDir.resolve("empty.a3p")).toFile();
+    SaveOperationFlow.Result result = new SaveOperationFlow.Result(true, false, 1, 1, emptyFile);
+
+    Path artifact = SaveOperationCompletionEvidence.write(
+        evidenceDir,
+        "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+        "a3p",
+        result);
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"saved_file_exists\": true"));
+    assertTrue(json, json.contains("\"saved_file_size_bytes\": 0"));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertFalse(json, json.contains("\"wroteFile\": true"));
+  }
+
+  @Test
   public void recordIsOptIn() throws Exception {
     Path evidenceDir = Files.createDirectories(newTestDir().resolve("disabled-evidence"));
     String previousEvidenceDir = System.getProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY);

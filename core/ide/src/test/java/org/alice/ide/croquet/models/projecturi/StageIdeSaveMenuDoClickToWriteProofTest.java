@@ -41,17 +41,21 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Window;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
 /**
@@ -216,10 +220,49 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"approved_selection\": true"));
     assertTrue(json, json.contains("\"file_written\": true"));
     assertTrue(json, json.contains("\"file_nonempty\": true"));
+    assertTrue(json, json.contains("\"dialogType\": \"Swing JFileChooser\""));
+    assertTrue(json, json.contains("\"wroteFile\": true"));
+    assertTrue(json, json.contains("\"selected_file_verified\": true"));
+    assertTrue(json, json.contains("\"ambiguous_chooser_discovery\": false"));
+    assertTrue(json, json.contains("\"normalized_selected_file\": \"" + FileDialogUtilities.escapeJson(targetFile.getCanonicalPath()) + "\""));
+    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\""));
+    assertTrue(json, json.contains("\"full lesson completion\""));
+    assertTrue(json, json.contains("\"visible rendering correctness\""));
+    assertTrue(json, json.contains("\"grading correctness\""));
+    assertTrue(json, json.contains("\"broad UI automation coverage\""));
+    assertTrue(json, json.contains("\"native dialog coverage\""));
     assertFalse(json, json.contains("\"status\": \"unsupported\""));
 
     assertTrue("target .a3p file must exist after save", targetFile.isFile());
     assertTrue("target .a3p file must be non-empty", targetFile.length() > 0);
+    assertTrue("target file must use .a3p extension", targetFile.getName().endsWith(".a3p"));
+    assertTrue("saved file must stay inside controlled temp projects dir",
+        targetFile.getCanonicalFile().toPath().startsWith(projectsDir.toRealPath()));
+  }
+
+  @Test
+  public void blockerArtifactReportsNoAvailableNonHeadlessAwtDisplay() throws Exception {
+    Path evidenceDir = Files.createDirectories(newTestDir().resolve("no-display-blocker"));
+
+    Method writeBlocker;
+    try {
+      writeBlocker = SaveMenuDoClickProbe.class.getDeclaredMethod(
+          "writeNoAvailableNonHeadlessAwtDisplayBlocker",
+          Path.class);
+    } catch (NoSuchMethodException nsme) {
+      fail("Save proof shard must provide executable blocker artifact writer: No available non-headless AWT display");
+      return;
+    }
+    writeBlocker.setAccessible(true);
+    Path artifact = (Path) writeBlocker.invoke(null, evidenceDir);
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertTrue(json, json.contains("\"reason\": \"No available non-headless AWT display\""));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"Save menu/control/dialog/write path\""));
+    assertTrue(json, json.contains("\"requiresNextEvidence\""));
+    assertFalse(json, json.contains("\"wroteFile\": true"));
   }
 
   // ---- inner probe ----
@@ -235,8 +278,12 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private final File targetFile;
     private volatile boolean chooserObserved;
     private volatile boolean approvedSelection;
+    private volatile boolean selectedFileVerified;
+    private volatile boolean ambiguousChooserDiscovery;
     private volatile boolean dialogShowing;
     private volatile String dialogClass;
+    private volatile String normalizedSelectedFile;
+    private volatile String failureReason;
     private volatile int pollCount;
     private java.util.Timer bgTimer;
 
@@ -261,25 +308,75 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
 
     Path artifactPath(Path evidenceDir) {
-      return evidenceDir.resolve(ARTIFACT);
+      return artifactPathFor(evidenceDir);
+    }
+
+    private static Path writeNoAvailableNonHeadlessAwtDisplayBlocker(Path evidenceDir) throws Exception {
+      Files.createDirectories(evidenceDir);
+      Path artifact = artifactPathFor(evidenceDir);
+      Files.writeString(
+          artifact,
+          "{\n"
+              + "  \"schema_version\": \"eatme.alice-desktop-stageide-save-menu-doclick-write-proof/v1\",\n"
+              + "  \"status\": \"unsupported\",\n"
+              + "  \"reason\": \"No available non-headless AWT display\",\n"
+              + "  \"dialogType\": \"Swing JFileChooser\",\n"
+              + "  \"wroteFile\": false,\n"
+              + "  \"proofTarget\": \"Save menu/control/dialog/write path\",\n"
+              + "  \"claim\": \"Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven\",\n"
+              + "  \"blocker\": {\n"
+              + "    \"observed\": \"GraphicsEnvironment.isHeadless() is true or no usable desktop display is available\",\n"
+              + "    \"required\": \"Xvfb or another non-headless AWT display capable of showing a Swing JFileChooser\"\n"
+              + "  },\n"
+              + "  \"requiresNextEvidence\": [\n"
+              + "    \"Run this proof shard under xvfb-run -a or an equivalent desktop session\",\n"
+              + "    \"Save menu/control/dialog/write path artifact with status proven\"\n"
+              + "  ],\n"
+              + "  \"doesNotClaim\": [\n"
+              + "    \"full lesson completion\",\n"
+              + "    \"visible rendering correctness\",\n"
+              + "    \"grading correctness\",\n"
+              + "    \"broad UI automation coverage\",\n"
+              + "    \"native dialog coverage\"\n"
+              + "  ]\n"
+              + "}\n",
+          StandardCharsets.UTF_8);
+      if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
+        throw new java.io.IOException("Save proof display blocker artifact was not written: " + artifact);
+      }
+      return artifact;
     }
 
     void writeResult(Path evidenceDir) throws Exception {
+      String targetCanonical = this.targetFile.getCanonicalPath();
+      String selectedCanonical = this.normalizedSelectedFile;
       boolean fileWritten = this.targetFile.isFile();
       boolean fileNonempty = fileWritten && this.targetFile.length() > 0;
-      boolean proven = this.chooserObserved && this.approvedSelection && fileWritten && fileNonempty;
+      boolean fileHasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
+      boolean selectedFileMatchesExpected = targetCanonical.equals(selectedCanonical);
+      boolean wroteFile = fileWritten && fileNonempty && fileHasExpectedExtension;
+      boolean proven = this.chooserObserved
+          && this.approvedSelection
+          && this.selectedFileVerified
+          && selectedFileMatchesExpected
+          && !this.ambiguousChooserDiscovery
+          && wroteFile
+          && this.failureReason == null;
       String status = proven ? "proven" : "unsupported";
       String reason = proven
           ? "save_menu_doclick_approved_chooser_wrote_project_file"
-          : "save_menu_doclick_e2e_not_completed";
+          : this.failureReason == null ? "save_menu_doclick_e2e_not_completed" : this.failureReason;
       Files.createDirectories(evidenceDir);
       Files.writeString(
           artifactPath(evidenceDir),
           "{\n"
               + "  \"schema_version\": \"eatme.alice-desktop-stageide-save-menu-doclick-write-proof/v1\",\n"
-              + "  \"status\": \"" + status + "\",\n"
-              + "  \"reason\": \"" + reason + "\",\n"
-              + "  \"proof_chain\": {\n"
+               + "  \"status\": \"" + status + "\",\n"
+               + "  \"reason\": \"" + reason + "\",\n"
+              + "  \"dialogType\": \"Swing JFileChooser\",\n"
+              + "  \"wroteFile\": " + wroteFile + ",\n"
+              + "  \"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\",\n"
+               + "  \"proof_chain\": {\n"
               + "    \"step1\": \"menuItem.doClick() on actual Save menu item (created via getMenuItemPrepModel().createMenuItemAndAddTo())\",\n"
               + "    \"step2\": \"Swing ActionEvent dispatched by doClick() → Croquet OperationSwingModel\",\n"
               + "    \"step3\": \"SaveProjectOperation.fire(UserActivity) called by Croquet\",\n"
@@ -298,55 +395,71 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "    \"trigger_description\": \"menuItem.doClick() on save MenuItem created by getMenuItemPrepModel().createMenuItemAndAddTo()\"\n"
               + "  },\n"
               + "  \"observed_dialog\": {\n"
-              + "    \"dialog_class\": " + stringJson(this.dialogClass) + ",\n"
-              + "    \"dialog_showing\": " + this.dialogShowing + ",\n"
-              + "    \"chooser_observed\": " + this.chooserObserved + ",\n"
-              + "    \"approved_selection\": " + this.approvedSelection + ",\n"
-              + "    \"poll_count\": " + this.pollCount + "\n"
+               + "    \"dialog_class\": " + stringJson(this.dialogClass) + ",\n"
+               + "    \"dialog_showing\": " + this.dialogShowing + ",\n"
+               + "    \"chooser_observed\": " + this.chooserObserved + ",\n"
+              + "    \"dialogType\": \"Swing JFileChooser\",\n"
+              + "    \"ambiguous_chooser_discovery\": " + this.ambiguousChooserDiscovery + ",\n"
+               + "    \"approved_selection\": " + this.approvedSelection + ",\n"
+               + "    \"poll_count\": " + this.pollCount + "\n"
+               + "  },\n"
+              + "  \"selected_file\": {\n"
+              + "    \"selected_file_verified\": " + this.selectedFileVerified + ",\n"
+              + "    \"normalized_selected_file\": " + stringJson(selectedCanonical) + ",\n"
+              + "    \"expected_file\": " + stringJson(targetCanonical) + ",\n"
+              + "    \"selected_file_matches_expected\": " + selectedFileMatchesExpected + "\n"
               + "  },\n"
-              + "  \"written_artifact\": {\n"
-              + "    \"target_file\": " + stringJson(this.targetFile.getAbsolutePath()) + ",\n"
-              + "    \"file_written\": " + fileWritten + ",\n"
-              + "    \"file_nonempty\": " + fileNonempty + ",\n"
+               + "  \"written_artifact\": {\n"
+              + "    \"target_file\": " + stringJson(targetCanonical) + ",\n"
+               + "    \"file_written\": " + fileWritten + ",\n"
+               + "    \"file_nonempty\": " + fileNonempty + ",\n"
+              + "    \"file_extension\": \"a3p\",\n"
+              + "    \"file_has_expected_extension\": " + fileHasExpectedExtension + ",\n"
               + "    \"file_size_bytes\": " + (fileWritten ? this.targetFile.length() : 0) + "\n"
-              + "  },\n"
-              + "  \"doesNotClaim\": [\n"
-              + "    \"native java.awt.FileDialog peer display/control\",\n"
-              + "    \"desktop pixels or visible rendering were validated\",\n"
-              + "    \"first-lesson completion\",\n"
-              + "    \"grading\"\n"
-              + "  ]\n"
-              + "}\n",
+               + "  },\n"
+               + "  \"doesNotClaim\": [\n"
+              + "    \"full lesson completion\",\n"
+              + "    \"visible rendering correctness\",\n"
+              + "    \"grading correctness\",\n"
+              + "    \"broad UI automation coverage\",\n"
+              + "    \"native dialog coverage\"\n"
+               + "  ]\n"
+               + "}\n",
           StandardCharsets.UTF_8);
     }
 
     private void poll() {
       int count = ++this.pollCount;
+      List<ChooserCandidate> candidates = new ArrayList<>();
       for (Window window : Window.getWindows()) {
         if (window instanceof JDialog dialog) {
-          JFileChooser chooser = findChooser(dialog);
-          if (chooser != null) {
-            this.chooserObserved = true;
-            this.dialogShowing = dialog.isShowing();
-            this.dialogClass = dialog.getClass().getName();
-            this.bgTimer.cancel();
-            final JFileChooser fc = chooser;
-            SwingUtilities.invokeLater(() -> {
-              fc.setSelectedFile(this.targetFile);
-              this.approvedSelection = true;
-              fc.approveSelection();
-            });
-            return;
-          }
+          addChoosers(dialog, dialog, candidates);
         }
       }
+      if (candidates.size() > 1) {
+        this.chooserObserved = true;
+        this.ambiguousChooserDiscovery = true;
+        this.failureReason = "ambiguous_swing_jfilechooser_discovery";
+        this.bgTimer.cancel();
+        cancelChoosersOnEdt(candidates);
+        return;
+      }
+      if (candidates.size() == 1) {
+        ChooserCandidate candidate = candidates.get(0);
+        this.chooserObserved = true;
+        this.dialogShowing = candidate.dialog().isShowing();
+        this.dialogClass = candidate.dialog().getClass().getName();
+        this.bgTimer.cancel();
+        approveChooserOnEdt(candidate.chooser());
+        return;
+      }
       if (count >= MAX_POLLS) {
+        this.failureReason = "swing_jfilechooser_not_observed_before_timeout";
         this.bgTimer.cancel();
         SwingUtilities.invokeLater(() -> {
           for (Window w : Window.getWindows()) {
             if (w instanceof JDialog d) {
-              JFileChooser fc = findChooser(d);
-              if (fc != null) {
+              for (JFileChooser fc : findChoosers(d)) {
                 fc.cancelSelection();
               }
             }
@@ -355,23 +468,76 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       }
     }
 
-    private static JFileChooser findChooser(Component component) {
+    private void approveChooserOnEdt(JFileChooser chooser) {
+      SwingUtilities.invokeLater(() -> {
+        try {
+          chooser.setSelectedFile(this.targetFile);
+          File selectedFile = chooser.getSelectedFile();
+          this.normalizedSelectedFile = selectedFile == null ? null : selectedFile.getCanonicalPath();
+          this.selectedFileVerified = this.targetFile.getCanonicalPath().equals(this.normalizedSelectedFile);
+          if (this.selectedFileVerified) {
+            this.approvedSelection = true;
+            chooser.approveSelection();
+          } else {
+            this.failureReason = "selected_file_did_not_match_expected_target";
+            chooser.cancelSelection();
+          }
+        } catch (java.io.IOException ioe) {
+          this.failureReason = "selected_file_canonicalization_failed";
+          chooser.cancelSelection();
+        }
+      });
+    }
+
+    private static void cancelChoosersOnEdt(List<ChooserCandidate> candidates) {
+      SwingUtilities.invokeLater(() -> {
+        for (ChooserCandidate candidate : candidates) {
+          candidate.chooser().cancelSelection();
+        }
+      });
+    }
+
+    private static void addChoosers(JDialog dialog, Component component, List<ChooserCandidate> candidates) {
       if (component instanceof JFileChooser chooser) {
-        return chooser;
+        candidates.add(new ChooserCandidate(dialog, chooser));
       }
       if (component instanceof Container container) {
         for (Component child : container.getComponents()) {
-          JFileChooser found = findChooser(child);
-          if (found != null) {
-            return found;
-          }
+          addChoosers(dialog, child, candidates);
         }
       }
-      return null;
+    }
+
+    private static List<JFileChooser> findChoosers(Component component) {
+      List<JFileChooser> choosers = new ArrayList<>();
+      addJFileChoosers(component, choosers);
+      return choosers;
+    }
+
+    private static void addJFileChoosers(Component component, List<JFileChooser> choosers) {
+      if (component instanceof JFileChooser chooser) {
+        choosers.add(chooser);
+      }
+      if (component instanceof Container container) {
+        for (Component child : container.getComponents()) {
+          addJFileChoosers(child, choosers);
+        }
+      }
+    }
+
+    private static Path artifactPathFor(Path evidenceDir) {
+      Path artifact = evidenceDir.resolve(ARTIFACT).normalize();
+      if (!artifact.startsWith(evidenceDir.normalize())) {
+        throw new IllegalArgumentException("Save menu doClick proof artifact escapes evidence dir");
+      }
+      return artifact;
     }
 
     private static String stringJson(String value) {
       return value == null ? "null" : "\"" + FileDialogUtilities.escapeJson(value) + "\"";
+    }
+
+    private record ChooserCandidate(JDialog dialog, JFileChooser chooser) {
     }
   }
 
