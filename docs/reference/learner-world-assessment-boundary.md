@@ -1,22 +1,23 @@
 # Learner-world assessment boundary
 
-This reference describes the learner-world assessment boundary contract and how
-the runner makes that boundary explicit in generated evidence. The boundary
-keeps instructor/student setup/open/save evidence review separate from
-assessment features that RabbitHole does not implement.
+This reference describes the current learner-world assessment boundary and the
+planned finished-state contract for the feature. The boundary keeps
+instructor/student setup/open/save evidence review separate from assessment
+features that RabbitHole does not implement.
 
 ## Contents
 
-- [Supported behavior](#supported-behavior)
+- [Current behavior](#current-behavior)
 - [Generated run artifacts](#generated-run-artifacts)
-- [Boundary contract API](#boundary-contract-api)
+- [Current boundary artifact](#current-boundary-artifact)
+- [Planned finished-state contract](#planned-finished-state-contract)
 - [Configuration](#configuration)
 - [Scenario configuration](#scenario-configuration)
 - [Manual review workflow](#manual-review-workflow)
 - [Examples](#examples)
 - [Extension rules](#extension-rules)
 
-## Supported behavior
+## Current behavior
 
 RabbitHole learner-world QA currently supports setup/open/save evidence review
 only. The selected scenario is `alice-desktop-instructor-student-setup`, and its
@@ -52,10 +53,9 @@ Running the selected scenario creates:
   manual-evidence-checklist.txt
 ```
 
-`status.txt` records `automationMode=manual-evidence-required`, points to the
-generated checklist, and names the reviewed-assessment boundary. It does not
-record a learner grade, rubric score, correctness result, creative-assessment
-result, or assessment pass.
+`status.txt` records `automationMode=manual-evidence-required` and points to the
+generated checklist. It does not record a learner grade, rubric score,
+correctness result, creative-assessment result, or assessment pass.
 
 `manual-evidence-checklist.txt` includes the standard manual sections:
 preconditions, user actions, expected outcomes, required evidence, fallback
@@ -67,16 +67,16 @@ boundary contract:
 qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 ```
 
-## Boundary contract API
+## Current boundary artifact
 
-The boundary record is a declarative contract, not an assessment engine. It is
-stored at:
+The current boundary record is declarative documentation, not an assessment
+engine. It is stored at:
 
 ```text
 qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 ```
 
-The contract exposes these fields:
+The current artifact exposes these fields:
 
 | Field | Meaning |
 | --- | --- |
@@ -86,11 +86,8 @@ The contract exposes these fields:
 | `scope` | Instructor/student learner-world setup/open/save evidence. |
 | `currentCapability` | Collects manual evidence for setup, open, and save workflow review. |
 | `supportedEvidence` | Explicit list of supported evidence areas: setup/open/save evidence review only, instructor starter artifact review, student open artifact review, student save artifact review, and manual review-notes acceptance decision. |
-| `assessmentLimits` | Explicit limits: no automated grading, no rubric scoring, no correctness assessment, and no creative assessment. |
-| `nonCapabilities` | Unsupported learner-world grading, rubric scoring, correctness assessment, and creative assessment claims. |
-| `nextBoundary` | Blocking requirement for future assessment work: `define-reviewed-assessment-contract`. |
-| `manualLimitationSummary` | User-facing summary rendered in generated evidence and documentation. It states that grading, rubric scoring, correctness assessment, and creative assessment remain manual/unsupported. |
-| `requiresReviewedAssessmentContractBefore` | Required contract topics before any future assessment implementation can be claimed: learner-world grading, rubric scoring, correctness assessment, and creative assessment. |
+| `assessmentLimits` | Explicit limits: no automated grading, no rubric scoring, no correctness scoring, and no creative assessment. The planned contract normalizes this to `no correctness assessment`. |
+| `nonCapabilities` | Unsupported learner-work grading, rubric scoring, correctness assessment, and creativity assessment claims. The planned contract normalizes these labels to learner-world grading and creative assessment. |
 | `nextBlocker.id` | Back-compatible blocker identifier for review tooling: `define-reviewed-assessment-contract`. |
 | `nextBlocker.description` | User-facing explanation that a reviewed assessment contract and evidence mapping are required before grading or creative assessment work can be claimed. |
 | `blocker` | User-facing blocker shown in generated evidence: learner-world state extraction for grading or creative assessment is blocked until the reviewed assessment contract and evidence mapping define safe rubric inputs and limits. |
@@ -99,9 +96,44 @@ Consumers may display these fields in documentation, generated evidence, or
 review tooling. They must not treat this file as executable assessment behavior
 without a separate reviewed implementation change.
 
-The contract intentionally does not expose executable assessment fields. These
-field names are reserved and rejected because they would imply behavior that
-does not exist:
+The current contract intentionally does not expose executable assessment fields.
+The current docs-owned contract test rejects these behavior fields because they
+would imply behavior that does not exist:
+
+```text
+gradingAlgorithm
+assessmentAlgorithm
+scoreSchema
+rubricSchema
+runnerIntegration
+```
+
+## Planned finished-state contract
+
+The feature to build is a stricter documentation-and-evidence boundary, not an
+assessment engine. Its finished state should update the JSON contract, generated
+checklist, documentation, and contract tests together so all surfaces use the
+same wording and the same fields.
+
+The planned contract adds these fields:
+
+| Field | Planned meaning |
+| --- | --- |
+| `nextBoundary` | Blocking requirement for future assessment work: `define-reviewed-assessment-contract`. |
+| `manualLimitationSummary` | User-facing summary rendered in generated evidence and documentation. It states that grading, rubric scoring, correctness assessment, and creative assessment remain manual/unsupported. |
+| `requiresReviewedAssessmentContractBefore` | Required contract topics before any future assessment implementation can be claimed: learner-world grading, rubric scoring, correctness assessment, and creative assessment. |
+
+The planned contract should use these assessment terms consistently:
+
+| Topic | Planned wording |
+| --- | --- |
+| Grading | `learner-world grading` |
+| Rubric evaluation | `rubric scoring` |
+| Correctness | `correctness assessment` |
+| Creativity | `creative assessment` |
+
+The planned contract tests should also reject every executable assessment field
+reserved by the boundary, including:
 
 ```text
 gradingAlgorithm
@@ -109,6 +141,7 @@ assessmentAlgorithm
 scoreSchema
 rubricSchema
 creativeAssessmentEngine
+runnerIntegration
 ```
 
 ## Configuration
@@ -130,8 +163,9 @@ contract values into grading logic.
 
 ## Generated checklist section
 
-`manual-evidence-checklist.txt` for `alice-desktop-instructor-student-setup`
-includes this generated section:
+The current `manual-evidence-checklist.txt` for
+`alice-desktop-instructor-student-setup` includes a generated section with this
+shape:
 
 ```text
 Assessment boundary
@@ -145,6 +179,19 @@ Assessment boundary
 7. Supported evidence: manual review-notes.txt acceptance decision.
 8. Assessment limit: no automated grading.
 9. Assessment limit: no rubric scoring.
+10. Assessment limit: no correctness scoring.
+11. Assessment limit: no creative assessment.
+12. Blocker: define-reviewed-assessment-contract.
+13. learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping define safe rubric inputs and limits.
+```
+
+The planned finished-state checklist should normalize `correctness scoring` to
+`correctness assessment` and add the planned boundary summary lines:
+
+```text
+Assessment boundary
+-------------------
+...
 10. Assessment limit: no correctness assessment.
 11. Assessment limit: no creative assessment.
 12. Next boundary: define-reviewed-assessment-contract.
@@ -155,9 +202,9 @@ Assessment boundary
 17. learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping define safe rubric inputs and limits.
 ```
 
-Boundary changes must update the JSON contract, generated checklist wording,
-documentation, and docs-owned contract tests together so unsupported assessment
-claims stay visible.
+Building that finished state requires updating the JSON contract, generated
+checklist wording, documentation, and docs-owned contract tests together so
+unsupported assessment claims stay visible.
 
 ## Scenario configuration
 
