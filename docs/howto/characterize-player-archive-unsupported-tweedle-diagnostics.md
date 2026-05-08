@@ -50,8 +50,9 @@ projectStructure.sceneCameraType = WindowCamera
 ```
 
 Add a `tweedle` `TypeReference` for `Program` and another supported sibling type
-such as `DecodedSibling`. The sibling proves the reader can report both decoded
-and unsupported manifest-declared type sets in one failure.
+such as `DecodedSibling`. `Program` should extend `SProgram`, and the sibling
+should be a decodable `SScene`. The sibling proves the reader can report both
+decoded and unsupported manifest-declared type sets in one failure.
 
 ## Use the unsupported program source
 
@@ -59,12 +60,12 @@ The `Program` source should contain the unsupported argument-bearing explicit
 `this` call:
 
 ```java
-class Program {
-  void helper(WholeNumber value) {
+class Program extends SProgram {
+  void caller() {
+    this.helper(value: 1);
   }
 
-  void run() {
-    this.helper(value: 1);
+  void helper(WholeNumber value) {
   }
 }
 ```
@@ -72,7 +73,7 @@ class Program {
 Use a simple supported sibling source:
 
 ```java
-class DecodedSibling {
+class DecodedSibling extends SScene {
 }
 ```
 
@@ -97,11 +98,12 @@ assertTrue(message.contains("Program"));
 assertTrue(message.contains("DecodedSibling"));
 assertTrue(message.contains("unsupported"));
 assertTrue(message.contains("argument-bearing explicit this method calls"));
+assertTrue(message.contains("caller.this.helper"));
 ```
 
 Prefer stable substrings over full-message equality. Full messages may gain
 additional archive context, but they must continue to name the affected manifest
-type and the unsupported decoder reason.
+type, the unsupported decoder reason, and the affected call-site context.
 
 ## Keep the boundary conservative
 

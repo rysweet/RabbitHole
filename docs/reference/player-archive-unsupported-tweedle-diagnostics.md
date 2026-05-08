@@ -4,9 +4,10 @@ This page defines the narrow JSON player archive behavior for manifest-declared
 Tweedle types that fail at an explicit unsupported decode boundary.
 
 The covered seam is an argument-bearing explicit `this` method call inside a
-JSON `.a3w` type, for example `this.helper(value: 1)`. The archive reader keeps
-that type unsupported and reports the decoder reason with deterministic archive
-context. This is not broader Tweedle method-call decode support.
+JSON `.a3w` type, for example `this.helper(value: 1)` inside a `caller` method.
+The archive reader keeps that type unsupported and reports the decoder reason
+plus the call-site context with deterministic archive context. This is not
+broader Tweedle method-call decode support.
 
 ## Usage
 
@@ -62,24 +63,30 @@ manifest-declared expected program type is unsupported.
 The selected unsupported seam is a labeled-argument call on explicit `this`:
 
 ```java
-class Program {
-  void helper(WholeNumber value) {
+class Program extends SProgram {
+  void caller() {
+    this.helper(value: 1);
   }
 
-  void run() {
-    this.helper(value: 1);
+  void helper(WholeNumber value) {
   }
 }
 ```
 
-The direct Tweedle decoder boundary is:
+The bounded stable decoder reason emitted by the Tweedle decoder is:
 
 ```text
-argument-bearing explicit this method calls
+Tweedle argument-bearing explicit this method calls
 ```
 
-The player archive reader preserves that reason at the archive boundary instead
-of replacing it with a generic missing-program failure.
+The call-site context is separate:
+
+```text
+caller.this.helper
+```
+
+The player archive reader preserves both pieces at the archive boundary instead
+of replacing them with a generic missing-program failure.
 
 ## API behavior
 
@@ -94,11 +101,12 @@ Stable `IOException` diagnostics include:
 | Expected type | Names the manifest-declared program type, such as `Program`. |
 | Decoded types | Lists any manifest-declared types that decoded successfully, such as `DecodedSibling`. |
 | Unsupported types | Lists manifest-declared Tweedle type names that reached `UnsupportedTweedleDecodeException`, such as `Program`. |
-| Decoder reason | Includes the sanitized unsupported decode reason for each unsupported type. |
-| Call context | Preserves the boundary label `argument-bearing explicit this method calls`. |
+| Decoder reason | Includes the bounded stable unsupported decode reason emitted by the Tweedle decoder for each unsupported type. |
+| Call context | Preserves the affected call-site context, such as `caller.this.helper`. |
 
-Ordering is deterministic. When multiple types or reasons are reported, they are
-sorted by manifest type name before formatting.
+The formatter orders unsupported type diagnostics by manifest type name. Add a
+multi-unsupported-type characterization before treating that order as a separate
+compatibility guarantee.
 
 ## Error message shape
 
@@ -110,6 +118,7 @@ Program
 DecodedSibling
 unsupported
 argument-bearing explicit this method calls
+caller.this.helper
 ```
 
 The diagnostic must not include raw archive payloads, full Tweedle source bodies,

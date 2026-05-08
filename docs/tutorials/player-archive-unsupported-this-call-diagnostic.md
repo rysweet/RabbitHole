@@ -7,8 +7,9 @@ The goal is to prove this behavior:
 
 ```text
 A JSON .a3w archive that declares Program as its player type fails closed when
-Program contains this.helper(value: 1), and the IOException names Program plus
-the unsupported decoder reason.
+Program contains `this.helper(value: 1)` inside a `caller` method, and the
+IOException names Program plus the unsupported decoder reason and call-site
+context.
 ```
 
 ## 1. Start with the unsupported call
@@ -16,12 +17,12 @@ the unsupported decoder reason.
 Use a small Tweedle program:
 
 ```java
-class Program {
-  void helper(WholeNumber value) {
+class Program extends SProgram {
+  void caller() {
+    this.helper(value: 1);
   }
 
-  void run() {
-    this.helper(value: 1);
+  void helper(WholeNumber value) {
   }
 }
 ```
@@ -32,10 +33,16 @@ The important syntax is the labeled argument on explicit `this`:
 this.helper(value: 1);
 ```
 
-That call remains unsupported. The diagnostic boundary is:
+That call remains unsupported. The bounded stable decoder reason is:
 
 ```text
-argument-bearing explicit this method calls
+Tweedle argument-bearing explicit this method calls
+```
+
+The separate call-site context is:
+
+```text
+caller.this.helper
 ```
 
 ## 2. Add one decodable sibling
@@ -43,7 +50,7 @@ argument-bearing explicit this method calls
 Use a simple sibling type:
 
 ```java
-class DecodedSibling {
+class DecodedSibling extends SScene {
 }
 ```
 
@@ -87,11 +94,12 @@ assertTrue(message.contains("Program"));
 assertTrue(message.contains("DecodedSibling"));
 assertTrue(message.contains("unsupported"));
 assertTrue(message.contains("argument-bearing explicit this method calls"));
+assertTrue(message.contains("caller.this.helper"));
 ```
 
 Those assertions prove that the archive failure identifies the expected program
 type, preserves decoded sibling context, names the unsupported type set, and
-surfaces the decoder reason.
+surfaces the decoder reason plus the call-site context.
 
 ## 6. Avoid broader claims
 
