@@ -102,7 +102,7 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
     return ClassUtilities.getInstance(PerspectiveApplication.getActiveInstance(), ProjectApplication.class);
   }
 
-  private final BackupProjectOperation backupProjectOperation = new BackupProjectOperation();
+  private BackupProjectOperation backupProjectOperation;
   private final ProjectBackupSelector projectBackupSelector = new ProjectBackupSelector();
 
   private UserActivity projectActivity;
@@ -111,7 +111,21 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
   public ProjectApplication(ApiConfigurationManager apiConfigurationManager) {
     this.projectFileUtilities = new ProjectFileUtilities(this);
     this.projectDocumentFrame = new ProjectDocumentFrame(apiConfigurationManager);
-    this.projectHistoryListener = new HistoryListener() {
+    this.projectHistoryListener = createProjectHistoryListener();
+    this.updateTitle();
+  }
+
+  ProjectApplication(ProjectDocumentFrame projectDocumentFrame) {
+    this.projectFileUtilities = new ProjectFileUtilities(this);
+    this.projectDocumentFrame = projectDocumentFrame;
+    this.projectHistoryListener = createProjectHistoryListener();
+    if (this.projectDocumentFrame != null) {
+      this.updateTitle();
+    }
+  }
+
+  private HistoryListener createProjectHistoryListener() {
+    return new HistoryListener() {
       @Override
       public void operationPushing(HistoryPushEvent e) {
       }
@@ -137,7 +151,13 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
       public void cleared(HistoryClearEvent e) {
       }
     };
-    this.updateTitle();
+  }
+
+  private BackupProjectOperation getBackupProjectOperation() {
+    if (backupProjectOperation == null) {
+      backupProjectOperation = new BackupProjectOperation();
+    }
+    return backupProjectOperation;
   }
 
   @Override
@@ -274,10 +294,14 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
   protected abstract IdeFrameTitleGenerator createFrameTitleGenerator();
 
   protected final void updateTitle() {
+    ProjectDocumentFrame documentFrame = this.getDocumentFrame();
+    if (documentFrame == null) {
+      return;
+    }
     if (frameTitleGenerator == null) {
       this.frameTitleGenerator = this.createFrameTitleGenerator();
     }
-    this.getDocumentFrame().getFrame().setTitle(this.frameTitleGenerator.generateTitle(uriProjectLoader, isProjectUpToDateWithFile()));
+    documentFrame.getFrame().setTitle(this.frameTitleGenerator.generateTitle(uriProjectLoader, isProjectUpToDateWithFile()));
   }
 
   private ProjectDocument getDocument() {
@@ -411,7 +435,7 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
       return false;
     }
 
-    YesNoCancelResult result = backupProjectOperation.showUnsavedBackupProjectOpenedDialog();
+    YesNoCancelResult result = getBackupProjectOperation().showUnsavedBackupProjectOpenedDialog();
 
     return switch (result) {
       case YES -> {
@@ -485,19 +509,19 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
     ProjectLoadFailurePlan.Action failureAction = plan.getAction();
     boolean accepted = false;
     switch (failureAction) {
-      case SHOW_BACKUP_LOAD_ERROR -> backupProjectOperation.showBackupLoadErrorDialog();
+      case SHOW_BACKUP_LOAD_ERROR -> getBackupProjectOperation().showBackupLoadErrorDialog();
       case PROMPT_LOAD_BACKUP -> {
-        accepted = backupProjectOperation.showProjectLoadErrorAndLoadBackupDialog(
+        accepted = getBackupProjectOperation().showProjectLoadErrorAndLoadBackupDialog(
             mainProject.getName(), plan.getFailedBackupName(), isBackup);
       }
       case SHOW_UNSAVED_BACKUPS_LOAD_ERROR -> {
-        backupProjectOperation.showUnsavedBackupsLoadErrorDialog();
+        getBackupProjectOperation().showUnsavedBackupsLoadErrorDialog();
       }
       case SHOW_PROJECT_AND_ALL_BACKUPS_LOAD_ERROR -> {
-        backupProjectOperation.showProjectAndAllBackupsLoadErrorDialog(mainProject.getName());
+        getBackupProjectOperation().showProjectAndAllBackupsLoadErrorDialog(mainProject.getName());
       }
       case PROMPT_LOAD_MAIN_PROJECT -> {
-        accepted = backupProjectOperation.showProjectLoadRecentBackupsErrorAndLoadMainDialog(projectFile.getName());
+        accepted = getBackupProjectOperation().showProjectLoadRecentBackupsErrorAndLoadMainDialog(projectFile.getName());
       }
     }
 
@@ -548,7 +572,7 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
 
         File backup = getNextBackup(projectModifiedTime, backupDir, false, unloadableFiles);
 
-        if (backup != null && backupProjectOperation.showMoreRecentBackupsDialog()) {
+        if (backup != null && getBackupProjectOperation().showMoreRecentBackupsDialog()) {
           // restart load with backup
           loadProject(newProjectActivity(), new FileProjectLoader(backup, uriProjectLoader.shouldMakeVrReady()), true, isMainProjectCorrupted, unloadableFiles);
 
@@ -588,7 +612,7 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
   }
 
   private void createProjectFromBackup(File backup, File original, boolean isMainProjectCorrupted) {
-    YesNoCancelResult result = backupProjectOperation.showBackupProjectOpenedDialog(original.getName(), backup.getName(), isMainProjectCorrupted);
+    YesNoCancelResult result = getBackupProjectOperation().showBackupProjectOpenedDialog(original.getName(), backup.getName(), isMainProjectCorrupted);
     ProjectBackupAdoptionPlan plan = ProjectBackupAdoptionPlan.afterUserChoice(result);
 
     switch (plan.getAction()) {
