@@ -2,6 +2,7 @@ package org.alice.ide.croquet.models.projecturi;
 
 import edu.cmu.cs.dennisc.crash.CrashDetector;
 import edu.cmu.cs.dennisc.java.awt.FileDialogUtilities;
+import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.alice.ide.ProjectDocument;
 import org.alice.ide.project.ProjectDocumentState;
 import org.alice.ide.uricontent.UriProjectLoader;
@@ -582,6 +583,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
             chooser.cancelSelection();
           }
         } catch (java.io.IOException ioe) {
+          Logger.throwable(ioe, "Save proof selected file canonicalization failed for: " + this.targetFile);
           this.failureReason = "selected_file_canonicalization_failed";
           chooser.cancelSelection();
         }
@@ -628,7 +630,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private static Path artifactPathFor(Path evidenceDir) {
       Path artifact = evidenceDir.resolve(ARTIFACT).normalize();
       if (!artifact.startsWith(evidenceDir.normalize())) {
-        throw new IllegalArgumentException("Save menu doClick proof artifact escapes evidence dir");
+        throw new SecurityException("Security violation: Save menu doClick proof artifact attempts path traversal outside evidence dir");
       }
       return artifact;
     }
