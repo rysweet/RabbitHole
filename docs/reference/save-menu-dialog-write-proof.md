@@ -70,8 +70,10 @@ The old `StageIdeSaveMenuDoClickToWriteProofTest` evidence and any `save-menu-di
 
 ```text
 qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof/
-  status.txt
-  command.log
+  alice-desktop-save-menu-dialog-write-proof/
+    <timestamp>/
+      status.txt
+      command.log
 
 core/ide/target/save-menu-proofs/
   robot-save-menu-dialog-write-readback-proof.json
