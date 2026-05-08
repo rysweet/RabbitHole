@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, first-lesson live procedure target observation, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -10,8 +10,9 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [List available scenarios](#list-available-scenarios)
 - [Run branch-installable checks with uvx](#run-branch-installable-checks-with-uvx)
 - [Run the real Alice launch scenario](#run-the-real-alice-launch-scenario)
-- [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
+- [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
+- [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
@@ -217,6 +218,32 @@ Review `status.txt`, `x-window-inventory.json`, `select-project-window.json`, an
 If the probe cannot safely prove target-specific selection/opening, it must preserve the existing string `blocker` and `blockerDetail` fields, then add structured target-specific detail in `nextBlocker`, including the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. A blocked result is the correct output when continuing would turn generic Select Project dismissal or main-window state into an unsupported Africa Full claim.
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
+
+## Observe the first-lesson live procedure target
+
+Use this scenario after the Select Project target starter path when the review
+needs the next first-lesson seam: whether the live post-open desktop exposes a
+stable procedure tab or code-editor target for `scene.eatmeFirstLesson`.
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-first-lesson-live-procedure-target-observation \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/first-lesson-live-procedure-target \
+  --timeout-seconds 300
+```
+
+Review `first-lesson-live-procedure-target-observation.json` and `status.txt`.
+`status=observed` means the runner found a stable live procedure tab or
+code-editor target that the next desktop edit shard can reacquire.
+`status=blocked` means the artifact names the exact missing target or
+display/accessibility prerequisite. Do not use this evidence to claim a desktop
+procedure edit, Save, rendering correctness, learner assessment, or full
+first-lesson completion.
+
+For the full artifact API, configuration, examples, and claim boundaries, see
+[First-Lesson Live Procedure Target Observation](../reference/first-lesson-live-procedure-target-observation.md).
 
 ## Collect post-open runtime/display accessibility evidence
 

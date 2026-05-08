@@ -41,6 +41,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-select-project-atk-exec` | `select-project-atk-exec-smoke` | `xvfb-real-alice` | Launches Alice through the AT-SPI exec:exec path and records live Select Project widget evidence or exact blockers. |
 | `alice-desktop-select-project-tab-click-exec` | `select-project-tab-click-smoke` | `xvfb-real-alice` | Uses the AT-SPI exec:exec launch path to activate Select Project tabs, select/open the committed `Africa Full` starter, or record the exact blocker. |
 | `alice-desktop-post-project-open-window-state` | `post-project-open-window-state-smoke` | `xvfb-real-alice` | Characterizes the Alice main-window AT-SPI frame state after project open. It is gated by prior Africa Full Select Project evidence. |
+| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Opens the first-lesson starter through Select Project and observes or blocks the stable live procedure tab/code-editor target for `scene.eatmeFirstLesson`. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic first-lesson procedure edit artifacts and the exact missing UI-action target at the command seam. |
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers object-placement-to-procedure-edit handoff evidence at the command seam. |
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
@@ -194,6 +195,26 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 This command uses the existing Alice launch/open path and the same Xvfb/AT-SPI infrastructure as the live Swing probes. The runner invokes `post-open-runtime-display-probe.py` after the supported project-open setup and writes `post-open-runtime-display-accessibility-evidence.json` plus probe-local `runtime-display-accessibility-status.txt`. Final success means `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and the JSON artifact found at least one live runtime/display accessibility candidate after project open. Failure or missing runtime/display, display, screenshot/pixel, root-directory, license, or AT-SPI prerequisites are recorded as structured blockers. For the dedicated usage, configuration, artifact API, examples, and review boundaries, see [Post-open runtime/display accessibility evidence](./post-open-runtime-display-accessibility-evidence.md).
 
+### First-lesson live procedure target observation
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-first-lesson-live-procedure-target-observation \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/first-lesson-live-procedure-target \
+  --timeout-seconds 300
+```
+
+This command starts after the Select Project target starter path and writes
+`first-lesson-live-procedure-target-observation.json`. The artifact either
+records `status=observed` with a stable procedure tab or code-editor target for
+`scene.eatmeFirstLesson`, or records `status=blocked` with the exact missing
+target or display/accessibility prerequisite. The shard is read-only and does
+not claim a desktop edit, Save, rendering correctness, learner assessment, or
+full first-lesson completion. For the dedicated artifact API and boundaries, see
+[First-Lesson Live Procedure Target Observation](./first-lesson-live-procedure-target-observation.md).
+
 ### Prepare a gated smoke without execution
 
 ```bash
@@ -323,8 +344,8 @@ supportingEvidence:
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
 | `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
-| `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec`. |
-| `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
+| `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec` and first-lesson live procedure target observation. |
+| `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`; for first-lesson live procedure target observation this is the configured first-lesson starter `.a3p` path. |
 | `supportingEvidence` | string list | Scenario IDs or evidence sources that support this scenario. |
 | `tags` | string list | Additional scenario labels. |
 
@@ -346,6 +367,7 @@ netbeans-package-smoke
 open-load-save
 package-install-smoke
 post-open-runtime-display-accessibility-evidence
+first-lesson-live-procedure-target-observation
 post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
@@ -423,6 +445,7 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
 | `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
+| `first-lesson-live-procedure-target-observation.json` | First-lesson live procedure target observation evidence, or the exact blocker that prevents the next desktop edit shard from safely reacquiring the procedure tab or code-editor target. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
@@ -447,6 +470,32 @@ For post-open runtime/display accessibility runs, `status.txt` records `runtimeD
 
 The artifact must not include environment variables, credentials, process dumps, unrelated desktop windows, saved project contents, decoder output, grading state, lesson state, or world execution traces. Acceptance requires both the JSON runtime/display artifact and final `status.txt`: JSON `status=observed` alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted, and JSON `status=blocked` remains the machine-readable runtime/display gap report.
 
+For first-lesson live procedure target observation runs, `status.txt` records
+`procedureTargetEvidence=first-lesson-live-procedure-target-observation.json`,
+`procedureTargetStatus`, `procedureTargetBlocker`, and `outcome=passed` or
+`outcome=blocked`. The JSON artifact is the target-observation
+machine-readable contract:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `schemaVersion` | string | Always `eatme.first-lesson-live-procedure-target-observation/v1`. |
+| `scenario` | string | Always `alice-desktop-first-lesson-live-procedure-target-observation`. |
+| `workflow` | string | Always `first-lesson-live-procedure-target-observation`. |
+| `status` | enum | `observed` or `blocked`. |
+| `seam` | string | Always `live-first-lesson-project-open-to-procedure-target-observable`. |
+| `project` | object | First-lesson starter metadata, Select Project open status, and post-open window status. |
+| `requiredTarget` | object | Required `scene.eatmeFirstLesson` procedure tab or code-editor target. |
+| `observedTarget` | object or null | Bounded target metadata when observed; null when blocked. |
+| `blocker` | string | `none` or a stable blocker code such as `select-project-open-not-observed`, `post-open-window-not-observed`, `procedure-target-not-found`, `procedure-target-not-stable`, `at-spi-or-atk-unavailable`, or `display-prerequisite-unavailable`. |
+| `downstreamBlockedStep` | string | Always `desktop-procedure-edit`. |
+| `outOfScope` | string array | Must include edit mutation, Save, rendering correctness, learner assessment, and full first-lesson completion. |
+
+The artifact must not include credentials, environment dumps, usernames, saved
+project contents, broad accessibility trees, unrelated desktop windows,
+screenshots, source contents, rendering traces, grading state, or lesson
+completion state. It is accepted only as a decision artifact for whether the
+next desktop edit shard has a stable live target.
+
 Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, most scenarios do not write `status.txt` because launch did not reach the evidence-capture phase. The post-open runtime/display accessibility scenario is the exception: it writes `post-open-runtime-display-accessibility-evidence.json` and `status.txt` with a blocked runtime/display accessibility outcome when an early prerequisite prevents collection.
 
 Manual scenarios are complete only after a human performs the workflow and places the required artifacts in the same timestamped run directory. Every accepted manual run must include `review-notes.txt` with the scenario ID, run directory, evidence files reviewed, observed result, deviations from the checklist, and an explicit accept or reject decision.
@@ -462,6 +511,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |
 | Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. It must be gated by prior `tab-click-observation.json` Africa Full evidence with `evidenceStatus=opened`, matching target/opened metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`; generic main-window presence is not Africa Full proof. |
+| First-lesson live procedure target observation | `first-lesson-live-procedure-target-observation.json` with `status=observed`, `blocker=none`, `project.openedViaSelectProject=true`, `project.postOpenWindowObserved=true`, `requiredTarget.procedureSelector=scene.eatmeFirstLesson`, and an `observedTarget` that can be reacquired by a stable automation path, or `status=blocked` with an exact blocker. Supporting artifacts include `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. This workflow is read-only and does not prove edit, Save, rendering, assessment, or full first-lesson completion. |
 | Procedure edit seam smoke | `status.txt`, `command.log`, focused test output naming `editsSceneProcedureAndWritesEatmeProofArtifacts`, and procedure edit artifacts named by the focused test. |
 | Procedure edit handoff smoke | `status.txt`, `command.log`, focused test output naming `chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff`, and handoff evidence recording `placed-project.a3p` as the procedure edit input project artifact. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. This workflow is setup/open/save evidence only; pair it with `contracts/learner-world-assessment-boundary.json` when reviewing the current learner-world claim boundary. |

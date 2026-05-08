@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -93,6 +93,7 @@ netbeans-package-smoke
 open-load-save
 package-install-smoke
 post-open-runtime-display-accessibility-evidence
+first-lesson-live-procedure-target-observation
 post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
@@ -257,6 +258,18 @@ has a reliable Run-window/world-canvas pixel sampling target. The stable
 artifact API, visible-rendering blocker contract, configuration, examples, and
 review rules are documented in [Post-open
 runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
+
+The `alice-desktop-first-lesson-live-procedure-target-observation` scenario goes
+one step beyond the Select Project first-lesson open path. It observes whether
+the live post-open desktop exposes a stable procedure tab or code-editor target
+for `scene.eatmeFirstLesson`, then writes
+`first-lesson-live-procedure-target-observation.json` with `status=observed` or
+an exact `status=blocked` reason. The artifact is the next-action seam for a
+future desktop procedure edit proof. It does not mutate a procedure, Save,
+assert rendering correctness, assess learner work, or claim full first-lesson
+completion. The stable artifact API, configuration, examples, and review rules
+are documented in [First-Lesson Live Procedure Target
+Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md).
 
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
 
