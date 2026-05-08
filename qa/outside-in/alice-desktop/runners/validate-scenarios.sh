@@ -90,6 +90,7 @@ allowed_automation = {
             "mvn",
             "-DincludeSims=false",
             "-Dinstall4j.skip",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
             "-pl",
             "netbeans",
             "-am",

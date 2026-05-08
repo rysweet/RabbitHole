@@ -101,15 +101,16 @@ validate_allowed_automation() {
   fi
 
   if [ "$cwd" = . ] &&
-    [ "$#" -eq 8 ] &&
+    [ "$#" -eq 9 ] &&
     [ "$1" = mvn ] &&
     [ "$2" = -DincludeSims=false ] &&
     [ "$3" = -Dinstall4j.skip ] &&
-    [ "$4" = -pl ] &&
-    [ "$5" = netbeans ] &&
-    [ "$6" = -am ] &&
-    [ "$7" = -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest ] &&
-    [ "$8" = test ]; then
+    [ "$4" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$5" = -pl ] &&
+    [ "$6" = netbeans ] &&
+    [ "$7" = -am ] &&
+    [ "$8" = -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest ] &&
+    [ "$9" = test ]; then
     return 0
   fi
 
