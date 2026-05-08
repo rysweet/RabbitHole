@@ -15,9 +15,10 @@ to an Alice MethodInvocation targeting the current instance and resolving to the
 same-type UserMethod declaration.
 ```
 
-The nearest neighboring call form, explicit `this.method(arg...)`, is a named
-fail-fast boundary. All other neighboring call forms remain unsupported unless a
-separate decoder slice explicitly implements them.
+The nearest neighboring call form, explicit
+`this.method(label: value, ...)`, is a named fail-fast boundary. All other
+neighboring call forms remain unsupported unless a separate decoder slice
+explicitly implements them.
 
 ## 1. Create the smallest Tweedle source
 
@@ -96,14 +97,14 @@ private decoder helper names.
 Add negative tests for the nearest adjacent unsupported forms:
 
 ```java
-this.helper(1);     // argument-bearing explicit this calls fail fast
-this.missing();     // unknown methods are unsupported
-other.helper();     // non-this targets are unsupported
+this.helper(value: 1);     // argument-bearing explicit this calls fail fast
+this.missing();            // unknown methods are unsupported
+other.helper();            // non-this targets are unsupported
 ```
 
 Each test should call `coder.decode(...)` and assert
-`UnsupportedTweedleDecodeException`. For `this.helper(1);`, also assert the
-diagnostic contains the boundary label:
+`UnsupportedTweedleDecodeException`. For `this.helper(value: 1);`, also assert
+the diagnostic contains the boundary label:
 
 ```text
 argument-bearing explicit this method calls
@@ -132,6 +133,6 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am \
 ```
 
 The result protects only zero-argument `this.method()` decode and the
-argument-bearing explicit `this.method(arg...)` fail-fast boundary. It does not
-prove general method calls, object construction calls, member access, or full
-Tweedle/player decode support.
+argument-bearing explicit `this.method(label: value, ...)` fail-fast boundary.
+It does not prove general method calls, object construction calls, member
+access, or full Tweedle/player decode support.

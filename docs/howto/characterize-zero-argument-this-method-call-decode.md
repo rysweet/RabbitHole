@@ -4,7 +4,8 @@ Use this guide when reviewing or extending decoder coverage for the implemented
 `this.someMethod()` slice.
 
 This guide applies only to same-type, zero-argument calls with an explicit
-`this` target and the adjacent argument-bearing explicit `this.method(arg...)`
+`this` target and the adjacent argument-bearing explicit
+`this.method(label: value, ...)`
 fail-fast boundary. It documents the feature boundary, not broader Tweedle
 method support. See the
 [zero-argument this-method call decode reference](../reference/zero-argument-this-method-call-decode.md)
@@ -77,7 +78,7 @@ UnsupportedTweedleDecodeException thrown = assertThrows(
           }
 
           void run() {
-            this.helper(1);
+            this.helper(value: 1);
           }
         }
         """));
@@ -85,9 +86,10 @@ assertTrue(thrown.getMessage().contains(
     "argument-bearing explicit this method calls"));
 ```
 
-The failure proves the decoder rejects `this.method(arg...)` before decoding
-argument expressions, binding parameters, applying optional arguments, or
-performing overload resolution.
+The failure proves the decoder rejects argument-bearing explicit `this` calls
+using current Tweedle labeled-argument syntax before decoding argument
+expressions, binding parameters, applying optional arguments, or performing
+overload resolution.
 
 ### Unknown this call
 
