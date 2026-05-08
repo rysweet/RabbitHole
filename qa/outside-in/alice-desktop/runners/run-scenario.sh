@@ -74,6 +74,28 @@ for item in value:
 PY
 }
 
+python_with_module() {
+  local module=$1
+  local candidate
+
+  for candidate in "${ALICE_QA_PYTHON:-}" python3 /usr/bin/python3; do
+    [ -n "$candidate" ] || continue
+    if command -v "$candidate" >/dev/null 2>&1 &&
+      "$candidate" - "$module" >/dev/null 2>&1 <<'PY'
+import importlib
+import sys
+
+importlib.import_module(sys.argv[1])
+PY
+    then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  printf '%s\n' python3
+}
+
 validate_allowed_automation() {
   local cwd=$1
   shift
@@ -822,23 +844,29 @@ write_select_project_probe() {
 write_swing_widget_probe() {
   local inventory_path=$1
   local output_path=$2
+  local python
 
-  python3 "$SWING_WIDGET_PROBE" "$inventory_path" "$output_path"
+  python=$(python_with_module pyatspi)
+  "$python" "$SWING_WIDGET_PROBE" "$inventory_path" "$output_path"
 }
 
 write_tab_click_probe() {
   local inventory_path=$1
   local output_path=$2
+  local python
 
-  python3 "$TAB_CLICK_PROBE" "$inventory_path" "$output_path"
+  python=$(python_with_module pyatspi)
+  "$python" "$TAB_CLICK_PROBE" "$inventory_path" "$output_path"
 }
 
 write_post_project_open_probe() {
   local inventory_path=$1
   local tab_click_path=$2
   local output_path=$3
+  local python
 
-  python3 "$POST_PROJECT_OPEN_PROBE" "$inventory_path" "$tab_click_path" "$output_path"
+  python=$(python_with_module pyatspi)
+  "$python" "$POST_PROJECT_OPEN_PROBE" "$inventory_path" "$tab_click_path" "$output_path"
 }
 
 write_post_open_runtime_display_blocker() {
@@ -901,8 +929,10 @@ write_post_open_runtime_display_probe() {
   local status_path=$4
   local scenario_id=$5
   local automation_mode=$6
+  local python
 
-  python3 "$POST_OPEN_RUNTIME_DISPLAY_PROBE" \
+  python=$(python_with_module pyatspi)
+  "$python" "$POST_OPEN_RUNTIME_DISPLAY_PROBE" \
     --inventory "$inventory_path" \
     --post-open-window-observation "$post_open_path" \
     --output "$output_path" \

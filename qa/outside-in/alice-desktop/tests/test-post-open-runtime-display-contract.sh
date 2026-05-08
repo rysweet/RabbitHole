@@ -144,6 +144,11 @@ PY
 status=$?
 assert_success "$status" "schema recognizes the post-open runtime/display workflow and AT-SPI argv"
 
+assert_contains "$RUNNER" '^python_with_module\(\) \{' "runner can select a Python interpreter by required module"
+assert_contains "$RUNNER" 'python=\$\(python_with_module pyatspi\)' "runner uses a pyatspi-capable Python for AT-SPI probes"
+assert_contains "$RUNNER" '"\$python" "\$POST_PROJECT_OPEN_PROBE"' "post-open setup probe escapes uvx Python when needed"
+assert_contains "$RUNNER" '"\$python" "\$POST_OPEN_RUNTIME_DISPLAY_PROBE"' "runtime/display probe escapes uvx Python when needed"
+
 evidence_dir="$tmp_root/no-xvfb-evidence"
 ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$evidence_dir" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
 status=$?
