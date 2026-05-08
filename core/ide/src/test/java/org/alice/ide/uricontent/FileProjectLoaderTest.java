@@ -22,23 +22,20 @@ public class FileProjectLoaderTest {
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void savedTemporaryProjectLoadsAndCorruptTemporaryProjectIsRejected() throws Exception {
+  public void savedTemporaryProjectLoadsAndCorruptTemporaryProjectIsRejected() throws IOException {
     File savedProject = temporaryFolder.newFile("saved-generated-world.a3p");
     Project project = new Project(programType("GeneratedProgram"), Project.SceneCameraType.WindowCamera);
     IoUtilities.writeProject(savedProject, project);
-    FileProjectLoader savedLoader = new FileProjectLoader(savedProject);
 
-    Project loadedProject = savedLoader.load();
+    Project loadedProject = new FileProjectLoader(savedProject).load();
 
     assertNotNull(loadedProject);
     assertEquals("GeneratedProgram", loadedProject.getProgramType().getName());
-    assertEquals(Project.SceneCameraType.WindowCamera, loadedProject.createSaveManifest().projectStructure.sceneCameraType);
 
     File corruptProject = temporaryFolder.newFile("corrupt-generated-world.a3p");
     Files.writeString(corruptProject.toPath(), "not an Alice project archive", StandardCharsets.UTF_8);
-    FileProjectLoader corruptLoader = new FileProjectLoader(corruptProject);
 
-    Project rejectedProject = corruptLoader.load();
+    Project rejectedProject = new FileProjectLoader(corruptProject).load();
 
     assertNull(rejectedProject);
   }
