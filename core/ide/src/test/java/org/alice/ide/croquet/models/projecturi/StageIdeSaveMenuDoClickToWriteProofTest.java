@@ -330,8 +330,6 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     CountDownLatch edtBlocked = new CountDownLatch(1);
     CountDownLatch releaseEdt = new CountDownLatch(1);
 
-    probe.start();
-    probe.stop();
     try {
       SwingUtilities.invokeAndWait(() -> {
         chooser[0] = new CountingFileChooser();
@@ -409,6 +407,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
   private static class SaveMenuDoClickProbe {
     private static final String ARTIFACT = "stageide-save-menu-doclick-write-proof.json";
     private static final int MAX_POLLS = 400;
+    private static final int MAX_CHOOSER_CANDIDATES = 2;
+    private static volatile Boolean cachedNonHeadlessAwtDisplayAvailable;
 
     private final File targetFile;
     private final Path proofRoot;
@@ -438,13 +438,11 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         public void run() {
           poll();
         }
-      }, 100, 100);
+      }, 0, 100);
     }
 
     void stop() {
-      if (this.bgTimer != null) {
-        this.bgTimer.cancel();
-      }
+      cancelTimer();
     }
 
     Path artifactPath(Path evidenceDir) {
@@ -452,6 +450,16 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
 
     static boolean isNonHeadlessAwtDisplayAvailable() {
+      Boolean cached = cachedNonHeadlessAwtDisplayAvailable;
+      if (cached != null) {
+        return cached;
+      }
+      boolean available = detectNonHeadlessAwtDisplayAvailable();
+      cachedNonHeadlessAwtDisplayAvailable = available;
+      return available;
+    }
+
+    private static boolean detectNonHeadlessAwtDisplayAvailable() {
       if (GraphicsEnvironment.isHeadless()) {
         return false;
       }
@@ -510,13 +518,15 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     void writeResult(Path evidenceDir) throws Exception {
       String selectedCanonical = this.normalizedSelectedFile;
-      String selectedEvidencePath = proofRelativePath(selectedCanonical);
-      String targetEvidencePath = proofRelativePath(this.targetCanonicalPath);
+      Path selectedPath = normalizedPath(selectedCanonical);
+      Path targetPath = normalizedPath(this.targetCanonicalPath);
+      String selectedEvidencePath = proofRelativePath(selectedPath);
+      String targetEvidencePath = proofRelativePath(targetPath);
       boolean fileWritten = this.targetFile.isFile();
       long fileSizeBytes = fileWritten ? this.targetFile.length() : 0;
       boolean fileNonempty = fileSizeBytes > 0;
       boolean fileHasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
-      boolean targetInsideProofRoot = proofContainsPath(this.targetCanonicalPath);
+      boolean targetInsideProofRoot = proofContainsPath(targetPath);
       boolean selectedFileMatchesExpected = this.targetCanonicalPath.equals(selectedCanonical);
       boolean observedExpectedFile = fileWritten && fileNonempty && fileHasExpectedExtension && targetInsideProofRoot;
       boolean chooserApproved = this.approvedSelection.get();
@@ -623,8 +633,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         this.chooserObserved = true;
         this.ambiguousChooserDiscovery = true;
         this.failureReason = "ambiguous_swing_jfilechooser_discovery";
-        this.bgTimer.cancel();
-        cancelChoosersOnEdt(candidates);
+        cancelTimer();
+        cancelCurrentChoosersOnEdt();
         return;
       }
       if (candidates.size() == 1) {
@@ -632,7 +642,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         this.chooserObserved = true;
         this.dialogShowing = candidate.dialog().isShowing();
         this.dialogClass = candidate.dialog().getClass().getName();
-        this.bgTimer.cancel();
+        cancelTimer();
         if (this.approvalScheduled.compareAndSet(false, true)) {
           approveChooserOnEdt(candidate.chooser());
         }
@@ -640,8 +650,15 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       }
       if (count >= MAX_POLLS) {
         this.failureReason = "swing_jfilechooser_not_observed_before_timeout";
-        this.bgTimer.cancel();
+        cancelTimer();
         cancelCurrentChoosersOnEdt();
+      }
+    }
+
+    private void cancelTimer() {
+      java.util.Timer timer = this.bgTimer;
+      if (timer != null) {
+        timer.cancel();
       }
     }
 
@@ -667,41 +684,49 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       });
     }
 
-    private static void cancelChoosersOnEdt(List<ChooserCandidate> candidates) {
-      SwingUtilities.invokeLater(() -> {
-        for (ChooserCandidate candidate : candidates) {
-          candidate.chooser().cancelSelection();
-        }
-      });
-    }
-
     private static void cancelCurrentChoosersOnEdt() {
       SwingUtilities.invokeLater(() -> {
-        for (ChooserCandidate candidate : findChooserCandidates()) {
+        for (ChooserCandidate candidate : findChooserCandidates(Integer.MAX_VALUE)) {
           candidate.chooser().cancelSelection();
         }
       });
     }
 
     private static List<ChooserCandidate> findChooserCandidates() {
-      List<ChooserCandidate> candidates = new ArrayList<>();
+      return findChooserCandidates(MAX_CHOOSER_CANDIDATES);
+    }
+
+    private static List<ChooserCandidate> findChooserCandidates(int maxCandidates) {
+      List<ChooserCandidate> candidates = new ArrayList<>(Math.min(maxCandidates, MAX_CHOOSER_CANDIDATES));
       for (Window window : Window.getWindows()) {
         if (window instanceof JDialog dialog && dialog.isShowing()) {
-          addChooserCandidates(dialog, dialog, candidates);
+          if (addChooserCandidates(dialog, dialog, candidates, maxCandidates)) {
+            break;
+          }
         }
       }
       return candidates;
     }
 
-    private static void addChooserCandidates(JDialog dialog, Component component, List<ChooserCandidate> candidates) {
+    private static boolean addChooserCandidates(
+        JDialog dialog,
+        Component component,
+        List<ChooserCandidate> candidates,
+        int maxCandidates) {
       if (component instanceof JFileChooser chooser) {
         candidates.add(new ChooserCandidate(dialog, chooser));
+        if (candidates.size() >= maxCandidates) {
+          return true;
+        }
       }
       if (component instanceof Container container) {
         for (Component child : container.getComponents()) {
-          addChooserCandidates(dialog, child, candidates);
+          if (addChooserCandidates(dialog, child, candidates, maxCandidates)) {
+            return true;
+          }
         }
       }
+      return false;
     }
 
     private static Path artifactPathFor(Path evidenceDir) {
@@ -712,19 +737,22 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       return artifact;
     }
 
-    private String proofRelativePath(String canonicalPath) {
-      if (canonicalPath == null) {
+    private String proofRelativePath(Path path) {
+      if (path == null) {
         return null;
       }
-      Path path = Path.of(canonicalPath).normalize();
-      if (!proofContainsPath(canonicalPath)) {
+      if (!proofContainsPath(path)) {
         return "[outside-proof-root]";
       }
       return this.proofRoot.relativize(path).toString().replace(File.separatorChar, '/');
     }
 
-    private boolean proofContainsPath(String canonicalPath) {
-      return canonicalPath != null && Path.of(canonicalPath).normalize().startsWith(this.proofRoot);
+    private boolean proofContainsPath(Path path) {
+      return path != null && path.startsWith(this.proofRoot);
+    }
+
+    private static Path normalizedPath(String canonicalPath) {
+      return canonicalPath == null ? null : Path.of(canonicalPath).normalize();
     }
 
     private static String stringJson(String value) {
