@@ -18,6 +18,7 @@ behavior that remains outside this slice.
 | Run the save flow | `org.alice.ide.croquet.models.projecturi.SaveOperationFlow` | Covers prompt, cancel, retry, wait cursor, error, finish, and save-callback behavior without Swing dialogs. Returns whether the flow finished or canceled, how many prompts and save attempts ran, and which file saved after `saveProjectTo(File)` returned. |
 | Connect Save to live Alice objects | `org.alice.ide.croquet.models.projecturi.AbstractSaveOperation` | Adapts the active `StageIDE`, `ProjectDocumentFrame`, Croquet `UserActivity`, wait cursor, and `ProjectApplication.saveProjectTo(File)` to `SaveOperationFlow`. |
 | Prove Save menu/dialog/write path | `org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest` | Canonical shard for activating the real Save menu item with `doClick()`, controlling exactly one expected live Swing `JFileChooser`, approving a normalized temp-directory `.a3p` target, and asserting a non-empty project file write. |
+| Prove Robot Save menu/dialog/write/readback path | `org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest` | Canonical joined shard for AWT Robot File-menu Save activation, live Swing chooser control, proof-root `.a3p` write, `IoUtilities.readProject(File)` readback, marker verification, or a machine-readable blocker artifact. |
 
 `ProcedureTabSelection` is intentionally small. It does not edit code. It gives a
 desktop automation runner one stable place to ask, "which real Croquet operation
@@ -69,9 +70,10 @@ behavior:
    only after the code editor exposes a real command for the intended edit. The
    hook should invoke that command; it should not call the implementation command
    a desktop edit.
-3. Use `StageIdeSaveMenuDoClickToWriteProofTest` as the bounded Save proof shard
-    for menu activation, Swing chooser approval, and `.a3p` write evidence. Keep
-    procedure-edit automation separate from this Save proof.
+3. Use `RobotSaveMenuDialogWriteReadbackProofTest` as the bounded joined Save
+   proof shard for Robot File-menu activation, Swing chooser approval, `.a3p`
+   write, readback, and marker evidence. Keep procedure-edit automation
+   separate from this Save proof.
 
 ## Test plan
 
@@ -122,6 +124,24 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
 ```
 
 The intended executable display-precondition blocker is `No available non-headless AWT display`.
+
+Run the joined Robot Save menu/dialog/write/readback proof only when a usable
+display is prepared:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest,org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest,org.alice.ide.croquet.models.projecturi.JMenuBarRobotClickSaveProofTest,org.alice.ide.ProjectApplicationSaveProjectToTest \
+  test
+```
+
+The Robot proof writes `robot-save-menu-dialog-write-readback-proof.json` under
+`core/ide/target/save-menu-proofs/`. Use `status: "proven"` only for the
+complete Robot/menu/dialog/write/readback/marker path. Use `status: "blocked"`
+as the machine-readable blocker result when the environment or UI state makes
+the combined path unsafe to prove.
 
 When `org.alice.eatme.saveOperationEvidenceDir` is set for flow-seam-only Save
 runs, Save operation evidence also writes

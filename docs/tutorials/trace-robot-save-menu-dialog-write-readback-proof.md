@@ -1,0 +1,128 @@
+# Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof
+
+This tutorial shows how to review the Robot-driven Save proof from command execution to machine-readable evidence.
+
+## Goal
+
+Confirm one bounded Alice desktop Save path:
+
+```text
+Robot File -> Save
+  -> live Swing Save chooser approval
+  -> .a3p file write
+  -> IoUtilities.readProject(...)
+  -> robotSaveMenuRoundTripMarker found in the readback project
+```
+
+This tutorial does not prove every Save variant or full desktop Save completion.
+
+## 1. Run the focused shard
+
+From the repository root:
+
+```bash
+git submodule update --init tweedle-lang
+export NODE_OPTIONS=--max-old-space-size=32768
+
+NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest \
+  test
+```
+
+## 2. Find the artifact
+
+Look under:
+
+```text
+core/ide/target/save-menu-proofs/
+```
+
+Open the generated:
+
+```text
+robot-save-menu-dialog-write-readback-proof.json
+```
+
+## 3. Trace menu activation
+
+Start with the `trigger` object:
+
+```json
+{
+  "trigger": {
+    "robot_file_menu_opened": true,
+    "robot_save_item_clicked": true,
+    "save_action_identity_matched": true
+  }
+}
+```
+
+These fields show that the proof used AWT Robot on a rendered File menu and clicked the production Save item by action identity. If any field is false, the run is not evidence for the joined Robot Save seam.
+
+## 4. Trace dialog control
+
+Review `observed_dialog`:
+
+```json
+{
+  "observed_dialog": {
+    "dialogType": "Swing JFileChooser",
+    "chooser_observed": true,
+    "approved_selection": true,
+    "ambiguous_chooser_discovery": false
+  }
+}
+```
+
+`approved_selection: true` means the proof verified the selected target and completed chooser approval. A queued approval or an unobserved dialog is not enough.
+
+## 5. Trace write and readback
+
+Review the selected file, write result, and readback result together:
+
+```json
+{
+  "selected_file": {
+    "normalized_selected_file": "projects/robot-save-menu-proof.a3p",
+    "target_inside_proof_root": true
+  },
+  "written_artifact": {
+    "target_file": "projects/robot-save-menu-proof.a3p",
+    "file_written": true,
+    "file_nonempty": true,
+    "file_extension": "a3p"
+  },
+  "readback": {
+    "project_readable": true,
+    "expected_marker": "robotSaveMenuRoundTripMarker",
+    "marker_present": true
+  }
+}
+```
+
+The proof needs all three groups. A non-empty file without `project_readable: true` and `marker_present: true` is not enough.
+
+## 6. Check boundaries
+
+Finish by reading `doesNotClaim`. A correct proven artifact still excludes:
+
+```json
+{
+  "doesNotClaim": [
+    "full desktop Save completion",
+    "all Save variants",
+    "Save As coverage",
+    "backup Save coverage",
+    "native java.awt.FileDialog coverage",
+    "physical user click",
+    "visible rendering correctness",
+    "grading correctness",
+    "lesson completion"
+  ]
+}
+```
+
+Use the artifact only for the bounded Robot File -> Save menu/dialog/write/readback/marker path. Keep broader desktop Save completion claims for a later proof that exercises the full intended user path and variants.

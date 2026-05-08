@@ -11,6 +11,7 @@ This reference describes the `core/ide` project Save, Save As, and Export operat
 - [API reference](#api-reference)
 - [Testing notes](#testing-notes)
 - [Save menu dialog write proof](#save-menu-dialog-write-proof)
+- [Robot Save menu dialog write/readback proof](#robot-save-menu-dialog-writereadback-proof)
 - [Configuration](#configuration)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
@@ -185,6 +186,22 @@ This proof target is stronger than direct operation tests and flow-seam tests be
 
 See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the evidence schema, unsupported display artifact contract, non-claims, and focused validation command.
 
+## Robot Save menu dialog write/readback proof
+
+The canonical joined Robot proof is `RobotSaveMenuDialogWriteReadbackProofTest`. Its target contract proves one bounded path only: AWT Robot opens the rendered File menu, AWT Robot clicks the production Save menu item by `SaveProjectOperation` action identity, exactly one live Swing `JFileChooser` is controlled, a proof-root `.a3p` file is written, the file reads back through `IoUtilities.readProject(File)`, and the readback project contains `robotSaveMenuRoundTripMarker`.
+
+This proof is stronger than `JMenuBarRobotClickSaveProofTest` because it continues past menu dispatch into dialog control, file write, readback, and marker verification. It is stronger than `StageIdeSaveMenuDoClickToWriteProofTest` for menu attribution because it uses Robot mouse events instead of `doClick()`. It still does not claim full desktop Save completion or all Save variants.
+
+| Proof boundary | Required observation |
+| --- | --- |
+| Robot menu activation | The rendered File menu popup opens after AWT Robot mouse press/release at the File menu location. |
+| Save item attribution | The clicked item is matched by `SaveProjectOperation` Swing action identity, not by label alone. |
+| Dialog control | Exactly one expected Swing `JFileChooser` is observed, receives a normalized proof-root `.a3p` target, and completes approval. |
+| Write/readback | The target `.a3p` exists, is non-empty, reads back with `IoUtilities.readProject(File)`, and contains `robotSaveMenuRoundTripMarker`. |
+| Evidence | `robot-save-menu-dialog-write-readback-proof.json` reports `status: proven` only after the complete chain succeeds, or `status: blocked` with a fixed `blocker.kind` when the environment or UI state prevents safe proof. |
+
+See [Robot Save Menu Dialog Write/Readback Proof](./robot-save-menu-dialog-write-readback-proof.md) for the artifact schema, blocker contract, non-claims, and focused validation command.
+
 ## Configuration
 
 There is no runtime configuration flag for Save, Save As, or Export routing. The behavior is fixed by the operation classes and the Alice project save and export constants.
@@ -206,6 +223,17 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest \
+  test
+```
+
+Run the joined Robot Save menu/dialog/write/readback proof with the required baselines:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest,org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest,org.alice.ide.croquet.models.projecturi.JMenuBarRobotClickSaveProofTest,org.alice.ide.ProjectApplicationSaveProjectToTest \
   test
 ```
 
