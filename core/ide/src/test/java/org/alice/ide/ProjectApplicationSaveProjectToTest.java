@@ -34,6 +34,13 @@ public class ProjectApplicationSaveProjectToTest {
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
+  public void productionUpdateTitleFailsFastWhenDocumentFrameIsMissing() throws Exception {
+    TestProjectApplication application = applicationWith(projectNamed("FrameInvariantProgram"), new InMemoryProjectLoader());
+
+    assertThrows(NullPointerException.class, application::callProductionUpdateTitle);
+  }
+
+  @Test
   public void saveNewProjectToFileWritesArchiveAdoptsTargetAndRecordsRecentProject() throws Exception {
     Project project = projectNamed("NewProgram");
     TestProjectApplication application = applicationWith(project, new InMemoryProjectLoader());
@@ -183,6 +190,10 @@ public class ProjectApplicationSaveProjectToTest {
 
     @Override
     protected void updateTitle() {
+    }
+
+    void callProductionUpdateTitle() {
+      super.updateTitle();
     }
 
     @Override
