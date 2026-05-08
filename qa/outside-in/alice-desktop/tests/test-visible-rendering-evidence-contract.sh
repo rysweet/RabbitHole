@@ -130,6 +130,8 @@ if isinstance(blocked_target, dict):
     require(blocked_target.get("missingTarget") == "run-window-world-canvas-screen-extents", "blocked target must name the exact missing target")
     require(blocked_target.get("exactNextUnblocker") == "reliable-run-window-world-canvas-pixel-sampling-target", "blocked target must name the exact next unblocker")
     require(blocked_target.get("geometryStatus") == blocked.get("geometryStatus"), "blocked target geometryStatus must match top-level geometryStatus")
+    require(blocked_target.get("runtimeDisplayCandidateCount") == blocked.get("runtimeDisplayCandidateCount"), "blocked target must preserve runtimeDisplayCandidateCount")
+    require(blocked_target.get("sourceArtifact") == "post-open-runtime-display-accessibility-evidence.json", "blocked target must cite runtime/display source")
 
 assert_no_overclaiming(ready, "target-ready fixture")
 assert_no_overclaiming(blocked, "blocked fixture")

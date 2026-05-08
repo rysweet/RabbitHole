@@ -114,6 +114,7 @@ import os
 STATE_ENABLED = "enabled"
 STATE_SHOWING = "showing"
 STATE_VISIBLE = "visible"
+DESKTOP_COORDS = "desktop"
 
 
 class _State:
@@ -127,13 +128,30 @@ class _State:
         return list(self._states)
 
 
+class _Extents:
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+
+class _Component:
+    def __init__(self, extents):
+        self._extents = extents
+
+    def getExtents(self, coordinate_type):
+        return _Extents(**self._extents)
+
+
 class _Accessible:
-    def __init__(self, name="", role="panel", states=None, children=None, pid=None):
+    def __init__(self, name="", role="panel", states=None, children=None, pid=None, extents=None):
         self.name = name
         self._role = role
         self._states = states or [STATE_ENABLED, STATE_SHOWING, STATE_VISIBLE]
         self._children = children or []
         self._pid = pid
+        self._extents = extents
 
     @property
     def childCount(self):
@@ -150,6 +168,11 @@ class _Accessible:
 
     def getState(self):
         return _State(self._states)
+
+    def queryComponent(self):
+        if self._extents is None:
+            raise RuntimeError("component interface unavailable")
+        return _Component(self._extents)
 
 
 class Registry:
@@ -172,7 +195,11 @@ class Registry:
                     role="frame",
                     children=[
                         _Accessible(name="Toolbar", role="tool bar"),
-                        _Accessible(name="Scene display", role="canvas"),
+                        _Accessible(
+                            name="Scene display",
+                            role="canvas",
+                            extents={"x": 160, "y": 120, "width": 320, "height": 240},
+                        ),
                         _Accessible(name="Runtime controls", role="panel"),
                     ],
                 )
@@ -247,6 +274,10 @@ assert_contains "$observed_out" '"postOpenRuntimeDisplayAccessibilityObserved": 
 assert_contains "$observed_out" '"runtimeDisplayCandidateCount": 1' "observed artifact counts one runtime/display candidate"
 assert_contains "$observed_out" '"name": "Scene display"' "observed artifact names the accessible display candidate"
 assert_contains "$observed_out" '"role": "canvas"' "observed artifact records the display candidate role"
+assert_contains "$observed_out" '"geometryStatus": "available"' "observed artifact records available candidate geometry"
+assert_contains "$observed_out" '"coordinateType": "screen"' "observed artifact records screen-coordinate candidate extents"
+assert_contains "$observed_out" '"width": 320' "observed artifact records positive candidate extent width"
+assert_contains "$observed_out" '"height": 240' "observed artifact records positive candidate extent height"
 assert_not_contains "$observed_out" 'rendering correctness|world execution|lesson completion|grading|installer success' "observed artifact avoids overclaiming"
 assert_file_exists "$observed_status" "observed probe writes status.txt"
 assert_contains "$observed_status" '^outcome=passed$' "observed status records passed outcome"

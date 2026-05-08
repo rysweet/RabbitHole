@@ -203,9 +203,17 @@ An observed result emits these fields. Field order is not part of the contract.
   "runtimeDisplayCandidates": [
     {
       "childCount": 0,
+      "geometryStatus": "available",
       "name": "Scene display",
       "path": "application/0/3",
       "role": "canvas",
+      "screenExtents": {
+        "coordinateType": "screen",
+        "x": 144,
+        "y": 188,
+        "width": 996,
+        "height": 642
+      },
       "states": ["enabled", "showing", "visible"]
     }
   ],
@@ -225,9 +233,17 @@ The minimum decision fields for accepting an observed result are:
   "runtimeDisplayCandidates": [
     {
       "childCount": 0,
+      "geometryStatus": "available",
       "name": "Scene display",
       "path": "application/0/3",
       "role": "canvas",
+      "screenExtents": {
+        "coordinateType": "screen",
+        "x": 144,
+        "y": 188,
+        "width": 996,
+        "height": 642
+      },
       "states": ["enabled", "showing", "visible"]
     }
   ],

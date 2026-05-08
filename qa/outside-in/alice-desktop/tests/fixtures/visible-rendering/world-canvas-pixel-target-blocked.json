@@ -29,6 +29,7 @@
     "geometryStatus": "missing-extents",
     "identified": false,
     "missingTarget": "run-window-world-canvas-screen-extents",
+    "runtimeDisplayCandidateCount": 1,
     "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
     "status": "blocked"
   }
