@@ -489,6 +489,22 @@ public class ModelResourceExporter {
     this.boundingBoxes.put(modelName, boundingBox);
   }
 
+  AxisAlignedBox getBoundingBox(String modelName) {
+    return this.boundingBoxes.get(modelName);
+  }
+
+  boolean hasBoundingBox(String modelName) {
+    return this.boundingBoxes.containsKey(modelName);
+  }
+
+  AxisAlignedBox computeBoundingBoxUnion() {
+    AxisAlignedBox superBox = AxisAlignedBox.NaN;
+    for (AxisAlignedBox boundingBox : this.boundingBoxes.values()) {
+      superBox = superBox.union(boundingBox);
+    }
+    return superBox;
+  }
+
   //  public void addThumbnail( String modelName, String textureName, String resourceType, String attributionName, String attributionYear, Image thumbnail )
   //  {
   //    this.thumbnails.put( new ModelSubResourceExporter( modelName, textureName, resourceType, attributionName, attributionYear ), thumbnail );

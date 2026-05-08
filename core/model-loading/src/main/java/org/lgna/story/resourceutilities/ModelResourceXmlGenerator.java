@@ -57,8 +57,6 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 final class ModelResourceXmlGenerator {
@@ -99,7 +97,6 @@ final class ModelResourceXmlGenerator {
       List<String> tags = exporter.getTags();
       List<String> groupTags = exporter.getGroupTags();
       List<String> themeTags = exporter.getThemeTags();
-      Map<String, AxisAlignedBox> boundingBoxes = exporter.getBoundingBoxes();
       List<ModelSubResourceExporter> subResources = exporter.getSubResources();
       Set<String> tagSet = new HashSet<String>(tags);
       Set<String> groupTagSet = new HashSet<String>(groupTags);
@@ -120,21 +117,19 @@ final class ModelResourceXmlGenerator {
         modelRoot.setAttribute("placeOnGround", "TRUE");
       }
       doc.appendChild(modelRoot);
-      if (boundingBoxes.get(className) == null) {
-        AxisAlignedBox superBox = AxisAlignedBox.NaN;
-        for (Entry<String, AxisAlignedBox> entry : boundingBoxes.entrySet()) {
-          superBox = superBox.union(entry.getValue());
-        }
-        boundingBoxes.put(className, superBox);
+      AxisAlignedBox classBoundingBox = exporter.getBoundingBox(className);
+      if (classBoundingBox == null) {
+        classBoundingBox = exporter.computeBoundingBoxUnion();
+        exporter.setBoundingBox(className, classBoundingBox);
       }
-      modelRoot.appendChild(createBoundingBoxElement(doc, boundingBoxes.get(className)));
+      modelRoot.appendChild(createBoundingBoxElement(doc, classBoundingBox));
       modelRoot.appendChild(createTagsElement(doc, tags));
       modelRoot.appendChild(createGroupTagsElement(doc, groupTags));
       modelRoot.appendChild(createThemeTagsElement(doc, themeTags));
 
       for (ModelSubResourceExporter subResource : subResources) {
-        if (!subResource.getModelName().equalsIgnoreCase(className) && boundingBoxes.containsKey(subResource.getModelName())) {
-          subResource.setBbox(boundingBoxes.get(subResource.getModelName()));
+        if (!subResource.getModelName().equalsIgnoreCase(className) && exporter.hasBoundingBox(subResource.getModelName())) {
+          subResource.setBbox(exporter.getBoundingBox(subResource.getModelName()));
         }
         modelRoot.appendChild(createSubResourceElement(doc, subResource, exporter, tagSet, groupTagSet, themeTagSet));
       }

@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -207,6 +208,23 @@ public class ModelExportTest {
     assertEquals("2.0", max.getAttribute("x"));
     assertEquals("4.0", max.getAttribute("y"));
     assertEquals("5.0", max.getAttribute("z"));
+  }
+
+  @Test
+  public void createXmlStringPopulatesMissingBoundingBoxes() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+    AxisAlignedBox variantBox = AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5);
+    exporter.setBoundingBox("VariantProp", variantBox);
+    ModelSubResourceExporter subResource = exporter.getSubResources().get(0);
+
+    assertNull(exporter.getBoundingBox("TestProp"));
+    assertNull(subResource.getBbox());
+
+    assertNotNull(exporter.createXMLString());
+
+    assertEquals(variantBox, exporter.getBoundingBox("TestProp"));
+    assertEquals(variantBox, subResource.getBbox());
   }
 
   @Test
