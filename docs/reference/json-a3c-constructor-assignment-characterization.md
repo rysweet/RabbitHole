@@ -64,7 +64,7 @@ The source uses Alice Tweedle assignment syntax:
 
 ```java
 class GeneratedJsonTypeWithConstructorAssignmentBoundary extends SProgram {
-  WholeNumber count <- 0;
+  WholeNumber count;
 
   GeneratedJsonTypeWithConstructorAssignmentBoundary() {
     this.count <- 1;
