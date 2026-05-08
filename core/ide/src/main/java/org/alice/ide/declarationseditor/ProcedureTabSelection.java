@@ -1,6 +1,7 @@
 package org.alice.ide.declarationseditor;
 
 import org.alice.ide.IDE;
+import org.alice.ide.codeeditor.CodeEditor;
 import org.lgna.croquet.Operation;
 import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.ast.AbstractCode;
@@ -35,14 +36,31 @@ public final class ProcedureTabSelection {
   }
 
   public static UserMethod getSelectedProcedure(DeclarationsEditorComposite editor) {
+    CodeComposite selectedProcedureComposite = getSelectedProcedureCodeComposite(editor);
+    return selectedProcedureComposite != null ? (UserMethod) selectedProcedureComposite.getDeclaration() : null;
+  }
+
+  public static CodeComposite getSelectedProcedureCodeComposite(DeclarationsEditorComposite editor) {
     DeclarationComposite<?, ?> selection = editor.getTabState().getValue();
     if (selection instanceof CodeComposite codeComposite) {
       AbstractCode code = codeComposite.getDeclaration();
       if (code instanceof UserMethod method && method.isProcedure()) {
-        return method;
+        return codeComposite;
       }
     }
     return null;
+  }
+
+  public static AbstractCode getSelectedCodeEditorCode(DeclarationsEditorComposite editor) {
+    CodeComposite selectedProcedureComposite = getSelectedProcedureCodeComposite(editor);
+    if (selectedProcedureComposite == null) {
+      return null;
+    }
+    if (selectedProcedureComposite.getView().getCodePanelWithDropReceptor() instanceof CodeEditor codeEditor) {
+      return codeEditor.getCode();
+    }
+    throw new IllegalStateException(
+        "selected procedure tab is not backed by a CodeEditor: " + selectedProcedureComposite.getDeclaration().getName());
   }
 
   private static void requireProcedure(UserMethod method) {
