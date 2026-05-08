@@ -2,6 +2,9 @@ id: alice-desktop-select-project-tab-click-exec
 title: Select Project AT-SPI tab structure diagnosis and click attempt via exec:exec
 workflow: select-project-tab-click-smoke
 automationMode: xvfb-real-alice
+targetStarter:
+  displayName: Africa Full
+  repositoryPath: core/resources/src/application/resources/starter-projects/AfricaFull.a3p
 preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
@@ -25,8 +28,10 @@ expectedOutcomes:
   - tab-click-observation.json records toggleTabNodeCount=5 listing all five Select Project tab toggle buttons (Blank Slates, Starters, My Projects, Recent, File System) at depth=11 with their correct names. Alice's Select Project dialog uses toggle buttons (AT-SPI role="toggle button") rather than standard JTabbedPane page tabs.
   - tab-click-observation.json records tabClickAttempts with clickSuccess=true for all five tabs; AT-SPI DoAction("click") successfully invokes each tab selector.
   - tab-click-observation.json records anyClickSuccess=true.
-  - tab-click-observation.json records projectOpenAttempt.startersTabClick.success=true (Starters tab activated), projectOpenAttempt.listItemClick.success=true with item name from the Starters list (e.g., "Africa Full"), projectOpenAttempt.okButtonClick.success=true, and projectOpenObserved=true with projectOpenDetail confirming the Select Project frame is no longer present in the AT-SPI tree.
-  - The proof confirms project opening: Select Project was dismissed after clicking Starters tab, selecting a starter project by name, and clicking OK.
+  - tab-click-observation.json records targetStarter.displayName="Africa Full" and targetStarter.repositoryPath="core/resources/src/application/resources/starter-projects/AfricaFull.a3p".
+  - tab-click-observation.json records evidenceStatus=opened only when targetStarterObserved.name="Africa Full", targetStarterSelected=true, targetStarterOpenAttempted=true, openedStarter matches the Africa Full metadata, and projectOpenObserved=true with projectOpenDetail confirming the Select Project frame is no longer present in the AT-SPI tree.
+  - If Africa Full cannot be selected/opened through AT-SPI, tab-click-observation.json records evidenceStatus=blocked or selected plus targetStarterBlocker.observedAtspiState, targetStarterBlocker.actionAttempted, targetStarterBlocker.expectedNextAction, and targetStarterBlocker.reasonProgressStopped.
+  - The proof confirms only target-specific AT-SPI selection/open evidence for the committed Africa Full starter; it does not claim visible rendering, full project interaction, grading, or lesson completion.
 automation:
   cwd: alice-ide
   argv:
@@ -46,7 +51,7 @@ evidence:
     - license-dialog.json recording not-observed.
     - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry; selectProjectWaitStatus=select-project-window-found confirms the Select Project window was specifically awaited.
     - select-project-window.json recording observed Select Project title/class/process/geometry.
-    - tab-click-observation.json recording status=observed with toggleTabNodeCount=5 (Blank Slates, Starters, My Projects, Recent, File System), tabClickAttempts all success, projectOpenObserved=true with listItemClick.item naming the selected Starters project and projectOpenDetail confirming Select Project frame dismissed.
+    - tab-click-observation.json recording status=observed with toggleTabNodeCount=5 (Blank Slates, Starters, My Projects, Recent, File System), tabClickAttempts all success, targetStarter displayName Africa Full, targetStarter repositoryPath core/resources/src/application/resources/starter-projects/AfricaFull.a3p, and either evidenceStatus=opened with openedStarter matching Africa Full and projectOpenObserved=true or a structured targetStarterBlocker explaining the exact AT-SPI blocker after the main-window state proof.
     - Screenshot of the Alice desktop state.
     - Environment summary with Java version, Maven version, and DISPLAY value.
 fallback:
@@ -54,8 +59,8 @@ fallback:
   notes:
     - If the Select Project window is not visible within the readiness wait, the wait mechanism must be confirmed to include the new scenario ID (alice-desktop-select-project-tab-click-exec).
     - If tab nodes have only toggle-button role with empty names, record the exact AT-SPI property gap.
-    - If listItemClick fails, record availableActions on the item panel and its label child; the panel may not expose a click action, requiring AT-SPI selection-interface interaction instead.
-    - Do not claim project opening unless tab-click-observation.json records projectOpenObserved=true.
+    - If targetStarter selection fails, record the target role/name/states/actions/tree path, parent selection-interface availability, attempted action, expected next action, and reason progress stopped.
+    - Do not claim Africa Full opening unless tab-click-observation.json records openedStarter matching the Africa Full metadata, targetStarterSelected=true, targetStarterOpenAttempted=true, and projectOpenObserved=true.
 supportingEvidence:
   - alice-desktop-select-project-atk-exec
   - alice-desktop-select-project-widget-introspection

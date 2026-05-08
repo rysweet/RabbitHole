@@ -33,6 +33,8 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | --- | --- | --- | --- |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
 | `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
+| `alice-desktop-select-project-tab-click-exec` | `select-project-tab-click-smoke` | `xvfb-real-alice` | Uses the AT-SPI exec:exec launch path to activate Select Project tabs. The target-specific feature contract will bind this scenario to `Africa Full` and either prove target-specific selection/opening or record the exact blocker. |
+| `alice-desktop-post-project-open-window-state` | `post-project-open-window-state-smoke` | `xvfb-real-alice` | Characterizes the Alice main-window AT-SPI frame state after project open. Under the target-specific feature contract, it must be gated by prior Africa Full Select Project evidence. |
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
 | `alice-desktop-scene-creation` | `scene-creation` | `manual-evidence-required` | Covers creating or selecting a starter scene and saving it as an Alice project. |
 | `alice-desktop-run-debug` | `run-debug` | `manual-evidence-required` | Covers program run controls plus the closest baseline debug-like control, such as fast-forward or statement execution. |
@@ -46,6 +48,8 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
+| `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` | `gated-command-smoke` | Covers unsupported adjacent Tweedle method-call boundaries for the narrow decoder slice. |
+| `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
 
@@ -274,6 +278,8 @@ supportingEvidence:
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
 | `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
+| `targetStarter.displayName` | string | Planned target-specific field: display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec` when the target-specific feature lands. |
+| `targetStarter.repositoryPath` | string | Planned target-specific field: repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
 | `supportingEvidence` | string list | Scenario IDs or evidence sources that support this scenario. |
 | `tags` | string list | Additional scenario labels. |
 
@@ -290,11 +296,13 @@ future-ui-smoke
 netbeans-package-smoke
 open-load-save
 package-install-smoke
+post-project-open-window-state-smoke
 project-io-smoke
 scene-creation
 run-debug
 save-load
 select-project-interaction-smoke
+select-project-tab-click-smoke
 export
 wizard-palette-completion-smoke
 post-open-runtime-display-accessibility-evidence
@@ -389,6 +397,8 @@ Manual scenarios are complete only after a human performs the workflow and place
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
 | Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus `status.txt`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the same JSON artifact records `status=blocked` with a precise blocker. |
+| Select Project tab-click smoke | Current tab activation/open evidence, then under the target-specific feature contract `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened` plus target selection/open evidence, or existing `blocker`/`blockerDetail` fields plus structured target-specific blocker details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
+| Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. Under the target-specific feature contract it must be gated by prior `tab-click-observation.json` Africa Full evidence; generic main-window presence is not Africa Full proof. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
 | Run/debug | Screenshot before run, screenshot or screen capture during execution, notes naming run/debug-like controls in `review-notes.txt`, launch or run log, saved `.a3p`. |

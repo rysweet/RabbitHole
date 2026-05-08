@@ -20,8 +20,10 @@ repository.
 ## QA and acceptance testing
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
+- [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - feature contract for running and reviewing the target-specific Select Project evidence path for the committed starter project.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
+- [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - intended target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [Desktop procedure edit and Save automation](./reference/desktop-procedure-edit-and-save-automation.md) - checked-in hook points, next tests, and unproven limits for procedure tab selection and project Save automation.
 - [Gadugi exported launcher evidence scenario](./reference/gadugi-exported-launcher-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for exported launcher evidence checks.
 - [Headless-safe desktop action characterization](./reference/headless-safe-desktop-action-characterization.md) - JavaFX/Swing headless startup contract, Croquet action-flow seams, validation commands, and compatibility rules.
@@ -41,6 +43,9 @@ repository.
 - [Tutorial: Add a modernization corpus manifest entry](./tutorials/add-modernization-corpus-manifest-entry.md) - guided example for documenting a new generated fixture shape and refreshing scorecard evidence.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
+- [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments.
+- [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice.
+- [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage without broadening decoder claims.
 
 ## Formal specification lane
 

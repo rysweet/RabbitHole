@@ -58,6 +58,53 @@ write_tab_click_not_opened() {
 JSON
 }
 
+# --- Helper: inventory with a non-Alice Java process/window only ---
+write_non_alice_java_inventory() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "windows": [
+    {
+      "id": "41943051",
+      "title": "Maven Test Harness",
+      "class": "sun-awt-X11-XFramePeer",
+      "pid": 1357,
+      "processName": "java",
+      "geometry": {"x": 20, "y": 20, "width": 800, "height": 600, "screen": 0}
+    }
+  ]
+}
+JSON
+}
+
+# --- Helper: target-starter selection without target-specific open proof ---
+write_target_selected_not_opened() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "target-starter-open-not-observed",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Generic Select Project dismissal was observed, but Africa Full was not proven opened.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterSelected": true,
+  "targetStarterOpenAttempted": true,
+  "openedStarter": null,
+  "evidenceStatus": "selected",
+  "targetStarterBlocker": {
+    "observedAtspiState": "Africa Full selection evidence exists, but openedStarter is not Africa Full.",
+    "actionAttempted": "Click OK/Open after selecting Africa Full.",
+    "expectedNextAction": "Observe projectOpenObserved=true with openedStarter set to Africa Full.",
+    "reasonProgressStopped": "The generic main-window transition is insufficient target-specific proof."
+  }
+}
+JSON
+}
+
 # ---- 1. Missing inventory → blocked ----
 missing_out="$tmp_root/missing-inventory-out.json"
 python3 "$PROBE" "$tmp_root/no-inventory.json" "$tmp_root/no-tab-click.json" "$missing_out"
@@ -117,7 +164,7 @@ assert_contains "$not_opened_out" '"mainWindowObservationBlocker": "project-not-
 assert_contains "$not_opened_out" '"mainFrameNames": \[\]' "project-not-opened records empty mainFrameNames"
 assert_contains "$not_opened_out" '"mainFrameChildCounts": \[\]' "project-not-opened records empty mainFrameChildCounts"
 
-# ---- 6. No Java window in inventory → blocked with java-pid-not-in-inventory ----
+# ---- 6. No Alice 3 Java window in inventory → blocked with alice-window-java-pid-not-identified ----
 no_java_inv="$tmp_root/no-java-inv.json"
 cat > "$no_java_inv" <<'JSON'
 {
@@ -139,21 +186,41 @@ python3 "$PROBE" "$no_java_inv" "$opened_tab6" "$no_java_out"
 status=$?
 assert_success "$status" "probe exits 0 when no Java window is in inventory"
 assert_contains "$no_java_out" '"status": "blocked"' "no-java-pid records blocked status"
-assert_contains "$no_java_out" '"blocker": "java-pid-not-in-inventory"' "no-java-pid names exact blocker"
+assert_contains "$no_java_out" '"blocker": "alice-window-java-pid-not-identified"' "no-java-pid names exact blocker"
+assert_contains "$no_java_out" 'Unable to identify the Java process for the Alice 3 main window' "no-java-pid explains missing Alice 3 window Java process"
+assert_contains "$no_java_out" 'Refusing to introspect an arbitrary Java process' "no-java-pid refuses arbitrary Java introspection"
 assert_contains "$no_java_out" '"postOpenWindowObserved": false' "no-java-pid does not claim post-open observed"
-assert_contains "$no_java_out" '"mainWindowObservationBlocker": "java-pid-not-in-inventory"' "no-java-pid names exact mainWindowObservationBlocker"
+assert_contains "$no_java_out" '"mainWindowObservationBlocker": "alice-window-java-pid-not-identified"' "no-java-pid names exact mainWindowObservationBlocker"
 
-# ---- 7. pyatspi not installed → blocked with pyatspi-not-installed ----
+# ---- 7. Non-Alice Java process is rejected instead of introspected ----
+non_alice_java_inv="$tmp_root/non-alice-java-inv.json"
+write_non_alice_java_inventory "$non_alice_java_inv"
+opened_tab7="$tmp_root/opened-tab7.json"
+write_tab_click_opened "$opened_tab7"
+non_alice_java_out="$tmp_root/non-alice-java-out.json"
+python3 "$PROBE" "$non_alice_java_inv" "$opened_tab7" "$non_alice_java_out"
+status=$?
+assert_success "$status" "probe exits 0 when only a non-Alice Java process is in inventory"
+assert_contains "$non_alice_java_out" '"status": "blocked"' "non-Alice Java process records blocked status"
+assert_contains "$non_alice_java_out" '"blocker": "alice-window-java-pid-not-identified"' "non-Alice Java process names exact blocker"
+assert_contains "$non_alice_java_out" '"javaPid": null' "non-Alice Java process is not selected for introspection"
+assert_contains "$non_alice_java_out" 'Unable to identify the Java process for the Alice 3 main window' "non-Alice Java blocker explains missing Alice 3 window Java process"
+assert_contains "$non_alice_java_out" 'Refusing to introspect an arbitrary Java process' "non-Alice Java blocker refuses arbitrary Java introspection"
+assert_contains "$non_alice_java_out" '"postOpenWindowObserved": false' "non-Alice Java process does not claim post-open observed"
+assert_contains "$non_alice_java_out" '"mainWindowObservationBlocker": "alice-window-java-pid-not-identified"' "non-Alice Java process names exact mainWindowObservationBlocker"
+assert_not_contains "$non_alice_java_out" '"javaPid": 1357' "non-Alice Java PID is not recorded as selected"
+
+# ---- 8. pyatspi not installed → blocked with pyatspi-not-installed ----
 # The probe falls through to probe_post_open when project is open and PID is found.
 # Without a live AT-SPI session, pyatspi import fails on most test machines.
 # We assert the probe exits 0 and records either pyatspi-not-installed or
 # at-spi-registry-unavailable (both are legitimate blocked outcomes in CI).
-inventory7="$tmp_root/inventory7.json"
-write_alice_inventory "$inventory7"
-opened_tab7="$tmp_root/opened-tab7.json"
-write_tab_click_opened "$opened_tab7"
+inventory8="$tmp_root/inventory8.json"
+write_alice_inventory "$inventory8"
+opened_tab8="$tmp_root/opened-tab8.json"
+write_tab_click_opened "$opened_tab8"
 atk_out="$tmp_root/atk-out.json"
-python3 "$PROBE" "$inventory7" "$opened_tab7" "$atk_out"
+python3 "$PROBE" "$inventory8" "$opened_tab8" "$atk_out"
 status=$?
 assert_success "$status" "probe exits 0 when AT-SPI is not available in test environment"
 assert_contains "$atk_out" '"status": "blocked"' "no-AT-SPI records blocked status"
@@ -163,9 +230,23 @@ assert_contains "$atk_out" '"postOpenWindowObserved": false' "no-AT-SPI does not
 assert_contains "$atk_out" '"blocker": "(pyatspi-not-installed|at-spi-registry-unavailable|atk-wrapper-not-loaded)"' \
   "no-AT-SPI names a precise AT-SPI-related blocker"
 
-# ---- 8. Probe output is valid JSON ----
+# ---- 9. Generic main-window observation does not imply Africa Full proof ----
+inventory9="$tmp_root/inventory9.json"
+write_alice_inventory "$inventory9"
+target_selected_tab="$tmp_root/target-selected-tab.json"
+write_target_selected_not_opened "$target_selected_tab"
+target_selected_out="$tmp_root/target-selected-out.json"
+python3 "$PROBE" "$inventory9" "$target_selected_tab" "$target_selected_out"
+status=$?
+assert_success "$status" "probe exits 0 when Africa Full target evidence is selected but not opened"
+assert_contains "$target_selected_out" '"status": "blocked"' "target-selected-not-opened records blocked status"
+assert_contains "$target_selected_out" '"blocker": "target-starter-open-not-proven"' "target-selected-not-opened refuses generic main-window proof"
+assert_contains "$target_selected_out" '"postOpenWindowObserved": false' "target-selected-not-opened does not claim post-open window observation"
+assert_contains "$target_selected_out" '"mainWindowObservationBlocker": "target-starter-open-not-proven"' "target-selected-not-opened names exact mainWindowObservationBlocker"
+
+# ---- 10. Probe output is valid JSON ----
 for out_file in "$missing_out" "$missing_tab_out" "$malformed_inv_out" "$malformed_tab_out" \
-                "$not_opened_out" "$no_java_out" "$atk_out"; do
+                "$not_opened_out" "$no_java_out" "$non_alice_java_out" "$atk_out" "$target_selected_out"; do
   python3 - "$out_file" <<'PY'
 import json, sys
 try:

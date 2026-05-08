@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -171,13 +172,16 @@ public class TweedleUnlinkedParser {
   }
 
   private Map<String, TweedleExpression> visitLabeledArguments(TweedleParser.LabeledExpressionListContext context) {
-    Map<String, TweedleExpression> arguments = new HashMap<>();
+    if (context == null) {
+      return Collections.emptyMap();
+    }
+
+    List<TweedleParser.LabeledExpressionContext> argumentContexts = context.labeledExpression();
+    Map<String, TweedleExpression> arguments = new HashMap<>(argumentContexts.size());
     final ExpressionVisitor visitor = new ExpressionVisitor();
-    if (context != null) {
-      context.labeledExpression().forEach(arg -> {
-        TweedleExpression argValue = arg.expression().accept(visitor);
-        arguments.put(arg.IDENTIFIER().getText(), argValue);
-      });
+    for (TweedleParser.LabeledExpressionContext arg : argumentContexts) {
+      TweedleExpression argValue = arg.expression().accept(visitor);
+      arguments.put(arg.IDENTIFIER().getText(), argValue);
     }
     return arguments;
   }
@@ -390,7 +394,7 @@ public class TweedleUnlinkedParser {
     @Override
     public TweedleExpression visitMethodCall(TweedleParser.MethodCallContext ctx) {
 
-      return new MethodCallExpression(new ThisExpression(), ctx.IDENTIFIER().getText(), visitLabeledArguments(ctx.labeledExpressionList()));
+      return new MethodCallExpression(new ThisExpression(), ctx.IDENTIFIER().getText(), visitLabeledArguments(ctx.labeledExpressionList()), false);
     }
 
     public @Override
@@ -437,22 +441,10 @@ public class TweedleUnlinkedParser {
         return new FieldAccess(target, context.IDENTIFIER().getText());
       }
       if (context.methodCall() != null) {
-        //TweedleParser.LabeledExpressionListContext argsContext = context.methodCall().labeledExpressionList();
-        //        Map<String, TweedleExpression> arguments = visitLabeledArguments(argsContext);
-        //        return new MethodCallExpression(target,
-        //                                        context.methodCall().IDENTIFIER().getText(),
-        //                                        arguments );
-
-        final MethodCallExpression methodCall = new MethodCallExpression(target, context.methodCall().IDENTIFIER().getText());
-        TweedleParser.LabeledExpressionListContext argsContext = context.methodCall().labeledExpressionList();
-        if (argsContext != null) {
-          argsContext.labeledExpression().forEach(arg -> {
-            final TweedleExpression argValue = arg.expression().accept(new ExpressionVisitor());
-            methodCall.addArgument(arg.IDENTIFIER().getText(), argValue);
-          });
-        }
-        return methodCall;
-
+        return new MethodCallExpression(
+            target,
+            context.methodCall().IDENTIFIER().getText(),
+            visitLabeledArguments(context.methodCall().labeledExpressionList()));
       }
       throw new RuntimeException("Unexpected details on context " + context);
     }
