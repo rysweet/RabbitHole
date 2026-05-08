@@ -237,7 +237,7 @@ A preexisting file at the expected target is not write proof. If the complete me
 
 ```json
 {
-  "status": "not_proven",
+  "status": "unsupported",
   "reason": "No available non-headless AWT display",
   "blocker": "Display environment does not support the Swing Save proof.",
   "wroteFile": false,

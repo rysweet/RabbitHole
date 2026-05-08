@@ -12,16 +12,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.lgna.croquet.Application;
+import org.lgna.croquet.MenuModel;
 import org.lgna.croquet.history.UserActivity;
-import org.lgna.croquet.views.AwtComponentView;
-import org.lgna.croquet.views.AwtContainerView;
-import org.lgna.croquet.views.CascadeMenu;
-import org.lgna.croquet.views.CascadeMenuItem;
-import org.lgna.croquet.views.CheckBoxMenuItem;
 import org.lgna.croquet.views.Menu;
 import org.lgna.croquet.views.MenuItem;
-import org.lgna.croquet.views.MenuItemContainer;
-import org.lgna.croquet.views.MenuTextSeparator;
 import org.lgna.croquet.views.ViewController;
 import org.lgna.project.License;
 import org.lgna.project.Project;
@@ -35,7 +29,6 @@ import org.lgna.story.SScene;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.SwingUtilities;
-import javax.swing.event.PopupMenuListener;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.GraphicsEnvironment;
@@ -160,7 +153,6 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     resetActiveApplication();
 
-    // Capture the save menu item so doClick() can be called outside invokeAndWait.
     MenuItem[] capturedMenuItem = new MenuItem[1];
 
     // Step 1: Initialize StageIDE on the EDT and create the actual Save menu item.
@@ -182,13 +174,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       assertTrue(ide.getDocumentFrame().getFrame().getAwtComponent().isDisplayable());
       assertTrue(ide.getDocumentFrame().getFrame().getAwtComponent().isShowing());
 
-      // Create the real Save menu item via getMenuItemPrepModel() — same as StageIDE menu bar.
-      CapturingMenuItemContainer menu = new CapturingMenuItemContainer();
-      ViewController<?, ?> menuItem =
-          SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(menu);
-      assertTrue("createMenuItemAndAddTo must produce a MenuItem", menuItem instanceof MenuItem);
-      assertTrue("CapturingMenuItemContainer must capture the item", menu.menuItem == menuItem);
-      capturedMenuItem[0] = menu.menuItem;
+      capturedMenuItem[0] = createSaveMenuItem();
     });
 
     // Drain post-setVisible events (windowOpened, license checks).
@@ -749,98 +735,19 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
   }
 
-  // ---- CapturingMenuItemContainer ----
-
-  /**
-   * Minimal MenuItemContainer that captures the MenuItem added to it.
-   * Used to obtain the actual Save menu item from getMenuItemPrepModel().createMenuItemAndAddTo().
-   */
-  private static final class CapturingMenuItemContainer implements MenuItemContainer {
-    private static final AwtComponentView<?>[] NO_MENU_COMPONENTS = new AwtComponentView<?>[0];
-
-    private MenuItem menuItem;
-
-    @Override
-    public ViewController<?, ?> getViewController() {
-      return null;
-    }
-
-    @Override
-    public void addPopupMenuListener(PopupMenuListener listener) {
-    }
-
-    @Override
-    public void removePopupMenuListener(PopupMenuListener listener) {
-    }
-
-    @Override
-    public UserActivity getActivity() {
-      return new UserActivity();
-    }
-
-    @Override
-    public AwtContainerView<?> getParent() {
-      return null;
-    }
-
-    @Override
-    public AwtComponentView<?>[] getMenuComponents() {
-      return NO_MENU_COMPONENTS;
-    }
-
-    @Override
-    public AwtComponentView<?> getMenuComponent(int i) {
-      return null;
-    }
-
-    @Override
-    public int getMenuComponentCount() {
-      return 0;
-    }
-
-    @Override
-    public void addMenu(Menu menu) {
-    }
-
-    @Override
-    public void addMenuItem(MenuItem menuItem) {
-      this.menuItem = menuItem;
-    }
-
-    @Override
-    public void addCascadeMenu(CascadeMenu cascadeMenu) {
-    }
-
-    @Override
-    public void addCascadeMenuItem(CascadeMenuItem cascadeMenuItem) {
-    }
-
-    @Override
-    public void addCheckBoxMenuItem(CheckBoxMenuItem checkBoxMenuItem) {
-    }
-
-    @Override
-    public void addCascadeCombo(CascadeMenuItem cascadeMenuItem, CascadeMenu cascadeMenu) {
-    }
-
-    @Override
-    public void addSeparator() {
-    }
-
-    @Override
-    public void addSeparator(MenuTextSeparator menuTextSeparator) {
-    }
-
-    @Override
-    public void forgetAndRemoveAllMenuItems() {
-    }
-
-    @Override
-    public void removeAllMenuItems() {
-    }
-  }
-
   // ---- helpers ----
+
+  private static MenuItem createSaveMenuItem() {
+    Menu hostMenu = new Menu(new MenuModel(UUID.fromString("132f2a47-2e7c-4af0-910c-0cb10f74afe8")) {
+    });
+    ViewController<?, ?> menuItem =
+        SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(hostMenu);
+    assertTrue("createMenuItemAndAddTo must produce a MenuItem", menuItem instanceof MenuItem);
+    assertEquals("host menu must contain only the Save item", 1, hostMenu.getAwtComponent().getMenuComponentCount());
+    assertTrue("host menu must contain the returned Save item",
+        hostMenu.getAwtComponent().getMenuComponent(0) == ((MenuItem) menuItem).getAwtComponent());
+    return (MenuItem) menuItem;
+  }
 
   private static void restoreProperty(String name, String value) {
     if (value == null) {
