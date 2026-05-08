@@ -95,7 +95,10 @@ If a CI worker has no usable display, the artifact reports a blocker instead of 
 
 ```json
 {
+  "schema_version": "eatme.alice-desktop-robot-save-menu-dialog-write-readback-proof/v1",
   "status": "blocked",
+  "proofTarget": "Robot File menu Save activation joined to dialog/write/readback evidence",
+  "reporting_summary": "Robot File menu Save dialog/write/readback path was not proven; see blocker.kind for the exact missing or unsafe precondition",
   "blocker": {
     "kind": "headless_awt",
     "observed": "No available non-headless AWT display",
@@ -103,16 +106,59 @@ If a CI worker has no usable display, the artifact reports a blocker instead of 
   },
   "trigger": {
     "robot_file_menu_opened": false,
-    "robot_save_item_clicked": false
+    "robot_save_item_clicked": false,
+    "save_action_identity_matched": false
+  },
+  "observed_dialog": {
+    "dialogType": "Swing JFileChooser",
+    "dialog_class": null,
+    "dialog_showing": false,
+    "chooser_observed": false,
+    "approved_selection": false,
+    "ambiguous_chooser_discovery": false,
+    "poll_count": 0
+  },
+  "selected_file": {
+    "normalized_selected_file": null,
+    "expected_file": "projects/robot-save-menu-proof.a3p",
+    "selected_file_verified": false,
+    "selected_file_matches_expected": false,
+    "target_inside_proof_root": false
   },
   "written_artifact": {
-    "file_written": false
+    "target_file": "projects/robot-save-menu-proof.a3p",
+    "file_written": false,
+    "file_nonempty": false,
+    "file_extension": "a3p",
+    "file_has_expected_extension": true,
+    "file_size_bytes": 0
   },
   "readback": {
     "project_readable": false,
+    "expected_marker": "robotSaveMenuRoundTripMarker",
     "marker_present": false
-  }
+  },
+  "baselinePreserved": [
+    "StageIdeSaveMenuDoClickToWriteProofTest",
+    "ProjectApplicationSaveProjectToTest",
+    "JMenuBarRobotClickSaveProofTest"
+  ],
+  "requiresNextEvidence": [
+    "Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related",
+    "Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed"
+  ],
+  "doesNotClaim": [
+    "full desktop Save completion",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage",
+    "all Save variants",
+    "Save As coverage"
+  ]
 }
 ```
 
-Rerun under `xvfb-run -a` or another desktop session to collect a `status: "proven"` artifact.
+Use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation, chooser approval, project file write, project readback, marker verification, or full desktop Save completion. Rerun under `xvfb-run -a` or another desktop session to collect a `status: "proven"` artifact.
