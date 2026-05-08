@@ -11,7 +11,7 @@ preconditions:
 userActions:
   - Enable gated smokes in a workspace prepared for core IDE module tests.
   - Run the focused Robot Save menu dialog/write/readback proof under a desktop-capable display.
-  - Review the proof artifact for Robot File-menu Save activation, Swing JFileChooser approval, a non-empty a3p file write, readable project readback, and marker verification.
+  - Review the proof artifact for Robot File-menu Save activation, controlled Swing JFileChooser approval, a non-empty a3p file write, readable project readback, and marker verification.
 expectedOutcomes:
   - The proof starts from Robot File-menu Save activation of the production Save action, not doClick, fire, SaveOperationFlow, or a direct save helper.
   - The focused proof controls a live Swing JFileChooser, approves the selected a3p target, writes the file, reads it back, and verifies the marker when a display is available.
@@ -36,7 +36,7 @@ evidence:
     - status.txt recording the gated command outcome.
     - command.log from the focused Robot Save menu dialog/write/readback proof command.
     - Surefire output naming RobotSaveMenuDialogWriteReadbackProofTest.
-    - robot-save-menu-dialog-write-readback-proof.json recording status=proven with Robot File-menu Save activation, chooser approval, file write, readable-project readback, and marker verification, or the precise blocked Robot/Swing precondition.
+    - robot-save-menu-dialog-write-readback-proof.json recording status=proven with Robot File-menu Save activation, controlled chooser approval, file write, readable-project readback, and marker verification, or the precise blocked Robot/Swing precondition.
 fallback:
   mode: manual-evidence-required
   notes:

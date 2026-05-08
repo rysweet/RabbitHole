@@ -99,6 +99,7 @@ for required in (
     "RobotSaveMenuDialogWriteReadbackProofTest",
     "robot-save-menu-dialog-write-readback-proof.json",
     "Robot File-menu Save activation",
+    "controlled chooser",
     "readback",
     "marker",
 ):
@@ -107,6 +108,7 @@ for required in (
 for stale in (
     "StageIdeSaveMenuDoClickToWriteProofTest",
     "stageide-save-menu-doclick-write-proof.json",
+    "save-menu-dialog-write-proof.json",
 ):
     if stale in scenario_text:
         raise AssertionError(f"Save menu scenario must not keep stale Stage proof dependency: {stale}")
