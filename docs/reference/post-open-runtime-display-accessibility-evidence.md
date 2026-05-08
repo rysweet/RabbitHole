@@ -342,6 +342,13 @@ Candidate `geometryStatus` values are:
 | `invalid-extents` | Extents were present but not usable because width or height was non-positive, numeric fields were missing, or the coordinate type was not screen coordinates. |
 | `ambiguous-candidates` | More than one visible/showing candidate had valid extents, so the runner refused to pick one without stronger metadata. |
 
+Ambiguity is based on the count of eligible pixel-target candidates, not the
+raw count of runtime/display candidates. A candidate is eligible only when it is
+visible/showing and has `geometryStatus=available` with numeric screen extents
+where `width > 0` and `height > 0`. Multiple candidates whose extents are
+missing, zero-sized, negative, malformed, or non-screen-coordinate are not
+ambiguous; they remain fail-closed geometry blockers.
+
 ## Controlled-display screenshot-consistency API
 
 The screenshot-consistency artifact is:
@@ -556,6 +563,11 @@ Target-ready evidence is valid only when:
 - `screenExtents.height > 0`
 - exactly one accepted runtime/display candidate satisfies those rules
 
+The runner does not default or coerce candidate geometry. Missing dimensions,
+non-numeric dimensions, zero or negative `width`/`height`, and non-screen
+coordinate extents make that candidate ineligible for target readiness and
+ineligible for ambiguity counting.
+
 Target-ready evidence is the handoff point for a later pixel sampler. That
 sampler may crop or sample inside `screenExtents` from the same controlled
 display screenshot. This shard does not define color expectations, image
@@ -618,6 +630,60 @@ candidates: `missing-component-interface`, `missing-extents`,
 `invalid-extents`, and `ambiguous-candidates`. The runner fails closed to this
 artifact whenever the candidate geometry is absent, non-screen-coordinate,
 non-positive, malformed, or ambiguous.
+
+`ambiguous-candidates` is emitted only when more than one visible/showing
+candidate has valid positive screen-coordinate extents. If two or more
+runtime/display candidates exist but none has valid extents, the blocker keeps a
+non-ambiguous geometry status such as `missing-extents` or `invalid-extents`.
+The blocked artifact must still keep `worldCanvasPixelTarget.identified=false`
+and must not claim readiness, rendered-world visibility, or pixel correctness.
+
+### Candidate geometry examples
+
+Multiple missing or invalid candidates are blocked, but not ambiguous:
+
+```json
+{
+  "status": "blocked",
+  "geometryStatus": "invalid-extents",
+  "runtimeDisplayCandidateCount": 3,
+  "worldCanvasPixelTarget": {
+    "identified": false,
+    "status": "blocked",
+    "geometryStatus": "invalid-extents",
+    "runtimeDisplayCandidateCount": 3
+  },
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness"
+  ]
+}
+```
+
+The same raw candidate count becomes ambiguous only when more than one
+visible/showing candidate has valid positive screen-coordinate extents:
+
+```json
+{
+  "status": "blocked",
+  "geometryStatus": "ambiguous-candidates",
+  "runtimeDisplayCandidateCount": 3,
+  "worldCanvasPixelTarget": {
+    "identified": false,
+    "status": "blocked",
+    "geometryStatus": "ambiguous-candidates",
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents"
+  },
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness"
+  ]
+}
+```
+
+Both examples are blockers. Neither example is a substitute for a pixel sampler,
+visible-rendering proof, rendered-world oracle, or world-canvas pixel
+correctness claim.
 
 ## Review workflow
 

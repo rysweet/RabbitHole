@@ -130,7 +130,11 @@ screenshot-consistency artifact. `worldCanvasPixelTarget.status=target-ready`
 means exactly one visible/showing runtime/display candidate exposed valid
 screen-coordinate extents for future pixel sampling. `status=blocked` means
 `visible-rendering-pixel-target-blocker.json` names the exact missing target and
-next unblocker. `tab-click-observation.json` and
+next unblocker. `geometryStatus=ambiguous-candidates` is reserved for more than
+one visible/showing candidate with valid positive screen-coordinate extents; a
+larger raw candidate count with missing, zero, negative, malformed, or otherwise
+invalid geometry stays fail-closed without being reported as ambiguous.
+`tab-click-observation.json` and
 `post-project-open-observation.json` are supporting setup artifacts. An observed
 result is limited to a live post-open runtime/display accessibility signal,
 controlled-display screenshot consistency, and pixel target readiness or its
@@ -243,7 +247,7 @@ accessibility tree.
 | `runtime-display-accessibility-status.txt` | Probe-local status written before final scenario status; useful for debugging, not the final pass/fail artifact. |
 | `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, target-ready or blocked `worldCanvasPixelTarget`, and unsupported claims. Pixel blockers keep final `outcome=blocked`. |
-| `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the exact next unblocker for missing, invalid, or ambiguous world-canvas pixel target readiness. |
+| `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the exact next unblocker for missing, invalid, or ambiguous world-canvas pixel target readiness. Ambiguous means more than one visible/showing candidate has valid extents, not merely more than one raw candidate. |
 
 If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
 `python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, screenshot

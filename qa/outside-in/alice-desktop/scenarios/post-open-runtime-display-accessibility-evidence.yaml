@@ -29,6 +29,7 @@ expectedOutcomes:
   - post-open-runtime-display-accessibility-evidence.json records blocker=none only for observed post-open runtime/display accessibility evidence.
   - controlled-display-pixel-observation.json records worldCanvasPixelTarget.status=target-ready only when exactly one visible/showing runtime/display candidate has valid positive screen-coordinate extents.
   - visible-rendering-pixel-target-blocker.json records missingTarget=run-window-world-canvas-screen-extents and exactNextUnblocker=reliable-run-window-world-canvas-pixel-sampling-target when target identification is missing, invalid, or ambiguous.
+  - visible-rendering-pixel-target-blocker.json records geometryStatus=ambiguous-candidates only when more than one visible/showing runtime/display candidate has valid positive screen-coordinate extents; multiple raw candidates with missing, zero, negative, malformed, or otherwise invalid geometry remain non-ambiguous blockers.
 automation:
   cwd: alice-ide
   argv:
