@@ -93,6 +93,22 @@ public class ModelExportTest {
   }
 
   @Test
+  public void modelExporterPreservesDeprecatedMetadataInXmlAndGeneratedJava() throws Exception {
+    ModelResourceExporter exporter = createSyntheticPropExporter();
+    exporter.setIsDeprecated(true);
+
+    Document xml = parseXml(exporter.createXMLString());
+    String javaCode = exporter.createJavaCode();
+
+    assertEquals("TRUE", xml.getDocumentElement().getAttribute("deprecated"));
+    assertFalse(((Element) xml.getDocumentElement().getElementsByTagName("Resource").item(0)).hasAttribute("deprecated"));
+    assertTrue(javaCode.contains("@Deprecated"));
+    assertAppearsBefore(javaCode, "@Deprecated", "public enum TestPropResource");
+    assertTrue(javaCode.contains("public enum TestPropResource implements org.lgna.story.resources.PropResource"));
+    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
+  }
+
+  @Test
   public void modelExporterKeepsGeneratedEnumConstantsAndResourceTypes() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
     exporter.addResource("VariantProp", "Default", "SIMS2", null, null);

@@ -27,6 +27,7 @@ public final class ResourceExportExample {
         new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
 
     exporter.addAttribution("Alice Test", "2026");
+    exporter.setIsDeprecated(true);
     exporter.setPlaceOnGround(true);
     exporter.addTags("class-tag");
     exporter.addGroupTags("class-group");
@@ -57,6 +58,7 @@ the helper classes.
 | --- | --- | --- |
 | `ModelResourceExporter` constructors | Public | Create an exporter for a resource class such as a prop, biped, flyer, or other model class, with overloads for resource name, class data, and joint/visual factory data. |
 | `addAttribution(String name, String year)` | Public | Adds class-level creator and creation-year metadata. |
+| `setIsDeprecated(boolean isDeprecated)` | Public | Marks the exported resource class as deprecated in generated XML and Java output when enabled. |
 | `setPlaceOnGround(boolean placeOnGround)` | Public | Writes `placeOnGround="TRUE"` on the XML root when enabled. |
 | `setBoundingBox(String modelName, AxisAlignedBox boundingBox)` | Public | Records bounds for the class or a named subresource. |
 | `addTags`, `addGroupTags`, `addThemeTags` | Public | Adds class-level gallery tags, group tags, and theme tags. |
@@ -77,7 +79,7 @@ the helper classes.
 The XML generator writes one `AliceModel` root:
 
 ```xml
-<AliceModel name="TestProp" creator="Alice Test" creationYear="2026" placeOnGround="TRUE">
+<AliceModel name="TestProp" creator="Alice Test" creationYear="2026" deprecated="TRUE" placeOnGround="TRUE">
     <BoundingBox>
         <Min x="-1.0" y="0.0" z="-2.0"/>
         <Max x="1.0" y="3.0" z="2.0"/>
@@ -100,6 +102,10 @@ when they are unique from the class-level tags. For example, if the class has
 `shared-tag` and the `VariantProp` subresource has both `shared-tag` and
 `variant-tag`, only `variant-tag` is emitted under that subresource.
 
+When `setIsDeprecated(true)` is applied, the XML root includes
+`deprecated="TRUE"`. The flag is class-level metadata; it does not add
+subresource attributes or change resource enum names.
+
 Bounding boxes are class-scoped by model name. If the class itself has no
 bounding box, the XML generator computes the class box as the union of the
 registered subresource boxes.
@@ -119,6 +125,7 @@ import org.lgna.story.Orientation;
 import org.lgna.story.Position;
 import org.lgna.story.resources.ImplementationAndVisualType;
 
+@Deprecated
 public enum TestPropResource implements org.lgna.story.resources.PropResource {
     DEFAULT;
 ```
@@ -138,6 +145,11 @@ The generated enum includes `getImplementationAndVisualFactory()` and
 `createImplementation(...)` methods so the resource can create the matching
 Alice implementation class. Joint and pose declarations are generated from the
 exporter's joint map and pose data when those inputs are present.
+
+Deprecated resources add `@Deprecated` directly to the generated enum
+declaration. The annotation is emitted from the same exporter flag that writes
+the XML `deprecated="TRUE"` attribute, so XML metadata and generated Java source
+stay in sync for downstream resource consumers.
 
 ## Thumbnail behavior
 
@@ -173,6 +185,7 @@ Behavior-preserving refactors must keep these outputs stable:
 | --- | --- |
 | XML shape | Root attributes, `Resource` attributes, tag nesting, unique subresource tags, and bounding-box values remain compatible. |
 | Java source shape | Package, enum name, constants, resource type constructor arguments, factory methods, joint declarations, and pose declarations remain compatible. |
+| Deprecated metadata | `setIsDeprecated(true)` continues to write XML `deprecated="TRUE"` and a generated Java `@Deprecated` enum annotation together. |
 | File paths | XML and thumbnail output paths continue to use the package directory and resource subdirectory conventions. |
 | Error handling | Output and thumbnail failures surface as checked `IOException` where the exporter API declares them. |
 | Dependencies | Export behavior does not require Git LFS checkout changes, new CI dependencies, or artificial coverage exclusions. |
@@ -188,13 +201,19 @@ one of its helper generators:
 
 ```sh
 git submodule update --init tweedle-lang
-mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
   -pl core/model-loading -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.lgna.story.resourceutilities.ModelExportTest \
+  -Dtest=ModelExportTest \
   test
 ```
+
+`ModelExportTest` includes behavior-backed characterization for XML output,
+generated Java output, thumbnail handling, and deprecated metadata. In
+particular, the deprecated metadata characterization verifies that
+`ModelResourceExporter` keeps generated XML and generated Java aligned without
+requiring decoder, project Save, or Select Project coverage.
 
 When a production refactor changes code style-sensitive files, run the
 repository's relevant checkstyle or module validation gate in addition to the
