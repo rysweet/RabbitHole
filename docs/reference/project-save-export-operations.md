@@ -181,9 +181,9 @@ This proof target is stronger than direct operation tests and flow-seam tests be
 | Menu activation | The Save menu item is created through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)` and activated with `doClick()`. |
 | Dialog control | Exactly one expected Swing `JFileChooser` is observed, receives the normalized temp-directory `.a3p` target, and is approved. |
 | Write result | The target `.a3p` exists and has non-zero size after `ProjectApplication.saveProjectTo(File)` returns. |
-| Evidence | The `stageide-save-menu-doclick-write-proof.json` artifact reports the dialog type as `Swing JFileChooser` and sets `wroteFile` to `true` only after the file assertions pass. |
+| Evidence | The `stageide-save-menu-doclick-write-proof.json` artifact reports the dialog type as `Swing JFileChooser`, uses `status: proven`, `status: not_proven`, or `status: unsupported`, and sets `wroteFile` to `true` only after the file assertions pass. |
 
-See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the evidence schema, blocker artifact contract, non-claims, and focused validation command.
+See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the evidence schema, unsupported display artifact contract, non-claims, and focused validation command.
 
 ## Configuration
 

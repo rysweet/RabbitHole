@@ -183,7 +183,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-The executable blocker for an environment with no usable display is:
+An environment with no usable display produces `status: unsupported` with this exact reason:
 
 ```text
 No available non-headless AWT display

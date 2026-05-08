@@ -59,9 +59,9 @@ A successful run proves all of the following in one bounded path:
 
 Any unproven run fails closed. Preexisting target files, incomplete chooser observations, timeouts, path mismatches, canonicalization failures, and multiple live `JFileChooser` instances must not produce approval or write success claims.
 
-### Executable blocker
+### Unsupported display result
 
-If the proof cannot run because the JVM cannot create a non-headless desktop, the final executable result records this precise blocker:
+If the proof cannot run because the JVM cannot create a non-headless desktop, the executable proof writes an unsupported-result artifact and returns without claiming success. The precise reason is:
 
 ```text
 No available non-headless AWT display
@@ -69,13 +69,22 @@ No available non-headless AWT display
 
 This blocker is the desktop-precondition blocker for the canonical shard. It means the environment must provide a display, such as Xvfb, before the Save dialog/control/write path can be exercised.
 
-When this blocker is the repo-recorded outcome for the shard, the machine-readable blocker artifact is:
+The proof shard keeps result states distinct:
+
+| State | Meaning |
+| --- | --- |
+| `proven` | Menu activation, chooser approval, selected path verification, and non-empty `.a3p` write all completed. |
+| `not_proven` | The proof ran under a display but the complete chain did not finish. |
+| `unsupported` | The proof did not exercise the dialog path because no non-headless AWT display was available. |
+| `gated-not-run` | Outside-in QA wrapper state only; the gated command was not executed. |
+
+The Maven proof writes generated artifacts under its test target directory. It does not write directly to the outside-in QA evidence path. If a PR cannot provide the display-backed proof and needs persistent review evidence, copy the generated unsupported artifact to:
 
 ```text
 qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof-blocker.json
 ```
 
-That artifact records exactly one next blocker, `No available non-headless AWT display`. It must not list multiple blockers, infer chooser behavior, or claim that a project file was written.
+That copied artifact remains an unsupported-result artifact. It must preserve the single reason, `No available non-headless AWT display`, keep all success-shaped fields false, avoid inferring chooser behavior, and avoid claiming that a project file was written.
 
 ## Evidence artifacts
 
@@ -97,7 +106,7 @@ The canonical proof artifact records:
 
 | Field | Contract |
 | --- | --- |
-| `status` | `proven` only when menu activation, chooser approval, and file write assertions all pass. |
+| `status` | `proven` only when menu activation, chooser approval, and file write assertions all pass; `not_proven` for display-backed runs that do not complete the chain; `unsupported` for missing non-headless AWT display. |
 | `dialogType` | `Swing JFileChooser` for the controlled Linux Swing chooser path. |
 | `wroteFile` | `true` only after the target exists inside the proof root, has `.a3p` extension, and has non-zero size. |
 | `claim` / `reporting_summary` | `claim` is present only for `status: proven`; unsupported or not-proven runs use `reporting_summary` and must not claim chooser approval or file writing. |
@@ -109,15 +118,20 @@ The canonical proof artifact records:
 | `trigger.menu_item_doclick` | `true` for the production Save menu item activation path. |
 | `doesNotClaim` | Explicit exclusions for lesson completion, rendering, grading, physical user clicks, broad UI automation, and native dialog coverage. |
 
-The source-controlled blocker artifact, when present, has this contract:
+The unsupported display artifact has this contract:
 
 | Field | Contract |
 | --- | --- |
-| `status` | `blocked`; never `proven`. |
-| `blocker` | Exactly `No available non-headless AWT display`. |
-| `nextBlocker` | The same single blocker string, used by automation that expects an explicit next action. |
-| `wroteFile` | `false`; the blocker artifact never represents a successful Save write. |
-| `doesNotClaim` | Explicitly excludes full UI automation, visible rendering, grading, creative assessment, first-lesson completion, native-dialog coverage, and full Save completion. |
+| `status` | `unsupported`; never `proven`. |
+| `reason` | Exactly `No available non-headless AWT display`. |
+| `dialogType` | `Swing JFileChooser`, naming the dialog path that could not be exercised. |
+| `wroteFile` | `false`; the unsupported artifact never represents a successful Save write. |
+| `approved_selection`, `file_written`, `file_nonempty` | `false`; chooser approval and file write remain unproven. |
+| `reporting_summary` | States that the Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven. |
+| `blocker.observed` | States that `GraphicsEnvironment.isHeadless()` is true or no usable desktop display is available. |
+| `blocker.required` | States that Xvfb or another non-headless AWT display capable of showing a Swing `JFileChooser` is required. |
+| `requiresNextEvidence` | Includes running the proof under `xvfb-run -a` or an equivalent desktop session and collecting a `status: proven` artifact. |
+| `doesNotClaim` | Explicitly excludes full lesson completion, visible rendering correctness, grading correctness, physical user clicks, broad UI automation coverage, and native dialog coverage. |
 
 The dialog-discovery companion artifact is:
 
@@ -185,6 +199,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Use the direct Maven command for the canonical proof artifact. Use the QA scenario when review also needs the standard outside-in `status.txt` and `command.log` wrapper evidence.
+
+The QA scenario executes the checked-in Maven argv directly. It relies on the ambient process environment for a usable display and options such as `NODE_OPTIONS`; it does not prepend `xvfb-run` or set memory options itself.
 
 To collect dialog-discovery evidence for this proof, set:
 
@@ -267,29 +283,35 @@ A preexisting file at the expected target is not write proof. If the complete me
 }
 ```
 
-### Display-precondition blocker
+### Unsupported display result
 
 ```json
 {
-  "status": "blocked",
-  "blocker": "No available non-headless AWT display",
-  "nextBlocker": "No available non-headless AWT display",
+  "schema_version": "eatme.alice-desktop-stageide-save-menu-doclick-write-proof/v1",
+  "status": "unsupported",
+  "reason": "No available non-headless AWT display",
+  "dialogType": "Swing JFileChooser",
   "wroteFile": false,
+  "approved_selection": false,
+  "file_written": false,
+  "file_nonempty": false,
+  "proofTarget": "Save menu/control/dialog/write path",
   "reporting_summary": "Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven",
-  "observed_dialog": {
-    "approved_selection": false
+  "blocker": {
+    "observed": "GraphicsEnvironment.isHeadless() is true or no usable desktop display is available",
+    "required": "Xvfb or another non-headless AWT display capable of showing a Swing JFileChooser"
   },
-  "written_artifact": {
-    "file_written": false
-  },
+  "requiresNextEvidence": [
+    "Run this proof shard under xvfb-run -a or an equivalent desktop session",
+    "Save menu/control/dialog/write path artifact with status proven"
+  ],
   "doesNotClaim": [
-    "full Alice UI automation",
+    "full lesson completion",
     "visible rendering correctness",
     "grading correctness",
-    "creative assessment",
-    "first-lesson completion",
-    "native dialog coverage",
-    "full Save completion"
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage"
   ]
 }
 ```
