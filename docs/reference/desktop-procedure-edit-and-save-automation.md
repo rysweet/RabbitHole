@@ -10,7 +10,7 @@ seam, and the behavior that remains outside this slice.
 
 | User step | Class | What can be observed without launching the full desktop |
 | --- | --- | --- |
-| Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, and reports the currently selected procedure when one is active. |
+| Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, reports the selected procedure and `CodeComposite`, and observes the selected tab's backing `CodeEditor.getCode()` model. |
 | Run the current procedure edit implementation | `org.alice.tools.ProcedureEditCommand` | Applies the supported `append-comment` edit to the selected `UserMethod` and returns statement counts for `procedure-edit-command.json`. This is an implementation command, not a desktop code-editor command. |
 | Select a procedure tab in Alice | `org.alice.ide.declarationseditor.DeclarationTabState` | Owns the real tab-selection operation used by the desktop declarations editor. |
 | Show procedure code | `org.alice.ide.declarationseditor.CodeComposite` | Wraps the selected `UserMethod` and creates the code view when the desktop activates the tab. |
@@ -22,15 +22,17 @@ seam, and the behavior that remains outside this slice.
 
 `ProcedureTabSelection` is intentionally small. It does not edit code. It gives a
 desktop automation runner one stable place to ask, "which real Croquet operation
-selects this procedure tab?" The helper refuses to fire the operation until a
-live Alice IDE is active, because the tab change creates the desktop code view.
+selects this procedure tab?" and one read-only way to prove that the selected
+procedure tab is backed by the expected code-editor code model. The helper
+refuses to fire the guarded live selection operation until a live Alice IDE is
+active, because the tab change creates the desktop code view.
 
 `RobotSaveMenuDialogWriteReadbackProofTest` is the joined Save seam. It either
 proves AWT Robot File-menu Save activation, live Swing chooser control,
 proof-root `.a3p` write, `IoUtilities.readProject(File)` readback, and marker
 verification, or writes a machine-readable blocker artifact.
 
-## Live target action seam and proposed next hooks
+## Live target action seam and code-editor backing hook
 
 The live target action seam owns the smallest unevidenced transition
 after Select Project opens the configured first-lesson flow starter:
@@ -70,18 +72,24 @@ read-only: it does not mutate the procedure, save the project, assert rendering
 correctness, assess learner work, assess creative quality, or claim full
 first-lesson completion.
 
+The next checked-in hook after the live target/action seam is the procedure tab
+code-editor backing proof. Its contract is documented in [First-Lesson Procedure
+Tab Code-Editor Backing](./first-lesson-procedure-tab-code-editor-backing.md).
+It proves that selecting `scene.eatmeFirstLesson` lands on the expected
+`CodeComposite` and that the selected tab's backing code-editor model reports
+the same `UserMethod` from `getCode()`. It remains read-only: it does not invoke
+a desktop edit action, mutate AST statements, save the project, assert
+rendering, assess learner work, assess creative quality, or claim first-lesson
+completion.
+
 Add the remaining hooks in order, each with a focused test before changing
 behavior:
 
-1. Add or strengthen a narrow code-editor observation helper that accepts the
-   active `DeclarationsEditorComposite` and reports the selected `CodeComposite`
-   and `CodeEditor.getCode()` value. This should prove the procedure tab is
-   active, not that any visual layout is correct.
-2. Replace the implementation edit command with a desktop code-editor edit hook
+1. Replace the implementation edit command with a desktop code-editor edit hook
    only after the code editor exposes a real command for the intended edit. The
    hook should invoke that command; it should not call the implementation command
    a desktop edit.
-3. Use `RobotSaveMenuDialogWriteReadbackProofTest` as the bounded joined Save
+2. Use `RobotSaveMenuDialogWriteReadbackProofTest` as the bounded joined Save
    proof shard for Robot File-menu activation, Swing chooser approval, `.a3p`
    write, readback, and marker evidence. Keep procedure-edit automation
    separate from this Save proof.
