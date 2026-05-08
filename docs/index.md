@@ -58,7 +58,7 @@ characterization tests.
   and executable validation boundaries.
 - [Project Load and Backup Recovery Characterization](./reference/project-backup-recovery-io.md) -
   Reference for saved temporary project loading, corrupt project rejection,
-  backup selection, all-backups failure dispatch, configuration, and focused
-  `core/ide` validation.
+  file-loader QA smoke evidence, backup selection, all-backups failure dispatch,
+  configuration, and focused `core/ide` validation.
 - [Trace save, load, export, and recovery behavior](./tutorials/trace-save-load-recovery.md) -
   A guided walkthrough from acceptance scenario to model rule to focused test.

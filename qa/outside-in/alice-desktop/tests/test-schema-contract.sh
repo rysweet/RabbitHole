@@ -108,6 +108,18 @@ expected_argv = {
         "-Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest",
         "test",
     ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/ide",
+        "-am",
+        "-Dtest=org.alice.ide.uricontent.FileProjectLoaderTest",
+        "test",
+    ),
     ("qa/outside-in/alice-desktop/runners/netbeans-package-smoke.sh",),
     ("qa/outside-in/alice-desktop/runners/package-install-smoke.sh",),
     (

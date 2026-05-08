@@ -7,6 +7,7 @@ characterization that uses real temporary Alice project files.
 
 - [Feature scope](#feature-scope)
 - [Direct saved-project load characterization](#direct-saved-project-load-characterization)
+- [File-loader QA smoke scenario](#file-loader-qa-smoke-scenario)
 - [User-visible recovery behavior](#user-visible-recovery-behavior)
 - [API and seam reference](#api-and-seam-reference)
 - [Characterization examples](#characterization-examples)
@@ -48,12 +49,18 @@ existing Alice project writer, loads that saved file through the same-package
 `FileProjectLoader` protected `load()` seam, and checks the current negative
 path by loading a second corrupt temporary `.a3p` file through the same boundary.
 
-The recovery test covers two recovery journeys:
+`ProjectBackupRecoveryIoTest` includes these recovery and post-recovery
+characterization cases:
 
 | Journey | Protected behavior |
 | --- | --- |
 | Corrupt main project, corrupt newest backup, readable older backup | The corrupt main project loads as `null`, the unreadable newest backup is skipped, the next backup is offered, and the readable backup reopens with its program type and resources intact. |
 | Corrupt main project and all backups corrupt | Alice attempts recovery in newest-first order, marks each failed backup unloadable, exhausts candidates, and plans the user-visible new-project failure dispatch. |
+| Corrupt default backup with no other backups | A failed unsaved-project default backup reaches the unsaved-backups failure plan without trying to compare backup times. |
+| Accepted recovered backup saved and exported | A readable recovered backup can be saved as an `.a3p` and exported as an `.a3w` while preserving the recovered program type and resource data. |
+
+The examples below highlight the first two PR-relevant recovery journeys because
+they exercise the backup-selection and all-backups-failed paths most directly.
 
 ## Direct saved-project load characterization
 
@@ -69,10 +76,79 @@ backup recovery:
 These tests create both files with JUnit `TemporaryFolder`. They do not read
 sample projects, user files, external paths, LFS assets, or committed binary
 fixtures.
+
 The saved-project assertion should name only the generated temporary project load
 behavior. The corrupt-project assertion should name only current rejection
 behavior; it is not broad archive-recovery coverage. Keep these as focused
 characterization tests rather than combining them with unrelated loader behavior.
+
+## File-loader QA smoke scenario
+
+The outside-in QA catalog includes one command-gated smoke scenario for the
+direct file-loader boundary:
+
+```text
+qa/outside-in/alice-desktop/scenarios/file-loader-smoke.yaml
+```
+
+The scenario is:
+
+| Field | Value |
+| --- | --- |
+| ID | `alice-desktop-file-loader-smoke` |
+| Workflow | `file-loader-smoke` |
+| Automation mode | `gated-command-smoke` |
+| Focused command | `mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/ide -am -Dtest=org.alice.ide.uricontent.FileProjectLoaderTest test` |
+
+Use this scenario when review needs QA evidence for the same saved-project and
+corrupt-project loader seam protected by `FileProjectLoaderTest`. It is not a
+desktop UI workflow, a broad project archive corpus run, or backup recovery
+automation. For an executed gated run, the evidence should stay limited to:
+
+1. The gated command outcome.
+2. The command log.
+3. Test output or a Surefire report naming
+   `FileProjectLoaderTest.savedTemporaryProjectLoadsAndCorruptTemporaryProjectIsRejected`.
+4. Review notes that identify the generated saved-project load assertion and the
+   corrupt-project rejection assertion.
+
+Validate that the scenario is present and normalized:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh \
+  --dump-json alice-desktop-file-loader-smoke
+```
+
+Prepare checklist and status metadata without running the gated Maven command:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-file-loader-smoke \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/file-loader-smoke
+```
+
+`--prepare-only` writes the scenario environment, checklist, and `status.txt`
+metadata with `outcome=gated-not-run` and `skipMode=prepare-only`. It
+intentionally does not create `command.log`; `command.log` is produced only when
+the gated command actually runs with `ALICE_QA_RUN_GATED_SMOKES=1`.
+
+Run the gated smoke only when focused QA evidence is explicitly needed:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  ALICE_QA_RUN_GATED_SMOKES=1 \
+  qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-file-loader-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/file-loader-smoke
+```
+
+The runner allowlist accepts only the exact focused command above for this
+scenario. Do not add general shell commands, nested scenario paths, generated
+fixtures, local absolute paths, or broader Maven test selections to the smoke
+scenario.
 
 ## User-visible recovery behavior
 
@@ -275,6 +351,17 @@ The direct `FileProjectLoader` characterization also has no runtime
 configuration. It uses generated temporary files and the existing project writer
 and loader.
 
+The file-loader QA smoke scenario uses the existing Alice desktop QA runner
+configuration:
+
+| Setting | Default or required value | Purpose |
+| --- | --- | --- |
+| `NODE_OPTIONS` | `--max-old-space-size=32768` | Gives Maven and QA validation enough heap for this checkout. |
+| `ALICE_QA_SCENARIO_DIR` | `qa/outside-in/alice-desktop/scenarios` | Optional catalog override; leave unset for normal repository validation. |
+| `ALICE_QA_RUN_GATED_SMOKES` | unset | Leave unset for `--prepare-only`; set to `1` only to execute the focused file-loader Maven smoke. |
+| Scenario `automation.cwd` | `.` | Runs from the repository root. |
+| Scenario `automation.timeoutSeconds` | `600` | Bounds the focused Maven smoke. |
+
 ## Compatibility rules
 
 Changes to project load or recovery behavior preserve these rules:
@@ -292,8 +379,10 @@ Changes to project load or recovery behavior preserve these rules:
    protected `FileProjectLoader` seam returns a non-null project.
 8. A corrupt generated temporary `.a3p` project loaded through the same protected
    seam returns `null`.
-9. Characterization fixtures are generated in temporary files; tests do not
-   depend on Git LFS archives, Sims assets, desktop launch, or dialog clicking.
+9. The file-loader QA smoke scenario validates and runs only the focused
+   `FileProjectLoaderTest` command through the Alice desktop QA runner allowlist.
+10. Characterization fixtures are generated in temporary files; tests do not
+    depend on Git LFS archives, Sims assets, desktop launch, or dialog clicking.
 
 ## Validation
 
@@ -306,14 +395,37 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Run the direct file-loader characterization from the repository root:
+Run the direct file-loader characterization from the repository root. This is
+the same focused Maven command allowed by the QA smoke scenario:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.ide.uricontent.FileProjectLoaderTest \
   test
+```
+
+Validate the Alice desktop QA catalog and the file-loader smoke scenario from
+the repository root:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh \
+  --dump-json alice-desktop-file-loader-smoke
+```
+
+Check the runner path without executing the gated Maven smoke:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-file-loader-smoke \
+  --prepare-only
 ```
 
 Run the focused recovery characterization from the repository root:
