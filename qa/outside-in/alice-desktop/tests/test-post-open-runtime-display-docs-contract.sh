@@ -53,6 +53,7 @@ supporting_artifacts = [
     "tab-click-observation.json",
     "post-project-open-observation.json",
     "controlled-display-pixel-observation.json",
+    "visible-rendering-pixel-sampling-blocker.json",
 ]
 decision_fields = [
     "automationMode",
@@ -85,7 +86,8 @@ for name in ("reference", "howto", "tutorial", "qa_reference", "readme"):
     for required_status in (
         "runtime-display-accessibility-status.txt",
         "controlledDisplayPixelStatus",
-        "outcome=passed",
+        "outcome=blocked",
+        "visibleRenderingPixelSamplingStatus=blocked",
     ):
         if required_status not in text:
             errors.append(f"{name} doc must document final/probe status contract: {required_status}")
