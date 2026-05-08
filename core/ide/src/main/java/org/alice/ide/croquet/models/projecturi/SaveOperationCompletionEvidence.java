@@ -8,6 +8,7 @@ import org.lgna.croquet.views.MenuItem;
 import org.lgna.croquet.views.ViewController;
 
 import javax.swing.JMenuItem;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -201,6 +202,10 @@ final class SaveOperationCompletionEvidence {
   }
 
   private static String resultJson(String operationClass, String extension, SaveOperationFlow.Result result) {
+    File savedFile = result.savedFile();
+    Path savedPath = savedFile == null ? null : savedFile.toPath();
+    boolean savedFileExists = savedPath != null && Files.isRegularFile(savedPath);
+    Long fileSizeBytes = savedFileExists ? savedFileSizeBytes(savedPath) : null;
     return "{\n"
         + "  \"schema_version\": \"eatme.alice-desktop-save-operation-result/v1\",\n"
         + "  \"status\": \"" + status(result) + "\",\n"
@@ -211,12 +216,12 @@ final class SaveOperationCompletionEvidence {
         + "  \"canceled\": " + result.canceled() + ",\n"
         + "  \"prompt_count\": " + result.promptCount() + ",\n"
         + "  \"save_attempts\": " + result.saveAttempts() + ",\n"
-        + "  \"saved_file\": " + savedFileJson(result) + ",\n"
-        + "  \"saved_file_exists\": " + savedFileExistsJson(result) + ",\n"
-        + "  \"saved_file_size_bytes\": " + savedFileSizeJson(result) + ",\n"
+        + "  \"saved_file\": " + savedFileJson(savedFile) + ",\n"
+        + "  \"saved_file_exists\": " + savedFileExistsJson(savedFile, savedFileExists) + ",\n"
+        + "  \"saved_file_size_bytes\": " + savedFileSizeJson(fileSizeBytes) + ",\n"
         + "  \"dialogType\": \"Swing JFileChooser\",\n"
         + "  \"evidencePath\": \"Save dialog control/write path\",\n"
-        + "  \"wroteFile\": " + wroteFile(result, extension) + ",\n"
+        + "  \"wroteFile\": " + wroteFile(savedPath, fileSizeBytes, extension) + ",\n"
         + "  \"fileExtension\": \"" + escapeJson(nullToBlank(extension)) + "\",\n"
         + "  \"claim\": \"Save control/dialog approval reached a non-empty .a3p project file write\",\n"
         + "  \"doesNotClaim\": [\n"
@@ -251,10 +256,10 @@ final class SaveOperationCompletionEvidence {
         + "  \"result_status\": \"" + status(result) + "\",\n"
         + "  \"prompt_count\": " + result.promptCount() + ",\n"
         + "  \"save_attempts\": " + result.saveAttempts() + ",\n"
-        + "  \"saved_file\": " + savedFileJson(result) + ",\n"
+        + "  \"saved_file\": " + savedFileJson(result.savedFile()) + ",\n"
         + "  \"dialog_targets\": {\n"
         + "    \"desktop_frame\": \"org.lgna.croquet.DocumentFrame#showSaveFileDialog(File,String,String)\",\n"
-        + "    \"native_chooser\": \"edu.cmu.cs.dennisc.java.awt.FileDialogUtilities#showSaveFileDialog(Component,File,String,String)\"\n"
+        + "    \"swing_file_chooser\": \"edu.cmu.cs.dennisc.java.awt.FileDialogUtilities#showSaveFileDialog(Component,File,String,String)\"\n"
         + "  },\n"
         + "  \"reporting_summary\": \"" + escapeJson(summary) + "\",\n"
         + "  \"missing_evidence\": [\n"
@@ -397,49 +402,59 @@ final class SaveOperationCompletionEvidence {
         + "  ]\n";
   }
 
-  private static String savedFileJson(SaveOperationFlow.Result result) {
-    return result.savedFile() == null
+  private static String savedFileJson(File savedFile) {
+    return savedFile == null
         ? "null"
-        : "\"" + escapeJson(result.savedFile().getPath()) + "\"";
+        : "\"" + escapeJson(redactedSavedFilePath(savedFile)) + "\"";
   }
 
-  private static String savedFileExistsJson(SaveOperationFlow.Result result) {
-    return result.savedFile() == null
-        ? "null"
-        : Boolean.toString(Files.isRegularFile(result.savedFile().toPath()));
+  private static String redactedSavedFilePath(File savedFile) {
+    return redactedSavedPath(savedFile.toPath());
   }
 
-  private static String savedFileSizeJson(SaveOperationFlow.Result result) {
-    if (result.savedFile() == null || !Files.isRegularFile(result.savedFile().toPath())) {
-      return "null";
+  private static String redactedSavedPath(Path savedPath) {
+    Path path = savedPath.normalize();
+    if (!path.isAbsolute()) {
+      return path.toString();
     }
+    Path cwd = Path.of("").toAbsolutePath().normalize();
+    if (path.startsWith(cwd)) {
+      return cwd.relativize(path).toString();
+    }
+    Path fileName = path.getFileName();
+    return "[redacted]/" + (fileName == null ? "" : fileName.toString());
+  }
+
+  private static String savedFileExistsJson(File savedFile, boolean savedFileExists) {
+    return savedFile == null
+        ? "null"
+        : Boolean.toString(savedFileExists);
+  }
+
+  private static String savedFileSizeJson(Long savedFileSizeBytes) {
+    return savedFileSizeBytes == null ? "null" : savedFileSizeBytes.toString();
+  }
+
+  private static Long savedFileSizeBytes(Path savedPath) {
     try {
-      return Long.toString(Files.size(result.savedFile().toPath()));
+      return Files.size(savedPath);
     } catch (IOException ioe) {
-      return "null";
+      Logger.throwable(ioe, "eatme Save operation completion evidence could not measure saved file: " + redactedSavedPath(savedPath));
+      return null;
     }
   }
 
-  private static boolean wroteFile(SaveOperationFlow.Result result, String extension) {
-    if (result.savedFile() == null) {
-      return false;
-    }
-    Path savedPath = result.savedFile().toPath();
-    if (!Files.isRegularFile(savedPath)) {
-      return false;
-    }
+  private static boolean wroteFile(Path savedPath, Long savedFileSizeBytes, String extension) {
     if (!hasExtension(savedPath, extension)) {
       return false;
     }
-    try {
-      return Files.size(savedPath) > 0;
-    } catch (IOException ioe) {
-      Logger.throwable(ioe, "eatme Save operation completion evidence could not measure saved file: " + savedPath);
-      return false;
-    }
+    return savedFileSizeBytes != null && savedFileSizeBytes > 0;
   }
 
   private static boolean hasExtension(Path savedPath, String extension) {
+    if (savedPath == null) {
+      return false;
+    }
     if (extension == null || extension.isBlank()) {
       return true;
     }

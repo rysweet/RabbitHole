@@ -1,12 +1,12 @@
-# [PLANNED - Implementation Pending] Save Menu Dialog Write Proof
+# Save Menu Dialog Write Proof
 
-This reference describes the intended bounded desktop-safe proof shard for Alice project Save: actual Save menu item activation, Swing `JFileChooser` approval, and a real `.a3p` file write.
+This reference describes the bounded desktop-safe proof shard for Alice project Save: actual Save menu item activation, Swing `JFileChooser` approval, and a real `.a3p` file write.
 
 ## Contents
 
 - [Purpose](#purpose)
-- [Planned canonical proof shard](#planned-canonical-proof-shard)
-- [Planned execution contract](#planned-execution-contract)
+- [Canonical proof shard](#canonical-proof-shard)
+- [Execution contract](#execution-contract)
 - [Evidence artifacts](#evidence-artifacts)
 - [API boundaries](#api-boundaries)
 - [Configuration](#configuration)
@@ -30,7 +30,7 @@ Save menu item doClick()
 
 Linux Swing `JFileChooser` is the expected controlled dialog. The proof does not require a native `java.awt.FileDialog` peer.
 
-## Planned canonical proof shard
+## Canonical proof shard
 
 The canonical test target is:
 
@@ -38,15 +38,15 @@ The canonical test target is:
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/StageIdeSaveMenuDoClickToWriteProofTest.java
 ```
 
-When complete, the test creates controlled temporary project state, obtains the production Save menu item through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)`, activates it with `doClick()`, controls the live Swing `JFileChooser`, and asserts that the approved target file is a non-empty `.a3p`.
+The test creates controlled temporary project state, obtains the production Save menu item through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)`, activates it with `doClick()`, controls the live Swing `JFileChooser`, and asserts that the approved target file is a non-empty `.a3p`.
 
 The proof must not call `SaveOperationFlow` directly. `SaveOperationFlow` remains the production coordination layer reached through the menu operation.
 
-## Planned execution contract
+## Execution contract
 
 ### Success
 
-A successful final implementation proves all of the following in one bounded path:
+A successful run proves all of the following in one bounded path:
 
 | Required observation | Meaning |
 | --- | --- |
@@ -68,7 +68,7 @@ This blocker is the intended desktop-precondition blocker for the canonical shar
 
 ## Evidence artifacts
 
-The planned reviewer-facing proof artifact is:
+The reviewer-facing proof artifact is:
 
 ```text
 stageide-save-menu-doclick-write-proof.json
@@ -80,18 +80,19 @@ The test-owned artifact location is under:
 core/ide/target/stageide-save-menu-doclick-write-proof-test/<run-id>/doclick-to-written-file/evidence/
 ```
 
-This artifact is separate from `SaveOperationCompletionEvidence`. `SaveOperationCompletionEvidence` records Save completion facts such as `saved_file_exists` and `saved_file_size_bytes`; it is not the source for the planned `dialogType`, `wroteFile`, or `selectedFile` fields.
+This artifact is separate from `SaveOperationCompletionEvidence`. `SaveOperationCompletionEvidence` records Save completion facts such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts; it is not the source for the full menu activation, chooser approval, and selected-file proof.
 
-The planned canonical proof artifact records:
+The canonical proof artifact records:
 
 | Field | Contract |
 | --- | --- |
 | `status` | `proven` only when menu activation, chooser approval, and file write assertions all pass. |
 | `dialogType` | `Swing JFileChooser` for the controlled Linux Swing chooser path. |
-| `wroteFile` | `true` only after the target exists, has `.a3p` extension, is inside the temp directory, and has non-zero size. |
-| `selectedFile` | The normalized approved path inside the test temp directory. |
-| `operation` | `org.alice.ide.croquet.models.projecturi.SaveProjectOperation`. |
-| `source` | The production Save menu path through `AbstractSaveOperation.perform`. |
+| `wroteFile` | `true` only after the target exists inside the proof root, has `.a3p` extension, and has non-zero size. |
+| `selected_file.normalized_selected_file` | The temp-relative normalized approved path, so reviewer artifacts do not expose machine-specific absolute paths. |
+| `written_artifact.target_inside_proof_root` | `true` only when the written target stayed inside the controlled proof root. |
+| `proof_chain` | The production Save menu path from `menuItem.doClick()` through `SaveProjectOperation`, `AbstractSaveOperation.perform`, dialog approval, and project write. |
+| `trigger.menu_item_doclick` | `true` for the production Save menu item activation path. |
 | `doesNotClaim` | Explicit exclusions for lesson completion, rendering, grading, broad UI automation, and native dialog coverage. |
 
 The dialog-discovery companion artifact is:
@@ -156,15 +157,16 @@ To collect dialog-discovery evidence for this proof, set:
 
 ## Examples
 
-### Planned successful proof result
+### Successful proof result
 
 ```json
 {
   "status": "proven",
-  "operation": "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
   "dialogType": "Swing JFileChooser",
   "wroteFile": true,
-  "savedFileExtension": "a3p",
+  "written_artifact": {
+    "file_extension": "a3p"
+  },
   "doesNotClaim": [
     "full lesson completion",
     "visible rendering correctness",
@@ -179,9 +181,12 @@ To collect dialog-discovery evidence for this proof, set:
 
 ```json
 {
-  "status": "blocked",
+  "status": "unsupported",
   "reason": "No available non-headless AWT display",
-  "requiredPrecondition": "Run with Xvfb or another usable AWT display"
+  "wroteFile": false,
+  "requiresNextEvidence": [
+    "Run this proof shard under xvfb-run -a or an equivalent desktop session"
+  ]
 }
 ```
 

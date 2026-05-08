@@ -67,6 +67,30 @@ public class SaveOperationCompletionEvidenceTest {
   }
 
   @Test
+  public void redactsAbsoluteSavedFileOutsideWorkspaceInEvidence() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("redacted-path-evidence"));
+    Path externalSavedFile = Files.createTempFile("alice-save-evidence-", ".a3p");
+    try {
+      Files.writeString(externalSavedFile, "project");
+      File savedFile = externalSavedFile.toFile();
+      Path artifact = SaveOperationCompletionEvidence.write(
+          evidenceDir,
+          "org.alice.ide.croquet.models.projecturi.SaveProjectOperation",
+          "a3p",
+          new SaveOperationFlow.Result(true, false, 1, 1, savedFile));
+
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("\"saved_file\": \"[redacted]/" + savedFile.getName() + "\""));
+      assertFalse(json, json.contains(SaveOperationCompletionEvidence.escapeJson(externalSavedFile.getParent().toString())));
+      assertTrue(json, json.contains("\"saved_file_exists\": true"));
+      assertTrue(json, json.contains("\"wroteFile\": true"));
+    } finally {
+      Files.deleteIfExists(externalSavedFile);
+    }
+  }
+
+  @Test
   public void wroteFileIsFalseUntilSavedA3pExistsAndIsNonEmpty() throws Exception {
     Path testDir = newTestDir();
     Path evidenceDir = Files.createDirectories(testDir.resolve("empty-file-evidence"));
@@ -134,6 +158,8 @@ public class SaveOperationCompletionEvidenceTest {
       assertTrue(dialogJson, dialogJson.contains("\"schema_version\": \"eatme.alice-desktop-save-dialog-control-target/v1\""));
       assertTrue(dialogJson, dialogJson.contains("\"status\": \"blocked\""));
       assertTrue(dialogJson, dialogJson.contains("\"prompt_count\": 1"));
+      assertTrue(dialogJson, dialogJson.contains("\"swing_file_chooser\""));
+      assertFalse(dialogJson, dialogJson.contains("\"native_chooser\""));
       assertTrue(dialogJson, dialogJson.contains("org.lgna.croquet.DocumentFrame#showSaveFileDialog(File,String,String)"));
       assertTrue(dialogJson, dialogJson.contains("edu.cmu.cs.dennisc.java.awt.FileDialogUtilities#showSaveFileDialog(Component,File,String,String)"));
       assertTrue(dialogJson, dialogJson.contains("desktop Save dialog control"));

@@ -41,7 +41,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Window;
 import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -55,8 +54,6 @@ import java.util.prefs.Preferences;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
 
 /**
  * Proves the full Save menu item doClick → JFileChooser approved → project file written path.
@@ -126,12 +123,19 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
    */
   @Test(timeout = 60000)
   public void saveMenuDoClickApprovesChooserAndWritesProjectFile() throws Exception {
-    assumeFalse("requires Xvfb or another headful AWT display", GraphicsEnvironment.isHeadless());
-
     Path testDir = newTestDir().resolve("doclick-to-written-file");
     Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
     Path projectsDir = Files.createDirectories(testDir.resolve("projects"));
     File targetFile = projectsDir.resolve("doclick-save-proof.a3p").toAbsolutePath().toFile();
+    if (!SaveMenuDoClickProbe.isNonHeadlessAwtDisplayAvailable()) {
+      Path artifact = SaveMenuDoClickProbe.writeNoAvailableNonHeadlessAwtDisplayBlocker(evidenceDir);
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("\"status\": \"unsupported\""));
+      assertTrue(json, json.contains("\"reason\": \"No available non-headless AWT display\""));
+      assertTrue(json, json.contains("\"wroteFile\": false"));
+      assertFalse(json, json.contains("\"wroteFile\": true"));
+      return;
+    }
 
     // Ensure path-injection bypass is NOT active so the real dialog is displayed.
     System.clearProperty(FileDialogUtilities.SAVE_DIALOG_SELECTED_PATH_PROPERTY);
@@ -160,7 +164,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       try {
         ProjectDocumentState.getInstance().setValueTransactionlessly(
             new ProjectDocument(project, new UserActivity()));
-        injectUriProjectLoader(ide, new NewProjectStub());
+        injectUriProjectLoader(ide, new NewProjectLoader());
       } catch (Exception e) {
         throw new RuntimeException("project state injection failed", e);
       }
@@ -195,7 +199,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     });
 
     // Step 2: Start background probe (daemon timer, independent of EDT).
-    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetFile);
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetFile, testDir);
     probe.start();
 
     // Step 3: Trigger via doClick() on the actual Save menu item — not fire() directly.
@@ -220,11 +224,13 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"approved_selection\": true"));
     assertTrue(json, json.contains("\"file_written\": true"));
     assertTrue(json, json.contains("\"file_nonempty\": true"));
+    assertTrue(json, json.contains("\"target_inside_proof_root\": true"));
     assertTrue(json, json.contains("\"dialogType\": \"Swing JFileChooser\""));
     assertTrue(json, json.contains("\"wroteFile\": true"));
     assertTrue(json, json.contains("\"selected_file_verified\": true"));
     assertTrue(json, json.contains("\"ambiguous_chooser_discovery\": false"));
-    assertTrue(json, json.contains("\"normalized_selected_file\": \"" + FileDialogUtilities.escapeJson(targetFile.getCanonicalPath()) + "\""));
+    assertTrue(json, json.contains("\"normalized_selected_file\": \"projects/doclick-save-proof.a3p\""));
+    assertFalse(json, json.contains(FileDialogUtilities.escapeJson(targetFile.getCanonicalPath())));
     assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\""));
     assertTrue(json, json.contains("\"full lesson completion\""));
     assertTrue(json, json.contains("\"visible rendering correctness\""));
@@ -244,17 +250,20 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
   public void blockerArtifactReportsNoAvailableNonHeadlessAwtDisplay() throws Exception {
     Path evidenceDir = Files.createDirectories(newTestDir().resolve("no-display-blocker"));
 
-    Method writeBlocker;
-    try {
-      writeBlocker = SaveMenuDoClickProbe.class.getDeclaredMethod(
-          "writeNoAvailableNonHeadlessAwtDisplayBlocker",
-          Path.class);
-    } catch (NoSuchMethodException nsme) {
-      fail("Save proof shard must provide executable blocker artifact writer: No available non-headless AWT display");
+    if (SaveMenuDoClickProbe.isNonHeadlessAwtDisplayAvailable()) {
+      boolean refused = false;
+      try {
+        SaveMenuDoClickProbe.writeNoAvailableNonHeadlessAwtDisplayBlocker(evidenceDir);
+      } catch (IllegalStateException expected) {
+        refused = true;
+        assertTrue(expected.getMessage().contains("non-headless AWT display is available"));
+      }
+      assertTrue("blocker artifact must not be written when a display is available", refused);
+      assertFalse(Files.exists(evidenceDir.resolve(SaveMenuDoClickProbe.ARTIFACT)));
       return;
     }
-    writeBlocker.setAccessible(true);
-    Path artifact = (Path) writeBlocker.invoke(null, evidenceDir);
+
+    Path artifact = SaveMenuDoClickProbe.writeNoAvailableNonHeadlessAwtDisplayBlocker(evidenceDir);
 
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"status\": \"unsupported\""));
@@ -276,6 +285,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private static final int MAX_POLLS = 400;
 
     private final File targetFile;
+    private final Path proofRoot;
+    private final String targetCanonicalPath;
     private volatile boolean chooserObserved;
     private volatile boolean approvedSelection;
     private volatile boolean selectedFileVerified;
@@ -287,8 +298,10 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private volatile int pollCount;
     private java.util.Timer bgTimer;
 
-    SaveMenuDoClickProbe(File targetFile) {
+    SaveMenuDoClickProbe(File targetFile, Path proofRoot) throws java.io.IOException {
       this.targetFile = targetFile;
+      this.proofRoot = proofRoot.toRealPath();
+      this.targetCanonicalPath = targetFile.getCanonicalPath();
     }
 
     void start() {
@@ -311,7 +324,28 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       return artifactPathFor(evidenceDir);
     }
 
+    static boolean isNonHeadlessAwtDisplayAvailable() {
+      if (GraphicsEnvironment.isHeadless()) {
+        return false;
+      }
+      java.awt.Frame probeFrame = null;
+      try {
+        probeFrame = new java.awt.Frame();
+        probeFrame.pack();
+        return true;
+      } catch (java.awt.HeadlessException | java.awt.AWTError e) {
+        return false;
+      } finally {
+        if (probeFrame != null) {
+          probeFrame.dispose();
+        }
+      }
+    }
+
     private static Path writeNoAvailableNonHeadlessAwtDisplayBlocker(Path evidenceDir) throws Exception {
+      if (isNonHeadlessAwtDisplayAvailable()) {
+        throw new IllegalStateException("Cannot write display blocker because a non-headless AWT display is available");
+      }
       Files.createDirectories(evidenceDir);
       Path artifact = artifactPathFor(evidenceDir);
       Files.writeString(
@@ -348,13 +382,16 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
 
     void writeResult(Path evidenceDir) throws Exception {
-      String targetCanonical = this.targetFile.getCanonicalPath();
       String selectedCanonical = this.normalizedSelectedFile;
+      String selectedEvidencePath = proofRelativePath(selectedCanonical);
+      String targetEvidencePath = proofRelativePath(this.targetCanonicalPath);
       boolean fileWritten = this.targetFile.isFile();
-      boolean fileNonempty = fileWritten && this.targetFile.length() > 0;
+      long fileSizeBytes = fileWritten ? this.targetFile.length() : 0;
+      boolean fileNonempty = fileSizeBytes > 0;
       boolean fileHasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
-      boolean selectedFileMatchesExpected = targetCanonical.equals(selectedCanonical);
-      boolean wroteFile = fileWritten && fileNonempty && fileHasExpectedExtension;
+      boolean targetInsideProofRoot = proofContainsPath(this.targetCanonicalPath);
+      boolean selectedFileMatchesExpected = this.targetCanonicalPath.equals(selectedCanonical);
+      boolean wroteFile = fileWritten && fileNonempty && fileHasExpectedExtension && targetInsideProofRoot;
       boolean proven = this.chooserObserved
           && this.approvedSelection
           && this.selectedFileVerified
@@ -403,19 +440,20 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
                + "    \"approved_selection\": " + this.approvedSelection + ",\n"
                + "    \"poll_count\": " + this.pollCount + "\n"
                + "  },\n"
-              + "  \"selected_file\": {\n"
-              + "    \"selected_file_verified\": " + this.selectedFileVerified + ",\n"
-              + "    \"normalized_selected_file\": " + stringJson(selectedCanonical) + ",\n"
-              + "    \"expected_file\": " + stringJson(targetCanonical) + ",\n"
-              + "    \"selected_file_matches_expected\": " + selectedFileMatchesExpected + "\n"
-              + "  },\n"
-               + "  \"written_artifact\": {\n"
-              + "    \"target_file\": " + stringJson(targetCanonical) + ",\n"
-               + "    \"file_written\": " + fileWritten + ",\n"
+               + "  \"selected_file\": {\n"
+               + "    \"selected_file_verified\": " + this.selectedFileVerified + ",\n"
+               + "    \"normalized_selected_file\": " + stringJson(selectedEvidencePath) + ",\n"
+               + "    \"expected_file\": " + stringJson(targetEvidencePath) + ",\n"
+               + "    \"selected_file_matches_expected\": " + selectedFileMatchesExpected + "\n"
+               + "  },\n"
+                + "  \"written_artifact\": {\n"
+               + "    \"target_file\": " + stringJson(targetEvidencePath) + ",\n"
+                + "    \"file_written\": " + fileWritten + ",\n"
                + "    \"file_nonempty\": " + fileNonempty + ",\n"
-              + "    \"file_extension\": \"a3p\",\n"
-              + "    \"file_has_expected_extension\": " + fileHasExpectedExtension + ",\n"
-              + "    \"file_size_bytes\": " + (fileWritten ? this.targetFile.length() : 0) + "\n"
+               + "    \"file_extension\": \"a3p\",\n"
+               + "    \"file_has_expected_extension\": " + fileHasExpectedExtension + ",\n"
+               + "    \"target_inside_proof_root\": " + targetInsideProofRoot + ",\n"
+               + "    \"file_size_bytes\": " + fileSizeBytes + "\n"
                + "  },\n"
                + "  \"doesNotClaim\": [\n"
               + "    \"full lesson completion\",\n"
@@ -430,12 +468,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     private void poll() {
       int count = ++this.pollCount;
-      List<ChooserCandidate> candidates = new ArrayList<>();
-      for (Window window : Window.getWindows()) {
-        if (window instanceof JDialog dialog) {
-          addChoosers(dialog, dialog, candidates);
-        }
-      }
+      List<ChooserCandidate> candidates = findChooserCandidates();
       if (candidates.size() > 1) {
         this.chooserObserved = true;
         this.ambiguousChooserDiscovery = true;
@@ -456,15 +489,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       if (count >= MAX_POLLS) {
         this.failureReason = "swing_jfilechooser_not_observed_before_timeout";
         this.bgTimer.cancel();
-        SwingUtilities.invokeLater(() -> {
-          for (Window w : Window.getWindows()) {
-            if (w instanceof JDialog d) {
-              for (JFileChooser fc : findChoosers(d)) {
-                fc.cancelSelection();
-              }
-            }
-          }
-        });
+        cancelCurrentChoosersOnEdt();
       }
     }
 
@@ -474,7 +499,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
           chooser.setSelectedFile(this.targetFile);
           File selectedFile = chooser.getSelectedFile();
           this.normalizedSelectedFile = selectedFile == null ? null : selectedFile.getCanonicalPath();
-          this.selectedFileVerified = this.targetFile.getCanonicalPath().equals(this.normalizedSelectedFile);
+          this.selectedFileVerified = this.targetCanonicalPath.equals(this.normalizedSelectedFile);
           if (this.selectedFileVerified) {
             this.approvedSelection = true;
             chooser.approveSelection();
@@ -497,30 +522,31 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       });
     }
 
-    private static void addChoosers(JDialog dialog, Component component, List<ChooserCandidate> candidates) {
+    private static void cancelCurrentChoosersOnEdt() {
+      SwingUtilities.invokeLater(() -> {
+        for (ChooserCandidate candidate : findChooserCandidates()) {
+          candidate.chooser().cancelSelection();
+        }
+      });
+    }
+
+    private static List<ChooserCandidate> findChooserCandidates() {
+      List<ChooserCandidate> candidates = new ArrayList<>();
+      for (Window window : Window.getWindows()) {
+        if (window instanceof JDialog dialog && dialog.isShowing()) {
+          addChooserCandidates(dialog, dialog, candidates);
+        }
+      }
+      return candidates;
+    }
+
+    private static void addChooserCandidates(JDialog dialog, Component component, List<ChooserCandidate> candidates) {
       if (component instanceof JFileChooser chooser) {
         candidates.add(new ChooserCandidate(dialog, chooser));
       }
       if (component instanceof Container container) {
         for (Component child : container.getComponents()) {
-          addChoosers(dialog, child, candidates);
-        }
-      }
-    }
-
-    private static List<JFileChooser> findChoosers(Component component) {
-      List<JFileChooser> choosers = new ArrayList<>();
-      addJFileChoosers(component, choosers);
-      return choosers;
-    }
-
-    private static void addJFileChoosers(Component component, List<JFileChooser> choosers) {
-      if (component instanceof JFileChooser chooser) {
-        choosers.add(chooser);
-      }
-      if (component instanceof Container container) {
-        for (Component child : container.getComponents()) {
-          addJFileChoosers(child, choosers);
+          addChooserCandidates(dialog, child, candidates);
         }
       }
     }
@@ -531,6 +557,21 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         throw new IllegalArgumentException("Save menu doClick proof artifact escapes evidence dir");
       }
       return artifact;
+    }
+
+    private String proofRelativePath(String canonicalPath) {
+      if (canonicalPath == null) {
+        return null;
+      }
+      Path path = Path.of(canonicalPath).normalize();
+      if (!proofContainsPath(canonicalPath)) {
+        return "[outside-proof-root]";
+      }
+      return this.proofRoot.relativize(path).toString().replace(File.separatorChar, '/');
+    }
+
+    private boolean proofContainsPath(String canonicalPath) {
+      return canonicalPath != null && Path.of(canonicalPath).normalize().startsWith(this.proofRoot);
     }
 
     private static String stringJson(String value) {
@@ -548,6 +589,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
    * Used to obtain the actual Save menu item from getMenuItemPrepModel().createMenuItemAndAddTo().
    */
   private static final class CapturingMenuItemContainer implements MenuItemContainer {
+    private static final AwtComponentView<?>[] NO_MENU_COMPONENTS = new AwtComponentView<?>[0];
+
     private MenuItem menuItem;
 
     @Override
@@ -575,7 +618,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     @Override
     public AwtComponentView<?>[] getMenuComponents() {
-      return new AwtComponentView<?>[0];
+      return NO_MENU_COMPONENTS;
     }
 
     @Override
@@ -663,8 +706,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
   }
 
   /**
-   * Injects a UriProjectLoader stub into the application so ProjectSaveTargetPlan.choose()
-   * does not NPE. This field is normally set by ProjectApplication.loadProject().
+   * Injects a UriProjectLoader test double so ProjectSaveTargetPlan.choose() can
+   * use the same new-project branch normally prepared by ProjectApplication.loadProject().
    */
   private static void injectUriProjectLoader(StageIDE ide, UriProjectLoader loader) throws Exception {
     Class<?> c = ide.getClass();
@@ -691,8 +734,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     return new Project(programType, Project.SceneCameraType.WindowCamera);
   }
 
-  private static final class NewProjectStub extends UriProjectLoader {
-    NewProjectStub() {
+  private static final class NewProjectLoader extends UriProjectLoader {
+    NewProjectLoader() {
       super(false);
     }
 

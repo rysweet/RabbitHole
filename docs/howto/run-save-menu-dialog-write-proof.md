@@ -1,6 +1,6 @@
-# [PLANNED - Implementation Pending] Run the Save Menu Dialog Write Proof
+# Run the Save Menu Dialog Write Proof
 
-Use this guide to run the planned bounded Alice desktop Save proof that activates the real Save menu item, approves the Swing Save chooser, and writes a non-empty `.a3p` file.
+Use this guide to run the bounded Alice desktop Save proof that activates the real Save menu item, approves the Swing Save chooser, and writes a non-empty `.a3p` file.
 
 ## Prerequisites
 
@@ -58,14 +58,16 @@ xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-Review `desktop-save-dialog-discovery-target.json` for owner/root/selection-target facts before the chooser appears. Review the planned canonical proof artifact, `stageide-save-menu-doclick-write-proof.json`, under `core/ide/target/stageide-save-menu-doclick-write-proof-test/<run-id>/doclick-to-written-file/evidence/` for these final write facts:
+Review `desktop-save-dialog-discovery-target.json` for owner/root/selection-target facts before the chooser appears. Review the canonical proof artifact, `stageide-save-menu-doclick-write-proof.json`, under `core/ide/target/stageide-save-menu-doclick-write-proof-test/<run-id>/doclick-to-written-file/evidence/` for these final write facts:
 
 | Field | Expected value |
 | --- | --- |
 | `status` | `proven` |
 | `dialogType` | `Swing JFileChooser` |
 | `wroteFile` | `true` |
-| `savedFileExtension` | `a3p` |
+| `selected_file.normalized_selected_file` | Temp-relative `.a3p` path, for example `projects/doclick-save-proof.a3p` |
+| `written_artifact.file_extension` | `a3p` |
+| `written_artifact.target_inside_proof_root` | `true` |
 | `doesNotClaim` | Includes lesson completion, rendering, grading, broad UI automation, and native dialog exclusions. |
 
-Do not use `SaveOperationCompletionEvidence` as the source for `dialogType`, `wroteFile`, or `selectedFile`; that evidence records Save completion fields such as `saved_file_exists` and `saved_file_size_bytes`. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
+Use `stageide-save-menu-doclick-write-proof.json` as the source for the full menu activation, chooser approval, selected path, and project-file write claim. `SaveOperationCompletionEvidence` records Save completion fields such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts, but it does not by itself prove Save menu activation. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
