@@ -136,7 +136,7 @@ The planned Select Project Africa Full feature must pass `targetStarter.displayN
 Before adding or changing a scenario:
 
 1. Keep actions and outcomes observable from the user-visible Alice desktop.
-2. Use one of the supported workflows: `launch`, `instructor-student-setup`, `scene-creation`, `run-debug`, `save-load`, `select-project-interaction-smoke`, `open-load-save`, `export`, `exported-project-smoke`, `netbeans-package-smoke`, `package-install-smoke`, `project-io-smoke`, `failure-path-smoke`, `future-ui-smoke`, `menu-action-smoke`, `post-open-runtime-display-accessibility-evidence`, `tweedle-decoder-boundary-smoke`, `tweedle-decoder-this-call-smoke`, or `wizard-palette-completion-smoke`.
+2. Use one of the supported workflows: `launch`, `instructor-student-setup`, `scene-creation`, `run-debug`, `save-load`, `save-menu-dialog-write-proof`, `select-project-interaction-smoke`, `open-load-save`, `export`, `exported-project-smoke`, `netbeans-package-smoke`, `package-install-smoke`, `project-io-smoke`, `failure-path-smoke`, `future-ui-smoke`, `menu-action-smoke`, `post-open-runtime-display-accessibility-evidence`, `tweedle-decoder-boundary-smoke`, `tweedle-decoder-this-call-smoke`, or `wizard-palette-completion-smoke`.
 3. Use `xvfb-real-alice` only when the runner can execute the real Alice command and collect logs/screenshots.
 4. Use `manual-evidence-required` when human Swing interaction is required.
 5. Name concrete required artifacts in `evidence.required`; manual workflows also require `review-notes.txt` for acceptance.

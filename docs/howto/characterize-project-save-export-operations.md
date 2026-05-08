@@ -9,6 +9,7 @@ Use this guide to add or review compatibility tests for Alice project Save, Save
 - [Choose the behavior](#choose-the-behavior)
 - [Add a direct operation test](#add-a-direct-operation-test)
 - [Add a flow-level test through SaveOperationFlow](#add-a-flow-level-test-through-saveoperationflow)
+- [Run the Save menu dialog write proof](#run-the-save-menu-dialog-write-proof)
 - [Add a project archive round-trip test](#add-a-project-archive-round-trip-test)
 - [Run the focused tests](#run-the-focused-tests)
 
@@ -65,6 +66,7 @@ Start with the highest-value untested behavior in the operation layer:
 | Export always prompts and uses export extension | `ExportProjectOperation` |
 | Shared project extension | `AbstractSaveProjectOperation` as observed through Save and Save As operations |
 | Finish, cancel, wait cursor, and retry flow | `SaveOperationFlow` |
+| Planned Save menu item, live Save chooser approval, and `.a3p` write proof | `StageIdeSaveMenuDoClickToWriteProofTest` |
 | Saved Alice project reopens, accepts an edit, saves again, reopens again with the edit, and exports | `IoUtilitiesTest` |
 
 Keep archive-content tests in lower-level classes that save Alice projects,
@@ -167,6 +169,27 @@ And the user activity is finished after the successful retry
 ```
 
 For prompted Save As or Export-style retries, characterize the existing suggestion behavior explicitly: retries use the current project base name when one exists and no suggested base name when no current file exists.
+
+## Run the Save menu dialog write proof
+
+Use the planned canonical proof shard when the behavior must be proven beyond operation dispatch and flow seams. The completed shard starts from the production Save menu item, controls exactly one expected live Swing `JFileChooser`, verifies the normalized temp-directory `.a3p` target, and asserts a non-empty `.a3p` file write.
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest \
+  test
+```
+
+The intended executable blocker for an environment with no usable display is:
+
+```text
+No available non-headless AWT display
+```
+
+Do not broaden this proof while reviewing Save behavior. It does not cover Save As, backup saves, retry behavior, rendering correctness, grading, lesson completion, broad UI automation, or native dialog control.
 
 ## Add a project archive round-trip test
 
