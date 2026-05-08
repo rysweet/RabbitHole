@@ -670,6 +670,14 @@ def visible_showing(candidate):
     state_set = {str(state).lower() for state in states}
     return "visible" in state_set and "showing" in state_set
 
+def has_valid_visible_screen_extents(candidate):
+    return (
+        isinstance(candidate, dict)
+        and visible_showing(candidate)
+        and derived_geometry_status(candidate) == "available"
+        and valid_screen_extents(candidate) is not None
+    )
+
 def derived_geometry_status(candidate):
     status = str(candidate.get("geometryStatus") or "")
     if status in BLOCKED_GEOMETRY_STATUSES or status == "available":
@@ -682,6 +690,25 @@ def derived_geometry_status(candidate):
     if extents.get("coordinateType") != "screen":
         return "invalid-extents"
     return "available" if valid_screen_extents(candidate) is not None else "invalid-extents"
+
+def zero_valid_candidate_geometry_status(candidates):
+    visible_candidates = [
+        candidate for candidate in candidates
+        if isinstance(candidate, dict) and visible_showing(candidate)
+    ]
+    if not visible_candidates:
+        return "missing-extents"
+    statuses = []
+    for candidate in visible_candidates:
+        geometry_status = derived_geometry_status(candidate)
+        if geometry_status == "available":
+            geometry_status = "invalid-extents"
+        statuses.append(geometry_status)
+    if "invalid-extents" in statuses:
+        return "invalid-extents"
+    if "missing-component-interface" in statuses:
+        return "missing-component-interface"
+    return "missing-extents"
 
 def blocked_world_canvas_target(geometry_status, candidate_count):
     return {
@@ -727,21 +754,16 @@ def world_canvas_target_from_runtime_display(runtime_display_path):
     valid_candidates = [
         candidate
         for candidate in candidates
-        if isinstance(candidate, dict)
-        and visible_showing(candidate)
-        and derived_geometry_status(candidate) == "available"
-        and valid_screen_extents(candidate) is not None
+        if has_valid_visible_screen_extents(candidate)
     ]
     if len(valid_candidates) == 1:
         return target_ready_payload(valid_candidates[0], candidate_count)
-    if len(valid_candidates) > 1 or len(candidates) > 1:
+    if len(valid_candidates) > 1:
         return blocked_world_canvas_target("ambiguous-candidates", candidate_count)
-    if len(candidates) == 1 and isinstance(candidates[0], dict):
-        geometry_status = derived_geometry_status(candidates[0])
-        if geometry_status == "available":
-            geometry_status = "invalid-extents"
-        return blocked_world_canvas_target(geometry_status, candidate_count)
-    return blocked_world_canvas_target("missing-extents", candidate_count)
+    return blocked_world_canvas_target(
+        zero_valid_candidate_geometry_status(candidates),
+        candidate_count,
+    )
 
 pixels_observed = value("CONTROLLED_DISPLAY_PIXELS_OBSERVED") == "true"
 screenshot_status = value("CONTROLLED_DISPLAY_SCREENSHOT_STATUS")
@@ -882,6 +904,14 @@ def visible_showing(candidate):
     state_set = {str(state).lower() for state in states}
     return "visible" in state_set and "showing" in state_set
 
+def has_valid_visible_screen_extents(candidate):
+    return (
+        isinstance(candidate, dict)
+        and visible_showing(candidate)
+        and derived_geometry_status(candidate) == "available"
+        and valid_screen_extents(candidate) is not None
+    )
+
 def derived_geometry_status(candidate):
     status = str(candidate.get("geometryStatus") or "")
     if status in BLOCKED_GEOMETRY_STATUSES or status == "available":
@@ -894,6 +924,25 @@ def derived_geometry_status(candidate):
     if extents.get("coordinateType") != "screen":
         return "invalid-extents"
     return "available" if valid_screen_extents(candidate) is not None else "invalid-extents"
+
+def zero_valid_candidate_geometry_status(candidates):
+    visible_candidates = [
+        candidate for candidate in candidates
+        if isinstance(candidate, dict) and visible_showing(candidate)
+    ]
+    if not visible_candidates:
+        return "missing-extents"
+    statuses = []
+    for candidate in visible_candidates:
+        geometry_status = derived_geometry_status(candidate)
+        if geometry_status == "available":
+            geometry_status = "invalid-extents"
+        statuses.append(geometry_status)
+    if "invalid-extents" in statuses:
+        return "invalid-extents"
+    if "missing-component-interface" in statuses:
+        return "missing-component-interface"
+    return "missing-extents"
 
 def blocker_metadata(runtime_display_path):
     if not runtime_display_path:
@@ -912,19 +961,11 @@ def blocker_metadata(runtime_display_path):
     valid_candidates = [
         candidate
         for candidate in candidates
-        if isinstance(candidate, dict)
-        and visible_showing(candidate)
-        and derived_geometry_status(candidate) == "available"
-        and valid_screen_extents(candidate) is not None
+        if has_valid_visible_screen_extents(candidate)
     ]
-    if len(valid_candidates) > 1 or len(candidates) > 1:
+    if len(valid_candidates) > 1:
         return "ambiguous-candidates", candidate_count
-    if len(candidates) == 1 and isinstance(candidates[0], dict):
-        geometry_status = derived_geometry_status(candidates[0])
-        if geometry_status == "available":
-            geometry_status = "invalid-extents"
-        return geometry_status, candidate_count
-    return "missing-extents", candidate_count
+    return zero_valid_candidate_geometry_status(candidates), candidate_count
 
 geometry_status, candidate_count = blocker_metadata(
     os.environ.get("VISIBLE_RENDERING_RUNTIME_DISPLAY_ARTIFACT", "")

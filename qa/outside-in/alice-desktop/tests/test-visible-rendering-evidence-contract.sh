@@ -623,6 +623,235 @@ PY
   assert_success "$target_blocked_status" "target blocker writer output preserves exact blocker contract"
 fi
 
+target_multiple_missing_dir="$tmp_root/target-multiple-missing-fixture"
+mkdir -p "$target_multiple_missing_dir"
+cat >"$target_multiple_missing_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" <<'EOF'
+{
+  "automationMode": "xvfb-real-alice",
+  "blocker": "none",
+  "blockerDetail": "",
+  "claim": "post-open-runtime-display-accessibility-evidence",
+  "javaPid": 12345,
+  "postOpenRuntimeDisplayAccessibilityObserved": true,
+  "postOpenWindowObserved": true,
+  "runtimeDisplayCandidateCount": 2,
+  "runtimeDisplayCandidates": [
+    {
+      "childCount": 0,
+      "geometryStatus": "missing-extents",
+      "name": "Scene display A",
+      "path": "application/0/3",
+      "role": "canvas",
+      "screenExtents": null,
+      "states": ["enabled", "showing", "visible"]
+    },
+    {
+      "childCount": 0,
+      "geometryStatus": "missing-extents",
+      "name": "Scene display B",
+      "path": "application/0/4",
+      "role": "canvas",
+      "states": ["enabled", "showing", "visible"]
+    }
+  ],
+  "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
+  "status": "observed",
+  "traversalErrors": []
+}
+EOF
+
+bash -c '
+  . "$1"
+  write_controlled_display_pixel_observation \
+    "$2" \
+    observed \
+    none \
+    "" \
+    ":99" \
+    true \
+    controlled-display-pixels-observed-rendering-not-asserted \
+    "" \
+    alice-window-found \
+    running \
+    screenshot-captured \
+    "$2/screenshot.png" \
+    /usr/bin/Xvfb \
+    import \
+    non-black-pixels \
+    "Screenshot is 640x480 with non-black pixel data." \
+    after-readiness-wait \
+    observed \
+    x-window-inventory.json \
+    2 \
+    "$2/post-open-runtime-display-accessibility-evidence.json"
+  write_visible_rendering_pixel_target_blocker \
+    "$2" \
+    observed \
+    none \
+    "$2/screenshot.png" \
+    screenshot-captured \
+    non-black-pixels \
+    "$2/post-open-runtime-display-accessibility-evidence.json"
+' _ "$RUNNER" "$target_multiple_missing_dir" >"$tmp_root/target-multiple-missing-writer.out" 2>"$tmp_root/target-multiple-missing-writer.err"
+status=$?
+assert_success "$status" "runner handles multiple visible/showing candidates with missing extents as non-ambiguous blockers"
+
+if [ "$status" -eq 0 ]; then
+  python3 - \
+    "$target_multiple_missing_dir/$CONTROLLED_ARTIFACT" \
+    "$target_multiple_missing_dir/$BLOCKER_ARTIFACT" \
+    >"$tmp_root/target-multiple-missing-contract.out" \
+    2>"$tmp_root/target-multiple-missing-contract.err" <<'PY'
+import json
+import sys
+
+controlled = json.load(open(sys.argv[1], encoding="utf-8"))
+blocker = json.load(open(sys.argv[2], encoding="utf-8"))
+controlled_target = controlled.get("worldCanvasPixelTarget") or {}
+blocker_target = blocker.get("worldCanvasPixelTarget") or {}
+
+for label, payload, target in (
+    ("controlled", controlled, controlled_target),
+    ("blocker", blocker, blocker_target),
+):
+    if payload.get("geometryStatus") == "ambiguous-candidates":
+        raise AssertionError(f"{label} artifact must not mark missing extents as ambiguous")
+    if target.get("geometryStatus") != "missing-extents":
+        raise AssertionError(f"{label} target must preserve missing-extents, got {target.get('geometryStatus')!r}")
+    if target.get("identified") is not False:
+        raise AssertionError(f"{label} target must not be identified with zero valid extents")
+    if target.get("status") != "blocked":
+        raise AssertionError(f"{label} target must stay blocked with zero valid extents")
+    if target.get("runtimeDisplayCandidateCount") != 2:
+        raise AssertionError(f"{label} target must preserve raw candidate count")
+if controlled.get("claim") != "controlled-display-pixels-observed-rendering-not-asserted":
+    raise AssertionError("controlled artifact may keep only screenshot-consistency claim")
+PY
+  target_multiple_missing_status=$?
+  assert_success "$target_multiple_missing_status" "multiple missing-extents candidates do not produce ambiguity or readiness"
+fi
+
+target_multiple_invalid_dir="$tmp_root/target-multiple-invalid-fixture"
+mkdir -p "$target_multiple_invalid_dir"
+cat >"$target_multiple_invalid_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" <<'EOF'
+{
+  "automationMode": "xvfb-real-alice",
+  "blocker": "none",
+  "blockerDetail": "",
+  "claim": "post-open-runtime-display-accessibility-evidence",
+  "javaPid": 12345,
+  "postOpenRuntimeDisplayAccessibilityObserved": true,
+  "postOpenWindowObserved": true,
+  "runtimeDisplayCandidateCount": 4,
+  "runtimeDisplayCandidates": [
+    {
+      "childCount": 0,
+      "geometryStatus": "available",
+      "name": "Scene display zero",
+      "path": "application/0/3",
+      "role": "canvas",
+      "screenExtents": {"coordinateType": "screen", "height": 240, "width": 0, "x": 160, "y": 120},
+      "states": ["enabled", "showing", "visible"]
+    },
+    {
+      "childCount": 0,
+      "geometryStatus": "available",
+      "name": "Scene display negative",
+      "path": "application/0/4",
+      "role": "canvas",
+      "screenExtents": {"coordinateType": "screen", "height": -1, "width": 320, "x": 500, "y": 120},
+      "states": ["enabled", "showing", "visible"]
+    },
+    {
+      "childCount": 0,
+      "geometryStatus": "available",
+      "name": "Scene display malformed",
+      "path": "application/0/5",
+      "role": "canvas",
+      "screenExtents": {"coordinateType": "screen", "height": 240, "width": "wide", "x": 840, "y": 120},
+      "states": ["enabled", "showing", "visible"]
+    },
+    {
+      "childCount": 0,
+      "geometryStatus": "available",
+      "name": "Scene display hidden",
+      "path": "application/0/6",
+      "role": "canvas",
+      "screenExtents": {"coordinateType": "screen", "height": 240, "width": 320, "x": 1180, "y": 120},
+      "states": ["enabled"]
+    }
+  ],
+  "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
+  "status": "observed",
+  "traversalErrors": []
+}
+EOF
+
+bash -c '
+  . "$1"
+  write_controlled_display_pixel_observation \
+    "$2" \
+    observed \
+    none \
+    "" \
+    ":99" \
+    true \
+    controlled-display-pixels-observed-rendering-not-asserted \
+    "" \
+    alice-window-found \
+    running \
+    screenshot-captured \
+    "$2/screenshot.png" \
+    /usr/bin/Xvfb \
+    import \
+    non-black-pixels \
+    "Screenshot is 640x480 with non-black pixel data." \
+    after-readiness-wait \
+    observed \
+    x-window-inventory.json \
+    4 \
+    "$2/post-open-runtime-display-accessibility-evidence.json"
+  write_visible_rendering_pixel_target_blocker \
+    "$2" \
+    observed \
+    none \
+    "$2/screenshot.png" \
+    screenshot-captured \
+    non-black-pixels \
+    "$2/post-open-runtime-display-accessibility-evidence.json"
+' _ "$RUNNER" "$target_multiple_invalid_dir" >"$tmp_root/target-multiple-invalid-writer.out" 2>"$tmp_root/target-multiple-invalid-writer.err"
+status=$?
+assert_success "$status" "runner handles multiple visible/showing candidates with invalid extents as non-ambiguous blockers"
+
+if [ "$status" -eq 0 ]; then
+  python3 - \
+    "$target_multiple_invalid_dir/$CONTROLLED_ARTIFACT" \
+    "$target_multiple_invalid_dir/$BLOCKER_ARTIFACT" \
+    >"$tmp_root/target-multiple-invalid-contract.out" \
+    2>"$tmp_root/target-multiple-invalid-contract.err" <<'PY'
+import json
+import sys
+
+controlled = json.load(open(sys.argv[1], encoding="utf-8"))
+blocker = json.load(open(sys.argv[2], encoding="utf-8"))
+
+for label, payload in (("controlled", controlled), ("blocker", blocker)):
+    target = payload.get("worldCanvasPixelTarget") or {}
+    if payload.get("geometryStatus") == "ambiguous-candidates":
+        raise AssertionError(f"{label} artifact must not mark invalid extents as ambiguous")
+    if target.get("geometryStatus") != "invalid-extents":
+        raise AssertionError(f"{label} target must preserve invalid-extents, got {target.get('geometryStatus')!r}")
+    if target.get("identified") is not False:
+        raise AssertionError(f"{label} target must not be identified with invalid extents")
+    if target.get("status") != "blocked":
+        raise AssertionError(f"{label} target must stay blocked with invalid extents")
+    if target.get("runtimeDisplayCandidateCount") != 4:
+        raise AssertionError(f"{label} target must preserve raw candidate count")
+PY
+  target_multiple_invalid_status=$?
+  assert_success "$target_multiple_invalid_status" "multiple invalid-extents candidates do not produce ambiguity or readiness"
+fi
+
 target_ambiguous_dir="$tmp_root/target-ambiguous-fixture"
 mkdir -p "$target_ambiguous_dir"
 cat >"$target_ambiguous_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" <<'EOF'
