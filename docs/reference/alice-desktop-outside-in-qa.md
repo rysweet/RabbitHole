@@ -54,7 +54,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
-| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Observes whether the post-Select-Project live desktop exposes a stable `scene.eatmeFirstLesson` procedure tab or code-editor target, or writes a precise blocker. |
+| `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Observes the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and records either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -66,12 +66,13 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
-The first-lesson live procedure target observation seam is an active read-only
-scenario. It records only whether the live desktop exposes a stable procedure
-tab or code-editor target for `scene.eatmeFirstLesson`; it does not perform a
-desktop edit, Save, rendering correctness check, learner assessment, or full
-first-lesson completion proof. See [First-Lesson Live Procedure Target
-Observation](./first-lesson-live-procedure-target-observation.md).
+The first-lesson live procedure target action seam is an active read-only
+scenario. It records only whether the live desktop exposes a stable
+`scene.eatmeFirstLesson` procedure/code-editor target and whether that target is
+ready for a public desktop edit action; it does not perform a desktop edit,
+Save, rendering correctness check, learner assessment, creative assessment, or
+full first-lesson completion proof. See [First-Lesson Live Procedure Target
+Action Seam](./first-lesson-live-procedure-target-observation.md).
 
 ## Learner-world boundary
 

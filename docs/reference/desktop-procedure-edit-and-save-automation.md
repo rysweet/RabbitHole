@@ -52,11 +52,13 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 The decision artifact is `first-lesson-live-procedure-target-observation.json`.
-`status=observed` means a stable target was found for the next desktop edit
-shard. `status=blocked` means the artifact names the exact missing target or
-display/accessibility prerequisite. In both cases the shard is read-only: it
-does not mutate the procedure, save the project, assert rendering correctness,
-assess learner work, or claim full first-lesson completion.
+`status=edit-ready` means a stable `scene.eatmeFirstLesson` target was found and
+has a public desktop edit invocation contract for the next proof.
+`status=blocked` means the artifact names the exact target, display/accessibility,
+or public `CodeEditor`/`CodeComposite` edit-action contract blocker. In both
+cases the shard is read-only: it does not mutate the procedure, save the project,
+assert rendering correctness, assess learner work, or claim full first-lesson
+completion.
 
 Add the remaining hooks in order, each with a focused test before changing
 behavior:
@@ -144,9 +146,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-The first-lesson live procedure target observation shard is for reviews about
-the live desktop target after Select Project opens the configured first-lesson
-flow starter. Its runner command is:
+The first-lesson live procedure target action seam shard is for reviews about
+the live desktop target and edit-action readiness after Select Project opens the
+configured first-lesson flow starter. Its runner command is:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \

@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, first-lesson live procedure target observation, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -219,15 +219,16 @@ If the probe cannot safely prove target-specific selection/opening, it must pres
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 
-## Observe the first-lesson live procedure target
+## Observe the first-lesson live procedure target action seam
 
-The first-lesson live procedure target observation scenario verifies only
+The first-lesson live procedure target action seam scenario verifies only
 whether a post-open live desktop exposes a stable procedure tab or code-editor
-target for `scene.eatmeFirstLesson`. It reuses the Select Project and
-post-project-open evidence path, then writes either an observed target or a
-machine-readable blocker. It does not prove desktop editing, Save behavior,
-rendering correctness, learner assessment, grading, creative assessment, or full
-first-lesson completion.
+target for `scene.eatmeFirstLesson`, then classifies that target as edit-ready or
+blocked by the missing public CodeEditor/CodeComposite edit invocation contract.
+It reuses the Select Project and post-project-open evidence path, then writes a
+machine-readable action-seam decision. It does not prove desktop editing, Save
+behavior, rendering correctness, learner assessment, grading, creative
+assessment, or full first-lesson completion.
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -240,11 +241,12 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Review `first-lesson-live-procedure-target-observation.json`, `status.txt`,
 `tab-click-observation.json`, and `post-project-open-observation.json`. Accept
-the shard only when the decision artifact records `status=observed` and
-`observedTarget.readyForDesktopEditAction=true`. A `status=blocked` artifact is
-the correct next-blocker evidence when the stable live desktop target is missing.
+the shard only when the decision artifact records either `status=edit-ready` and
+`observedTarget.readyForDesktopEditAction=true`, or the exact no-go blocker
+`blocker.kind=missing-desktop-edit-action-contract` with
+`blocker.message=missing public CodeEditor/CodeComposite edit invocation contract`.
 For the artifact API, configuration, examples, and claim boundaries, see
-[First-Lesson Live Procedure Target Observation](../reference/first-lesson-live-procedure-target-observation.md).
+[First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
 
 ## Collect post-open runtime/display accessibility evidence
 
