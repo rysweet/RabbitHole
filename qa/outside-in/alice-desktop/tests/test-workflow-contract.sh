@@ -198,10 +198,24 @@ else:
         "id": "learner-world-assessment-boundary",
         "scope": "instructor-student learner-world setup/open/save evidence",
         "currentCapability": "collects evidence for setup, open, and save workflow review",
+        "selectedScenario": "alice-desktop-instructor-student-setup",
+        "automationMode": "manual-evidence-required",
     }
     for field, expected in expected_boundary.items():
         if learner_world_boundary.get(field) != expected:
             errors.append(f"learner-world boundary artifact field {field} must be {expected!r}")
+    supported_evidence = set(learner_world_boundary.get("supportedEvidence", []))
+    if "setup/open/save evidence review only" not in supported_evidence:
+        errors.append("learner-world boundary artifact must name setup/open/save evidence review only as supportedEvidence")
+    assessment_limits = learner_world_boundary.get("assessmentLimits", [])
+    for required in (
+        "no automated grading",
+        "no rubric scoring",
+        "no correctness scoring",
+        "no creative assessment",
+    ):
+        if required not in assessment_limits:
+            errors.append(f"learner-world boundary artifact assessmentLimits must include {required}")
     non_capabilities = set(learner_world_boundary.get("nonCapabilities", []))
     for required in (
         "learner-work grading",
@@ -214,6 +228,12 @@ else:
     next_blocker = learner_world_boundary.get("nextBlocker", {})
     if next_blocker.get("id") != learner_world_next_blocker:
         errors.append("learner-world boundary artifact must name define-reviewed-assessment-contract as nextBlocker.id")
+    blocker = learner_world_boundary.get("blocker", {})
+    if blocker.get("id") != learner_world_next_blocker:
+        errors.append("learner-world boundary artifact must name define-reviewed-assessment-contract as blocker.id")
+    blocker_description = blocker.get("description", "")
+    if "learner-world state extraction" not in blocker_description or "blocked" not in blocker_description:
+        errors.append("learner-world boundary artifact blocker must make learner-world state extraction an explicit blocker")
     description = next_blocker.get("description", "")
     if "reviewed assessment contract" not in description or "evidence mapping" not in description:
         errors.append("learner-world boundary artifact must describe the reviewed assessment contract and evidence mapping blocker")
@@ -318,5 +338,14 @@ assert_file_exists "$checklist" "workflow runner writes manual checklist"
 assert_contains "$checklist" '^Required evidence$' "workflow checklist includes required evidence section"
 assert_contains "$checklist" '^Completion status$' "workflow checklist includes completion status section"
 assert_contains "$checklist" 'Human reviewer|human performs the workflow' "workflow checklist names human review requirement"
+assert_contains "$checklist" '^Assessment boundary$' "workflow checklist includes assessment boundary section"
+assert_contains "$checklist" '[Mm]anual evidence required' "workflow checklist requires manual evidence for assessment boundary"
+assert_contains "$checklist" 'setup/open/save evidence review only' "workflow checklist limits learner-world scope to setup open save evidence"
+assert_contains "$checklist" 'no automated grading' "workflow checklist rejects automated grading"
+assert_contains "$checklist" 'no rubric scoring' "workflow checklist rejects rubric scoring"
+assert_contains "$checklist" 'no correctness scoring' "workflow checklist rejects correctness scoring"
+assert_contains "$checklist" 'no creative assessment' "workflow checklist rejects creative assessment"
+assert_contains "$checklist" '[Ll]earner-world state extraction.*blocked|blocked.*learner-world state extraction' "workflow checklist exposes learner-world extraction blocker"
+assert_contains "$checklist" 'define-reviewed-assessment-contract' "workflow checklist names assessment blocker artifact"
 
 finish

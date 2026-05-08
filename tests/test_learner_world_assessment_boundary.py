@@ -1,5 +1,7 @@
 import json
 import re
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -21,6 +23,14 @@ INSTRUCTOR_STUDENT_SCENARIO = (
     / "scenarios"
     / "instructor-student-setup.yaml"
 )
+RUNNER = (
+    REPO_ROOT
+    / "qa"
+    / "outside-in"
+    / "alice-desktop"
+    / "runners"
+    / "run-scenario.sh"
+)
 BOUNDARY_DOCS = [
     REPO_ROOT / "qa" / "outside-in" / "alice-desktop" / "README.md",
     REPO_ROOT / "docs" / "reference" / "alice-desktop-outside-in-qa.md",
@@ -34,6 +44,12 @@ NON_CAPABILITIES = [
     "rubric scoring",
     "correctness assessment",
     "creativity assessment",
+]
+ASSESSMENT_LIMITS = [
+    "no automated grading",
+    "no rubric scoring",
+    "no correctness scoring",
+    "no creative assessment",
 ]
 OVERCLAIM_TERMS = [
     "learner-work grading",
@@ -79,12 +95,26 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
             "collects evidence for setup, open, and save workflow review",
             boundary.get("currentCapability"),
         )
+        self.assertEqual(
+            "alice-desktop-instructor-student-setup",
+            boundary.get("selectedScenario"),
+        )
+        self.assertEqual(
+            "manual-evidence-required",
+            boundary.get("automationMode"),
+        )
+        self.assertIn("setup/open/save evidence review only", boundary.get("supportedEvidence", []))
+        self.assertEqual(ASSESSMENT_LIMITS, boundary.get("assessmentLimits"))
         self.assertEqual(NON_CAPABILITIES, boundary.get("nonCapabilities"))
         self.assertEqual(NEXT_BLOCKER_ID, boundary.get("nextBlocker", {}).get("id"))
+        self.assertEqual(NEXT_BLOCKER_ID, boundary.get("blocker", {}).get("id"))
 
         blocker_description = boundary.get("nextBlocker", {}).get("description", "")
+        extraction_blocker = boundary.get("blocker", {}).get("description", "")
         self.assertIn("reviewed assessment contract", blocker_description)
         self.assertIn("evidence mapping", blocker_description)
+        self.assertIn("learner-world state extraction", extraction_blocker.lower())
+        self.assertIn("blocked", extraction_blocker.lower())
         for non_capability in NON_CAPABILITIES:
             with self.subTest(non_capability=non_capability):
                 self.assertIn(non_capability, blocker_description)
@@ -109,6 +139,41 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
         for non_capability in NON_CAPABILITIES:
             with self.subTest(non_capability=non_capability):
                 self.assertIn(non_capability, scenario_text)
+        for assessment_limit in ASSESSMENT_LIMITS:
+            with self.subTest(assessment_limit=assessment_limit):
+                self.assertIn(assessment_limit, scenario_text)
+
+    def test_generated_manual_checklist_surfaces_assessment_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            evidence_root = Path(tmp_dir) / "evidence"
+            subprocess.run(
+                [
+                    str(RUNNER),
+                    "run",
+                    "alice-desktop-instructor-student-setup",
+                    "--evidence-dir",
+                    str(evidence_root),
+                ],
+                cwd=REPO_ROOT,
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            run_dirs = list((evidence_root / "alice-desktop-instructor-student-setup").iterdir())
+            self.assertEqual(1, len(run_dirs))
+            checklist = run_dirs[0] / "manual-evidence-checklist.txt"
+            checklist_text = normalized_text(checklist)
+
+        self.assertIn("assessment boundary", checklist_text)
+        self.assertIn("manual evidence required", checklist_text)
+        self.assertIn("setup/open/save evidence review only", checklist_text)
+        self.assertIn("learner-world state extraction", checklist_text)
+        self.assertIn("blocked", checklist_text)
+        self.assertIn(NEXT_BLOCKER_ID, checklist_text)
+        for assessment_limit in ASSESSMENT_LIMITS:
+            with self.subTest(assessment_limit=assessment_limit):
+                self.assertIn(assessment_limit, checklist_text)
 
     def test_docs_name_boundary_and_blocker_without_overclaiming_assessment(self) -> None:
         for path in BOUNDARY_DOCS:

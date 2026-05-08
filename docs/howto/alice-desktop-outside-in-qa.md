@@ -444,10 +444,19 @@ student-copy.a3p
 review-notes.txt
 ```
 
+Open `manual-evidence-checklist.txt` before collecting the manual artifacts. The
+checklist describes the manual evidence required for setup/open/save review and
+includes a generated `Assessment boundary` section. Use that generated section
+and the checked-in boundary record while reviewing this run, and treat missing
+learner-world state extraction for grading or creative assessment as blocker
+`define-reviewed-assessment-contract`, not as a hidden fallback.
+
 Accept the manual run only as setup/open/save evidence. `review-notes.txt`
 should list the reviewed files, state whether the starter project was prepared,
 opened by the student, and saved as a separate copy, and end with `decision:
-accept` or `decision: reject`.
+accept` or `decision: reject`. Do not use the run notes to claim learner-work
+grading, rubric scoring, correctness assessment, correctness scoring, creativity
+assessment, or creative assessment.
 
 The learner-world claim boundary is recorded in:
 
@@ -456,12 +465,14 @@ qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
 ```
 
 Treat that JSON file as documentation for the current boundary, not as runner
-configuration. Its `currentCapability` is setup/open/save workflow evidence, its
-`nonCapabilities` list excludes learner-work grading, rubric scoring,
-correctness assessment, and creativity assessment, and its `nextBlocker.id` is
-`define-reviewed-assessment-contract`. The blocker must be resolved with a
-reviewed assessment contract and evidence mapping before those capabilities can
-be claimed.
+configuration. The current artifact records `id`, `selectedScenario`,
+`automationMode`, `scope`, `currentCapability`, `supportedEvidence`,
+`assessmentLimits`, `nonCapabilities`, `nextBlocker`, and `blocker`. Its blocker
+is `define-reviewed-assessment-contract`, which must be resolved with a reviewed
+assessment contract and evidence mapping before learner-world state extraction
+for grading or creative assessment can be claimed. The complete current contract
+is described in
+[Learner-world assessment boundary](../reference/learner-world-assessment-boundary.md).
 
 ## Choose a custom evidence directory
 

@@ -22,7 +22,7 @@ userActions:
   - Record read-only runtime/display accessibility evidence plus bounded world-canvas pixel target readiness or an exact target blocker.
 expectedOutcomes:
   - status.txt records runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json.
-  - status.txt records outcome=passed only when runtimeDisplayAccessibilityStatus=observed and controlledDisplayPixelStatus=observed.
+  - status.txt records outcome=passed only when runtimeDisplayAccessibilityStatus=observed, controlledDisplayPixelStatus=observed, and visibleRenderingPixelSamplingStatus=observed.
   - post-open-runtime-display-accessibility-evidence.json records status=observed only when postOpenRuntimeDisplayAccessibilityObserved=true.
   - post-open-runtime-display-accessibility-evidence.json records runtimeDisplayCandidateCount greater than zero when observed.
   - post-open-runtime-display-accessibility-evidence.json records runtimeDisplayCandidates for live visible AT-SPI runtime/display components beyond launch, window, and pixel checks, including geometryStatus and screenExtents.
@@ -30,6 +30,7 @@ expectedOutcomes:
   - controlled-display-pixel-observation.json records worldCanvasPixelTarget.status=target-ready only when exactly one visible/showing runtime/display candidate has valid positive screen-coordinate extents.
   - visible-rendering-pixel-target-blocker.json records missingTarget=run-window-world-canvas-screen-extents and exactNextUnblocker=reliable-run-window-world-canvas-pixel-sampling-target when target identification is missing, invalid, or ambiguous.
   - visible-rendering-pixel-target-blocker.json records geometryStatus=ambiguous-candidates only when more than one visible/showing runtime/display candidate has valid positive screen-coordinate extents; multiple raw candidates with missing, zero, negative, malformed, or otherwise invalid geometry remain non-ambiguous blockers.
+  - visible-rendering-pixel-sampling-blocker.json records status=blocked and renderedWorldPixelsObserved=false when the runner has not sampled pixels inside a target-ready world-canvas region.
 automation:
   cwd: alice-ide
   argv:
@@ -55,11 +56,13 @@ evidence:
     - runtime-display-accessibility-status.txt recording the probe-local runtime/display accessibility status before final scenario status is assembled.
     - controlled-display-pixel-observation.json recording observed controlled-display pixels or the exact display, screenshot, process, or pixel blocker plus worldCanvasPixelTarget target-ready or blocked metadata.
     - visible-rendering-pixel-target-blocker.json when worldCanvasPixelTarget.status=blocked.
+    - visible-rendering-pixel-sampling-blocker.json until rendered-world pixels are actually sampled and checked.
 fallback:
   mode: manual-evidence-required
   notes:
     - If root-directory prep, license prep, Xvfb, display allocation/startup, screenshot or pixel capture, AT-SPI, python3-pyatspi, the Java ATK wrapper, or the post-open project setup is unavailable, record status=blocked with a precise blocker in post-open-runtime-display-accessibility-evidence.json and outcome=blocked with the matching status fields in status.txt.
     - If runtime/display candidate screen-coordinate extents are missing, invalid, non-positive, or ambiguous, record visible-rendering-pixel-target-blocker.json with the exact missing target and next unblocker.
+    - If the target is ready but world-canvas pixels are not sampled and checked, record visible-rendering-pixel-sampling-blocker.json with renderedWorldPixelsObserved=false and keep outcome=blocked.
     - If only launcher, License Agreement, or Select Project surfaces are accessible, record blocker=runtime-display-accessible-candidate-not-found.
     - Do not claim postOpenRuntimeDisplayAccessibilityObserved=true unless the JSON artifact explicitly records at least one runtime/display candidate.
     - This evidence is limited to a live post-open runtime/display accessibility signal and does not assert full visible rendering correctness, deployed installer success, full world execution, grading, lesson completion, active Save behavior, active Select Project behavior, or decoder behavior.
