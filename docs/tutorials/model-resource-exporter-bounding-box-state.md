@@ -8,9 +8,10 @@ stateful XML bounding-box generation.
 Protect this model export behavior:
 
 ```text
-ModelResourceExporter XML generation may populate missing class and subresource
-bounding-box state. The mutation is part of the exporter contract and must be
-explicitly asserted when the XML generator is changed.
+ModelResourceExporter XML generation may populate a missing class bounding box
+and may update matching non-class subresource bounding-box state. The mutation is
+part of the exporter contract and must be explicitly asserted when the XML
+generator is changed.
 ```
 
 The test uses synthetic model names and in-memory `AxisAlignedBox` values. It
@@ -37,7 +38,8 @@ without adding new public API.
 ## 2. Build the smallest stateful fixture
 
 Create an exporter with one non-class subresource and a bounding box registered
-for that subresource model name:
+for that subresource model name. Keep this fixture limited to the boxes that
+should contribute to the class-level union:
 
 ```java
 ModelResourceExporter exporter =
@@ -73,9 +75,11 @@ Call the exporter XML boundary:
 assertNotNull(exporter.createXMLString());
 ```
 
-`createXMLFile(...)` follows the same XML-generation contract before writing to
-the package resource path. Use `createXMLString()` for this characterization so
-the test stays in memory and focused on exporter state.
+`createXMLFile(...)` follows the same XML-generation contract only when it
+generates fresh XML before writing to the package resource path. If it copies an
+existing `xmlFile` with `forceRebuild=false`, it does not call XML generation.
+Use `createXMLString()` for this characterization so the test stays in memory
+and focused on exporter state.
 
 ## 5. Assert the post-generation mutation
 
@@ -86,17 +90,20 @@ assertEquals(variantBox, exporter.getBoundingBox("TestProp"));
 assertEquals(variantBox, subResource.getBbox());
 ```
 
-For multiple subresources, the expected class box is the union of registered
-subresource boxes. For a single subresource, the union equals the subresource
-box.
+For multiple registrations, the expected class box is the union of the
+exporter's registered bounding-box values, not a filtered pass over only the
+current subresource list. For a single registered subresource box, the union
+equals that box.
 
 ## 6. Keep the implementation contract explicit
 
 The production implementation should express state changes through exporter and
-subresource methods, such as `setBoundingBox(...)` and `setBbox(...)`. Avoid
-patterns that make mutation look accidental, such as assigning the exporter's
-live bounding-box map to a local variable and mutating the map through that
-alias.
+subresource methods, such as `setBoundingBox(...)` and `setBbox(...)`. The
+subresource update is not limited to missing local values: a non-class
+subresource with a matching exporter box receives that exporter box before its
+`Resource` element is emitted. Avoid patterns that make mutation look
+accidental, such as assigning the exporter's live bounding-box map to a local
+variable and mutating the map through that alias.
 
 If XML generation is intentionally changed to become read-only later, update this
 characterization and the reference documentation in the same change. Do not let a

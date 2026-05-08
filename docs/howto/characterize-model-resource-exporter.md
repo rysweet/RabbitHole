@@ -29,7 +29,7 @@ future refactor could accidentally break:
 | Behavior surface | Useful characterization |
 | --- | --- |
 | XML metadata | Assert root attributes, resource attributes, tag nesting, and bounding boxes. |
-| XML generation state | Assert the exporter state that XML generation intentionally populates, such as missing class/subresource bounding boxes. |
+| XML generation state | Assert the exporter state that XML generation intentionally populates or updates, such as missing class boxes and matching non-class subresource boxes. |
 | Generated Java | Assert package, enum declaration, constants, annotations, constructors, and compilation. |
 | Thumbnail output | Assert saved file paths, class thumbnail creation, and checked failure reporting. |
 | Protected hotspot metadata | Assert that one exporter flag updates every generated surface that consumes it. |
@@ -57,8 +57,8 @@ assumptions.
 
 ## 3. Example: characterize stateful bounding-box generation
 
-XML generation is a stateful exporter operation when bounding boxes are missing.
-The characterization should document both the generated XML behavior and the
+XML generation is a stateful exporter operation for bounding boxes. The
+characterization should document both the generated XML behavior and the
 post-generation exporter state, not hide the mutation behind a local map
 reference.
 
@@ -85,6 +85,11 @@ bounds that later callers can observe on the exporter. If a future implementatio
 changes XML generation to be read-only, this test must be updated with an
 explicit compatibility decision rather than accidentally passing through a hidden
 live-map alias.
+
+For class-level bounds, characterize the actual union input: when the class box
+is missing, the generator unions the exporter's registered bounding-box values.
+Keep the fixture's registered boxes limited to the intended inputs, or assert the
+larger union explicitly.
 
 ## 4. Example: characterize deprecated metadata
 

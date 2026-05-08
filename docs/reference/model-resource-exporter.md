@@ -70,8 +70,8 @@ the helper classes.
 | `getThumbnailPath(String rootPath, String thumbnailName)` | Public | Returns the output path for a thumbnail under the package resource directory. |
 | `createClassThumb(BufferedImage imgSrc)` | Public static | Creates the class thumbnail image from a source thumbnail. |
 | `addExistingThumbnail(String name, File thumbnailFile)` | Public | Registers an already-written thumbnail if the file exists at registration time. |
-| `createXMLString()` | Package-private | Creates the XML resource description as a string for same-package generators and tests. This call may populate missing class and subresource bounding boxes on the exporter. |
-| `createXMLFile(String root, boolean forceRebuild)` | Package-private | Writes the XML resource description into the package resource directory and surfaces output failures as `IOException`. Because it delegates to XML generation, it may populate missing bounding boxes before writing. |
+| `createXMLString()` | Package-private | Creates the XML resource description as a string for same-package generators and tests. This call may populate a missing class bounding box and update matching non-class subresource bounding boxes on the exporter. |
+| `createXMLFile(String root, boolean forceRebuild)` | Package-private | Writes the XML resource description into the package resource directory and surfaces output failures as `IOException`. It may populate bounding-box state only on the path that generates fresh XML. When `forceRebuild` is `false` and an existing `xmlFile` is copied, it does not call XML generation. |
 | `saveThumbnailsToDir(String root)` | Package-private | Reuses registered thumbnails, writes generated thumbnails when present, creates the class thumbnail from the first subresource thumbnail, and returns the files it saved or reused. |
 
 ## XML contract
@@ -106,23 +106,25 @@ When `setIsDeprecated(true)` is applied, the XML root includes
 `deprecated="TRUE"`. The flag is class-level metadata; it does not add
 subresource attributes or change resource enum names.
 
-Bounding boxes are class-scoped by model name. If the class itself has no
-bounding box, the XML generator computes the class box as the union of the
-registered subresource boxes.
+Bounding boxes are registered on the exporter by model name. If the class itself
+has no bounding box, the XML generator computes the class box as the union of the
+exporter's registered bounding-box values. The union is not filtered to the
+current subresource list.
 
-XML generation is intentionally stateful for missing bounding boxes. Calling
-`createXMLString()` or `createXMLFile(...)` may update the exporter before the
-XML is returned or written:
+XML generation is intentionally stateful for bounding boxes. Calling
+`createXMLString()` or calling `createXMLFile(...)` on the fresh-generation path
+may update the exporter before the XML is returned or written:
 
 | Missing state before XML generation | State after XML generation |
 | --- | --- |
-| Class bounding box is missing and subresource boxes are present | The exporter records the computed class union through `setBoundingBox(className, computedUnion)`. |
-| A non-class subresource has no local `bbox`, but the exporter has a box for that subresource model name | The matching `ModelSubResourceExporter` receives that box before its `Resource` element is emitted. |
+| Class bounding box is missing and exporter bounding boxes are registered | The exporter records the computed union of registered bounding-box values through `setBoundingBox(className, computedUnion)`. |
+| A non-class subresource has a matching exporter bounding box | The matching `ModelSubResourceExporter` receives that box before its `Resource` element is emitted, even if it already had a local `bbox`. |
 
 This is not a read-only rendering pass. Callers that inspect the exporter after
-XML generation should expect the missing class and subresource bounding-box
-state to be populated. Callers that need an immutable pre-render snapshot should
-copy the relevant state before invoking XML generation.
+XML generation should expect missing class bounding-box state to be populated
+and matching non-class subresource bounding-box state to be updated. Callers that
+need an immutable pre-render snapshot should copy the relevant state before
+invoking XML generation.
 
 ### Stateful bounding-box example
 
@@ -148,10 +150,11 @@ assert exporter.getBoundingBox("TestProp").equals(variantBox);
 assert subResource.getBbox().equals(variantBox);
 ```
 
-When multiple subresource boxes are present and the class box is missing, the
-same stateful rule records the union as the class box. Set the class bounding box
-explicitly before XML generation when a caller needs a value other than the
-computed union.
+When multiple exporter bounding boxes are registered and the class box is
+missing, the same stateful rule records their union as the class box. The union
+uses all registered bounding-box values, so callers that want a subresource-only
+union should register only those boxes before XML generation, or set the class
+bounding box explicitly when they need a different value.
 
 ## Generated Java contract
 
@@ -242,9 +245,9 @@ Behavior-preserving refactors must keep these outputs stable:
 
 Model resource XML generation has no runtime configuration flag for
 bounding-box state. The stateful behavior is part of the exporter contract:
-missing class boxes are derived from registered subresource boxes, and missing
-subresource `bbox` fields are filled from exporter boxes for matching model
-names.
+missing class boxes are derived from the exporter's registered bounding-box
+values, and non-class subresource `bbox` fields are set from exporter boxes for
+matching model names.
 
 Developer validation uses the existing Maven reactor configuration. Set
 `NODE_OPTIONS=--max-old-space-size=32768` when running the focused model export
