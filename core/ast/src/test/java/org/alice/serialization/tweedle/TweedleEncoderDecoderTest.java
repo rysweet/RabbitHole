@@ -1408,6 +1408,15 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void argumentBearingExplicitThisMethodCallReportsBoundaryBeforeMethodLookup() {
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.missing(value: 1); }
+        }
+        """, "caller.this.missing");
+  }
+
+  @Test
   public void zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod() {
     assertUnsupportedZeroArgumentThisMethodCallDecode("""
         class SyntheticType {

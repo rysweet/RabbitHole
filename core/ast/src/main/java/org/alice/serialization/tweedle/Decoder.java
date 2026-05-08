@@ -82,6 +82,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Decoder {
+  private static final String ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS =
+      "argument-bearing explicit this method calls";
   private final Map<String, AbstractType<?, ?, ?>> terminalTypesByName;
   private static final List<String> JAVA_TYPE_PACKAGES = List.of(
       "org.lgna.story.",
@@ -1023,7 +1025,7 @@ public class Decoder {
       String ownerName,
       MethodCallExpression methodCall) {
     return new UnsupportedTweedleDecodeException(
-        "Tweedle argument-bearing explicit this method calls are not supported by the AST decoder: "
+        "Tweedle " + ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS + " are not supported by the AST decoder: "
             + ownerName + "." + describeMethodCall(methodCall));
   }
 
