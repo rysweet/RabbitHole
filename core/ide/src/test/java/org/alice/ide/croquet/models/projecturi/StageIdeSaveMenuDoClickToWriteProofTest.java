@@ -136,6 +136,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       assertTrue(json, json.contains("\"status\": \"unsupported\""));
       assertTrue(json, json.contains("\"reason\": \"No available non-headless AWT display\""));
       assertTrue(json, json.contains("\"wroteFile\": false"));
+      assertTrue(json, json.contains("\"approved_selection\": false"));
+      assertTrue(json, json.contains("\"file_written\": false"));
       assertFalse(json, json.contains("\"claim\""));
       assertFalse(json, json.contains("\"wroteFile\": true"));
       assertFalse(json, json.contains("approved the selected .a3p path"));
@@ -270,6 +272,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertFalse(json, json.contains("\"status\": \"not_proven\""));
     assertTrue(json, json.contains("\"reason\": \"No available non-headless AWT display\""));
     assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"approved_selection\": false"));
+    assertTrue(json, json.contains("\"file_written\": false"));
     assertTrue(json, json.contains("\"Save menu/control/dialog/write path\""));
     assertTrue(json, json.contains("\"requiresNextEvidence\""));
     assertTrue(json, json.contains("\"physical user click\""));
@@ -385,14 +389,14 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       releaseEdt.countDown();
       SwingUtilities.invokeAndWait(() -> { /* drain queued approvals */ });
       assertEquals("repeated poll callbacks must enqueue one chooser approval", 1, chooser[0].approvalCount());
-      assertEquals("each poll callback must be counted exactly once", pollCallbacks, probe.pollCount.get());
+      assertEquals("repeated callbacks after terminal discovery must not mutate poll count", 1, probe.pollCount.get());
 
       probe.writeResult(evidenceDir);
       String json = Files.readString(probe.artifactPath(evidenceDir));
       assertTrue(json, json.contains("\"status\": \"not_proven\""));
       assertFalse(json, json.contains("\"status\": \"unsupported\""));
       assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_e2e_not_completed\""));
-      assertTrue(json, json.contains("\"poll_count\": " + pollCallbacks));
+      assertTrue(json, json.contains("\"poll_count\": 1"));
       assertTrue(json, json.contains("\"approved_selection\": false"));
       assertTrue(json, json.contains("\"wroteFile\": false"));
       assertTrue(json, json.contains("\"file_written\": false"));
@@ -443,7 +447,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private final Path proofRoot;
     private final String targetCanonicalPath;
     private volatile boolean chooserObserved;
+    private final AtomicBoolean pollingFinished = new AtomicBoolean(false);
     private final AtomicBoolean approvalScheduled = new AtomicBoolean(false);
+    private final AtomicBoolean approvalApplied = new AtomicBoolean(false);
     private final AtomicBoolean approvedSelection = new AtomicBoolean(false);
     private volatile boolean selectedFileVerified;
     private volatile boolean ambiguousChooserDiscovery;
@@ -452,7 +458,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private volatile String normalizedSelectedFile;
     private volatile String failureReason;
     private final AtomicInteger pollCount = new AtomicInteger();
-    private java.util.Timer bgTimer;
+    private volatile java.util.Timer bgTimer;
 
     SaveMenuDoClickProbe(File targetFile, Path proofRoot) throws java.io.IOException {
       this.targetFile = targetFile;
@@ -461,6 +467,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
 
     void start() {
+      this.pollingFinished.set(false);
       this.bgTimer = new java.util.Timer("save-menu-doclick-probe", /* daemon= */ true);
       this.bgTimer.scheduleAtFixedRate(new TimerTask() {
         @Override
@@ -520,6 +527,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "  \"reason\": \"No available non-headless AWT display\",\n"
               + "  \"dialogType\": \"Swing JFileChooser\",\n"
               + "  \"wroteFile\": false,\n"
+              + "  \"approved_selection\": false,\n"
+              + "  \"file_written\": false,\n"
+              + "  \"file_nonempty\": false,\n"
               + "  \"proofTarget\": \"Save menu/control/dialog/write path\",\n"
               + "  \"reporting_summary\": \"Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven\",\n"
               + "  \"blocker\": {\n"
@@ -661,13 +671,16 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     }
 
     private synchronized void poll() {
+      if (this.pollingFinished.get()) {
+        return;
+      }
       int count = this.pollCount.incrementAndGet();
       List<ChooserCandidate> candidates = findChooserCandidates();
       if (candidates.size() > 1) {
         this.chooserObserved = true;
         this.ambiguousChooserDiscovery = true;
         this.failureReason = "ambiguous_swing_jfilechooser_discovery";
-        cancelTimer();
+        finishPolling();
         cancelCurrentChoosersOnEdt();
         return;
       }
@@ -676,36 +689,45 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         this.chooserObserved = true;
         this.dialogShowing = candidate.dialog().isShowing();
         this.dialogClass = candidate.dialog().getClass().getName();
-        cancelTimer();
         if (this.approvalScheduled.compareAndSet(false, true)) {
+          finishPolling();
           approveChooserOnEdt(candidate.chooser());
         }
         return;
       }
       if (count >= MAX_POLLS) {
         this.failureReason = "swing_jfilechooser_not_observed_before_timeout";
-        cancelTimer();
+        finishPolling();
         cancelCurrentChoosersOnEdt();
       }
+    }
+
+    private void finishPolling() {
+      this.pollingFinished.set(true);
+      cancelTimer();
     }
 
     private void cancelTimer() {
       java.util.Timer timer = this.bgTimer;
       if (timer != null) {
         timer.cancel();
+        this.bgTimer = null;
       }
     }
 
     private void approveChooserOnEdt(JFileChooser chooser) {
       SwingUtilities.invokeLater(() -> {
+        if (!this.approvalApplied.compareAndSet(false, true)) {
+          return;
+        }
         try {
           chooser.setSelectedFile(this.targetFile);
           File selectedFile = chooser.getSelectedFile();
           this.normalizedSelectedFile = selectedFile == null ? null : selectedFile.getCanonicalPath();
           this.selectedFileVerified = this.targetCanonicalPath.equals(this.normalizedSelectedFile);
           if (this.selectedFileVerified) {
-            this.approvedSelection.set(true);
             chooser.approveSelection();
+            this.approvedSelection.set(true);
           } else {
             this.failureReason = "selected_file_did_not_match_expected_target";
             chooser.cancelSelection();
