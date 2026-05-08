@@ -638,6 +638,7 @@ if isinstance(sampling, dict):
     require(sampling.get("status") == "blocked", "pixelSampling must be blocked")
     require(sampling.get("pixelsSampled") is False, "pixelSampling must not claim sampled pixels")
     require(sampling.get("sampleCount") == 0, "pixelSampling sampleCount must be zero")
+    require(sampling.get("samplingMethod") is None, "pixelSampling must not name a sampling method")
 unsupported = payload.get("unsupportedClaims")
 require(isinstance(unsupported, list), "pixel sampling blocker must list unsupportedClaims")
 if isinstance(unsupported, list):
@@ -656,6 +657,122 @@ PY
 else
   fail "target-ready pixel sampling blocker artifact could not be inspected"
 fi
+
+source_boundary_root="$tmp_root/pixel-sampling-source-boundary"
+mkdir -p "$source_boundary_root"
+
+for source_case in missing malformed array scalar semantically-invalid-target-ready; do
+  case_dir="$source_boundary_root/$source_case"
+  source_path="$case_dir/$CONTROLLED_ARTIFACT"
+  mkdir -p "$case_dir"
+  case "$source_case" in
+    missing)
+      ;;
+    malformed)
+      printf '{\n' >"$source_path"
+      ;;
+    array)
+      printf '[]\n' >"$source_path"
+      ;;
+    scalar)
+      printf '"target-ready"\n' >"$source_path"
+      ;;
+    semantically-invalid-target-ready)
+      cat >"$source_path" <<'EOF'
+{
+  "schemaVersion": 1,
+  "status": "observed",
+  "claimScope": "full-visible-rendering-correctness",
+  "claim": "rendered-world-correctness",
+  "screenshotStatus": "screenshot-captured",
+  "screenshotPixelStatus": "non-black-pixels",
+  "worldCanvasPixelTarget": {
+    "identified": true,
+    "status": "target-ready",
+    "geometryStatus": "available",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents",
+    "candidateStates": ["visible", "showing"],
+    "screenExtents": {
+      "coordinateType": "screen",
+      "x": 144,
+      "y": 188,
+      "width": 996,
+      "height": 642
+    }
+  }
+}
+EOF
+      ;;
+  esac
+
+  bash -c '
+    . "$1"
+    write_visible_rendering_pixel_sampling_blocker "$2" "$3"
+  ' _ "$RUNNER" "$case_dir" "$source_path" >"$case_dir/writer.out" 2>"$case_dir/writer.err"
+  status=$?
+  assert_success "$status" "pixel sampling blocker writes fail-closed artifact for $source_case source"
+done
+
+python3 - \
+  "$source_boundary_root" \
+  "$PIXEL_SAMPLING_BLOCKER_ARTIFACT" \
+  >"$tmp_root/pixel-sampling-source-boundary-contract.out" \
+  2>"$tmp_root/pixel-sampling-source-boundary-contract.err" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+artifact_name = sys.argv[2]
+errors = []
+
+
+def require(condition, message):
+    if not condition:
+        errors.append(message)
+
+
+for source_case in ("missing", "malformed", "array", "scalar", "semantically-invalid-target-ready"):
+    payload_path = root / source_case / artifact_name
+    require(payload_path.exists(), f"{source_case} source must produce a blocker artifact")
+    if not payload_path.exists():
+        continue
+    payload = json.load(open(payload_path, encoding="utf-8"))
+    sampling = payload.get("pixelSampling")
+    target = payload.get("worldCanvasPixelTarget")
+    unsupported = payload.get("unsupportedClaims")
+
+    require(payload.get("schemaVersion") == 1, f"{source_case} blocker must use schemaVersion=1")
+    require(payload.get("status") == "blocked", f"{source_case} blocker must stay blocked")
+    require(payload.get("blocker") == "world-canvas-pixel-target-not-ready", f"{source_case} blocker must not advance to sampling-not-implemented")
+    require(payload.get("claimScope") == "visible-rendering-world-canvas-pixel-sampling", f"{source_case} blocker must keep pixel-sampling claim scope")
+    require(payload.get("claimScopeDetail") == "target-selection-blocked", f"{source_case} blocker must report target-selection-blocked")
+    require(payload.get("sourceArtifact") == "controlled-display-pixel-observation.json", f"{source_case} blocker must preserve fixed source artifact name")
+    require(payload.get("prerequisiteTargetStatus") == "unavailable", f"{source_case} blocker must treat source target as unavailable")
+    require(payload.get("renderedWorldPixelsObserved") is False, f"{source_case} blocker must not claim rendered-world pixels")
+    require(payload.get("sampleCount") == 0, f"{source_case} blocker must keep zero samples")
+    require(target == {}, f"{source_case} blocker must not trust source target metadata")
+    require(isinstance(sampling, dict), f"{source_case} blocker must include pixelSampling object")
+    if isinstance(sampling, dict):
+        require(sampling.get("status") == "blocked", f"{source_case} pixelSampling must be blocked")
+        require(sampling.get("pixelsSampled") is False, f"{source_case} pixelSampling must not claim sampled pixels")
+        require(sampling.get("sampleCount") == 0, f"{source_case} pixelSampling must keep zero samples")
+        require(sampling.get("samplingMethod") is None, f"{source_case} pixelSampling must not name a sampling method")
+    require(isinstance(unsupported, list), f"{source_case} blocker must list unsupportedClaims")
+    if isinstance(unsupported, list):
+        for claim in (
+            "world-canvas-pixel-correctness",
+            "full-visible-rendering-correctness",
+            "rendered-world-correctness",
+        ):
+            require(claim in unsupported, f"{source_case} unsupportedClaims must include {claim}")
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+source_boundary_status=$?
+assert_success "$source_boundary_status" "pixel sampling blocker fails closed across malformed and semantically invalid source artifacts"
 
 target_blocked_dir="$tmp_root/target-blocked-fixture"
 mkdir -p "$target_blocked_dir"
