@@ -9,6 +9,12 @@ The archive reader keeps that type unsupported and reports the decoder reason
 plus the call-site context with deterministic archive context. This is not
 broader Tweedle method-call decode support.
 
+The adjacent supported shard is a non-resource field initialized with
+literal-only arithmetic, for example `WholeNumber count <- 1 + 2`, in a
+manifest-declared JSON player type. That source no longer belongs to the
+unsupported-diagnostics path. The player reader decodes the field initializer as
+an AST expression and still rejects broader initializer forms.
+
 ## Usage
 
 Use this contract when reading, testing, or changing JSON player archive decode
@@ -24,6 +30,13 @@ For a JSON `.a3w` archive whose manifest declares a program type and whose
 Tweedle source contains an unsupported argument-bearing explicit `this` call,
 `IoUtilities.readProject(File)` throws `IOException`. It does not return a
 partial project and does not silently drop the unsupported type.
+
+For a JSON `.a3w` archive whose manifest declares a program type and whose
+Tweedle source contains only a literal arithmetic field initializer such as
+`WholeNumber count <- 1 + 2`, `IoUtilities.readProject(File)` returns the
+decoded project. The returned program type contains the `count` field with an
+arithmetic AST initializer. The reader does not evaluate the expression and does
+not enable general Tweedle field-initializer support.
 
 ## Supported archive context
 
@@ -88,11 +101,55 @@ caller.this.helper
 The player archive reader preserves both pieces at the archive boundary instead
 of replacing them with a generic missing-program failure.
 
+## Supported neighboring example
+
+The supported neighboring shard is a literal-only arithmetic initializer on a
+non-resource field:
+
+```java
+class Program extends SProgram {
+  WholeNumber count <- 1 + 2;
+}
+```
+
+The archive reader decodes this program type through the normal JSON player
+path:
+
+```java
+Project project = IoUtilities.readProject(playerArchiveFile);
+NamedUserType programType = project.getProgramType();
+```
+
+The decoded `Program` type includes the `count` field with a non-null arithmetic
+initializer expression. The expression is preserved as AST; it is not folded to
+a literal value.
+
+This support is allowlisted. The following field initializers still route to the
+unsupported path:
+
+```java
+WholeNumber count <- otherCount + 2;
+WholeNumber count <- this.getCount();
+WholeNumber count <- new WholeNumber();
+ImageResource picture <- someImage;
+AudioResource sound <- sound0;
+```
+
+Those forms require identifier binding, call decode, explicit receiver decode,
+constructor decode, resource manifest binding, or mixed expression support that
+is outside this shard.
+
 ## API behavior
 
 `JsonProjectIo` records unsupported Tweedle decode failures for manifest-declared
 types as type-name-to-reason diagnostics. Archive-level failures include the
 existing type context and the unsupported decoder reason.
+
+Literal-only arithmetic field initializers on non-resource fields are decoded
+before this unsupported-diagnostics path is used. If the initializer tree
+contains any non-literal or non-arithmetic node, the decoder must fail closed
+with `UnsupportedTweedleDecodeException`, and `JsonProjectIo` reports the type
+as unsupported at the archive boundary.
 
 Stable `IOException` diagnostics include:
 
@@ -172,8 +229,9 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
 
 This feature does not decode argument-bearing method calls, bind labeled
 arguments, evaluate argument expressions, apply optional parameters, resolve
-overloads, infer implicit receivers, or add general Tweedle/player decode
-support.
+overloads, infer implicit receivers, decode non-literal field initializer
+references, decode initializer method calls, bind resource initializers, or add
+general Tweedle/player decode support.
 
 Unsupported manifest-declared Tweedle types remain unsupported. The archive
 reader reports the reason clearly and fails closed.
