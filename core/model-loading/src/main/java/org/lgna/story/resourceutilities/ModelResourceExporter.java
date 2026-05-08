@@ -545,10 +545,6 @@ public class ModelResourceExporter {
     return this.placeOnGround;
   }
 
-  Map<String, AxisAlignedBox> getBoundingBoxes() {
-    return this.boundingBoxes;
-  }
-
   List<String> getTags() {
     return this.tags;
   }
