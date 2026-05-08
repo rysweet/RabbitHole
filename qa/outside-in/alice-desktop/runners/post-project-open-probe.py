@@ -46,31 +46,101 @@ EXPECTED_ALICE_TITLE = "Alice 3"
 POST_OPEN_WAIT_SECONDS = 5
 
 
+def post_open_payload(
+    *,
+    status: str,
+    blocker: str,
+    blocker_detail: str,
+    java_pid: int | None,
+    post_open_observed: bool = False,
+    frame_names: list[str] | None = None,
+    frame_child_counts: list[int] | None = None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = {
+        "status": status,
+        "blocker": blocker,
+        "blockerDetail": blocker_detail,
+        "javaPid": java_pid,
+        "postOpenWindowObserved": post_open_observed,
+        "mainFrameNames": frame_names or [],
+        "mainFrameChildCounts": frame_child_counts or [],
+        "mainWindowObservationBlocker": blocker,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def safe_child_count(node: Any) -> int:
+    try:
+        return int(node.childCount)
+    except Exception:
+        return 0
+
+
+def safe_node_name(node: Any) -> str:
+    try:
+        return node.name or ""
+    except Exception:
+        return ""
+
+
 def find_java_pid(inventory: dict[str, Any]) -> int | None:
-    """Return the PID of any Java window in the inventory, preferring 'Alice 3'."""
+    """Return the Java PID for the Alice 3 main window, if positively identified."""
     windows = inventory.get("windows", [])
     if not isinstance(windows, list):
         return None
-    # Prefer the primary Alice 3 window.
     for window in windows:
         if not isinstance(window, dict):
             continue
-        if (
-            str(window.get("title", "")) == EXPECTED_ALICE_TITLE
-            and str(window.get("processName", "")).lower() == "java"
-        ):
-            pid = window.get("pid")
-            if isinstance(pid, int) and pid > 0:
-                return pid
-    # Fall back to any Java window (e.g., the Select Project dialog shares PID).
-    for window in windows:
-        if not isinstance(window, dict):
+        pid = window.get("pid")
+        if not isinstance(pid, int) or pid <= 0:
             continue
-        if str(window.get("processName", "")).lower() == "java":
-            pid = window.get("pid")
-            if isinstance(pid, int) and pid > 0:
-                return pid
+        if str(window.get("processName", "")).lower() != "java":
+            continue
+        if str(window.get("title", "")) == EXPECTED_ALICE_TITLE:
+            return pid
     return None
+
+
+def find_alice_app(desktop: Any, java_pid: int) -> tuple[Any | None, int]:
+    app_count = 0
+    for _attempt in range(5):
+        try:
+            app_count = desktop.childCount
+        except Exception:
+            app_count = 0
+        for index in range(app_count):
+            try:
+                app = desktop.getChildAtIndex(index)
+            except Exception:
+                continue
+            if app is None:
+                continue
+            try:
+                app_pid = app.get_process_id()
+            except Exception:
+                app_pid = None
+            if app_pid == java_pid and safe_child_count(app) > 0:
+                return app, app_count
+        time.sleep(2)
+    return None, app_count
+
+
+def top_level_frame_state(alice_app: Any) -> tuple[list[str], list[int]]:
+    frame_names: list[str] = []
+    frame_child_counts: list[int] = []
+    for index in range(min(safe_child_count(alice_app), 20)):
+        try:
+            child = alice_app.getChildAtIndex(index)
+        except Exception:
+            continue
+        if child is None:
+            continue
+        frame_names.append(safe_node_name(child))
+        frame_child_counts.append(safe_child_count(child))
+    return frame_names, frame_child_counts
 
 
 def probe_post_open(java_pid: int) -> dict[str, Any]:
@@ -78,168 +148,116 @@ def probe_post_open(java_pid: int) -> dict[str, Any]:
     try:
         import pyatspi  # noqa: PLC0415
     except ImportError:
-        return {
-            "status": "blocked",
-            "blocker": "pyatspi-not-installed",
-            "blockerDetail": "python3-pyatspi is not installed.",
-            "javaPid": java_pid,
-            "postOpenWindowObserved": False,
-            "mainFrameNames": [],
-            "mainFrameChildCounts": [],
-            "mainWindowObservationBlocker": "pyatspi-not-installed",
-        }
+        return post_open_payload(
+            status="blocked",
+            blocker="pyatspi-not-installed",
+            blocker_detail="python3-pyatspi is not installed.",
+            java_pid=java_pid,
+        )
 
     try:
         desktop = pyatspi.Registry.getDesktop(0)
     except Exception as exc:
-        return {
-            "status": "blocked",
-            "blocker": "at-spi-registry-unavailable",
-            "blockerDetail": f"Cannot connect to AT-SPI registry: {exc}",
-            "javaPid": java_pid,
-            "postOpenWindowObserved": False,
-            "mainFrameNames": [],
-            "mainFrameChildCounts": [],
-            "mainWindowObservationBlocker": "at-spi-registry-unavailable",
-        }
+        return post_open_payload(
+            status="blocked",
+            blocker="at-spi-registry-unavailable",
+            blocker_detail=f"Cannot connect to AT-SPI registry: {exc}",
+            java_pid=java_pid,
+        )
 
-    # Find Alice by PID.
-    alice_app = None
-    app_count = 0
-    for _attempt in range(5):
-        try:
-            app_count = desktop.childCount
-            for i in range(app_count):
-                try:
-                    app = desktop.getChildAtIndex(i)
-                    if app is None:
-                        continue
-                    try:
-                        app_pid = app.get_process_id()
-                    except Exception:
-                        app_pid = None
-                    if app_pid == java_pid:
-                        alice_app = app
-                        break
-                except Exception:
-                    continue
-        except Exception:
-            pass
-        if alice_app is not None and alice_app.childCount > 0:
-            break
-        time.sleep(2)
-
+    alice_app, app_count = find_alice_app(desktop, java_pid)
     if alice_app is None:
-        return {
-            "status": "blocked",
-            "blocker": "atk-wrapper-not-loaded",
-            "blockerDetail": (
+        return post_open_payload(
+            status="blocked",
+            blocker="atk-wrapper-not-loaded",
+            blocker_detail=(
                 f"Java process PID {java_pid} not found in AT-SPI registry "
                 f"({app_count} total AT-SPI apps visible)."
             ),
-            "javaPid": java_pid,
-            "postOpenWindowObserved": False,
-            "mainFrameNames": [],
-            "mainFrameChildCounts": [],
-            "mainWindowObservationBlocker": "atk-wrapper-not-loaded",
-        }
+            java_pid=java_pid,
+        )
 
     # Wait briefly to allow Alice to finish loading the project.
     time.sleep(POST_OPEN_WAIT_SECONDS)
 
-    # Enumerate all top-level frames.
-    frame_names: list[str] = []
-    frame_child_counts: list[int] = []
-    for i in range(min(alice_app.childCount, 20)):
-        try:
-            child = alice_app.getChildAtIndex(i)
-            if child is None:
-                continue
-            name = ""
-            child_count = 0
-            try:
-                name = child.name or ""
-            except Exception:
-                pass
-            try:
-                child_count = child.childCount
-            except Exception:
-                pass
-            frame_names.append(name)
-            frame_child_counts.append(child_count)
-        except Exception:
-            continue
+    frame_names, frame_child_counts = top_level_frame_state(alice_app)
 
     # The proof criterion: at least one frame present that is NOT "Select Project".
-    non_select_project_frames = [
-        n for n in frame_names if n != EXPECTED_SELECT_PROJECT_TITLE
-    ]
-    post_open_observed = bool(non_select_project_frames)
+    post_open_observed = any(name != EXPECTED_SELECT_PROJECT_TITLE for name in frame_names)
     blocker = "none" if post_open_observed else "no-non-select-project-frame-visible"
 
-    return {
-        "status": "observed" if post_open_observed else "not-observed",
-        "blocker": blocker,
-        "blockerDetail": (
-            ""
-            if post_open_observed
-            else (
-                "After project-open wait, no top-level AT-SPI frame other than "
-                f"'Select Project' is visible. Frames seen: {frame_names}"
-            )
-        ),
-        "javaPid": java_pid,
-        "postOpenWindowObserved": post_open_observed,
-        "mainFrameNames": frame_names,
-        "mainFrameChildCounts": frame_child_counts,
-        "mainWindowObservationBlocker": blocker,
-    }
+    blocker_detail = ""
+    if not post_open_observed:
+        blocker_detail = (
+            "After project-open wait, no top-level AT-SPI frame other than "
+            f"'Select Project' is visible. Frames seen: {frame_names}"
+        )
+    return post_open_payload(
+        status="observed" if post_open_observed else "not-observed",
+        blocker=blocker,
+        blocker_detail=blocker_detail,
+        java_pid=java_pid,
+        post_open_observed=post_open_observed,
+        frame_names=frame_names,
+        frame_child_counts=frame_child_counts,
+    )
 
 
 def blocked_payload(path: Path, exc: Exception) -> dict[str, Any]:
-    return {
-        "status": "blocked",
-        "blocker": "input-unreadable",
-        "blockerDetail": f"Could not read {path}: {exc}",
-        "javaPid": None,
-        "postOpenWindowObserved": False,
-        "mainFrameNames": [],
-        "mainFrameChildCounts": [],
-        "mainWindowObservationBlocker": "input-unreadable",
-    }
+    return post_open_payload(
+        status="blocked",
+        blocker="input-unreadable",
+        blocker_detail=f"Could not read {path}: {exc}",
+        java_pid=None,
+    )
 
 
 def project_not_opened_payload(tab_click_path: Path) -> dict[str, Any]:
-    return {
-        "status": "blocked",
-        "blocker": "project-not-opened",
-        "blockerDetail": (
+    return post_open_payload(
+        status="blocked",
+        blocker="project-not-opened",
+        blocker_detail=(
             f"{tab_click_path.name} does not record projectOpenObserved=true; "
             "post-project-open window state cannot be proved without a prior "
             "confirmed project open."
         ),
-        "javaPid": None,
-        "postOpenWindowObserved": False,
-        "mainFrameNames": [],
-        "mainFrameChildCounts": [],
-        "mainWindowObservationBlocker": "project-not-opened",
-    }
+        java_pid=None,
+    )
+
+
+def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict[str, Any]) -> dict[str, Any]:
+    target = tab_click.get("targetStarter")
+    status = tab_click.get("evidenceStatus")
+    opened = tab_click.get("openedStarter")
+    blocker_detail = (
+        f"{tab_click_path.name} contains targetStarter metadata but does not record "
+        "evidenceStatus=opened with openedStarter matching targetStarter; generic "
+        "main-window observation cannot prove the Africa Full starter was opened."
+    )
+    return post_open_payload(
+        status="blocked",
+        blocker="target-starter-open-not-proven",
+        blocker_detail=blocker_detail,
+        java_pid=None,
+        extra={
+            "targetStarter": target,
+            "evidenceStatus": status,
+            "openedStarter": opened,
+        },
+    )
 
 
 def no_java_pid_payload(inventory_path: Path) -> dict[str, Any]:
-    return {
-        "status": "blocked",
-        "blocker": "java-pid-not-in-inventory",
-        "blockerDetail": (
-            f"No Java window found in {inventory_path.name}; "
-            "cannot identify the Alice process for AT-SPI introspection."
+    return post_open_payload(
+        status="blocked",
+        blocker="alice-window-java-pid-not-identified",
+        blocker_detail=(
+            "Unable to identify the Java process for the Alice 3 main window "
+            f"from {inventory_path.name}. Refusing to introspect an arbitrary "
+            "Java process."
         ),
-        "javaPid": None,
-        "postOpenWindowObserved": False,
-        "mainFrameNames": [],
-        "mainFrameChildCounts": [],
-        "mainWindowObservationBlocker": "java-pid-not-in-inventory",
-    }
+        java_pid=None,
+    )
 
 
 def main() -> int:
@@ -272,6 +290,21 @@ def main() -> int:
             json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
         return 0
+
+    # Target-specific scenarios must prove the selected/opened starter before the
+    # generic main-window state can be used as downstream evidence.
+    target_starter = tab_click.get("targetStarter")
+    if isinstance(target_starter, dict):
+        if (
+            tab_click.get("evidenceStatus") != "opened"
+            or tab_click.get("openedStarter") != target_starter
+            or not tab_click.get("projectOpenObserved", False)
+        ):
+            payload = target_starter_open_not_proven_payload(tab_click_path, tab_click)
+            output_path.write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+            return 0
 
     # Require projectOpenObserved=true before connecting to AT-SPI.
     if not tab_click.get("projectOpenObserved", False):

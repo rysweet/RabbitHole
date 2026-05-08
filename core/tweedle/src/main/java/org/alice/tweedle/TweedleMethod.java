@@ -47,6 +47,10 @@ public class TweedleMethod {
     return optionalParameters;
   }
 
+  public boolean isStatic() {
+    return modifiers != null && modifiers.contains("static");
+  }
+
   public List<TweedleStatement> getBody() {
     return body;
   }

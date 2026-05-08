@@ -1,0 +1,48 @@
+id: alice-desktop-tweedle-decoder-this-call-smoke
+title: Tweedle decoder zero-argument this-call smoke
+workflow: tweedle-decoder-this-call-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Focused Tweedle encoder/decoder characterization tests are available in the checkout.
+userActions:
+  - Enable gated smokes in a workspace prepared for core AST module tests.
+  - Run the focused zero-argument this-method call decoder command smoke.
+  - Review the command output for the public Tweedle decoder accepting this.helper() and producing a MethodInvocation.
+expectedOutcomes:
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
+  - When the gate is enabled, the focused zero-argument this-method call decoder test exits successfully.
+  - Command evidence covers only explicit same-type this.method() calls with no arguments and does not claim broader Tweedle or player decode.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/ast
+    - -am
+    - -Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeCreatesMethodInvocation
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the focused Tweedle decoder this-call smoke command.
+    - Test output or surefire report naming zeroArgumentThisMethodCallDecodeCreatesMethodInvocation.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If focused core AST tests are unavailable, attach the nearest decoder characterization evidence and record the missing assertion.
+    - Do not substitute desktop Save or Select Project proof for this decoder-specific smoke.
+supportingEvidence:
+  - alice-desktop-archive-fixture-smoke
+tags:
+  - immediate-qa-backlog
+  - tweedle-decoder
+  - command-smoke
