@@ -12,6 +12,8 @@ core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDial
 
 Use the generated JSON artifact as evidence. Do not treat Maven success by itself as proof, because a safe display-precondition run can pass while writing `status: "blocked"`.
 
+For the full artifact field contract, see [Robot Save Menu Dialog Write/Readback Proof](../reference/robot-save-menu-dialog-write-readback-proof.md). For the Save operation layer that this proof exercises, see [Project Save and Export Operations](../reference/project-save-export-operations.md). Keep those reference docs in sync whenever this proof changes the artifact schema or Save boundary it claims.
+
 ## Prerequisites
 
 Run commands from the repository root. Initialize the Tweedle grammar submodule:
