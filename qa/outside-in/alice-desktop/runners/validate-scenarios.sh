@@ -51,6 +51,7 @@ workflow_values = {
     "select-project-atk-exec-smoke",
     "select-project-tab-click-smoke",
     "post-project-open-window-state-smoke",
+    "post-open-runtime-display-accessibility-evidence",
     "export",
     "wizard-palette-completion-smoke",
 }

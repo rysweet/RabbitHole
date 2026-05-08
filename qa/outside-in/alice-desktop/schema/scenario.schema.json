@@ -47,6 +47,7 @@
         "select-project-atk-exec-smoke",
         "select-project-tab-click-smoke",
         "post-project-open-window-state-smoke",
+        "post-open-runtime-display-accessibility-evidence",
         "wizard-palette-completion-smoke"
       ]
     },
@@ -115,6 +116,34 @@
               "items": false,
               "minItems": 8,
               "maxItems": 8
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-Dcheckstyle.skip"
+                },
+                {
+                  "const": "-DskipTests"
+                },
+                {
+                  "const": "compile"
+                },
+                {
+                  "const": "exec:exec@alice-ide-atk"
+                }
+              ],
+              "items": false,
+              "minItems": 7,
+              "maxItems": 7
             },
             {
               "prefixItems": [

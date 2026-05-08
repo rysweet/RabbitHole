@@ -12,6 +12,9 @@ SELECT_PROJECT_PROBE="$SCRIPT_DIR/select-project-probe.py"
 SWING_WIDGET_PROBE="$SCRIPT_DIR/swing-widget-probe.py"
 TAB_CLICK_PROBE="$SCRIPT_DIR/tab-click-probe.py"
 POST_PROJECT_OPEN_PROBE="$SCRIPT_DIR/post-project-open-probe.py"
+POST_OPEN_RUNTIME_DISPLAY_PROBE="$SCRIPT_DIR/post-open-runtime-display-probe.py"
+POST_OPEN_RUNTIME_DISPLAY_SCENARIO=alice-desktop-post-open-runtime-display-accessibility-evidence
+POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
 
 usage() {
   cat <<'EOF'
@@ -791,6 +794,85 @@ write_post_project_open_probe() {
   python3 "$POST_PROJECT_OPEN_PROBE" "$inventory_path" "$tab_click_path" "$output_path"
 }
 
+write_post_open_runtime_display_blocker() {
+  local run_dir=$1
+  local scenario_id=$2
+  local automation_mode=$3
+  local blocker=$4
+  local blocker_detail=$5
+
+  RUNTIME_DISPLAY_SCENARIO="$scenario_id" \
+  RUNTIME_DISPLAY_AUTOMATION_MODE="$automation_mode" \
+  RUNTIME_DISPLAY_BLOCKER="$blocker" \
+  RUNTIME_DISPLAY_BLOCKER_DETAIL="$blocker_detail" \
+  python3 - "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" <<'PY'
+import json
+import os
+import sys
+
+payload = {
+    "status": "blocked",
+    "blocker": os.environ["RUNTIME_DISPLAY_BLOCKER"],
+    "blockerDetail": os.environ["RUNTIME_DISPLAY_BLOCKER_DETAIL"],
+    "claim": "post-open-runtime-display-accessibility-evidence",
+    "scenario": os.environ["RUNTIME_DISPLAY_SCENARIO"],
+    "automationMode": os.environ["RUNTIME_DISPLAY_AUTOMATION_MODE"],
+    "javaPid": None,
+    "postOpenWindowObserved": False,
+    "postOpenRuntimeDisplayAccessibilityObserved": False,
+    "runtimeDisplayCandidateCount": 0,
+    "runtimeDisplayCandidates": [],
+    "traversalErrors": [],
+}
+with open(sys.argv[1], "w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
+write_post_open_runtime_display_probe() {
+  local inventory_path=$1
+  local post_open_path=$2
+  local output_path=$3
+  local status_path=$4
+  local scenario_id=$5
+  local automation_mode=$6
+
+  python3 "$POST_OPEN_RUNTIME_DISPLAY_PROBE" \
+    --inventory "$inventory_path" \
+    --post-open-window-observation "$post_open_path" \
+    --output "$output_path" \
+    --status-file "$status_path" \
+    --scenario-id "$scenario_id" \
+    --automation-mode "$automation_mode"
+}
+
+write_post_open_runtime_display_status() {
+  local run_dir=$1
+  local scenario_id=$2
+  local automation_mode=$3
+  local outcome=$4
+  local status=$5
+  local blocker=$6
+  local display=${7:-}
+  local timeout_seconds=${8:-}
+
+  {
+    printf 'scenario=%s\n' "$scenario_id"
+    printf 'automationMode=%s\n' "$automation_mode"
+    if [ -n "$display" ]; then
+      printf 'display=%s\n' "$display"
+    fi
+    printf 'outcome=%s\n' "$outcome"
+    printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
+    printf 'runtimeDisplayAccessibilityStatus=%s\n' "$status"
+    printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$blocker"
+    if [ -n "$timeout_seconds" ]; then
+      printf 'timeoutSeconds=%s\n' "$timeout_seconds"
+    fi
+  } > "$run_dir/status.txt"
+}
+
 select_display() {
   if [ -n "${ALICE_QA_DISPLAY:-}" ]; then
     printf '%s\n' "$ALICE_QA_DISPLAY"
@@ -943,6 +1025,23 @@ run_xvfb_real_alice() {
       not-attempted \
       x-window-inventory.json \
       0
+    if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+      write_post_open_runtime_display_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        x-server-unavailable \
+        "Xvfb executable is not available on PATH; no X server exists for post-open runtime/display accessibility evidence."
+      write_post_open_runtime_display_status \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        blocked \
+        blocked \
+        x-server-unavailable \
+        "" \
+        "$run_timeout"
+    fi
     printf 'Xvfb is not available; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -981,6 +1080,23 @@ run_xvfb_real_alice() {
       not-attempted \
       x-window-inventory.json \
       0
+    if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+      write_post_open_runtime_display_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        display-allocation-unavailable \
+        "No free X display could be selected; no display exists for post-open runtime/display accessibility evidence."
+      write_post_open_runtime_display_status \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        blocked \
+        blocked \
+        display-allocation-unavailable \
+        "" \
+        "$run_timeout"
+    fi
     printf 'No free X display found; wrote manual fallback checklist to %s\n' "$run_dir" >&2
     return 2
   fi
@@ -1045,6 +1161,14 @@ JSON
       not-attempted \
       x-window-inventory.json \
       0
+    if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+      write_post_open_runtime_display_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        "$root_directory_prep_blocker" \
+        "Alice rootDirectory launch preparation failed before post-open runtime/display accessibility evidence could be collected."
+    fi
     {
       printf 'scenario=%s\n' "$scenario_id"
       printf 'automationMode=%s\n' "$automation_mode"
@@ -1057,6 +1181,12 @@ JSON
       printf 'screenshotStatus=not-attempted\n'
       printf 'windowInventory=%s\n' x-window-inventory.json
       printf 'applicationRootError=not-attempted\n'
+      if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+        printf 'outcome=blocked\n'
+        printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
+        printf 'runtimeDisplayAccessibilityStatus=blocked\n'
+        printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$root_directory_prep_blocker"
+      fi
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     } > "$run_dir/status.txt"
     printf 'Alice rootDirectory launch preparation blocked: %s; see %s/root-directory-prep.json\n' "$root_directory_prep_blocker" "$run_dir" >&2
@@ -1106,6 +1236,23 @@ JSON
         not-attempted \
         x-window-inventory.json \
         0
+      if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+        write_post_open_runtime_display_blocker \
+          "$run_dir" \
+          "$scenario_id" \
+          "$automation_mode" \
+          license-acceptance-prep-failed \
+          "Alice first-run license acceptance prep failed before post-open runtime/display accessibility evidence could be collected."
+        write_post_open_runtime_display_status \
+          "$run_dir" \
+          "$scenario_id" \
+          "$automation_mode" \
+          blocked \
+          blocked \
+          license-acceptance-prep-failed \
+          "$display" \
+          "$run_timeout"
+      fi
       printf 'Alice license acceptance prep failed; see %s/license-acceptance.json\n' "$run_dir" >&2
       return 2
     fi
@@ -1176,6 +1323,23 @@ JSON
       not-attempted \
       x-window-inventory.json \
       0
+    if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+      write_post_open_runtime_display_blocker \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        x-server-start-failed \
+        "Xvfb exited before Alice launch; post-open runtime/display accessibility evidence could not be collected."
+      write_post_open_runtime_display_status \
+        "$run_dir" \
+        "$scenario_id" \
+        "$automation_mode" \
+        blocked \
+        blocked \
+        x-server-start-failed \
+        "$display" \
+        "$run_timeout"
+    fi
     printf 'Xvfb exited before Alice launch; see %s/xvfb.log\n' "$run_dir" >&2
     return 2
   fi
@@ -1234,7 +1398,8 @@ JSON
       || [ "$scenario_id" = alice-desktop-select-project-widget-introspection ] \
       || [ "$scenario_id" = alice-desktop-select-project-atk-exec ] \
       || [ "$scenario_id" = alice-desktop-select-project-tab-click-exec ] \
-      || [ "$scenario_id" = alice-desktop-post-project-open-window-state ]; then
+      || [ "$scenario_id" = alice-desktop-post-project-open-window-state ] \
+      || [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
     if [ "${ALICE_QA_DISABLE_WINDOW_DETECTOR:-}" != "1" ] && command -v xdotool >/dev/null 2>&1; then
       select_project_wait_status=not-found
       local select_waited=0
@@ -1270,7 +1435,8 @@ JSON
   fi
   local tab_click_status=not-requested tab_click_blocker=not-requested
   if [ "$scenario_id" = alice-desktop-select-project-tab-click-exec ] \
-      || [ "$scenario_id" = alice-desktop-post-project-open-window-state ]; then
+      || [ "$scenario_id" = alice-desktop-post-project-open-window-state ] \
+      || [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
     # Allow the Swing accessibility tree to build before probing, then run
     # the tab structure diagnosis and click attempt.
     sleep 3
@@ -1279,13 +1445,26 @@ JSON
     tab_click_blocker=$(inventory_json_field "$run_dir/tab-click-observation.json" blocker)
   fi
   local post_open_status=not-requested post_open_blocker=not-requested
-  if [ "$scenario_id" = alice-desktop-post-project-open-window-state ]; then
+  if [ "$scenario_id" = alice-desktop-post-project-open-window-state ] \
+      || [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
     write_post_project_open_probe \
       "$run_dir/x-window-inventory.json" \
       "$run_dir/tab-click-observation.json" \
       "$run_dir/post-project-open-observation.json"
     post_open_status=$(inventory_json_field "$run_dir/post-project-open-observation.json" status)
     post_open_blocker=$(inventory_json_field "$run_dir/post-project-open-observation.json" blocker)
+  fi
+  local runtime_display_status=not-requested runtime_display_blocker=not-requested
+  if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+    write_post_open_runtime_display_probe \
+      "$run_dir/x-window-inventory.json" \
+      "$run_dir/post-project-open-observation.json" \
+      "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" \
+      "$run_dir/runtime-display-accessibility-status.txt" \
+      "$scenario_id" \
+      "$automation_mode"
+    runtime_display_status=$(inventory_json_field "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" status)
+    runtime_display_blocker=$(inventory_json_field "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" blocker)
   fi
   local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker license_dialog_status license_dialog_blocker select_project_status select_project_blocker select_project_interaction
   window_inventory_status=$(inventory_json_field "$run_dir/x-window-inventory.json" status)
@@ -1347,6 +1526,13 @@ JSON
     printf 'postProjectOpenObservation=%s\n' post-project-open-observation.json
     printf 'postProjectOpenStatus=%s\n' "$post_open_status"
     printf 'postProjectOpenBlocker=%s\n' "$post_open_blocker"
+    if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+      printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
+    else
+      printf 'runtimeDisplayAccessibilityEvidence=not-requested\n'
+    fi
+    printf 'runtimeDisplayAccessibilityStatus=%s\n' "$runtime_display_status"
+    printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$runtime_display_blocker"
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
@@ -1442,6 +1628,20 @@ JSON
     x-window-inventory.json \
     "$alice_window_candidate_count"
 
+  if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+    scenario_outcome=blocked
+    if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ]; then
+      scenario_outcome=passed
+    fi
+    {
+      cat "$run_dir/status.txt"
+      printf 'outcome=%s\n' "$scenario_outcome"
+      printf 'controlledDisplayPixelStatus=%s\n' "$observation_status"
+      printf 'controlledDisplayPixelBlocker=%s\n' "$observation_blocker"
+    } > "$run_dir/status.txt.tmp"
+    mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
+  fi
+
   if [ "$screenshot_status" != screenshot-captured ]; then
     printf 'Screenshot capture failed; see %s/screenshot.log\n' "$run_dir" >&2
     return 2
@@ -1461,6 +1661,10 @@ JSON
   if [ "$observation_status" != observed ]; then
     printf 'Controlled display pixel proof blocked: %s; see %s/controlled-display-pixel-observation.json\n' "$observation_blocker" "$run_dir" >&2
     return 1
+  fi
+  if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] && [ "$runtime_display_status" != observed ]; then
+    printf 'Post-open runtime/display accessibility evidence blocked: %s; see %s/%s\n' "$runtime_display_blocker" "$run_dir" "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" >&2
+    return 2
   fi
 
   printf 'Evidence written to %s\n' "$run_dir"

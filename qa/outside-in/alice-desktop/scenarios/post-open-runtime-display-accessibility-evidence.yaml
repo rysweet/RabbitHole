@@ -1,0 +1,60 @@
+id: alice-desktop-post-open-runtime-display-accessibility-evidence
+title: Post-open runtime/display accessibility evidence
+workflow: post-open-runtime-display-accessibility-evidence
+automationMode: xvfb-real-alice
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Controlled QA license acceptance is explicitly enabled with an isolated java.util.prefs.userRoot when first-run license dialogs would otherwise block automation.
+  - Xvfb is available for a controlled display session.
+  - python3-pyatspi is installed.
+  - libatk-wrapper-java is installed at /usr/share/java/java-atk-wrapper.jar.
+  - The AT-SPI2 accessibility bus is running for the current user session.
+  - alice-ide/pom.xml declares the alice-ide-atk exec:exec execution with the Java ATK wrapper.
+userActions:
+  - Launch Alice with the existing xvfb-real-alice AT-SPI Maven argv.
+  - Reuse the existing supported project-open setup from alice-desktop-post-project-open-window-state.
+  - After post-project-open-observation.json records postOpenWindowObserved=true, run post-open-runtime-display-probe.py against x-window-inventory.json and the post-open window observation.
+  - Record only read-only runtime/display accessibility evidence in post-open-runtime-display-accessibility-evidence.json and status.txt.
+expectedOutcomes:
+  - status.txt records runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json.
+  - post-open-runtime-display-accessibility-evidence.json records status=observed only when postOpenRuntimeDisplayAccessibilityObserved=true.
+  - post-open-runtime-display-accessibility-evidence.json records runtimeDisplayCandidateCount greater than zero when observed.
+  - post-open-runtime-display-accessibility-evidence.json records runtimeDisplayCandidates for live visible AT-SPI runtime/display components beyond launch, window, and pixel checks.
+  - post-open-runtime-display-accessibility-evidence.json records blocker=none only for observed post-open runtime/display accessibility evidence.
+automation:
+  cwd: alice-ide
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -Dcheckstyle.skip
+    - -DskipTests
+    - compile
+    - exec:exec@alice-ide-atk
+  timeoutSeconds: 300
+  readyWaitSeconds: 60
+evidence:
+  required:
+    - status.txt recording scenario, automationMode, outcome, runtimeDisplayAccessibilityEvidence, runtimeDisplayAccessibilityStatus, and runtimeDisplayAccessibilityBlocker.
+    - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
+    - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
+    - license-dialog.json recording not-observed or an exact blocker.
+    - x-window-inventory.json naming visible X window title, class, process, and geometry.
+    - tab-click-observation.json from existing project-open setup.
+    - post-project-open-observation.json recording postOpenWindowObserved=true.
+    - post-open-runtime-display-accessibility-evidence.json recording claim=post-open-runtime-display-accessibility-evidence, status, blocker, postOpenRuntimeDisplayAccessibilityObserved, runtimeDisplayCandidateCount, and runtimeDisplayCandidates.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If Xvfb, display allocation, AT-SPI, python3-pyatspi, the Java ATK wrapper, or the post-open project setup is unavailable, record status=blocked with a precise blocker in status.txt and post-open-runtime-display-accessibility-evidence.json.
+    - If only launcher, License Agreement, or Select Project surfaces are accessible, record blocker=runtime-display-accessible-candidate-not-found.
+    - Do not claim postOpenRuntimeDisplayAccessibilityObserved=true unless the JSON artifact explicitly records at least one runtime/display candidate.
+    - This evidence is limited to a live post-open runtime/display accessibility signal and does not assert full visible rendering correctness, deployed installer success, full world execution, grading, lesson completion, active Save behavior, active Select Project behavior, or decoder behavior.
+supportingEvidence:
+  - alice-desktop-post-project-open-window-state
+  - alice-desktop-select-project-tab-click-exec
+  - alice-desktop-select-project-atk-exec
+tags:
+  - post-open-runtime-display-accessibility-evidence
