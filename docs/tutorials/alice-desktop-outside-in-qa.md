@@ -254,9 +254,8 @@ Before accepting the run, add the instructor launch log, starter project
 screenshot, saved starter `.a3p`, student launch or open log, loaded project
 screenshot, saved student copy `.a3p`, and `review-notes.txt`.
 `review-notes.txt` should identify the reviewed files and the setup/open/save
-decision only. Do not turn this evidence into learner-work grading, rubric
-scoring, correctness assessment, correctness scoring, creativity assessment, or
-creative assessment.
+decision only. Do not turn this evidence into learner-world grading, rubric
+scoring, correctness assessment, or creative assessment.
 
 Review the checked-in blocker record:
 
@@ -266,8 +265,8 @@ python3 -m json.tool \
 ```
 
 The record is documentation for the current boundary. It names
-`define-reviewed-assessment-contract` as the next blocker before any future
-learner-work grading, rubric scoring, correctness assessment, or creativity
+`define-reviewed-assessment-contract` as the next boundary before any future
+learner-world grading, rubric scoring, correctness assessment, or creative
 assessment capability can be claimed. Learner-world state extraction for grading
 or creative assessment remains blocked until a reviewed assessment contract,
 evidence mapping, and reviewed implementation exist. The current contract is
