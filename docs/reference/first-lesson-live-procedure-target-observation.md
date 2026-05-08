@@ -1,13 +1,20 @@
-# First-Lesson Live Procedure Target Observation
+# [PLANNED - Implementation Pending] First-Lesson Live Procedure Target Observation
 
-This reference defines the outside-in QA shard that opens the first-lesson
-starter through Select Project and observes whether the live desktop exposes a
-stable procedure tab or code-editor target for `scene.eatmeFirstLesson`.
+This reference defines the intended outside-in QA shard that will open the
+first-lesson starter through Select Project and observe whether the live desktop
+exposes a stable procedure tab or code-editor target for
+`scene.eatmeFirstLesson`.
+
+The scenario, schema entries, runner workflow, and contract tests are not
+implemented yet. Do not treat the commands and artifact examples below as
+runnable until the implementation lands and this document removes the
+`[PLANNED - Implementation Pending]` marker.
 
 ## Contents
 
 - [Scope](#scope)
-- [Usage](#usage)
+- [Implementation status](#implementation-status)
+- [Planned runner interface](#planned-runner-interface)
 - [Scenario contract](#scenario-contract)
 - [Artifact API](#artifact-api)
 - [Configuration](#configuration)
@@ -18,7 +25,7 @@ stable procedure tab or code-editor target for `scene.eatmeFirstLesson`.
 
 ## Scope
 
-The shard covers exactly one transition in the first-lesson flow:
+The planned shard covers exactly one transition in the first-lesson flow:
 
 ```text
 Select Project opens the first-lesson project
@@ -37,21 +44,35 @@ It exists because earlier shards already cover adjacent boundaries:
 | Runtime/display accessibility and rendering blocker | `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
 | Learner assessment boundary | `qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`. |
 
-This shard does not mutate the project. It does not invoke a procedure edit,
-Save, Run, rendering assertion, grading rule, or learner assessment. A passing
-run means only that the live desktop exposed the target that the next desktop
-edit shard can safely act on.
+The planned shard will not mutate the project. It will not invoke a procedure
+edit, Save, Run, rendering assertion, grading rule, or learner assessment. A
+passing run will mean only that the live desktop exposed the target that the
+next desktop edit shard can safely act on.
 
-## Usage
+## Implementation status
 
-Validate the scenario catalog:
+This is a document-driven contract for the feature to build. The current
+repository does not contain:
+
+- `qa/outside-in/alice-desktop/scenarios/first-lesson-live-procedure-target-observation.yaml`
+- a schema/validator workflow value for `first-lesson-live-procedure-target-observation`
+- runner support for `alice-desktop-first-lesson-live-procedure-target-observation`
+- contract tests for the new workflow, argv allowlist, or evidence artifact
+
+Until those pieces exist, active QA docs and supported workflow lists must not
+claim this shard is runnable.
+
+## Planned runner interface
+
+[PLANNED] Validate the scenario catalog after the scenario/schema/runner changes
+exist:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 ```
 
-Run the live procedure target observation shard:
+[PLANNED] Run the live procedure target observation shard:
 
 ```bash
 rm -rf /tmp/alice-first-lesson-live-procedure-target
@@ -63,20 +84,20 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-Review the newest timestamped run directory under:
+[PLANNED] Review the newest timestamped run directory under:
 
 ```text
 /tmp/alice-first-lesson-live-procedure-target/alice-desktop-first-lesson-live-procedure-target-observation/
 ```
 
-The decision artifact is:
+The planned decision artifact is:
 
 ```text
 first-lesson-live-procedure-target-observation.json
 ```
 
-Use the branch-installable wrapper the same way when reviewing a pull request
-branch:
+[PLANNED] Use the branch-installable wrapper the same way when reviewing a pull
+request branch:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -92,13 +113,13 @@ Replace `<branch>` with the branch or commit under review.
 
 ## Scenario contract
 
-The scenario file is:
+When implemented, the scenario file will be:
 
 ```text
 qa/outside-in/alice-desktop/scenarios/first-lesson-live-procedure-target-observation.yaml
 ```
 
-Required scenario identity:
+Planned scenario identity:
 
 | Field | Value |
 | --- | --- |
@@ -108,7 +129,7 @@ Required scenario identity:
 | `targetStarter.displayName` | Display name of the first-lesson starter selected through Select Project. |
 | `targetStarter.repositoryPath` | Repository-relative first-lesson starter `.a3p` path. |
 
-Required evidence:
+Planned required evidence:
 
 | Artifact | Purpose |
 | --- | --- |
@@ -119,19 +140,20 @@ Required evidence:
 | `x-window-inventory.json` | Bounded Alice-related X window inventory. |
 | `launch.log` and `xvfb.log` | Desktop launch and display logs. |
 
-The runner must reject unknown workflows, unknown argv values, absolute output
-artifact paths, path traversal, and symlink targets that would write outside the
-run evidence directory.
+The implementation must reject unknown workflows, unknown argv values, absolute
+output artifact paths, path traversal, and symlink targets that would write
+outside the run evidence directory.
 
 ## Artifact API
 
-`first-lesson-live-procedure-target-observation.json` uses schema:
+The planned `first-lesson-live-procedure-target-observation.json` artifact uses
+schema:
 
 ```text
 eatme.first-lesson-live-procedure-target-observation/v1
 ```
 
-Required top-level fields:
+Planned required top-level fields:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -199,12 +221,12 @@ Accepted blocker codes:
 | `--timeout-seconds` | Positive integer, commonly `300` | Upper bound for live desktop launch and observation. |
 | `ALICE_QA_SCENARIO_DIR` | Optional catalog override | Used only when validating or running a custom scenario catalog. |
 
-No product preference or Alice project behavior change is required. The shard is
-read-only after Select Project opens the first-lesson starter.
+No product preference or Alice project behavior change should be required. The
+shard must be read-only after Select Project opens the first-lesson starter.
 
 ## Examples
 
-Observed decision artifact:
+Planned observed decision artifact:
 
 ```json
 {
@@ -215,8 +237,8 @@ Observed decision artifact:
   "status": "observed",
   "seam": "live-first-lesson-project-open-to-procedure-target-observable",
   "project": {
-    "targetStarterDisplayName": "First Lesson",
-    "targetStarterRepositoryPath": "core/resources/src/application/resources/starter-projects/FirstLesson.a3p",
+    "targetStarterDisplayName": "TBD first-lesson starter display name",
+    "targetStarterRepositoryPath": "TBD repository-relative first-lesson starter .a3p path",
     "openedViaSelectProject": true,
     "postOpenWindowObserved": true
   },
@@ -246,7 +268,7 @@ Observed decision artifact:
 }
 ```
 
-Blocked decision artifact:
+Planned blocked decision artifact:
 
 ```json
 {
@@ -257,8 +279,8 @@ Blocked decision artifact:
   "status": "blocked",
   "seam": "live-first-lesson-project-open-to-procedure-target-observable",
   "project": {
-    "targetStarterDisplayName": "First Lesson",
-    "targetStarterRepositoryPath": "core/resources/src/application/resources/starter-projects/FirstLesson.a3p",
+    "targetStarterDisplayName": "TBD first-lesson starter display name",
+    "targetStarterRepositoryPath": "TBD repository-relative first-lesson starter .a3p path",
     "openedViaSelectProject": true,
     "postOpenWindowObserved": true
   },
@@ -297,7 +319,7 @@ Blocked decision artifact:
 
 ## Claim boundaries
 
-This shard may claim only:
+When implemented, this shard may claim only:
 
 - Select Project opened the configured first-lesson starter when supporting
   `tab-click-observation.json` says so.
@@ -319,9 +341,9 @@ This shard must not claim:
 
 ## Relationship to adjacent shards
 
-Use this shard after the Select Project target starter evidence and before any
-desktop procedure edit attempt. It is the live-desktop target-discovery link
-between these existing references:
+Build and use this shard after the Select Project target starter evidence and
+before any desktop procedure edit attempt. It is intended to become the
+live-desktop target-discovery link between these existing references:
 
 - [Select Project Africa Full AT-SPI evidence](./select-project-africa-full-atspi-evidence.md)
 - [First-Lesson Procedure/Edit Seam](./first-lesson-procedure-edit-seam.md)
@@ -329,8 +351,8 @@ between these existing references:
 - [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md)
 - [Post-open runtime/display accessibility evidence](./post-open-runtime-display-accessibility-evidence.md)
 
-When this shard is `observed`, the next safe shard is a read/write desktop
-procedure edit action proof that reacquires the same target and performs the
-smallest supported edit. When this shard is `blocked`, the next implementation
-step is to expose or locate a stable live desktop procedure tab or code-editor
-automation target before attempting a real desktop edit.
+After implementation, when this shard is `observed`, the next safe shard will be
+a read/write desktop procedure edit action proof that reacquires the same target
+and performs the smallest supported edit. When this shard is `blocked`, the next
+implementation step will be to expose or locate a stable live desktop procedure
+tab or code-editor automation target before attempting a real desktop edit.

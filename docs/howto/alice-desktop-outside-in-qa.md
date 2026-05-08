@@ -219,30 +219,15 @@ If the probe cannot safely prove target-specific selection/opening, it must pres
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 
-## Observe the first-lesson live procedure target
+## Planned first-lesson live procedure target observation
 
-Use this scenario after the Select Project target starter path when the review
-needs the next first-lesson seam: whether the live post-open desktop exposes a
-stable procedure tab or code-editor target for `scene.eatmeFirstLesson`.
+The first-lesson live procedure target observation seam is planned and is not
+runnable from this how-to yet. The intended contract will verify only whether a
+post-open live desktop exposes a stable procedure tab or code-editor target for
+`scene.eatmeFirstLesson`; it will not prove desktop editing, Save behavior,
+rendering correctness, learner assessment, or full first-lesson completion.
 
-```bash
-export NODE_OPTIONS=--max-old-space-size=32768
-ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
-qa/outside-in/alice-desktop/runners/run-scenario.sh run \
-  alice-desktop-first-lesson-live-procedure-target-observation \
-  --evidence-dir qa/outside-in/alice-desktop/evidence/first-lesson-live-procedure-target \
-  --timeout-seconds 300
-```
-
-Review `first-lesson-live-procedure-target-observation.json` and `status.txt`.
-`status=observed` means the runner found a stable live procedure tab or
-code-editor target that the next desktop edit shard can reacquire.
-`status=blocked` means the artifact names the exact missing target or
-display/accessibility prerequisite. Do not use this evidence to claim a desktop
-procedure edit, Save, rendering correctness, learner assessment, or full
-first-lesson completion.
-
-For the full artifact API, configuration, examples, and claim boundaries, see
+For the planned artifact API, configuration, examples, and claim boundaries, see
 [First-Lesson Live Procedure Target Observation](../reference/first-lesson-live-procedure-target-observation.md).
 
 ## Collect post-open runtime/display accessibility evidence
