@@ -125,17 +125,25 @@ negation_markers = [
 forbidden_terms = [
     "full visible rendering correctness",
     "visible rendering correctness",
+    "visible ui correctness",
     "deployed installer success",
+    "deployed installer",
     "installer success",
+    "installer deployment",
     "full world execution",
     "world execution",
+    "world runs",
     "grading",
     "lesson completion",
+    "lesson completes",
     "active save",
     "save behavior",
+    "save succeeds",
     "active select project",
     "select project behavior",
+    "select project succeeds",
     "decoder behavior",
+    "decoder fallback",
 ]
 
 for name, text in texts.items():
