@@ -108,7 +108,7 @@ xvfb.log
 screenshot.png or screenshot.xwd
 ```
 
-Accept this tutorial step only when `tab-click-observation.json` records `evidenceStatus=opened`, exact `Africa Full` `targetStarter` metadata, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, and `projectOpenObserved=true`. A blocked artifact is still useful when it preserves `blocker` and `blockerDetail` and provides one structured `nextBlocker` with the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. Do not convert either result into a full Alice UI automation, visible rendering, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher, or unrelated decoder claim.
+Accept this tutorial step only when `tab-click-observation.json` records `evidenceStatus=opened`, exact `Africa Full` `targetStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, and `projectOpenObserved=true`. A blocked artifact is still useful when it preserves `blocker` and `blockerDetail` and provides one structured `nextBlocker` with the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. Do not convert either result into a full Alice UI automation, visible rendering, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher, or unrelated decoder claim.
 
 ## Step 5: Review post-open runtime/display accessibility evidence
 

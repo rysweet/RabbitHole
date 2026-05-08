@@ -35,6 +35,7 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
+bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 
 ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run \
@@ -53,7 +54,7 @@ The Select Project probe writes `tab-click-observation.json`. Existing tab inven
 | `targetStarter.displayName` | string | Scenario target display name. |
 | `targetStarter.repositoryPath` | string | Scenario target repository path. |
 | `javaPid` | integer or null | Alice Java process ID selected from the current Alice window inventory, or null when no safe PID is available. |
-| `targetStarterObserved` | object or null | AT-SPI discovery result for `Africa Full` in the active Starters context. This must be non-null for `evidenceStatus=opened`. |
+| `targetStarterObserved` | object or null | AT-SPI discovery result for `Africa Full` in the active Starters context. This must be non-null and identify `Africa Full` for `evidenceStatus=opened`. |
 | `targetStarterSelected` | boolean | `true` only when the probe has target-specific evidence that `Africa Full` was selected. |
 | `targetStarterOpenAttempted` | boolean | `true` only when OK/Open was attempted after target-specific selection evidence. |
 | `openedStarter` | object or null | Filled with the `Africa Full` target metadata only when the target-specific open path succeeds. |
@@ -115,7 +116,7 @@ If any step cannot provide target-specific evidence, the result must stop at `se
 
 | `evidenceStatus` | Required meaning |
 | --- | --- |
-| `opened` | `Africa Full` was observed in the active Starters context, target-specific selection/open was attempted, `openedStarter` records matching target metadata, `projectOpenObserved=true`, and the run has Alice Java/window PID context. |
+| `opened` | `Africa Full` was observed in the active Starters context, `targetStarterObserved.name` identifies `Africa Full`, target-specific selection/open was attempted, `openedStarter` records matching target metadata, `projectOpenObserved=true`, and the run has Alice Java/window PID context. |
 | `selected` | `Africa Full` selection is supported by evidence, but opening did not complete. The blocker names the remaining open step. |
 | `blocked` | AT-SPI automation could not prove target-specific selection/opening. The blocker records the observed state and `nextBlocker` action. |
 | `failed` | The probe or runtime failed before producing a normal AT-SPI capability result. The blocker records the failure boundary. |
@@ -173,7 +174,7 @@ Evidence and blocker payloads must stay scoped to safe AT-SPI state and scenario
 
 If any required target-starter field is missing, null, false, or inconsistent, `post-project-open-observation.json` must record a blocked result rather than converting generic main-window state into Africa Full proof.
 
-The Select Project completion proof does not require a separate downstream workflow. The tab-click proof is sufficient only when `tab-click-observation.json` records `evidenceStatus=opened`, matching `targetStarter` and `openedStarter` metadata for the committed `Africa Full` starter, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`.
+The Select Project completion proof does not require a separate downstream workflow. The tab-click proof is sufficient only when `tab-click-observation.json` records `evidenceStatus=opened`, matching `targetStarter` and `openedStarter` metadata for the committed `Africa Full` starter, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`.
 
 ## Contract test coverage
 
@@ -194,7 +195,7 @@ Publish only one of these outcomes:
 
 | Outcome | Required published content |
 | --- | --- |
-| Opened | `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same metadata, `projectOpenObserved=true`, and the Alice Java/window PID context. |
+| Opened | `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same metadata, `projectOpenObserved=true`, and the Alice Java/window PID context. |
 | Blocked | One blocker code and detail, current Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and one structured `nextBlocker`. |
 
 Do not publish full Alice UI automation, Save proof, visible rendering correctness, grading, creative assessment, first-lesson completion, model exporter behavior, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage measurements from this lane.

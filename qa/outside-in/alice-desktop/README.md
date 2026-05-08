@@ -92,8 +92,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Review `tab-click-observation.json` as the Select Project decision artifact.
 An opened result requires `evidenceStatus=opened`, exact `Africa Full`
-`targetStarter` metadata, non-null `targetStarterObserved`, `targetStarterSelected=true`,
-`targetStarterOpenAttempted=true`, matching `openedStarter`, and
+`targetStarter` metadata, `targetStarterObserved.name=Africa Full`,
+`targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, and
 `projectOpenObserved=true`. A blocked result preserves string `blocker` and
 `blockerDetail` fields and adds one structured `nextBlocker`; it is not a full
 Alice UI automation, visible rendering, grading, creative assessment, Save,

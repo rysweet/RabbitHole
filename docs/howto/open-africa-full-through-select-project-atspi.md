@@ -146,7 +146,7 @@ Publish only the Select Project result:
 
 | Result | Publish |
 | --- | --- |
-| Opened | `evidenceStatus=opened`, exact `Africa Full` target metadata, non-null `targetStarterObserved`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, `projectOpenObserved=true`, and the Alice Java/window PID context. |
+| Opened | `evidenceStatus=opened`, exact `Africa Full` target metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, `projectOpenObserved=true`, and the Alice Java/window PID context. |
 | Blocked | One blocker code/detail plus Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and one structured `nextBlocker`. |
 
 Do not publish downstream claims from this proof. The lane does not prove full Alice UI automation, Save completion, visible rendering correctness, grading, creative assessment, first-lesson completion, model export, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage.
