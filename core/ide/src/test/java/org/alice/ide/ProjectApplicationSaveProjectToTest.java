@@ -37,7 +37,8 @@ public class ProjectApplicationSaveProjectToTest {
   public void productionUpdateTitleFailsFastWhenDocumentFrameIsMissing() throws Exception {
     TestProjectApplication application = applicationWith(projectNamed("FrameInvariantProgram"), new InMemoryProjectLoader());
 
-    assertThrows(NullPointerException.class, application::callProductionUpdateTitle);
+    NullPointerException thrown = assertThrows(NullPointerException.class, application::callProductionUpdateTitle);
+    assertEquals("ProjectApplication requires documentFrame before updating title", thrown.getMessage());
   }
 
   @Test

@@ -295,7 +295,9 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
     if (frameTitleGenerator == null) {
       this.frameTitleGenerator = this.createFrameTitleGenerator();
     }
-    this.getDocumentFrame().getFrame().setTitle(this.frameTitleGenerator.generateTitle(uriProjectLoader, isProjectUpToDateWithFile()));
+    ProjectDocumentFrame documentFrame = Objects.requireNonNull(this.getDocumentFrame(),
+        "ProjectApplication requires documentFrame before updating title");
+    documentFrame.getFrame().setTitle(this.frameTitleGenerator.generateTitle(uriProjectLoader, isProjectUpToDateWithFile()));
   }
 
   private ProjectDocument getDocument() {
