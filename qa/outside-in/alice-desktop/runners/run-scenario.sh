@@ -1182,7 +1182,7 @@ JSON
         export JAVA_TOOL_OPTIONS="$license_jvm_option"
       fi
     fi
-    timeout -k 10s "${run_timeout}s" "${argv[@]}"
+    timeout -k 10s "${run_timeout}s" "${argv[@]}" < /dev/null
   ) > "$run_dir/launch.log" 2>&1 &
   alice_pid=$!
 
@@ -1499,7 +1499,7 @@ run_gated_command_smoke() {
   set +e
   (
     cd "$resolved_cwd"
-    timeout -k 10s "${run_timeout}s" "${argv[@]}"
+    timeout -k 10s "${run_timeout}s" "${argv[@]}" < /dev/null
   ) > "$run_dir/command.log" 2>&1
   exit_code=$?
   set -e
