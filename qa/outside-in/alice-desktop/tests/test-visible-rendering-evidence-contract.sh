@@ -9,7 +9,7 @@ SCENARIO_ID=alice-desktop-post-open-runtime-display-accessibility-evidence
 POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
 CONTROLLED_ARTIFACT=controlled-display-pixel-observation.json
 BLOCKER_ARTIFACT=visible-rendering-pixel-target-blocker.json
-SAMPLING_BLOCKER_ARTIFACT=visible-rendering-pixel-sampling-blocker.json
+PIXEL_SAMPLING_BLOCKER_ARTIFACT=visible-rendering-pixel-sampling-blocker.json
 FIXTURE_DIR="$SCRIPT_DIR/fixtures/visible-rendering"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
@@ -154,15 +154,20 @@ assert_success "$run_dir_status" "visible-rendering fallback creates one evidenc
 if [ "$run_dir_status" -eq 0 ]; then
   controlled="$run_dir/$CONTROLLED_ARTIFACT"
   blocker="$run_dir/$BLOCKER_ARTIFACT"
+  sampling_blocker="$run_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT"
   status_file="$run_dir/status.txt"
   assert_file_exists "$controlled" "runner writes controlled-display screenshot-consistency artifact"
   assert_file_exists "$blocker" "runner writes precise visible-rendering pixel-target blocker artifact"
+  assert_file_exists "$sampling_blocker" "runner writes precise visible-rendering pixel-sampling blocker artifact"
   assert_file_exists "$status_file" "runner writes visible-rendering status linkage"
   assert_contains "$status_file" "^visibleRenderingPixelTargetBlocker=$BLOCKER_ARTIFACT$" "status links the visible-rendering blocker artifact"
+  assert_contains "$status_file" "^visibleRenderingPixelSamplingStatus=blocked$" "status keeps pixel sampling fail-closed"
+  assert_contains "$status_file" "^visibleRenderingPixelSamplingArtifact=$PIXEL_SAMPLING_BLOCKER_ARTIFACT$" "status links the visible-rendering pixel-sampling blocker artifact"
 
   python3 - \
     "$controlled" \
     "$blocker" \
+    "$sampling_blocker" \
     "$CONTROLLED_ARTIFACT" \
     "$BLOCKER_ARTIFACT" \
     >"$tmp_root/artifact-contract.out" \
@@ -171,9 +176,10 @@ import json
 import os
 import sys
 
-controlled_path, blocker_path, controlled_name, blocker_name = sys.argv[1:5]
+controlled_path, blocker_path, sampling_blocker_path, controlled_name, blocker_name = sys.argv[1:6]
 controlled = json.load(open(controlled_path, encoding="utf-8"))
 blocker = json.load(open(blocker_path, encoding="utf-8"))
+sampling_blocker = json.load(open(sampling_blocker_path, encoding="utf-8"))
 errors = []
 
 
@@ -267,6 +273,14 @@ for path in (controlled.get("screenshot") or {}).get("path"), blocker.get("scree
         require(path in ("screenshot.png", "screenshot.xwd"), f"unexpected screenshot path: {path}")
 
 require(blocker_name == "visible-rendering-pixel-target-blocker.json", "test must track the fixed blocker artifact name")
+require(sampling_blocker.get("status") == "blocked", "pixel sampling artifact must be blocked")
+require(sampling_blocker.get("claimScope") == "visible-rendering-world-canvas-pixel-sampling", "pixel sampling artifact must use the next seam scope")
+require(sampling_blocker.get("prerequisiteTargetStatus") == "blocked", "pixel sampling artifact must preserve blocked target prerequisite")
+require(sampling_blocker.get("renderedWorldPixelsObserved") is False, "pixel sampling artifact must not claim rendered-world pixels")
+sampling = sampling_blocker.get("pixelSampling")
+require(isinstance(sampling, dict), "pixel sampling artifact must include pixelSampling object")
+if isinstance(sampling, dict):
+    require(sampling.get("pixelsSampled") is False, "blocked pixelSampling must not claim sampled pixels")
 
 if errors:
     raise AssertionError("\n".join(errors))
@@ -486,17 +500,13 @@ bash -c '
     x-window-inventory.json \
     1 \
     "$2/post-open-runtime-display-accessibility-evidence.json"
-  write_visible_rendering_pixel_sampling_blocker \
-    "$2" \
-    "$2/controlled-display-pixel-observation.json"
 ' _ "$RUNNER" "$target_ready_dir" >"$tmp_root/target-ready-writer.out" 2>"$tmp_root/target-ready-writer.err"
 status=$?
-assert_success "$status" "runner can embed target-ready world-canvas pixel target and blocked pixel-sampling seam"
+assert_success "$status" "runner can embed target-ready world-canvas pixel target from a single valid runtime/display candidate"
 
 if [ "$status" -eq 0 ]; then
   python3 - \
     "$target_ready_dir/$CONTROLLED_ARTIFACT" \
-    "$target_ready_dir/$SAMPLING_BLOCKER_ARTIFACT" \
     >"$tmp_root/target-ready-contract.out" \
     2>"$tmp_root/target-ready-contract.err" <<'PY'
 import json
@@ -504,9 +514,7 @@ import math
 import sys
 
 controlled = json.load(open(sys.argv[1], encoding="utf-8"))
-sampling = json.load(open(sys.argv[2], encoding="utf-8"))
 target = controlled.get("worldCanvasPixelTarget")
-sampling_target = sampling.get("worldCanvasPixelTarget")
 errors = []
 
 
@@ -541,66 +549,112 @@ if isinstance(target, dict):
         require(extents.get("width", 0) > 0, "target-ready width must be positive")
         require(extents.get("height", 0) > 0, "target-ready height must be positive")
 
-require(sampling.get("schemaVersion") == 1, "sampling blocker must use schemaVersion=1")
-require(sampling.get("status") == "blocked", "sampling blocker must be blocked")
-require(
-    sampling.get("blocker") == "rendered-world-pixel-sampling-not-implemented",
-    "sampling blocker must name unimplemented rendered-pixel sampling",
-)
-require(
-    sampling.get("claimScope") == "world-canvas-pixel-sampling-after-target-readiness",
-    "sampling blocker must cover the post-target-readiness pixel-sampling seam",
-)
-require(
-    sampling.get("sourceArtifact") == "controlled-display-pixel-observation.json",
-    "sampling blocker must cite controlled-display target source",
-)
-require(
-    sampling.get("targetSourceArtifact") == "post-open-runtime-display-accessibility-evidence.json",
-    "sampling blocker must cite runtime/display target source",
-)
-require(sampling.get("targetReadinessStatus") == "target-ready", "sampling blocker requires target readiness")
-require(
-    sampling.get("exactNextUnblocker") == "reliable-rendered-world-pixel-observation",
-    "sampling blocker must name the rendered-pixel observation unblocker",
-)
-for key in (
-    "renderedPixelsAvailable",
-    "renderedPixelsSampled",
-    "renderedPixelsChecked",
-    "renderedPixelsFresh",
-    "renderedPixelsConclusive",
-):
-    require(sampling.get(key) is False, f"sampling blocker must keep {key}=false")
-require(sampling.get("sampleCount") == 0, "sampling blocker must keep sampleCount=0")
-require(sampling.get("comparisonStatus") == "not-run", "sampling blocker must not run comparison")
-require(
-    isinstance(sampling_target, dict),
-    "sampling blocker must embed the target-ready worldCanvasPixelTarget",
-)
-if isinstance(sampling_target, dict) and isinstance(target, dict):
-    require(sampling_target.get("identified") is True, "sampling blocker target must remain identified")
-    require(sampling_target.get("status") == "target-ready", "sampling blocker target must preserve target-ready status")
-    require(sampling_target.get("screenExtents") == target.get("screenExtents"), "sampling blocker must preserve target bounds")
-unsupported = sampling.get("unsupportedClaims")
-require(isinstance(unsupported, list), "sampling blocker must list unsupported claims")
-if isinstance(unsupported, list):
-    for claim in (
-        "world-canvas-pixel-correctness",
-        "full-visible-rendering-correctness",
-        "full-ui-automation",
-        "world-execution",
-        "grading",
-        "save-behavior",
-        "first-lesson-completion",
-    ):
-        require(claim in unsupported, f"sampling blocker unsupportedClaims must include {claim}")
-
 if errors:
     raise AssertionError("\n".join(errors))
 PY
   target_ready_status=$?
-  assert_success "$target_ready_status" "target-ready writer output fails closed at the pixel-sampling seam"
+  assert_success "$target_ready_status" "target-ready writer output matches future pixel-sampling target contract"
+fi
+
+target_ready_sampling_dir="$tmp_root/target-ready-sampling-fixture"
+mkdir -p "$target_ready_sampling_dir"
+cat >"$target_ready_sampling_dir/screenshot-pixels.txt.raw" <<'EOF'
+width=640
+height=480
+minima=0
+maxima=1
+mean=0.42
+colors=42
+EOF
+cp "$target_ready_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" "$target_ready_sampling_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
+
+bash -c '
+  . "$1"
+  write_controlled_display_pixel_observation \
+    "$2" \
+    observed \
+    none \
+    "" \
+    ":99" \
+    true \
+    controlled-display-pixels-observed-rendering-not-asserted \
+    "" \
+    alice-window-found \
+    running \
+    screenshot-captured \
+    "$2/screenshot.png" \
+    /usr/bin/Xvfb \
+    import \
+    non-black-pixels \
+    "Screenshot is 640x480 with non-black pixel data." \
+    after-readiness-wait \
+    observed \
+    x-window-inventory.json \
+    1 \
+    "$2/post-open-runtime-display-accessibility-evidence.json"
+  write_visible_rendering_pixel_sampling_blocker \
+    "$2" \
+    "$2/controlled-display-pixel-observation.json"
+' _ "$RUNNER" "$target_ready_sampling_dir" >"$tmp_root/target-ready-sampling-writer.out" 2>"$tmp_root/target-ready-sampling-writer.err"
+status=$?
+assert_success "$status" "target-ready pixel sampling seam fails closed when rendered pixels are not sampled"
+
+if [ "$status" -eq 0 ]; then
+  python3 - \
+    "$target_ready_sampling_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" \
+    >"$tmp_root/target-ready-sampling-contract.out" \
+    2>"$tmp_root/target-ready-sampling-contract.err" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+target = payload.get("worldCanvasPixelTarget")
+sampling = payload.get("pixelSampling")
+errors = []
+
+
+def require(condition, message):
+    if not condition:
+        errors.append(message)
+
+
+require(payload.get("schemaVersion") == 1, "pixel sampling blocker must have schemaVersion=1")
+require(payload.get("status") == "blocked", "pixel sampling seam must be blocked without sampled pixels")
+require(payload.get("blocker") == "world-canvas-pixel-sampling-not-implemented", "blocker must name unavailable world-canvas pixel sampling")
+require(payload.get("claimScope") == "visible-rendering-world-canvas-pixel-sampling", "claim scope must be the next pixel-sampling seam")
+require(payload.get("claimScopeDetail") == "target-ready-sampling-not-observed", "claim scope detail must not imply rendered-world correctness")
+require(payload.get("sourceArtifact") == "controlled-display-pixel-observation.json", "pixel sampling blocker must cite controlled-display source")
+require(payload.get("prerequisiteTargetStatus") == "target-ready", "pixel sampling blocker must require target-ready prerequisite")
+require(payload.get("renderedWorldPixelsObserved") is False, "pixel sampling blocker must not claim observed rendered-world pixels")
+require(payload.get("sampleCount") == 0, "pixel sampling blocker must have zero samples")
+require(payload.get("exactNextUnblocker") == "sample-run-window-world-canvas-pixels", "pixel sampling blocker must name the next unblocker")
+require(isinstance(target, dict), "pixel sampling blocker must copy the target-ready metadata")
+if isinstance(target, dict):
+    require(target.get("identified") is True, "pixel sampling blocker target must preserve target-ready identification")
+    require(target.get("status") == "target-ready", "pixel sampling blocker target must preserve target-ready status")
+    require(target.get("screenExtents", {}).get("coordinateType") == "screen", "pixel sampling blocker target must preserve screen extents")
+require(isinstance(sampling, dict), "pixel sampling blocker must include pixelSampling decision object")
+if isinstance(sampling, dict):
+    require(sampling.get("status") == "blocked", "pixelSampling must be blocked")
+    require(sampling.get("pixelsSampled") is False, "pixelSampling must not claim sampled pixels")
+    require(sampling.get("sampleCount") == 0, "pixelSampling sampleCount must be zero")
+unsupported = payload.get("unsupportedClaims")
+require(isinstance(unsupported, list), "pixel sampling blocker must list unsupportedClaims")
+if isinstance(unsupported, list):
+    for claim in (
+        "world-canvas-pixel-correctness",
+        "full-visible-rendering-correctness",
+        "rendered-world-correctness",
+    ):
+        require(claim in unsupported, f"unsupportedClaims must include {claim}")
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+  target_ready_sampling_status=$?
+  assert_success "$target_ready_sampling_status" "target-ready pixel sampling blocker records fail-closed non-claim semantics"
+else
+  fail "target-ready pixel sampling blocker artifact could not be inspected"
 fi
 
 target_blocked_dir="$tmp_root/target-blocked-fixture"
@@ -1044,8 +1098,7 @@ assert_contains "$RUNNER" 'screenshot-pixels\.txt\.raw' "runner derives screensh
 assert_contains "$RUNNER" 'worldCanvasPixelTarget' "runner records the world-canvas pixel target status"
 assert_contains "$RUNNER" 'unsupportedClaims' "runner records unsupported visible-rendering claims"
 assert_contains "$RUNNER" "$BLOCKER_ARTIFACT" "runner writes the fixed pixel-target blocker artifact"
-assert_contains "$RUNNER" "$SAMPLING_BLOCKER_ARTIFACT" "runner writes the fixed post-target-readiness pixel-sampling blocker artifact"
-assert_contains "$RUNNER" 'visibleRenderingPixelSamplingStatus=blocked' "status keeps post-target-readiness pixel sampling blocked"
+assert_contains "$RUNNER" "$PIXEL_SAMPLING_BLOCKER_ARTIFACT" "runner writes the fixed pixel-sampling blocker artifact"
 assert_contains "$RUNNER" 'screenExtents' "runner threads runtime/display screen extents into the pixel-target contract"
 assert_contains "$RUNNER" 'exactNextUnblocker' "runner names the exact next unblocker for blocked pixel targets"
 

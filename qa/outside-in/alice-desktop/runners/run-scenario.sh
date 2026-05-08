@@ -21,6 +21,7 @@ VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER=visible-rendering-pixel-sampling-blocke
 FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
 FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
 FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
+LEARNER_WORLD_BOUNDARY_ARTIFACT="$BASE_DIR/contracts/learner-world-assessment-boundary.json"
 
 usage() {
   cat <<'EOF'
@@ -469,13 +470,14 @@ PY
 write_checklist() {
   local scenario_json=$1
   local run_dir=$2
-  SCENARIO_JSON="$scenario_json" RUN_DIR="$run_dir" python3 - <<'PY'
+  SCENARIO_JSON="$scenario_json" RUN_DIR="$run_dir" LEARNER_WORLD_BOUNDARY_ARTIFACT="$LEARNER_WORLD_BOUNDARY_ARTIFACT" python3 - <<'PY'
 import json
 import os
 from pathlib import Path
 
 scenario = json.loads(os.environ["SCENARIO_JSON"])
 run_dir = Path(os.environ["RUN_DIR"])
+boundary_path = Path(os.environ["LEARNER_WORLD_BOUNDARY_ARTIFACT"])
 path = run_dir / "manual-evidence-checklist.txt"
 
 def section(lines, title, values):
@@ -484,6 +486,50 @@ def section(lines, title, values):
     lines.append("-" * len(title))
     for index, value in enumerate(values, 1):
         lines.append(f"{index}. {value}")
+
+def require_string(value, field):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{boundary_path}: {field} must be a non-empty string")
+    return value
+
+def require_string_list(value, field):
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{boundary_path}: {field} must be a non-empty string list")
+    for index, item in enumerate(value, 1):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"{boundary_path}: {field}[{index}] must be a non-empty string")
+    return value
+
+def assessment_boundary_values():
+    if scenario["id"] != "alice-desktop-instructor-student-setup":
+        return []
+
+    boundary = json.loads(boundary_path.read_text(encoding="utf-8"))
+    selected_scenario = require_string(boundary.get("selectedScenario"), "selectedScenario")
+    if selected_scenario != scenario["id"]:
+        raise ValueError(
+            f"{boundary_path}: selectedScenario must match {scenario['id']} for generated manual evidence"
+        )
+    if require_string(boundary.get("automationMode"), "automationMode") != "manual-evidence-required":
+        raise ValueError(f"{boundary_path}: automationMode must be manual-evidence-required")
+
+    supported_evidence = require_string_list(boundary.get("supportedEvidence"), "supportedEvidence")
+    assessment_limits = require_string_list(boundary.get("assessmentLimits"), "assessmentLimits")
+    blocker = boundary.get("blocker")
+    if not isinstance(blocker, dict):
+        raise ValueError(f"{boundary_path}: blocker must be a mapping")
+    blocker_id = require_string(blocker.get("id"), "blocker.id")
+    blocker_description = require_string(blocker.get("description"), "blocker.description")
+
+    values = [
+        "Manual evidence required.",
+        f"Scope: {require_string(boundary.get('scope'), 'scope')}.",
+    ]
+    values.extend(f"Supported evidence: {item}." for item in supported_evidence)
+    values.extend(f"Assessment limit: {item}." for item in assessment_limits)
+    values.append(f"Blocker: {blocker_id}.")
+    values.append(blocker_description)
+    return values
 
 lines = [
     f"Scenario: {scenario['id']}",
@@ -496,6 +542,9 @@ section(lines, "User actions", scenario["userActions"])
 section(lines, "Expected outcomes", scenario["expectedOutcomes"])
 section(lines, "Required evidence", scenario["evidence"]["required"])
 section(lines, "Fallback notes", scenario["fallback"]["notes"])
+assessment_values = assessment_boundary_values()
+if assessment_values:
+    section(lines, "Assessment boundary", assessment_values)
 section(
     lines,
     "Completion status",
@@ -1022,7 +1071,7 @@ PY
 
 write_visible_rendering_pixel_sampling_blocker() {
   local run_dir=$1
-  local controlled_display_artifact=$2
+  local controlled_display_artifact=${2:-}
 
   VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT="$controlled_display_artifact" \
   python3 - "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" <<'PY'
@@ -1033,11 +1082,11 @@ from pathlib import Path
 
 output_path = Path(sys.argv[1])
 controlled_display_path = Path(os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT", ""))
-CONTROLLED_DISPLAY_ARTIFACT = "controlled-display-pixel-observation.json"
-NEXT_UNBLOCKER = "reliable-rendered-world-pixel-observation"
+SOURCE_ARTIFACT = "controlled-display-pixel-observation.json"
 unsupported_claims = [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
+    "rendered-world-correctness",
     "full-ui-automation",
     "world-execution",
     "grading",
@@ -1045,46 +1094,79 @@ unsupported_claims = [
     "first-lesson-completion",
 ]
 
-try:
-    controlled_display = json.loads(controlled_display_path.read_text(encoding="utf-8"))
-except (OSError, json.JSONDecodeError):
-    controlled_display = {}
-if not isinstance(controlled_display, dict):
-    controlled_display = {}
 
-target = controlled_display.get("worldCanvasPixelTarget")
-if not isinstance(target, dict):
-    target = {
-        "identified": False,
-        "status": "blocked",
-    }
+def relative_artifact_name(path):
+    return path.name if str(path) else SOURCE_ARTIFACT
 
-target_status = str(target.get("status") or "blocked")
-target_source_artifact = str(
-    target.get("sourceArtifact") or "post-open-runtime-display-accessibility-evidence.json"
-)
+
+def read_controlled_display(path):
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def screenshot_path(payload):
+    if not isinstance(payload, dict):
+        return None
+    screenshot = payload.get("screenshot")
+    if isinstance(screenshot, dict) and screenshot.get("path"):
+        return Path(str(screenshot["path"])).name
+    raw_path = payload.get("screenshotFile")
+    return Path(str(raw_path)).name if raw_path else None
+
+
+controlled = read_controlled_display(controlled_display_path)
+target = {}
+if isinstance(controlled, dict) and isinstance(controlled.get("worldCanvasPixelTarget"), dict):
+    target = controlled["worldCanvasPixelTarget"]
+
+target_ready = target.get("identified") is True and target.get("status") == "target-ready"
+if target_ready:
+    blocker = "world-canvas-pixel-sampling-not-implemented"
+    blocker_detail = (
+        "A single world-canvas pixel target is ready, but this runner does not yet "
+        "sample pixels inside screenExtents or compare sampled pixels to rendered-world expectations."
+    )
+    claim_scope_detail = "target-ready-sampling-not-observed"
+    prerequisite_status = "target-ready"
+    exact_next_unblocker = "sample-run-window-world-canvas-pixels"
+else:
+    blocker = "world-canvas-pixel-target-not-ready"
+    blocker_detail = (
+        "World-canvas pixel sampling requires worldCanvasPixelTarget.status=target-ready; "
+        "target selection is blocked or unavailable, so no rendered-world pixels were sampled."
+    )
+    claim_scope_detail = "target-selection-blocked"
+    prerequisite_status = str(target.get("status") or "unavailable")
+    exact_next_unblocker = str(
+        target.get("exactNextUnblocker") or "reliable-run-window-world-canvas-pixel-sampling-target"
+    )
 
 payload = {
     "schemaVersion": 1,
     "status": "blocked",
-    "blocker": "rendered-world-pixel-sampling-not-implemented",
-    "blockerDetail": (
-        "World-canvas target readiness was observed, but no reliable rendered-pixel "
-        "sampler has observed and checked pixels inside the target bounds."
-    ),
-    "claimScope": "world-canvas-pixel-sampling-after-target-readiness",
-    "sourceArtifact": CONTROLLED_DISPLAY_ARTIFACT,
-    "targetSourceArtifact": target_source_artifact,
-    "targetReadinessStatus": target_status,
-    "exactNextUnblocker": NEXT_UNBLOCKER,
-    "renderedPixelsAvailable": False,
-    "renderedPixelsSampled": False,
-    "renderedPixelsChecked": False,
-    "renderedPixelsFresh": False,
-    "renderedPixelsConclusive": False,
+    "blocker": blocker,
+    "blockerDetail": blocker_detail,
+    "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+    "claimScopeDetail": claim_scope_detail,
+    "sourceArtifact": relative_artifact_name(controlled_display_path),
+    "prerequisiteTargetStatus": prerequisite_status,
+    "exactNextUnblocker": exact_next_unblocker,
+    "renderedWorldPixelsObserved": False,
     "sampleCount": 0,
-    "comparisonStatus": "not-run",
+    "screenshotPath": screenshot_path(controlled),
+    "screenshotStatus": controlled.get("screenshotStatus") if isinstance(controlled, dict) else "",
+    "screenshotPixelStatus": controlled.get("screenshotPixelStatus") if isinstance(controlled, dict) else "",
     "worldCanvasPixelTarget": target,
+    "pixelSampling": {
+        "status": "blocked",
+        "blocker": blocker,
+        "pixelsSampled": False,
+        "sampleCount": 0,
+        "samplingMethod": None,
+    },
     "unsupportedClaims": unsupported_claims,
 }
 
@@ -1377,6 +1459,24 @@ print(value)
 PY
 }
 
+inventory_json_fields() {
+  local inventory_path=$1
+  shift
+  python3 - "$inventory_path" "$@" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    root = json.load(stream)
+
+for field in sys.argv[2:]:
+    value = root
+    for part in field.split("."):
+        value = value.get(part, "") if isinstance(value, dict) else ""
+    print(value)
+PY
+}
+
 inventory_json_compact_field() {
   local inventory_path=$1
   local field=$2
@@ -1466,6 +1566,9 @@ write_post_open_runtime_display_blocker() {
     "" \
     not-attempted \
     not-attempted
+  write_visible_rendering_pixel_sampling_blocker \
+    "$run_dir" \
+    "$run_dir/controlled-display-pixel-observation.json"
 
   RUNTIME_DISPLAY_SCENARIO="$scenario_id" \
   RUNTIME_DISPLAY_AUTOMATION_MODE="$automation_mode" \
@@ -1510,6 +1613,9 @@ PY
     printf 'visibleRenderingPixelTargetStatus=blocked\n'
     printf 'visibleRenderingPixelTargetArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
     printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
+    printf 'visibleRenderingPixelSamplingStatus=blocked\n'
+    printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
+    printf 'visibleRenderingPixelSamplingBlocker=world-canvas-pixel-target-not-ready\n'
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -1940,8 +2046,10 @@ run_xvfb_real_alice() {
     write_environment "$run_dir" "$display"
     write_checklist "$scenario_json" "$run_dir" >/dev/null
     if [ -f "$run_dir/root-directory-prep.json" ]; then
-      root_directory_prep_status=$(inventory_json_field "$run_dir/root-directory-prep.json" status)
-      root_directory_prep_blocker=$(inventory_json_field "$run_dir/root-directory-prep.json" blocker)
+      local -a failed_root_directory_prep_fields
+      mapfile -t failed_root_directory_prep_fields < <(inventory_json_fields "$run_dir/root-directory-prep.json" status blocker)
+      root_directory_prep_status=${failed_root_directory_prep_fields[0]}
+      root_directory_prep_blocker=${failed_root_directory_prep_fields[1]}
     else
       root_directory_prep_status=blocked
       root_directory_prep_blocker=root-directory-prep-script-failed
@@ -2047,8 +2155,10 @@ JSON
     printf 'Alice rootDirectory launch preparation blocked: %s; see %s/root-directory-prep.json\n' "$root_directory_prep_blocker" "$run_dir" >&2
     return 2
   fi
-  root_directory_prep_status=$(inventory_json_field "$run_dir/root-directory-prep.json" status)
-  root_directory_prep_blocker=$(inventory_json_field "$run_dir/root-directory-prep.json" blocker)
+  local -a root_directory_prep_fields
+  mapfile -t root_directory_prep_fields < <(inventory_json_fields "$run_dir/root-directory-prep.json" status blocker)
+  root_directory_prep_status=${root_directory_prep_fields[0]}
+  root_directory_prep_blocker=${root_directory_prep_fields[1]}
 
   local license_acceptance_status license_acceptance_blocker license_prefs_user_root license_jvm_option
   license_prefs_user_root="$(cd "$run_dir" && pwd)/java-user-prefs"
@@ -2131,8 +2241,10 @@ JSON
       --output "$run_dir/license-acceptance.json" >/dev/null 2>&1 || true
     license_jvm_option=
   fi
-  license_acceptance_status=$(inventory_json_field "$run_dir/license-acceptance.json" status)
-  license_acceptance_blocker=$(inventory_json_field "$run_dir/license-acceptance.json" blocker)
+  local -a license_acceptance_fields
+  mapfile -t license_acceptance_fields < <(inventory_json_fields "$run_dir/license-acceptance.json" status blocker)
+  license_acceptance_status=${license_acceptance_fields[0]}
+  license_acceptance_blocker=${license_acceptance_fields[1]}
 
   Xvfb "$display" -screen 0 "${ALICE_QA_SCREEN:-1280x900x24}" > "$run_dir/xvfb.log" 2>&1 &
   xvfb_pid=$!
@@ -2308,8 +2420,10 @@ JSON
     # Allow the Swing accessibility tree to build before probing.
     sleep 3
     write_swing_widget_probe "$run_dir/x-window-inventory.json" "$run_dir/swing-widget-observation.json"
-    swing_widget_status=$(inventory_json_field "$run_dir/swing-widget-observation.json" status)
-    swing_widget_blocker=$(inventory_json_field "$run_dir/swing-widget-observation.json" blocker)
+    local -a swing_widget_fields
+    mapfile -t swing_widget_fields < <(inventory_json_fields "$run_dir/swing-widget-observation.json" status blocker)
+    swing_widget_status=${swing_widget_fields[0]}
+    swing_widget_blocker=${swing_widget_fields[1]}
   fi
   local tab_click_status=not-requested tab_click_blocker=not-requested
   local select_project_evidence_status=not-requested
@@ -2331,17 +2445,29 @@ JSON
       "$run_dir/tab-click-observation.json" \
       "$target_starter_display_name" \
       "$target_starter_repo_path"
-    tab_click_status=$(inventory_json_field "$run_dir/tab-click-observation.json" status)
-    tab_click_blocker=$(inventory_json_field "$run_dir/tab-click-observation.json" blocker)
-    select_project_evidence_status=$(inventory_json_field "$run_dir/tab-click-observation.json" evidenceStatus)
-    select_project_target_display_name=$(inventory_json_field "$run_dir/tab-click-observation.json" targetStarter.displayName)
-    select_project_target_repo_path=$(inventory_json_field "$run_dir/tab-click-observation.json" targetStarter.repositoryPath)
-    select_project_opened_display_name=$(inventory_json_field "$run_dir/tab-click-observation.json" openedStarter.displayName)
-    select_project_opened_repo_path=$(inventory_json_field "$run_dir/tab-click-observation.json" openedStarter.repositoryPath)
-    select_project_project_open_observed=$(inventory_json_field "$run_dir/tab-click-observation.json" projectOpenObserved)
+    local -a tab_click_fields
+    mapfile -t tab_click_fields < <(inventory_json_fields \
+      "$run_dir/tab-click-observation.json" \
+      status \
+      blocker \
+      evidenceStatus \
+      targetStarter.displayName \
+      targetStarter.repositoryPath \
+      openedStarter.displayName \
+      openedStarter.repositoryPath \
+      projectOpenObserved \
+      javaPid)
+    tab_click_status=${tab_click_fields[0]}
+    tab_click_blocker=${tab_click_fields[1]}
+    select_project_evidence_status=${tab_click_fields[2]}
+    select_project_target_display_name=${tab_click_fields[3]}
+    select_project_target_repo_path=${tab_click_fields[4]}
+    select_project_opened_display_name=${tab_click_fields[5]}
+    select_project_opened_repo_path=${tab_click_fields[6]}
+    select_project_project_open_observed=${tab_click_fields[7]}
     select_project_next_blocker=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" nextBlocker)
     select_project_window_context=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" selectProjectWindowContext)
-    select_project_alice_java_pid=$(inventory_json_field "$run_dir/tab-click-observation.json" javaPid)
+    select_project_alice_java_pid=${tab_click_fields[8]}
     select_project_starters_tab_safety=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" startersTabSafety)
   fi
   local post_open_status=not-requested post_open_blocker=not-requested
@@ -2352,8 +2478,10 @@ JSON
       "$run_dir/x-window-inventory.json" \
       "$run_dir/tab-click-observation.json" \
       "$run_dir/post-project-open-observation.json"
-    post_open_status=$(inventory_json_field "$run_dir/post-project-open-observation.json" status)
-    post_open_blocker=$(inventory_json_field "$run_dir/post-project-open-observation.json" blocker)
+    local -a post_open_fields
+    mapfile -t post_open_fields < <(inventory_json_fields "$run_dir/post-project-open-observation.json" status blocker)
+    post_open_status=${post_open_fields[0]}
+    post_open_blocker=${post_open_fields[1]}
   fi
   local procedure_target_status=not-requested procedure_target_blocker=not-requested
   if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
@@ -2366,8 +2494,10 @@ JSON
       "$automation_mode" \
       "$target_starter_display_name" \
       "$target_starter_repo_path"
-    procedure_target_status=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" status)
-    procedure_target_blocker=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" blocker)
+    local -a procedure_target_fields
+    mapfile -t procedure_target_fields < <(inventory_json_fields "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" status blocker)
+    procedure_target_status=${procedure_target_fields[0]}
+    procedure_target_blocker=${procedure_target_fields[1]}
   fi
   local runtime_display_status=not-requested runtime_display_blocker=not-requested
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
@@ -2378,19 +2508,26 @@ JSON
       "$run_dir/runtime-display-accessibility-status.txt" \
       "$scenario_id" \
       "$automation_mode"
-    runtime_display_status=$(inventory_json_field "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" status)
-    runtime_display_blocker=$(inventory_json_field "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" blocker)
+    local -a runtime_display_fields
+    mapfile -t runtime_display_fields < <(inventory_json_fields "$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" status blocker)
+    runtime_display_status=${runtime_display_fields[0]}
+    runtime_display_blocker=${runtime_display_fields[1]}
   fi
   local window_inventory_status alice_window_candidate_count application_root_error_status application_root_error_blocker license_dialog_status license_dialog_blocker select_project_status select_project_blocker select_project_interaction
-  window_inventory_status=$(inventory_json_field "$run_dir/x-window-inventory.json" status)
-  alice_window_candidate_count=$(inventory_json_field "$run_dir/x-window-inventory.json" aliceWindowCandidateCount)
-  application_root_error_status=$(inventory_json_field "$run_dir/application-root-error.json" status)
-  application_root_error_blocker=$(inventory_json_field "$run_dir/application-root-error.json" blocker)
-  license_dialog_status=$(inventory_json_field "$run_dir/license-dialog.json" status)
-  license_dialog_blocker=$(inventory_json_field "$run_dir/license-dialog.json" blocker)
-  select_project_status=$(inventory_json_field "$run_dir/select-project-window.json" status)
-  select_project_blocker=$(inventory_json_field "$run_dir/select-project-window.json" blocker)
-  select_project_interaction=$(inventory_json_field "$run_dir/select-project-window.json" interactionProof)
+  local -a window_inventory_fields application_root_error_fields license_dialog_fields select_project_fields
+  mapfile -t window_inventory_fields < <(inventory_json_fields "$run_dir/x-window-inventory.json" status aliceWindowCandidateCount)
+  mapfile -t application_root_error_fields < <(inventory_json_fields "$run_dir/application-root-error.json" status blocker)
+  mapfile -t license_dialog_fields < <(inventory_json_fields "$run_dir/license-dialog.json" status blocker)
+  mapfile -t select_project_fields < <(inventory_json_fields "$run_dir/select-project-window.json" status blocker interactionProof)
+  window_inventory_status=${window_inventory_fields[0]}
+  alice_window_candidate_count=${window_inventory_fields[1]}
+  application_root_error_status=${application_root_error_fields[0]}
+  application_root_error_blocker=${application_root_error_fields[1]}
+  license_dialog_status=${license_dialog_fields[0]}
+  license_dialog_blocker=${license_dialog_fields[1]}
+  select_project_status=${select_project_fields[0]}
+  select_project_blocker=${select_project_fields[1]}
+  select_project_interaction=${select_project_fields[2]}
 
   local screenshot_tool screenshot_status
   screenshot_tool=$(screenshot_tool_name)
@@ -2569,14 +2706,10 @@ JSON
 
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
     local visible_rendering_pixel_target_status visible_rendering_pixel_target_artifact
-    local visible_rendering_pixel_sampling_status=
+    local visible_rendering_pixel_sampling_status visible_rendering_pixel_sampling_artifact visible_rendering_pixel_sampling_blocker
     visible_rendering_pixel_target_status=$(inventory_json_field "$run_dir/controlled-display-pixel-observation.json" worldCanvasPixelTarget.status)
     if [ "$visible_rendering_pixel_target_status" = target-ready ]; then
       visible_rendering_pixel_target_artifact=controlled-display-pixel-observation.json
-      visible_rendering_pixel_sampling_status=blocked
-      write_visible_rendering_pixel_sampling_blocker \
-        "$run_dir" \
-        "$run_dir/controlled-display-pixel-observation.json"
     else
       visible_rendering_pixel_target_status=blocked
       visible_rendering_pixel_target_artifact="$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
@@ -2589,7 +2722,18 @@ JSON
         "$screenshot_pixel_status" \
         "$runtime_display_artifact_path"
     fi
+    write_visible_rendering_pixel_sampling_blocker \
+      "$run_dir" \
+      "$run_dir/controlled-display-pixel-observation.json"
+    local -a visible_rendering_pixel_sampling_fields
+    mapfile -t visible_rendering_pixel_sampling_fields < <(inventory_json_fields "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" status blocker)
+    visible_rendering_pixel_sampling_status=${visible_rendering_pixel_sampling_fields[0]}
+    visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
+    visible_rendering_pixel_sampling_blocker=${visible_rendering_pixel_sampling_fields[1]}
     scenario_outcome=blocked
+    if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ] && [ "$visible_rendering_pixel_sampling_status" = observed ]; then
+      scenario_outcome=passed
+    fi
     {
       cat "$run_dir/status.txt"
       printf 'outcome=%s\n' "$scenario_outcome"
@@ -2600,10 +2744,9 @@ JSON
       if [ "$visible_rendering_pixel_target_artifact" = "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER" ]; then
         printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
       fi
-      if [ "$visible_rendering_pixel_sampling_status" = blocked ]; then
-        printf 'visibleRenderingPixelSamplingStatus=blocked\n'
-        printf 'visibleRenderingPixelSamplingBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
-      fi
+      printf 'visibleRenderingPixelSamplingStatus=%s\n' "$visible_rendering_pixel_sampling_status"
+      printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$visible_rendering_pixel_sampling_artifact"
+      printf 'visibleRenderingPixelSamplingBlocker=%s\n' "$visible_rendering_pixel_sampling_blocker"
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi
@@ -2643,6 +2786,10 @@ JSON
   fi
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] && [ "$runtime_display_status" != observed ]; then
     printf 'Post-open runtime/display accessibility evidence blocked: %s; see %s/%s\n' "$runtime_display_blocker" "$run_dir" "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" >&2
+    return 2
+  fi
+  if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ] && [ "${visible_rendering_pixel_sampling_status:-blocked}" != observed ]; then
+    printf 'World-canvas pixel sampling evidence blocked: %s; see %s/%s\n' "${visible_rendering_pixel_sampling_blocker:-world-canvas-pixel-sampling-not-observed}" "$run_dir" "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" >&2
     return 2
   fi
   if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ] && [ "$procedure_target_status" != observed ]; then
