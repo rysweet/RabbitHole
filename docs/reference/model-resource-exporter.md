@@ -70,8 +70,8 @@ the helper classes.
 | `getThumbnailPath(String rootPath, String thumbnailName)` | Public | Returns the output path for a thumbnail under the package resource directory. |
 | `createClassThumb(BufferedImage imgSrc)` | Public static | Creates the class thumbnail image from a source thumbnail. |
 | `addExistingThumbnail(String name, File thumbnailFile)` | Public | Registers an already-written thumbnail if the file exists at registration time. |
-| `createXMLString()` | Package-private | Creates the XML resource description as a string for same-package generators and tests. |
-| `createXMLFile(String root, boolean forceRebuild)` | Package-private | Writes the XML resource description into the package resource directory and surfaces output failures as `IOException`. |
+| `createXMLString()` | Package-private | Creates the XML resource description as a string for same-package generators and tests. This call may populate missing class and subresource bounding boxes on the exporter. |
+| `createXMLFile(String root, boolean forceRebuild)` | Package-private | Writes the XML resource description into the package resource directory and surfaces output failures as `IOException`. Because it delegates to XML generation, it may populate missing bounding boxes before writing. |
 | `saveThumbnailsToDir(String root)` | Package-private | Reuses registered thumbnails, writes generated thumbnails when present, creates the class thumbnail from the first subresource thumbnail, and returns the files it saved or reused. |
 
 ## XML contract
@@ -109,6 +109,49 @@ subresource attributes or change resource enum names.
 Bounding boxes are class-scoped by model name. If the class itself has no
 bounding box, the XML generator computes the class box as the union of the
 registered subresource boxes.
+
+XML generation is intentionally stateful for missing bounding boxes. Calling
+`createXMLString()` or `createXMLFile(...)` may update the exporter before the
+XML is returned or written:
+
+| Missing state before XML generation | State after XML generation |
+| --- | --- |
+| Class bounding box is missing and subresource boxes are present | The exporter records the computed class union through `setBoundingBox(className, computedUnion)`. |
+| A non-class subresource has no local `bbox`, but the exporter has a box for that subresource model name | The matching `ModelSubResourceExporter` receives that box before its `Resource` element is emitted. |
+
+This is not a read-only rendering pass. Callers that inspect the exporter after
+XML generation should expect the missing class and subresource bounding-box
+state to be populated. Callers that need an immutable pre-render snapshot should
+copy the relevant state before invoking XML generation.
+
+### Stateful bounding-box example
+
+The common stateful path starts with subresource bounds only:
+
+```java
+ModelResourceExporter exporter =
+    new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+
+AxisAlignedBox variantBox =
+    AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5);
+exporter.setBoundingBox("VariantProp", variantBox);
+
+ModelSubResourceExporter subResource = exporter.getSubResources().get(0);
+assert exporter.getBoundingBox("TestProp") == null;
+assert subResource.getBbox() == null;
+
+String xml = exporter.createXMLString();
+
+assert xml != null;
+assert exporter.getBoundingBox("TestProp").equals(variantBox);
+assert subResource.getBbox().equals(variantBox);
+```
+
+When multiple subresource boxes are present and the class box is missing, the
+same stateful rule records the union as the class box. Set the class bounding box
+explicitly before XML generation when a caller needs a value other than the
+computed union.
 
 ## Generated Java contract
 
@@ -184,6 +227,7 @@ Behavior-preserving refactors must keep these outputs stable:
 | Surface | Required compatibility |
 | --- | --- |
 | XML shape | Root attributes, `Resource` attributes, tag nesting, unique subresource tags, and bounding-box values remain compatible. |
+| XML generation state | Missing class and subresource bounding boxes may be populated during XML generation; that mutation must stay explicit and covered by `ModelExportTest`. |
 | Java source shape | Package, enum name, constants, resource type constructor arguments, factory methods, joint declarations, and pose declarations remain compatible. |
 | Deprecated metadata | `setIsDeprecated(true)` continues to write XML `deprecated="TRUE"` and a generated Java `@Deprecated` enum annotation together. |
 | File paths | XML and thumbnail output paths continue to use the package directory and resource subdirectory conventions. |
@@ -193,6 +237,19 @@ Behavior-preserving refactors must keep these outputs stable:
 `ModelResourceJavaGenerator`, `ModelResourceXmlGenerator`, and
 `ModelResourceThumbnailWriter` are package-private helpers. Callers use
 `ModelResourceExporter`; they do not depend on the helper classes directly.
+
+## Configuration
+
+Model resource XML generation has no runtime configuration flag for
+bounding-box state. The stateful behavior is part of the exporter contract:
+missing class boxes are derived from registered subresource boxes, and missing
+subresource `bbox` fields are filled from exporter boxes for matching model
+names.
+
+Developer validation uses the existing Maven reactor configuration. Set
+`NODE_OPTIONS=--max-old-space-size=32768` when running the focused model export
+test so local runs match the repository's documented heap setting for
+Node-backed tooling.
 
 ## Validation
 
@@ -210,8 +267,10 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 ```
 
 `ModelExportTest` includes behavior-backed characterization for XML output,
-generated Java output, thumbnail handling, and deprecated metadata. In
-particular, the deprecated metadata characterization verifies that
+stateful bounding-box population, generated Java output, thumbnail handling, and
+deprecated metadata. In particular, `createXmlStringPopulatesMissingBoundingBoxes`
+documents that XML generation may populate exporter and subresource
+bounding-box state, while the deprecated metadata characterization verifies that
 `ModelResourceExporter` keeps generated XML and generated Java aligned without
 requiring decoder, project Save, or Select Project coverage.
 

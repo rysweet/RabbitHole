@@ -29,6 +29,7 @@ future refactor could accidentally break:
 | Behavior surface | Useful characterization |
 | --- | --- |
 | XML metadata | Assert root attributes, resource attributes, tag nesting, and bounding boxes. |
+| XML generation state | Assert the exporter state that XML generation intentionally populates, such as missing class/subresource bounding boxes. |
 | Generated Java | Assert package, enum declaration, constants, annotations, constructors, and compilation. |
 | Thumbnail output | Assert saved file paths, class thumbnail creation, and checked failure reporting. |
 | Protected hotspot metadata | Assert that one exporter flag updates every generated surface that consumes it. |
@@ -54,7 +55,38 @@ Add only the setup needed for the selected behavior. Do not introduce binary
 fixtures, network access, Git LFS dependencies, or privileged filesystem
 assumptions.
 
-## 3. Example: characterize deprecated metadata
+## 3. Example: characterize stateful bounding-box generation
+
+XML generation is a stateful exporter operation when bounding boxes are missing.
+The characterization should document both the generated XML behavior and the
+post-generation exporter state, not hide the mutation behind a local map
+reference.
+
+```java
+ModelResourceExporter exporter =
+    new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+AxisAlignedBox variantBox =
+    AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5);
+exporter.setBoundingBox("VariantProp", variantBox);
+ModelSubResourceExporter subResource = exporter.getSubResources().get(0);
+
+assertNull(exporter.getBoundingBox("TestProp"));
+assertNull(subResource.getBbox());
+
+assertNotNull(exporter.createXMLString());
+
+assertEquals(variantBox, exporter.getBoundingBox("TestProp"));
+assertEquals(variantBox, subResource.getBbox());
+```
+
+This is behavior-backed because generated XML depends on the same resolved
+bounds that later callers can observe on the exporter. If a future implementation
+changes XML generation to be read-only, this test must be updated with an
+explicit compatibility decision rather than accidentally passing through a hidden
+live-map alias.
+
+## 4. Example: characterize deprecated metadata
 
 Deprecated resource metadata is a protected behavior because one exporter flag
 drives both XML metadata and generated Java source. The characterization sets the
@@ -78,7 +110,7 @@ This is behavior-backed because it protects two generated artifacts consumed by
 resource loading and compilation. It does not depend on private helper names or
 line-level implementation trivia.
 
-## 4. Validate the focused model-loading scope
+## 5. Validate the focused model-loading scope
 
 Initialize the Tweedle grammar submodule, then run the focused model export test
 with the configured heap setting for Node-backed tooling:
@@ -96,7 +128,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 Run broader module or checkstyle validation only when the change also touches
 production code or style-sensitive files.
 
-## 5. Keep review proof outside repository docs
+## 6. Keep review proof outside repository docs
 
 Repository documentation describes the stable workflow and behavior contract. It
 is not the required proof artifact for a characterization change.

@@ -43,6 +43,7 @@ repository.
 - [Tutorial: Add a modernization corpus manifest entry](./tutorials/add-modernization-corpus-manifest-entry.md) - guided example for documenting a new generated fixture shape and refreshing scorecard evidence.
 - [Characterize ModelResourceExporter behavior](./howto/characterize-model-resource-exporter.md) - how to add focused, behavior-backed model resource exporter coverage before protected hotspot work.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
+- [Tutorial: Characterize ModelResourceExporter bounding-box state](./tutorials/model-resource-exporter-bounding-box-state.md) - guided example for protecting the intentional stateful XML bounding-box behavior.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
 - [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments.
 - [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice.
