@@ -51,12 +51,14 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+bash qa/outside-in/alice-desktop/tests/test-scenario-validation.sh
+bash qa/outside-in/alice-desktop/tests/test-select-project-completion-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 ```
 
-These checks cover the scenario contract, Select Project window proof shape, target-specific `Africa Full` opened/blocked evidence shape, and the post-open gate that rejects incomplete target-starter evidence. They do not exercise Save, rendering, grading, lessons, model export, archive fixtures, procedure/edit, or coverage.
+These checks cover the scenario/schema contract, runner-published Select Project status fields, Select Project window proof shape, target-specific `Africa Full` opened/blocked evidence shape, and the post-open gate that rejects incomplete target-starter evidence. They do not exercise Save, rendering, grading, lessons, model export, archive fixtures, procedure/edit, or coverage.
 
 ## Required action order
 

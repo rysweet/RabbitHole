@@ -1589,7 +1589,7 @@ JSON
   local select_project_starters_tab_safety=not-requested
   if [ "$needs_tab_click_probe" -eq 1 ]; then
     # Allow the Swing accessibility tree to build before probing, then run
-    # the tab structure diagnosis and click attempt.
+    # the target-specific Select Project starter proof.
     sleep 3
     write_tab_click_probe \
       "$run_dir/x-window-inventory.json" \

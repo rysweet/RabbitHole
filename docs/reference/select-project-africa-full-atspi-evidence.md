@@ -33,6 +33,8 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+bash qa/outside-in/alice-desktop/tests/test-scenario-validation.sh
+bash qa/outside-in/alice-desktop/tests/test-select-project-completion-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
@@ -183,6 +185,8 @@ Use the existing QA contract test structure for this feature:
 | Test | Coverage |
 | --- | --- |
 | `qa/outside-in/alice-desktop/tests/test-schema-contract.sh` | JSON schema accepts the target metadata and evidence contract fields. |
+| `qa/outside-in/alice-desktop/tests/test-scenario-validation.sh` | Scenario catalog normalization preserves the committed Africa Full target metadata and rejects missing, absolute, or drifted target paths. |
+| `qa/outside-in/alice-desktop/tests/test-select-project-completion-contract.sh` | Select Project completion spec keeps the focused scenario ID/workflow and runner-published target/opened/blocker status fields. |
 | `qa/outside-in/alice-desktop/tests/test-select-project-proof.sh` | Select Project window proof preserves exact Java dialog/window context and does not claim project/world interaction. |
 | `qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh` | Tab-click probe emits target-specific `Africa Full` opened/blocked evidence and does not click OK/Open without target-specific selection evidence. |
 | `qa/outside-in/alice-desktop/tests/test-validator-contract.sh` | Validator enforces `targetStarter`, path safety, workflow allowlists, and scenario-specific Africa Full path constraints. |
