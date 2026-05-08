@@ -602,6 +602,15 @@ def nullable_relative_path(raw_path):
         return None
     return Path(raw_path).name
 
+def relative_path_or_empty(raw_path):
+    relative = nullable_relative_path(raw_path)
+    return relative if relative is not None else ""
+
+def executable_name_or_empty(raw_path):
+    if not raw_path:
+        return ""
+    return Path(raw_path).name
+
 def parse_screenshot_dimensions(output_path):
     raw_path = output_path.parent / "screenshot-pixels.txt.raw"
     dimensions = {"width": None, "height": None}
@@ -645,8 +654,8 @@ payload = {
     "readyStatus": value("CONTROLLED_DISPLAY_READY_STATUS"),
     "processStatus": value("CONTROLLED_DISPLAY_PROCESS_STATUS"),
     "screenshotStatus": screenshot_status,
-    "screenshotFile": value("CONTROLLED_DISPLAY_SCREENSHOT_FILE"),
-    "xvfbExecutable": value("CONTROLLED_DISPLAY_XVFB_EXECUTABLE"),
+    "screenshotFile": relative_path_or_empty(value("CONTROLLED_DISPLAY_SCREENSHOT_FILE")),
+    "xvfbExecutable": executable_name_or_empty(value("CONTROLLED_DISPLAY_XVFB_EXECUTABLE")),
     "screenshotTool": value("CONTROLLED_DISPLAY_SCREENSHOT_TOOL"),
     "screenshotPixelStatus": screenshot_pixel_status,
     "screenshotPixelDetail": value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_DETAIL"),
@@ -2097,90 +2106,99 @@ run_gated_command_smoke() {
 
   printf 'Evidence written to %s\n' "$run_dir"
 }
-command_name=${1:-}
-case "$command_name" in
-  list)
-    "$VALIDATOR" --list
-    ;;
-  validate)
-    "$VALIDATOR"
-    ;;
-  run)
-    shift
-    scenario_request=${1:-}
-    if [ -z "$scenario_request" ]; then
-      usage >&2
-      exit 2
-    fi
-    shift
+main() {
+  local command_name scenario_request evidence_base timeout_override prepare_only
+  local scenario_id scenario_json timestamp run_dir automation_mode checklist
 
-    evidence_base="$BASE_DIR/evidence"
-    timeout_override=
-    prepare_only=0
-    while [ "$#" -gt 0 ]; do
-      case "$1" in
-        --evidence-dir)
-          if [ "$#" -lt 2 ]; then
-            printf '%s\n' '--evidence-dir requires a value' >&2
+  command_name=${1:-}
+  case "$command_name" in
+    list)
+      "$VALIDATOR" --list
+      ;;
+    validate)
+      "$VALIDATOR"
+      ;;
+    run)
+      shift
+      scenario_request=${1:-}
+      if [ -z "$scenario_request" ]; then
+        usage >&2
+        exit 2
+      fi
+      shift
+
+      evidence_base="$BASE_DIR/evidence"
+      timeout_override=
+      prepare_only=0
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --evidence-dir)
+            if [ "$#" -lt 2 ]; then
+              printf '%s\n' '--evidence-dir requires a value' >&2
+              exit 2
+            fi
+            evidence_base=$2
+            shift 2
+            ;;
+          --timeout-seconds)
+            if [ "$#" -lt 2 ]; then
+              printf '%s\n' '--timeout-seconds requires a value' >&2
+              exit 2
+            fi
+            timeout_override=$2
+            validate_positive_integer "$timeout_override" "timeout"
+            shift 2
+            ;;
+          --prepare-only)
+            prepare_only=1
+            shift
+            ;;
+          *)
+            printf 'unknown argument: %s\n' "$1" >&2
+            usage >&2
             exit 2
-          fi
-          evidence_base=$2
-          shift 2
+            ;;
+        esac
+      done
+
+      scenario_id=$(resolve_scenario_id "$scenario_request")
+      scenario_json=$("$VALIDATOR" --dump-json "$scenario_id")
+      validate_scenario_automation_cwd "$scenario_json"
+      timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+      run_dir="$evidence_base/$scenario_id/$timestamp"
+      mkdir -p "$run_dir"
+
+      automation_mode=$(json_fields "$scenario_json" "automationMode")
+      case "$automation_mode" in
+        xvfb-real-alice)
+          run_xvfb_real_alice "$scenario_json" "$run_dir" "$timeout_override"
           ;;
-        --timeout-seconds)
-          if [ "$#" -lt 2 ]; then
-            printf '%s\n' '--timeout-seconds requires a value' >&2
-            exit 2
-          fi
-          timeout_override=$2
-          validate_positive_integer "$timeout_override" "timeout"
-          shift 2
+        gated-command-smoke)
+          run_gated_command_smoke "$scenario_json" "$run_dir" "$timeout_override" "$prepare_only"
           ;;
-        --prepare-only)
-          prepare_only=1
-          shift
+        manual-evidence-required)
+          write_environment "$run_dir"
+          checklist=$(write_checklist "$scenario_json" "$run_dir")
+          write_manual_status "$run_dir" "$checklist" "$scenario_id" "$automation_mode"
+          printf 'Manual scenario prepared: %s\n' "$checklist"
           ;;
         *)
-          printf 'unknown argument: %s\n' "$1" >&2
-          usage >&2
-          exit 2
+          printf 'unsupported automationMode: %s\n' "$automation_mode" >&2
+          exit 1
           ;;
-        esac
-    done
+      esac
+      ;;
+    -h|--help|help|"")
+      usage
+      ;;
+    *)
+      printf 'unknown command: %s\n' "$command_name" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
 
-    scenario_id=$(resolve_scenario_id "$scenario_request")
-    scenario_json=$("$VALIDATOR" --dump-json "$scenario_id")
-    validate_scenario_automation_cwd "$scenario_json"
-    timestamp=$(date -u +%Y%m%dT%H%M%SZ)
-    run_dir="$evidence_base/$scenario_id/$timestamp"
-    mkdir -p "$run_dir"
-
-    automation_mode=$(json_fields "$scenario_json" "automationMode")
-    case "$automation_mode" in
-      xvfb-real-alice)
-        run_xvfb_real_alice "$scenario_json" "$run_dir" "$timeout_override"
-        ;;
-      gated-command-smoke)
-        run_gated_command_smoke "$scenario_json" "$run_dir" "$timeout_override" "$prepare_only"
-        ;;
-      manual-evidence-required)
-        write_environment "$run_dir"
-        checklist=$(write_checklist "$scenario_json" "$run_dir")
-        write_manual_status "$run_dir" "$checklist" "$scenario_id" "$automation_mode"
-        printf 'Manual scenario prepared: %s\n' "$checklist"
-        ;;
-      *)
-        printf 'unsupported automationMode: %s\n' "$automation_mode" >&2
-        exit 1
-        ;;
-    esac
-    ;;
-  -h|--help|help|"")
-    usage
-    ;;
-  *)
-    printf 'unknown command: %s\n' "$command_name" >&2
-    usage >&2
-    exit 2
-    ;;
-esac
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
