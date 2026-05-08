@@ -1,8 +1,6 @@
 # Save Menu Dialog Written-Project Proof
 
-This reference is the target contract for the strengthened bounded desktop Save proof shard for Alice project Save. The feature to build must prove actual Save menu item activation, completed Swing `JFileChooser` approval, a real `.a3p` write, readable project round-trip, and verification that the saved project contains the expected synthetic marker.
-
-Implementation status: this document is a retcon spec for the strengthened proof, not evidence that the current shard already performs readback and marker verification. Until the test and artifact are updated to this contract, existing passing runs must be treated as bounded write proof only.
+This reference documents the strengthened bounded desktop Save proof shard for Alice project Save. The shard proves actual Save menu item activation, completed Swing `JFileChooser` approval, a real `.a3p` write, readable project round-trip, and verification that the saved project contains the expected synthetic marker.
 
 ## Contents
 
@@ -17,7 +15,7 @@ Implementation status: this document is a retcon spec for the strengthened proof
 
 ## Purpose
 
-The strengthened proof shard must show one real desktop Save menu path beyond the earlier bounded write-only seam. It does not attempt comprehensive Save coverage. The successful path is:
+The strengthened proof shard shows one real desktop Save menu path beyond the earlier bounded write-only seam. It does not attempt comprehensive Save coverage. The successful path is:
 
 ```text
 Save menu item doClick()
@@ -36,15 +34,15 @@ Linux Swing `JFileChooser` is the expected controlled dialog. The proof does not
 
 ## Canonical proof shard
 
-The canonical test target to strengthen is:
+The canonical proof shard is:
 
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/StageIdeSaveMenuDoClickToWriteProofTest.java
 ```
 
-The strengthened test must create a deterministic marked project, obtain the production Save menu item through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)`, activate it with `doClick()`, control the live Swing `JFileChooser`, and assert the approved target file is a non-empty `.a3p`.
+The test creates a deterministic marked project, obtains the production Save menu item through `SaveProjectOperation.getInstance().getMenuItemPrepModel().createMenuItemAndAddTo(...)`, activates it with `doClick()`, controls the live Swing `JFileChooser`, and asserts the approved target file is a non-empty `.a3p`.
 
-The strengthened implementation must then read the written file back through `IoUtilities.readProject(targetFile)`. The readback project must be non-null and must contain the marker `saveMenuDoClickRoundTripMarker` through normal Alice project/domain APIs. A non-empty file alone is not enough for this proof.
+The proof then reads the written file back through `IoUtilities.readProject(targetFile)`. The readback project must be non-null and must contain the marker `saveMenuDoClickRoundTripMarker` through normal Alice project/domain APIs. A non-empty file alone is not enough for this proof.
 
 The strengthened proof must not call `SaveOperationFlow` directly. `SaveOperationFlow` remains the production coordination layer reached through the menu operation.
 
@@ -190,7 +188,7 @@ Set the memory option for large Maven runs:
 export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
-Run the focused proof with a display after implementing the strengthened readback and marker contract:
+Run the focused proof with a display:
 
 ```bash
 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \

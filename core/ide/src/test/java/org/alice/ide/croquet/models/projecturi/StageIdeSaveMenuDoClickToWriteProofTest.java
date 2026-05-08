@@ -20,9 +20,14 @@ import org.lgna.croquet.views.ViewController;
 import org.lgna.project.License;
 import org.lgna.project.Project;
 import org.lgna.project.ast.AstUtilities;
+import org.lgna.project.ast.BlockStatement;
+import org.lgna.project.ast.Comment;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.UserField;
+import org.lgna.project.ast.UserMethod;
+import org.lgna.project.ast.UserParameter;
+import org.lgna.project.io.IoUtilities;
 import org.lgna.story.SProgram;
 import org.lgna.story.SScene;
 
@@ -55,6 +60,7 @@ import java.util.prefs.Preferences;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -83,11 +89,15 @@ import static org.junit.Assume.assumeTrue;
  *   → SaveOperationFlow calls saveAction.save(targetFile)
  *   → application.saveProjectTo(targetFile)
  *   → targetFile.a3p written to disk (non-empty)
+ *   → IoUtilities.readProject(targetFile)
+ *   → readback project contains saveMenuDoClickRoundTripMarker
  *
  * <p>The background probe uses a java.util.Timer (daemon thread, independent of EDT) so
  * it fires even while the EDT is blocked inside JFileChooser's secondary event loop.
  */
 public class StageIdeSaveMenuDoClickToWriteProofTest {
+  private static final String READBACK_MARKER = "saveMenuDoClickRoundTripMarker";
+
   private String previousDiscoveryEvidenceDir;
   private String previousSelectedPath;
   private Preferences licensePreferences;
@@ -111,15 +121,15 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
   }
 
   /**
-   * Proves the full Save menu item doClick → live JFileChooser approval → written .a3p file.
+   * Proves the full Save menu item doClick → live JFileChooser approval → written readable .a3p file.
    *
    * <p>The Save menu item is obtained via getMenuItemPrepModel().createMenuItemAndAddTo(),
    * the same factory the real StageIDE menu bar uses. doClick() on that item triggers the
    * Croquet ActionEvent dispatch path used by File→Save menu activation.
    *
    * <p>The JFileChooser is approved (not cancelled) by the background probe. The resulting
-   * .a3p file is verified to exist and be non-empty, proving the full write path from
-   * menu item doClick through to disk.
+   * .a3p file is verified to exist, be non-empty, read back as a project, and contain
+   * the synthetic marker from the project created by this test.
    *
    * <p>doesNotClaim: desktop pixels or visible rendering were validated, native
    * java.awt.FileDialog peer, first-lesson completion, grading, physical user click.
@@ -138,6 +148,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       assertTrue(json, json.contains("\"wroteFile\": false"));
       assertTrue(json, json.contains("\"approved_selection\": false"));
       assertTrue(json, json.contains("\"file_written\": false"));
+      assertTrue(json, json.contains("\"project_readable\": false"));
+      assertTrue(json, json.contains("\"marker_present\": false"));
       assertFalse(json, json.contains("\"claim\""));
       assertFalse(json, json.contains("\"wroteFile\": true"));
       assertFalse(json, json.contains("approved the selected .a3p path"));
@@ -217,13 +229,25 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       probe.stop();
     }
 
+    assertTrue("target .a3p file must exist after save", targetFile.isFile());
+    assertTrue("target .a3p file must be non-empty", targetFile.length() > 0);
+    assertTrue("target file must use .a3p extension", targetFile.getName().endsWith(".a3p"));
+    assertTrue("saved file must stay inside controlled temp projects dir",
+        targetFile.getCanonicalFile().toPath().startsWith(projectsDir.toRealPath()));
+
+    Project savedProject = IoUtilities.readProject(targetFile);
+    assertNotNull("saved .a3p must read back as an Alice project", savedProject);
+    boolean markerPresent = projectContainsMarker(savedProject, READBACK_MARKER);
+    assertTrue("saved .a3p readback must contain " + READBACK_MARKER, markerPresent);
+    probe.recordReadback(READBACK_MARKER, true, markerPresent);
+
     // Step 4: Write evidence artifact and assert the full chain.
     probe.writeResult(evidenceDir);
 
     String json = Files.readString(probe.artifactPath(evidenceDir));
     assertTrue(json, json.contains("\"status\": \"proven\""));
-    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_approved_chooser_wrote_project_file\""));
-    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\""));
+    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_approved_chooser_wrote_readable_project_with_marker\""));
+    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, wrote a non-empty project file, read it back, and verified the expected marker\""));
     assertTrue(json, json.contains("\"menu_item_doclick\": true"));
     assertTrue(json, json.contains("\"chooser_observed\": true"));
     assertTrue(json, json.contains("\"approved_selection\": true"));
@@ -235,6 +259,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"selected_file_verified\": true"));
     assertTrue(json, json.contains("\"ambiguous_chooser_discovery\": false"));
     assertTrue(json, json.contains("\"normalized_selected_file\": \"projects/doclick-save-proof.a3p\""));
+    assertTrue(json, json.contains("\"project_readable\": true"));
+    assertTrue(json, json.contains("\"expected_marker\": \"" + READBACK_MARKER + "\""));
+    assertTrue(json, json.contains("\"marker_present\": true"));
     assertFalse(json, json.contains(FileDialogUtilities.escapeJson(targetFile.getCanonicalPath())));
     assertTrue(json, json.contains("\"full lesson completion\""));
     assertTrue(json, json.contains("\"visible rendering correctness\""));
@@ -242,13 +269,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"physical user click\""));
     assertTrue(json, json.contains("\"broad UI automation coverage\""));
     assertTrue(json, json.contains("\"native dialog coverage\""));
+    assertTrue(json, json.contains("\"all Save variants\""));
     assertFalse(json, json.contains("\"status\": \"unsupported\""));
-
-    assertTrue("target .a3p file must exist after save", targetFile.isFile());
-    assertTrue("target .a3p file must be non-empty", targetFile.length() > 0);
-    assertTrue("target file must use .a3p extension", targetFile.getName().endsWith(".a3p"));
-    assertTrue("saved file must stay inside controlled temp projects dir",
-        targetFile.getCanonicalFile().toPath().startsWith(projectsDir.toRealPath()));
   }
 
   @Test
@@ -277,6 +299,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"wroteFile\": false"));
     assertTrue(json, json.contains("\"approved_selection\": false"));
     assertTrue(json, json.contains("\"file_written\": false"));
+    assertTrue(json, json.contains("\"project_readable\": false"));
+    assertTrue(json, json.contains("\"marker_present\": false"));
     assertTrue(json, json.contains("\"Save menu/control/dialog/write path\""));
     assertTrue(json, json.contains("\"requiresNextEvidence\""));
     assertTrue(json, json.contains("\"physical user click\""));
@@ -303,7 +327,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"menu_item_doclick\": false"));
     assertTrue(json, json.contains("\"approved_selection\": false"));
     assertTrue(json, json.contains("\"file_written\": false"));
-    assertTrue(json, json.contains("\"reporting_summary\": \"Save menu item doClick write path was not proven; chooser approval and file writing remain unproven\""));
+    assertTrue(json, json.contains("\"project_readable\": false"));
+    assertTrue(json, json.contains("\"marker_present\": false"));
+    assertTrue(json, json.contains("\"reporting_summary\": \"Save menu item doClick write/readback path was not proven; chooser approval, file writing, project readback, and marker verification remain unproven\""));
     assertFalse(json, json.contains("\"claim\""));
     assertFalse(json, json.contains("\"menu_item_doclick\": true"));
     assertFalse(json, json.contains("approved the selected .a3p path"));
@@ -336,6 +362,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"approved_selection\": false"));
     assertTrue(json, json.contains("\"file_written\": false"));
     assertTrue(json, json.contains("\"file_nonempty\": false"));
+    assertTrue(json, json.contains("\"project_readable\": false"));
+    assertTrue(json, json.contains("\"marker_present\": false"));
     assertTrue(json, json.contains("\"file_size_bytes\": " + Files.size(targetPath)));
     assertFalse(json, json.contains("\"status\": \"proven\""));
     assertFalse(json, json.contains("\"claim\""));
@@ -348,8 +376,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
   }
 
   @Test
-  public void chooserAndFileSignalsWithMenuDoClickProduceProvenArtifact() throws Exception {
-    Path testDir = newTestDir().resolve("completed-signals-with-menu-doclick");
+  public void chooserAndFileSignalsWithMenuDoClickWithoutReadbackDoNotProduceProvenArtifact() throws Exception {
+    Path testDir = newTestDir().resolve("completed-signals-with-menu-doclick-without-readback");
     Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
     Path targetPath = Files.createDirectories(testDir.resolve("projects")).resolve("doclick-save-proof.a3p");
     Files.writeString(targetPath, "saved project file", StandardCharsets.UTF_8);
@@ -365,14 +393,54 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     probe.writeResult(evidenceDir);
 
     String json = Files.readString(probe.artifactPath(evidenceDir));
+    assertTrue(json, json.contains("\"status\": \"not_proven\""));
+    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_written_project_not_readable\""));
+    assertTrue(json, json.contains("\"menu_item_doclick\": true"));
+    assertTrue(json, json.contains("\"wroteFile\": false"));
+    assertTrue(json, json.contains("\"approved_selection\": false"));
+    assertTrue(json, json.contains("\"file_written\": false"));
+    assertTrue(json, json.contains("\"file_nonempty\": false"));
+    assertTrue(json, json.contains("\"project_readable\": false"));
+    assertTrue(json, json.contains("\"marker_present\": false"));
+    assertFalse(json, json.contains("\"status\": \"proven\""));
+    assertFalse(json, json.contains("\"claim\""));
+    assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("\"approved_selection\": true"));
+    assertFalse(json, json.contains("\"file_written\": true"));
+    assertFalse(json, json.contains("\"project_readable\": true"));
+    assertFalse(json, json.contains("\"marker_present\": true"));
+  }
+
+  @Test
+  public void chooserAndFileSignalsWithMenuDoClickAndReadbackMarkerProduceProvenArtifact() throws Exception {
+    Path testDir = newTestDir().resolve("completed-signals-with-menu-doclick-readback-marker");
+    Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
+    Path targetPath = Files.createDirectories(testDir.resolve("projects")).resolve("doclick-save-proof.a3p");
+    Files.writeString(targetPath, "saved project file", StandardCharsets.UTF_8);
+    SaveMenuDoClickProbe probe = new SaveMenuDoClickProbe(targetPath.toAbsolutePath().toFile(), testDir);
+    probe.markMenuItemDoClickTriggered();
+    probe.chooserObserved = true;
+    probe.dialogShowing = true;
+    probe.dialogClass = JDialog.class.getName();
+    probe.normalizedSelectedFile = targetPath.toFile().getCanonicalPath();
+    probe.selectedFileVerified = true;
+    probe.approvedSelection.set(true);
+    probe.recordReadback(READBACK_MARKER, true, true);
+
+    probe.writeResult(evidenceDir);
+
+    String json = Files.readString(probe.artifactPath(evidenceDir));
     assertTrue(json, json.contains("\"status\": \"proven\""));
-    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_approved_chooser_wrote_project_file\""));
+    assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_approved_chooser_wrote_readable_project_with_marker\""));
     assertTrue(json, json.contains("\"menu_item_doclick\": true"));
     assertTrue(json, json.contains("\"wroteFile\": true"));
     assertTrue(json, json.contains("\"approved_selection\": true"));
     assertTrue(json, json.contains("\"file_written\": true"));
     assertTrue(json, json.contains("\"file_nonempty\": true"));
-    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file\""));
+    assertTrue(json, json.contains("\"project_readable\": true"));
+    assertTrue(json, json.contains("\"expected_marker\": \"" + READBACK_MARKER + "\""));
+    assertTrue(json, json.contains("\"marker_present\": true"));
+    assertTrue(json, json.contains("\"claim\": \"Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, wrote a non-empty project file, read it back, and verified the expected marker\""));
     assertFalse(json, json.contains("\"status\": \"not_proven\""));
     assertFalse(json, json.contains("\"reporting_summary\""));
   }
@@ -392,6 +460,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertFalse(json, json.contains("\"status\": \"unsupported\""));
     assertTrue(json, json.contains("\"wroteFile\": false"));
     assertTrue(json, json.contains("\"file_written\": false"));
+    assertTrue(json, json.contains("\"project_readable\": false"));
+    assertTrue(json, json.contains("\"marker_present\": false"));
     assertFalse(json, json.contains("\"wroteFile\": true"));
     assertFalse(json, json.contains("\"file_written\": true"));
     assertFalse(json, json.contains("\"claim\""));
@@ -470,6 +540,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       assertTrue(json, json.contains("\"approved_selection\": false"));
       assertTrue(json, json.contains("\"wroteFile\": false"));
       assertTrue(json, json.contains("\"file_written\": false"));
+      assertTrue(json, json.contains("\"project_readable\": false"));
+      assertTrue(json, json.contains("\"marker_present\": false"));
       assertFalse(json, json.contains("\"approved_selection\": true"));
       assertFalse(json, json.contains("\"wroteFile\": true"));
       assertFalse(json, json.contains("\"file_written\": true"));
@@ -526,6 +598,9 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     private volatile boolean dialogShowing;
     private volatile String dialogClass;
     private volatile String normalizedSelectedFile;
+    private volatile String expectedReadbackMarker = READBACK_MARKER;
+    private volatile boolean projectReadable;
+    private volatile boolean readbackMarkerPresent;
     private volatile String failureReason;
     private final AtomicInteger pollCount = new AtomicInteger();
     private final AtomicBoolean menuItemDoClickTriggered = new AtomicBoolean(false);
@@ -554,6 +629,12 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     void markMenuItemDoClickTriggered() {
       this.menuItemDoClickTriggered.set(true);
+    }
+
+    void recordReadback(String expectedMarker, boolean projectReadable, boolean markerPresent) {
+      this.expectedReadbackMarker = expectedMarker;
+      this.projectReadable = projectReadable;
+      this.readbackMarkerPresent = markerPresent;
     }
 
     Path artifactPath(Path evidenceDir) {
@@ -602,26 +683,33 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "  \"reason\": \"No available non-headless AWT display\",\n"
               + "  \"dialogType\": \"Swing JFileChooser\",\n"
               + "  \"wroteFile\": false,\n"
-              + "  \"approved_selection\": false,\n"
-              + "  \"file_written\": false,\n"
-              + "  \"file_nonempty\": false,\n"
-              + "  \"proofTarget\": \"Save menu/control/dialog/write path\",\n"
-              + "  \"reporting_summary\": \"Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven\",\n"
+               + "  \"approved_selection\": false,\n"
+               + "  \"file_written\": false,\n"
+               + "  \"file_nonempty\": false,\n"
+               + "  \"readback\": {\n"
+               + "    \"project_readable\": false,\n"
+               + "    \"expected_marker\": \"" + READBACK_MARKER + "\",\n"
+               + "    \"marker_present\": false\n"
+               + "  },\n"
+               + "  \"proofTarget\": \"Save menu/control/dialog/write/readback/marker path\",\n"
+              + "  \"reporting_summary\": \"Save menu/control/dialog/write/readback/marker path requires a non-headless AWT display before it can be proven\",\n"
               + "  \"blocker\": {\n"
               + "    \"observed\": \"GraphicsEnvironment.isHeadless() is true or no usable desktop display is available\",\n"
               + "    \"required\": \"Xvfb or another non-headless AWT display capable of showing a Swing JFileChooser\"\n"
               + "  },\n"
               + "  \"requiresNextEvidence\": [\n"
               + "    \"Run this proof shard under xvfb-run -a or an equivalent desktop session\",\n"
-              + "    \"Save menu/control/dialog/write path artifact with status proven\"\n"
+              + "    \"Save menu/control/dialog/write/readback/marker path artifact with status proven\"\n"
               + "  ],\n"
               + "  \"doesNotClaim\": [\n"
+              + "    \"full desktop Save completion\",\n"
               + "    \"full lesson completion\",\n"
               + "    \"visible rendering correctness\",\n"
               + "    \"grading correctness\",\n"
               + "    \"physical user click\",\n"
               + "    \"broad UI automation coverage\",\n"
-              + "    \"native dialog coverage\"\n"
+              + "    \"native dialog coverage\",\n"
+              + "    \"all Save variants\"\n"
               + "  ]\n"
               + "}\n",
           StandardCharsets.UTF_8);
@@ -646,6 +734,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       boolean observedExpectedFile = fileWritten && fileNonempty && fileHasExpectedExtension && targetInsideProofRoot;
       boolean chooserApproved = this.approvedSelection.get();
       boolean menuDoClickTriggered = this.menuItemDoClickTriggered.get();
+      boolean readbackVerified = this.projectReadable && this.readbackMarkerPresent;
       boolean wouldBeProvenExceptMenu = this.chooserObserved
           && chooserApproved
           && this.selectedFileVerified
@@ -653,20 +742,18 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
           && !this.ambiguousChooserDiscovery
           && observedExpectedFile
           && this.failureReason == null;
-      boolean proven = menuDoClickTriggered && wouldBeProvenExceptMenu;
+      boolean proven = menuDoClickTriggered && wouldBeProvenExceptMenu && readbackVerified;
       boolean claimedApprovedSelection = proven && chooserApproved;
       boolean claimedWroteFile = proven && observedExpectedFile;
       boolean claimedFileWritten = proven && fileWritten;
       boolean claimedFileNonempty = proven && fileNonempty;
+      boolean claimedProjectReadable = proven && this.projectReadable;
+      boolean claimedMarkerPresent = proven && this.readbackMarkerPresent;
       String status = proven ? "proven" : "not_proven";
-      String reason = proven
-          ? "save_menu_doclick_approved_chooser_wrote_project_file"
-          : this.failureReason == null
-              ? wouldBeProvenExceptMenu ? "save_menu_doclick_not_recorded" : "save_menu_doclick_e2e_not_completed"
-              : this.failureReason;
+      String reason = proofReason(proven, menuDoClickTriggered, wouldBeProvenExceptMenu, this.projectReadable);
       String claimOrSummaryJson = proven
-          ? "Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file"
-          : "Save menu item doClick write path was not proven; chooser approval and file writing remain unproven";
+          ? "Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, wrote a non-empty project file, read it back, and verified the expected marker"
+          : "Save menu item doClick write/readback path was not proven; chooser approval, file writing, project readback, and marker verification remain unproven";
       claimOrSummaryJson = proven
           ? "  \"claim\": \"" + FileDialogUtilities.escapeJson(claimOrSummaryJson) + "\",\n"
           : "  \"reporting_summary\": \"" + FileDialogUtilities.escapeJson(claimOrSummaryJson) + "\",\n";
@@ -685,6 +772,12 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       String writtenArtifactStep = claimedWroteFile
           ? "targetFile written to disk as non-empty .a3p"
           : "Non-empty target .a3p write was not proven in this run";
+      String readbackStep = claimedProjectReadable
+          ? "IoUtilities.readProject(targetFile) returned a non-null project"
+          : "Readable project round-trip was not proven in this run";
+      String markerStep = claimedMarkerPresent
+          ? "readback project contains expected marker " + this.expectedReadbackMarker
+          : "Readback marker verification was not proven in this run";
       String menuDoClickStep = menuDoClickTriggered
           ? "menuItem.doClick() on actual Save menu item (created via getMenuItemPrepModel().createMenuItemAndAddTo())"
           : "menuItem.doClick() was not recorded in this run";
@@ -713,8 +806,10 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "    \"step9\": \"" + chooserApprovalStep + "\",\n"
               + "    \"step10\": \"" + approvedReturnStep + "\",\n"
               + "    \"step11\": \"" + saveActionStep + "\",\n"
-              + "    \"step12\": \"" + writtenArtifactStep + "\"\n"
-              + "  },\n"
+              + "    \"step12\": \"" + writtenArtifactStep + "\",\n"
+              + "    \"step13\": \"" + readbackStep + "\",\n"
+              + "    \"step14\": \"" + markerStep + "\"\n"
+               + "  },\n"
                + "  \"trigger\": {\n"
                + "    \"menu_item_doclick\": " + menuDoClickTriggered + ",\n"
                + "    \"trigger_description\": \"" + menuDoClickDescription + "\"\n"
@@ -743,13 +838,20 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
                + "    \"target_inside_proof_root\": " + targetInsideProofRoot + ",\n"
                + "    \"file_size_bytes\": " + fileSizeBytes + "\n"
                + "  },\n"
-               + "  \"doesNotClaim\": [\n"
+               + "  \"readback\": {\n"
+               + "    \"project_readable\": " + claimedProjectReadable + ",\n"
+               + "    \"expected_marker\": " + stringJson(this.expectedReadbackMarker) + ",\n"
+               + "    \"marker_present\": " + claimedMarkerPresent + "\n"
+               + "  },\n"
+                + "  \"doesNotClaim\": [\n"
+               + "    \"full desktop Save completion\",\n"
                + "    \"full lesson completion\",\n"
                + "    \"visible rendering correctness\",\n"
                + "    \"grading correctness\",\n"
                + "    \"physical user click\",\n"
                + "    \"broad UI automation coverage\",\n"
-               + "    \"native dialog coverage\"\n"
+               + "    \"native dialog coverage\",\n"
+               + "    \"all Save variants\"\n"
                + "  ]\n"
                + "}\n",
           StandardCharsets.UTF_8);
@@ -785,6 +887,28 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
         finishPolling();
         cancelCurrentChoosersOnEdt();
       }
+    }
+
+    private String proofReason(
+        boolean proven,
+        boolean menuDoClickTriggered,
+        boolean wouldBeProvenExceptMenu,
+        boolean projectReadable) {
+      if (proven) {
+        return "save_menu_doclick_approved_chooser_wrote_readable_project_with_marker";
+      }
+      if (this.failureReason != null) {
+        return this.failureReason;
+      }
+      if (!wouldBeProvenExceptMenu) {
+        return "save_menu_doclick_e2e_not_completed";
+      }
+      if (!menuDoClickTriggered) {
+        return "save_menu_doclick_not_recorded";
+      }
+      return projectReadable
+          ? "save_menu_doclick_written_project_marker_missing"
+          : "save_menu_doclick_written_project_not_readable";
     }
 
     private void finishPolling() {
@@ -980,9 +1104,19 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
    */
   private static Project minimalProject() {
     NamedUserType sceneType = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
+    sceneType.methods.add(new UserMethod(
+        READBACK_MARKER,
+        JavaType.VOID_TYPE,
+        new UserParameter[0],
+        new BlockStatement(new Comment("Save menu doClick round-trip marker"))));
     NamedUserType programType = AstUtilities.createType("Program", JavaType.getInstance(SProgram.class));
     programType.fields.add(new UserField("myScene", sceneType));
     return new Project(programType, Project.SceneCameraType.WindowCamera);
+  }
+
+  private static boolean projectContainsMarker(Project project, String marker) {
+    return project != null && project.getNamedUserTypes().stream()
+        .anyMatch(type -> type.getDeclaredMethod(marker) != null);
   }
 
   private static final class NewProjectLoader extends UriProjectLoader {
