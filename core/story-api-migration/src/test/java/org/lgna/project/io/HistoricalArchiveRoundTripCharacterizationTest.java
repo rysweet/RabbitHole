@@ -28,6 +28,7 @@ import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ResourceExpression;
 import org.lgna.project.ast.ReturnStatement;
+import org.lgna.project.ast.StatementListProperty;
 import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
@@ -40,8 +41,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -57,6 +62,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 public class HistoricalArchiveRoundTripCharacterizationTest {
+  private static final byte[] CURRENT_VERSION_ENTRY_BYTES =
+      ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8);
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -809,23 +817,15 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
             + "GeneratedJsonTypeWithConstructorAssignmentBoundary() { this.count <- 1; } "
             + "}");
 
+    String typeSourceEntry = "src/GeneratedJsonTypeWithConstructorAssignmentBoundary.twe";
     try (ZipFile zipFile = new ZipFile(typeArchive)) {
-      TypeManifest manifest = readTypeManifest(zipFile);
-      assertEquals(3, zipFile.size());
-      assertNotNull("Constructor-assignment JSON .a3c fixture should declare a version",
-          zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
-      assertEquals(IoUtilities.TYPE_EXTENSION, manifest.metadata.fileType);
-      assertEquals(1, manifest.resources.size());
-      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithConstructorAssignmentBoundary.twe");
-      assertNotNull(
-          "Constructor-assignment JSON .a3c fixture should contain the manifest-declared type source",
-          typeEntry);
-      assertTrue(readEntry(zipFile, typeEntry).contains("this.count <- 1"));
-      assertTypeReference(
-          manifest,
-          "GeneratedJsonTypeWithConstructorAssignmentBoundary",
-          "src/GeneratedJsonTypeWithConstructorAssignmentBoundary.twe");
+      Set<String> entryNames = zipFile.stream().map(ZipEntry::getName).collect(Collectors.toSet());
+      assertEquals(
+          "Constructor-assignment JSON .a3c fixture should contain only version, manifest, and Tweedle source entries",
+          new HashSet<>(Arrays.asList(ProjectIo.VERSION_ENTRY_NAME, ProjectIo.MANIFEST_ENTRY_NAME, typeSourceEntry)),
+          entryNames);
     }
+
     TypeResourcesPair typeResourcesPair = IoUtilities.readType(typeArchive);
 
     NamedUserType readType = typeResourcesPair.getType();
@@ -1189,7 +1189,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       writeEntry(
           zipOutputStream,
           ProjectIo.VERSION_ENTRY_NAME,
-          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+          CURRENT_VERSION_ENTRY_BYTES);
       writeEntry(
           zipOutputStream,
           ProjectIo.MANIFEST_ENTRY_NAME,
@@ -1221,7 +1221,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       writeEntry(
           zipOutputStream,
           ProjectIo.VERSION_ENTRY_NAME,
-          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+          CURRENT_VERSION_ENTRY_BYTES);
       writeEntry(
           zipOutputStream,
           ProjectIo.MANIFEST_ENTRY_NAME,
@@ -1275,7 +1275,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       writeEntry(
           zipOutputStream,
           ProjectIo.VERSION_ENTRY_NAME,
-          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+          CURRENT_VERSION_ENTRY_BYTES);
       writeEntry(
           zipOutputStream,
           ProjectIo.MANIFEST_ENTRY_NAME,
@@ -1312,7 +1312,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       writeEntry(
           zipOutputStream,
           ProjectIo.VERSION_ENTRY_NAME,
-          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+          CURRENT_VERSION_ENTRY_BYTES);
       writeEntry(
           zipOutputStream,
           ProjectIo.MANIFEST_ENTRY_NAME,
@@ -1342,7 +1342,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       writeEntry(
           zipOutputStream,
           ProjectIo.VERSION_ENTRY_NAME,
-          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+          CURRENT_VERSION_ENTRY_BYTES);
       writeEntry(
           zipOutputStream,
           ProjectIo.MANIFEST_ENTRY_NAME,
@@ -1373,7 +1373,7 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       writeEntry(
           zipOutputStream,
           ProjectIo.VERSION_ENTRY_NAME,
-          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+          CURRENT_VERSION_ENTRY_BYTES);
       writeEntry(
           zipOutputStream,
           ProjectIo.MANIFEST_ENTRY_NAME,
@@ -1443,9 +1443,10 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(1, type.getDeclaredConstructors().size());
     NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
     assertTrue(constructor.getRequiredParameters().isEmpty());
-    assertEquals(1, constructor.body.getValue().statements.size());
-    assertTrue(constructor.body.getValue().statements.get(0) instanceof ExpressionStatement);
-    ExpressionStatement expressionStatement = (ExpressionStatement) constructor.body.getValue().statements.get(0);
+    StatementListProperty statements = constructor.body.getValue().statements;
+    assertEquals(1, statements.size());
+    assertTrue(statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement expressionStatement = (ExpressionStatement) statements.get(0);
     assertTrue(expressionStatement.expression.getValue() instanceof AssignmentExpression);
     AssignmentExpression assignment = (AssignmentExpression) expressionStatement.expression.getValue();
     assertSame(JavaType.getInstance(Integer.class), assignment.expressionType.getValue());
