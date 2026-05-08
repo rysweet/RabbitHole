@@ -247,8 +247,10 @@ Open the generated run directory and review `manual-evidence-checklist.txt`,
 `environment.txt`, and `status.txt`. The checklist describes the manual evidence
 needed for instructor starter-project setup, student open, and student save
 review. It includes a generated `Assessment boundary` section; use that section
-and the checked-in boundary record while reviewing the manual run. Checklist
-generation does not complete the scenario.
+and the matching `status.txt` boundary fields while reviewing the manual run.
+`status.txt` records `assessmentBoundary=define-reviewed-assessment-contract`
+and `assessmentBoundaryMode=manual/unsupported`, not a grade or assessment pass.
+Checklist generation does not complete the scenario.
 
 Before accepting the run, add the instructor launch log, starter project
 screenshot, saved starter `.a3p`, student launch or open log, loaded project
@@ -267,7 +269,7 @@ python3 -m json.tool \
 The record is documentation for the current boundary. It exposes
 `nextBoundary`, `manualLimitationSummary`,
 `requiresReviewedAssessmentContractBefore`, `nextBlocker`, and `blocker`, then
-renders matching manual/unsupported checklist lines.
+renders matching manual/unsupported status and checklist lines.
 `define-reviewed-assessment-contract` remains the next boundary before any
 future learner-world grading, rubric scoring, correctness assessment, or
 creative assessment capability can be claimed. Learner-world state extraction

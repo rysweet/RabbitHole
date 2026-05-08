@@ -446,8 +446,11 @@ review-notes.txt
 
 Open `manual-evidence-checklist.txt` before collecting the manual artifacts. The
 checklist describes the manual evidence required for setup/open/save review and
-includes a generated `Assessment boundary` section. Use that generated section
-and the checked-in boundary record while reviewing this run, and treat missing
+includes a generated `Assessment boundary` section. `status.txt` repeats the
+same boundary as plain fields, including
+`assessmentBoundary=define-reviewed-assessment-contract` and
+`assessmentBoundaryMode=manual/unsupported`. Use those generated lines and the
+checked-in boundary record while reviewing this run, and treat missing
 learner-world state extraction for grading or creative assessment as blocker
 `define-reviewed-assessment-contract`, not as a hidden fallback.
 

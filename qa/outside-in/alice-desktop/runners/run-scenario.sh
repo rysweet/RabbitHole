@@ -580,13 +580,72 @@ write_manual_status() {
   local checklist_path=$2
   local scenario_id=$3
   local automation_mode=$4
+  local status_path="$run_dir/status.txt"
 
   {
     printf 'scenario=%s\n' "$scenario_id"
     printf 'automationMode=%s\n' "$automation_mode"
     printf 'outcome=manual-evidence-required\n'
     printf 'checklist=%s\n' "$(basename "$checklist_path")"
-  } > "$run_dir/status.txt"
+  } > "$status_path"
+
+  STATUS_PATH="$status_path" SCENARIO_ID="$scenario_id" LEARNER_WORLD_BOUNDARY_ARTIFACT="$LEARNER_WORLD_BOUNDARY_ARTIFACT" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+status_path = Path(os.environ["STATUS_PATH"])
+scenario_id = os.environ["SCENARIO_ID"]
+boundary_path = Path(os.environ["LEARNER_WORLD_BOUNDARY_ARTIFACT"])
+boundary_scenario = "alice-desktop-instructor-student-setup"
+
+if scenario_id != boundary_scenario:
+    raise SystemExit(0)
+
+boundary = json.loads(boundary_path.read_text(encoding="utf-8"))
+
+def require_string(value, field):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{boundary_path}: {field} must be a non-empty string")
+    return value
+
+def require_string_list(value, field):
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{boundary_path}: {field} must be a non-empty string list")
+    for index, item in enumerate(value, 1):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"{boundary_path}: {field}[{index}] must be a non-empty string")
+    return value
+
+selected_scenario = require_string(boundary.get("selectedScenario"), "selectedScenario")
+if selected_scenario != scenario_id:
+    raise ValueError(
+        f"{boundary_path}: selectedScenario must match {scenario_id} for generated status evidence"
+    )
+
+if require_string(boundary.get("automationMode"), "automationMode") != "manual-evidence-required":
+    raise ValueError(f"{boundary_path}: automationMode must be manual-evidence-required")
+
+blocker = boundary.get("blocker")
+if not isinstance(blocker, dict):
+    raise ValueError(f"{boundary_path}: blocker must be a mapping")
+
+status_lines = [
+    f"assessmentBoundary={require_string(boundary.get('nextBoundary'), 'nextBoundary')}",
+    "assessmentBoundaryMode=manual/unsupported",
+    f"assessmentBoundaryScope={require_string(boundary.get('scope'), 'scope')}",
+    f"assessmentLimitation={require_string(boundary.get('manualLimitationSummary'), 'manualLimitationSummary')}",
+    f"assessmentLimits={'; '.join(require_string_list(boundary.get('assessmentLimits'), 'assessmentLimits'))}",
+    "assessmentUnsupportedUntilReviewedContract="
+    f"{'; '.join(require_string_list(boundary.get('requiresReviewedAssessmentContractBefore'), 'requiresReviewedAssessmentContractBefore'))}",
+    f"assessmentBlocker={require_string(blocker.get('id'), 'blocker.id')}",
+    f"assessmentBlockerDescription={require_string(blocker.get('description'), 'blocker.description')}",
+]
+
+with status_path.open("a", encoding="utf-8") as status_file:
+    for line in status_lines:
+        status_file.write(line + "\n")
+PY
 }
 
 validate_positive_integer() {

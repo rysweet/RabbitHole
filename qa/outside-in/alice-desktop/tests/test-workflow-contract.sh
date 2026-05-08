@@ -351,7 +351,9 @@ run_dir=$(single_child_dir "$tmp_root/evidence/alice-desktop-instructor-student-
 status=$?
 assert_success "$status" "workflow runner creates one evidence directory"
 checklist="$run_dir/manual-evidence-checklist.txt"
+status_file="$run_dir/status.txt"
 assert_file_exists "$checklist" "workflow runner writes manual checklist"
+assert_file_exists "$status_file" "workflow runner writes manual status"
 assert_contains "$checklist" '^Required evidence$' "workflow checklist includes required evidence section"
 assert_contains "$checklist" '^Completion status$' "workflow checklist includes completion status section"
 assert_contains "$checklist" 'Human reviewer|human performs the workflow' "workflow checklist names human review requirement"
@@ -371,5 +373,14 @@ assert_contains "$checklist" 'Manual/unsupported until reviewed contract: correc
 assert_contains "$checklist" 'Manual/unsupported until reviewed contract: creative assessment' "workflow checklist keeps creative assessment manual unsupported"
 assert_contains "$checklist" '[Ll]earner-world state extraction.*blocked|blocked.*learner-world state extraction' "workflow checklist exposes learner-world extraction blocker"
 assert_contains "$checklist" 'define-reviewed-assessment-contract' "workflow checklist names assessment blocker artifact"
+assert_contains "$status_file" '^assessmentBoundary=define-reviewed-assessment-contract$' "workflow status names assessment boundary"
+assert_contains "$status_file" '^assessmentBoundaryMode=manual/unsupported$' "workflow status keeps assessment boundary manual unsupported"
+assert_contains "$status_file" '^assessmentBoundaryScope=instructor-student learner-world setup/open/save evidence$' "workflow status records assessment scope"
+assert_contains "$status_file" 'Learner-world grading, rubric scoring, correctness assessment, and creative assessment remain manual/unsupported until a reviewed assessment contract exists\.' "workflow status renders manual limitation summary"
+assert_contains "$status_file" 'assessmentLimits=.*no automated grading.*no rubric scoring.*no correctness assessment.*no creative assessment' "workflow status rejects unsupported assessment limits"
+assert_contains "$status_file" 'assessmentUnsupportedUntilReviewedContract=.*learner-world grading.*rubric scoring.*correctness assessment.*creative assessment' "workflow status records capabilities requiring reviewed contract"
+assert_contains "$status_file" '^assessmentBlocker=define-reviewed-assessment-contract$' "workflow status names assessment blocker"
+assert_contains "$status_file" '[Ll]earner-world state extraction.*blocked|blocked.*learner-world state extraction' "workflow status exposes learner-world extraction blocker"
+assert_not_contains "$status_file" 'correctness scoring' "workflow status does not use scoring wording for correctness"
 
 finish

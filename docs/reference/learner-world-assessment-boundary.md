@@ -52,15 +52,29 @@ Running the selected scenario creates:
   manual-evidence-checklist.txt
 ```
 
-`status.txt` records `automationMode=manual-evidence-required` and points to the
-generated checklist. It does not record a learner grade, rubric score,
-correctness result, creative-assessment result, or assessment pass.
+`status.txt` records `automationMode=manual-evidence-required`, points to the
+generated checklist, and repeats the assessment boundary summary for the
+selected scenario:
+
+```text
+assessmentBoundary=define-reviewed-assessment-contract
+assessmentBoundaryMode=manual/unsupported
+assessmentBoundaryScope=instructor-student learner-world setup/open/save evidence
+assessmentLimitation=Learner-world grading, rubric scoring, correctness assessment, and creative assessment remain manual/unsupported until a reviewed assessment contract exists.
+assessmentLimits=no automated grading; no rubric scoring; no correctness assessment; no creative assessment
+assessmentUnsupportedUntilReviewedContract=learner-world grading; rubric scoring; correctness assessment; creative assessment
+assessmentBlocker=define-reviewed-assessment-contract
+assessmentBlockerDescription=learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping define safe rubric inputs and limits.
+```
+
+It does not record a learner grade, rubric score, correctness result,
+creative-assessment result, or assessment pass.
 
 `manual-evidence-checklist.txt` includes the standard manual sections:
 preconditions, user actions, expected outcomes, required evidence, fallback
-notes, and completion status. For `alice-desktop-instructor-student-setup`, it
-also includes a generated `Assessment boundary` section from the checked-in
-boundary contract:
+notes, and completion status. For `alice-desktop-instructor-student-setup`, both
+`status.txt` and the generated `Assessment boundary` checklist section are
+rendered from the checked-in boundary contract:
 
 ```text
 qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json
@@ -192,9 +206,9 @@ Assessment boundary
 19. learner-world state extraction for grading or creative assessment is blocked until a reviewed assessment contract and evidence mapping define safe rubric inputs and limits.
 ```
 
-Future changes must update the JSON contract, generated checklist wording,
-documentation, and docs-owned contract tests together so unsupported assessment
-claims stay visible.
+Future changes must update the JSON contract, generated status/checklist
+wording, documentation, and docs-owned contract tests together so unsupported
+assessment claims stay visible.
 
 ## Scenario configuration
 

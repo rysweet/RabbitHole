@@ -155,7 +155,7 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
             with self.subTest(assessment_limit=assessment_limit):
                 self.assertIn(assessment_limit, scenario_text)
 
-    def test_generated_manual_checklist_surfaces_assessment_limits(self) -> None:
+    def test_generated_manual_evidence_surfaces_assessment_limits(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             evidence_root = Path(tmp_dir) / "evidence"
             subprocess.run(
@@ -176,6 +176,8 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
             self.assertEqual(1, len(run_dirs))
             checklist = run_dirs[0] / "manual-evidence-checklist.txt"
             checklist_text = normalized_text(checklist)
+            status = run_dirs[0] / "status.txt"
+            status_text = normalized_text(status)
 
         self.assertIn("assessment boundary", checklist_text)
         self.assertIn("manual evidence required", checklist_text)
@@ -195,6 +197,20 @@ class LearnerWorldAssessmentBoundaryContractTest(unittest.TestCase):
                     f"manual/unsupported until reviewed contract: {non_capability}",
                     checklist_text,
                 )
+
+        self.assertIn(f"assessmentboundary={NEXT_BLOCKER_ID}", status_text)
+        self.assertIn("assessmentboundarymode=manual/unsupported", status_text)
+        self.assertIn(MANUAL_LIMITATION_SUMMARY.lower(), status_text)
+        self.assertIn("assessmentunsupporteduntilreviewedcontract=", status_text)
+        self.assertIn("learner-world state extraction", status_text)
+        self.assertIn("blocked", status_text)
+        self.assertNotIn("correctness scoring", status_text)
+        for assessment_limit in ASSESSMENT_LIMITS:
+            with self.subTest(status_assessment_limit=assessment_limit):
+                self.assertIn(assessment_limit, status_text)
+        for non_capability in NON_CAPABILITIES:
+            with self.subTest(status_non_capability=non_capability):
+                self.assertIn(non_capability, status_text)
 
     def test_docs_name_boundary_and_blocker_without_overclaiming_assessment(self) -> None:
         for path in BOUNDARY_DOCS:

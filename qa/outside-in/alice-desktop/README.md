@@ -45,7 +45,7 @@ The checked-in boundary record is
 `qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`.
 That file is declarative documentation for the current claim boundary. It names
 next boundary `define-reviewed-assessment-contract` and supplies the generated
-manual checklist boundary wording.
+manual status/checklist boundary wording.
 
 The generated `manual-evidence-checklist.txt` for
 `alice-desktop-instructor-student-setup` uses the standard manual checklist
@@ -57,6 +57,9 @@ adds explicit manual/unsupported checklist lines and keeps learner-world
 grading, rubric scoring, correctness assessment, and creative assessment
 manual/unsupported until `define-reviewed-assessment-contract` is resolved with
 a reviewed assessment contract, evidence mapping, and reviewed implementation.
+The generated `status.txt` repeats the same boundary as plain status fields,
+including `assessmentBoundary=define-reviewed-assessment-contract` and
+`assessmentBoundaryMode=manual/unsupported`.
 
 Do not use learner-world QA evidence to claim learner-world grading, rubric
 scoring, correctness assessment, or creative assessment. Any future

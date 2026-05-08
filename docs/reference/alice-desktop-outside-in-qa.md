@@ -84,7 +84,7 @@ capability beyond that evidence boundary requires a separate reviewed
 assessment contract and evidence mapping. The current declarative blocker record
 is `qa/outside-in/alice-desktop/contracts/learner-world-assessment-boundary.json`;
 it names blocker `define-reviewed-assessment-contract` and supplies the current
-manual checklist boundary wording.
+manual status/checklist boundary wording.
 
 The selected boundary scenario is
 `alice-desktop-instructor-student-setup`. Its generated
@@ -96,7 +96,9 @@ grading, no rubric scoring, no correctness assessment, no creative assessment,
 and blocker `define-reviewed-assessment-contract`. It also renders the contract
 summary that learner-world grading, rubric scoring, correctness assessment, and
 creative assessment remain manual/unsupported until a reviewed assessment
-contract exists.
+contract exists. The generated `status.txt` repeats the same boundary as plain
+status fields, including `assessmentBoundary=define-reviewed-assessment-contract`
+and `assessmentBoundaryMode=manual/unsupported`.
 See
 [Learner-world assessment boundary](./learner-world-assessment-boundary.md) for
 the current artifact fields, generated checklist text, review workflow, and
