@@ -92,13 +92,14 @@ The canonical proof artifact records:
 | `status` | `proven` only when menu activation, chooser approval, and file write assertions all pass. |
 | `dialogType` | `Swing JFileChooser` for the controlled Linux Swing chooser path. |
 | `wroteFile` | `true` only after the target exists inside the proof root, has `.a3p` extension, and has non-zero size. |
+| `claim` / `reporting_summary` | `claim` is present only for `status: proven`; unsupported or not-proven runs use `reporting_summary` and must not claim chooser approval or file writing. |
 | `observed_dialog.approved_selection` | `true` only when the EDT approval callback completed after selected-file verification; scheduling approval does not set this claim. |
 | `selected_file.normalized_selected_file` | The proof-root-relative normalized approved path, or a redacted outside-root marker, so reviewer artifacts do not expose machine-specific absolute paths. |
 | `written_artifact.target_file` | The proof-root-relative target path, or a redacted outside-root marker; evidence must not store absolute machine paths. |
 | `written_artifact.target_inside_proof_root` | `true` only when the written target stayed inside the controlled proof root. |
 | `proof_chain` | The production Save menu path from `menuItem.doClick()` through `SaveProjectOperation`, `AbstractSaveOperation.perform`, dialog approval, and project write. |
 | `trigger.menu_item_doclick` | `true` for the production Save menu item activation path. |
-| `doesNotClaim` | Explicit exclusions for lesson completion, rendering, grading, broad UI automation, and native dialog coverage. |
+| `doesNotClaim` | Explicit exclusions for lesson completion, rendering, grading, physical user clicks, broad UI automation, and native dialog coverage. |
 
 The dialog-discovery companion artifact is:
 
@@ -171,6 +172,7 @@ To collect dialog-discovery evidence for this proof, set:
   "status": "proven",
   "dialogType": "Swing JFileChooser",
   "wroteFile": true,
+  "claim": "Save menu item doClick opened a Swing JFileChooser, approved the selected .a3p path, and wrote a non-empty project file",
   "observed_dialog": {
     "approved_selection": true,
     "ambiguous_chooser_discovery": false
@@ -187,6 +189,7 @@ To collect dialog-discovery evidence for this proof, set:
     "full lesson completion",
     "visible rendering correctness",
     "grading correctness",
+    "physical user click",
     "broad UI automation coverage",
     "native dialog coverage"
   ]
@@ -203,6 +206,7 @@ A preexisting file at the expected target is not write proof. If the complete me
   "reason": "save_menu_doclick_e2e_not_completed",
   "dialogType": "Swing JFileChooser",
   "wroteFile": false,
+  "reporting_summary": "Save menu item doClick write path was not proven; chooser approval and file writing remain unproven",
   "observed_dialog": {
     "approved_selection": false,
     "ambiguous_chooser_discovery": false
@@ -223,6 +227,7 @@ A preexisting file at the expected target is not write proof. If the complete me
   "reason": "ambiguous_swing_jfilechooser_discovery",
   "dialogType": "Swing JFileChooser",
   "wroteFile": false,
+  "reporting_summary": "Save menu item doClick write path was not proven; chooser approval and file writing remain unproven",
   "observed_dialog": {
     "approved_selection": false,
     "ambiguous_chooser_discovery": true
@@ -241,6 +246,7 @@ A preexisting file at the expected target is not write proof. If the complete me
   "reason": "No available non-headless AWT display",
   "blocker": "Display environment does not support the Swing Save proof.",
   "wroteFile": false,
+  "reporting_summary": "Save menu/control/dialog/write path requires a non-headless AWT display before it can be proven",
   "observed_dialog": {
     "approved_selection": false
   },
@@ -260,6 +266,7 @@ This proof shard does not claim:
 1. Full lesson completion.
 2. Visible rendering correctness.
 3. Grading correctness.
-4. Broad UI automation coverage.
-5. Save As, backup Save, unwritable-file retry, or all Save permutations.
-6. Native `java.awt.FileDialog` display or control.
+4. Physical user click.
+5. Broad UI automation coverage.
+6. Save As, backup Save, unwritable-file retry, or all Save permutations.
+7. Native `java.awt.FileDialog` display or control.

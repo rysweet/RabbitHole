@@ -67,12 +67,13 @@ Review `desktop-save-dialog-discovery-target.json` for owner/root/selection-targ
 | `status` | `proven` |
 | `dialogType` | `Swing JFileChooser` |
 | `wroteFile` | `true` |
+| `claim` | Present only when `status` is `proven`; unsupported or not-proven runs use `reporting_summary` instead. |
 | `observed_dialog.approved_selection` | `true` only after EDT approval completes; scheduled approval is not enough. |
 | `observed_dialog.ambiguous_chooser_discovery` | `false`; multiple live `JFileChooser` instances are a blocker. |
 | `selected_file.normalized_selected_file` | Temp-relative `.a3p` path, for example `projects/doclick-save-proof.a3p` |
 | `written_artifact.target_file` | Temp-relative `.a3p` path, not an absolute machine path. |
 | `written_artifact.file_extension` | `a3p` |
 | `written_artifact.target_inside_proof_root` | `true` |
-| `doesNotClaim` | Includes lesson completion, rendering, grading, broad UI automation, and native dialog exclusions. |
+| `doesNotClaim` | Includes lesson completion, rendering, grading, physical user click, broad UI automation, and native dialog exclusions. |
 
-Use `stageide-save-menu-doclick-write-proof.json` as the source for the full menu activation, completed chooser approval, selected path, and project-file write claim. Stored path evidence must be proof-root-relative or redacted, not absolute. `SaveOperationCompletionEvidence` records Save completion fields such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts, but it does not by itself prove Save menu activation. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
+Use `stageide-save-menu-doclick-write-proof.json` as the source for the full menu activation, completed chooser approval, selected path, and project-file write claim only when its status is `proven`. Stored path evidence must be proof-root-relative or redacted, not absolute. `SaveOperationCompletionEvidence` records Save completion fields such as redacted/relative `saved_file`, `saved_file_exists`, `saved_file_size_bytes`, and bounded write facts, but it does not by itself prove Save menu activation. Do not treat either artifact as proof of any Save path other than Save menu activation, Swing chooser approval, and project-file write.
