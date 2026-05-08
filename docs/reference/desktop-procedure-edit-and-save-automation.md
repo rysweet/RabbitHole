@@ -2,7 +2,7 @@
 
 This reference describes the desktop-side automation path for observing a
 procedure target, editing a procedure, and then saving the project. It names the
-checked-in hook points, the planned live first-lesson procedure target action
+checked-in hook points, the live first-lesson procedure target action
 seam, the bounded Save proof for a real dialog/write path, and the behavior that
 remains outside this slice.
 
@@ -26,7 +26,7 @@ live Alice IDE is active, because the tab change creates the desktop code view.
 
 ## Live target action seam and proposed next hooks
 
-The planned live target action seam owns the smallest unevidenced transition
+The live target action seam owns the smallest unevidenced transition
 after Select Project opens the configured first-lesson flow starter:
 
 ```text
@@ -36,7 +36,7 @@ Select Project opened first-lesson project
   -> target classified as edit-ready or blocked by the named edit-action contract gap
 ```
 
-The planned runner contract is documented in [First-Lesson Live Procedure Target
+The runner contract is documented in [First-Lesson Live Procedure Target
 Action Seam](./first-lesson-live-procedure-target-observation.md). Use that
 contract as the implementation target for edit-ready-or-named-blocker evidence
 for the next desktop edit shard.
@@ -52,7 +52,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-The planned decision artifact is
+The decision artifact is
 `first-lesson-live-procedure-target-observation.json`. `status=edit-ready` means
 a stable `scene.eatmeFirstLesson` target was found and has a public desktop edit
 invocation contract for the next proof. The only accepted action-seam no-go is
@@ -150,7 +150,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-The planned first-lesson live procedure target action seam shard is for reviews
+The first-lesson live procedure target action seam shard is for reviews
 about the live desktop target and edit-action readiness after Select Project
 opens the configured first-lesson flow starter. Its runner command is:
 
@@ -163,7 +163,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-Use its planned evidence only for the procedure tab/code-editor target action
+Use its evidence only for the procedure tab/code-editor target action
 seam; do not cite it as edit, Save, rendering, learner assessment, creative
 assessment, or full first-lesson completion proof.
 

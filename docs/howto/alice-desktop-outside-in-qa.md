@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the planned first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -219,9 +219,9 @@ If the probe cannot safely prove target-specific selection/opening, it must pres
 
 For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 
-## Observe the planned first-lesson live procedure target action seam
+## Observe the first-lesson live procedure target action seam
 
-The first-lesson live procedure target action seam contract will verify only
+The first-lesson live procedure target action seam contract verifies only
 whether a post-open live desktop exposes a stable procedure tab or code-editor
 target for `scene.eatmeFirstLesson`, then classifies that target as edit-ready or
 blocked by the missing public CodeEditor/CodeComposite edit invocation contract.
@@ -241,7 +241,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Review `first-lesson-live-procedure-target-observation.json`, `status.txt`,
 `tab-click-observation.json`, and `post-project-open-observation.json`. Accept
-the planned action-seam proof only when the decision artifact records either
+the action-seam proof only when the decision artifact records either
 `status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`,
 `desktopEditAction.blocker.kind=none`, and top-level `blocker.kind=none`, or the
 exact no-go blocker in both `desktopEditAction.blocker.kind` and top-level
@@ -252,7 +252,7 @@ blockers as implementation or run-prerequisite gaps, not accepted action-seam
 proof.
 
 For the artifact API, configuration, examples, and claim boundaries, see
-[PLANNED: First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
+[First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
 
 ## Collect post-open runtime/display accessibility evidence
 

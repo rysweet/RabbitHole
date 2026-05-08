@@ -66,13 +66,13 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
-The first-lesson live procedure target action seam is a planned read-only
-contract. It records only whether the live desktop exposes a stable
-`scene.eatmeFirstLesson` procedure/code-editor target and whether that target is
-ready for a public desktop edit action; it does not perform a desktop edit,
-Save, rendering correctness check, learner assessment, creative assessment, or
-full first-lesson completion proof. See [PLANNED: First-Lesson Live Procedure
-Target Action Seam](./first-lesson-live-procedure-target-observation.md).
+The first-lesson live procedure target action seam is a read-only contract. It
+records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
+procedure/code-editor target and whether that target is ready for a public
+desktop edit action; it does not perform a desktop edit, Save, rendering
+correctness check, learner assessment, creative assessment, or full first-lesson
+completion proof. See [First-Lesson Live Procedure Target Action
+Seam](./first-lesson-live-procedure-target-observation.md).
 
 ## Learner-world boundary
 

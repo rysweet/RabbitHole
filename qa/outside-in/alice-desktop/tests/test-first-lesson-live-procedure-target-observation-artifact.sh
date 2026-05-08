@@ -11,7 +11,8 @@ SCENARIO_ID=alice-desktop-first-lesson-live-procedure-target-observation
 WORKFLOW=first-lesson-live-procedure-target-observation
 SCENARIO_FILE="$BASE_DIR/scenarios/first-lesson-live-procedure-target-observation.yaml"
 ARTIFACT=first-lesson-live-procedure-target-observation.json
-SEAM=live-first-lesson-project-open-to-procedure-target-observable
+SEAM=live-first-lesson-procedure-target-to-desktop-edit-action
+DOWNSTREAM_BLOCKED_STEP=desktop-procedure-edit-action-proof
 PROCEDURE_SELECTOR=scene.eatmeFirstLesson
 MISSING_DESKTOP_EDIT_ACTION_CONTRACT="missing public CodeEditor/CodeComposite edit invocation contract"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
@@ -113,7 +114,7 @@ for required in (
     "procedureTargetObservationEvidence",
     "procedureTargetObservationStatus",
     "procedureTargetObservationBlocker",
-    "downstreamBlockedStep=desktop-procedure-edit",
+    "downstreamBlockedStep=desktop-procedure-edit-action-proof",
 ):
     require(required in evidence_text, f"evidence.required must name {required}")
 
@@ -218,7 +219,7 @@ if [ "$run_dir_status" -eq 0 ]; then
   assert_contains "$status_file" "^procedureTargetObservationEvidence=$ARTIFACT$" "status points to procedure target artifact"
   assert_contains "$status_file" '^procedureTargetObservationStatus=blocked$' "status records procedure target blocked status"
   assert_contains "$status_file" '^procedureTargetObservationBlocker=display-prerequisite-unavailable$' "status records display prerequisite blocker"
-  assert_contains "$status_file" '^downstreamBlockedStep=desktop-procedure-edit$' "status names the downstream edit step"
+  assert_contains "$status_file" "^downstreamBlockedStep=$DOWNSTREAM_BLOCKED_STEP$" "status names the downstream edit-action proof step"
 
   python3 - \
     "$artifact_file" \
@@ -246,9 +247,9 @@ require(artifact.get("schemaVersion") == "eatme.first-lesson-live-procedure-targ
 require(artifact.get("scenario") == expected_id, "artifact scenario must match the scenario id")
 require(artifact.get("workflow") == expected_workflow, "artifact workflow must match the workflow")
 require(artifact.get("automationMode") == "xvfb-real-alice", "artifact automationMode must be xvfb-real-alice")
-require(artifact.get("status") in {"observed", "blocked"}, "artifact status must be observed or blocked")
-require(artifact.get("seam") == expected_seam, "artifact seam must name the live first-lesson target observation transition")
-require(artifact.get("downstreamBlockedStep") == "desktop-procedure-edit", "artifact must name desktop-procedure-edit as the downstream blocked step")
+require(artifact.get("status") in {"edit-ready", "blocked"}, "artifact status must be edit-ready or blocked, not target-only observed")
+require(artifact.get("seam") == expected_seam, "artifact seam must name the procedure/code-editor target to desktop edit-action transition")
+require(artifact.get("downstreamBlockedStep") in {"none", "desktop-procedure-edit-action-proof"}, "artifact must name the desktop edit-action proof boundary")
 
 project = artifact.get("project")
 require(isinstance(project, dict), "artifact project must be an object")
@@ -263,52 +264,57 @@ if isinstance(project, dict):
 required_target = artifact.get("requiredTarget")
 require(isinstance(required_target, dict), "artifact requiredTarget must be an object")
 if isinstance(required_target, dict):
-    require(required_target.get("procedureSelector") == expected_selector, "requiredTarget.procedureSelector must be scene.eatmeFirstLesson")
-    require(required_target.get("targetKind") == "procedure-tab-or-code-editor", "requiredTarget.targetKind must name the accepted target seam")
+    require(required_target.get("procedureName") == expected_selector, "requiredTarget.procedureName must be scene.eatmeFirstLesson")
+    require(required_target.get("kind") == "procedure-or-code-editor-target", "requiredTarget.kind must name the accepted target seam")
     require(
         required_target.get("minimumStableAutomationTarget") == "reacquirable live desktop procedure tab or code-editor target",
         "requiredTarget.minimumStableAutomationTarget must name the stable automation target",
     )
 
+blocker = artifact.get("blocker")
+require(isinstance(blocker, dict), "artifact blocker must be a machine-readable object")
+if isinstance(blocker, dict):
+    require(isinstance(blocker.get("kind"), str) and blocker.get("kind"), "artifact blocker.kind must be non-empty")
+    require(isinstance(blocker.get("message"), str), "artifact blocker.message must be a string")
+
 if artifact.get("status") == "blocked":
-    require(artifact.get("observedTarget") is None, "blocked artifact observedTarget must be null")
-    require(artifact.get("desktopEditAction") is None, "blocked artifact desktopEditAction must be null until the target is observed")
-    require(artifact.get("blocker") in {
+    require(artifact.get("downstreamBlockedStep") == "desktop-procedure-edit-action-proof", "blocked artifact must point at the edit-action proof boundary")
+    require(isinstance(artifact.get("desktopEditAction"), dict), "blocked artifact must include desktopEditAction readiness or blocker evidence")
+    if isinstance(blocker, dict) and blocker.get("kind") in {
         "select-project-open-not-observed",
         "post-open-window-not-observed",
         "procedure-target-not-found",
         "procedure-target-not-stable",
         "at-spi-or-atk-unavailable",
         "display-prerequisite-unavailable",
-    }, "blocked artifact must use an accepted blocker code")
-    require(isinstance(artifact.get("blockerDetail"), str) and artifact.get("blockerDetail"), "blocked artifact must include blockerDetail")
+    }:
+        require(artifact.get("observedTarget") is None, "run-failure blocked artifact observedTarget must be null")
+        require(isinstance(artifact.get("blockerDetail"), str) and artifact.get("blockerDetail"), "run-failure blocked artifact must include blockerDetail")
+    else:
+        require(isinstance(artifact.get("observedTarget"), dict), "accepted action-seam blocker must include observedTarget")
+        require(blocker.get("kind") == "missing-desktop-edit-action-contract", "accepted action-seam blocker must name missing-desktop-edit-action-contract")
+        require(
+            blocker.get("message") == "missing public CodeEditor/CodeComposite edit invocation contract",
+            "accepted action-seam blocker must name the missing public CodeEditor/CodeComposite edit invocation contract",
+        )
 else:
     observed = artifact.get("observedTarget")
     desktop_edit_action = artifact.get("desktopEditAction")
-    require(artifact.get("blocker") == "none", "observed artifact blocker must be none")
+    require(artifact.get("status") == "edit-ready", "non-blocked artifact must be edit-ready")
+    require(artifact.get("downstreamBlockedStep") == "none", "edit-ready artifact must not name a downstream blocker")
+    require(isinstance(blocker, dict) and blocker.get("kind") == "none" and blocker.get("message") == "", "edit-ready artifact blocker must be none")
     require(isinstance(observed, dict), "observed artifact observedTarget must be an object")
     if isinstance(observed, dict):
-        require(observed.get("procedureSelector") == expected_selector, "observedTarget.procedureSelector must be scene.eatmeFirstLesson")
-        require(observed.get("targetKind") in {"procedure-tab", "code-editor"}, "observedTarget.targetKind must be procedure-tab or code-editor")
+        require(observed.get("procedureName") == expected_selector, "observedTarget.procedureName must be scene.eatmeFirstLesson")
+        require(observed.get("kind") in {"procedure-tab", "code-editor", "procedure-code-editor-composite"}, "observedTarget.kind must be procedure-tab, code-editor, or composite")
         require(isinstance(observed.get("automationPath"), str) and observed["automationPath"], "observedTarget.automationPath must be non-empty")
-        ready = observed.get("readyForDesktopEditAction")
-        if ready is True:
-            require(desktop_edit_action is None, "edit-ready observed artifact must not include a no-go desktopEditAction blocker")
-        elif ready is False:
-            require(isinstance(desktop_edit_action, dict), "not-ready observed artifact must include desktopEditAction blocker evidence")
-            if isinstance(desktop_edit_action, dict):
-                require(desktop_edit_action.get("status") == "blocked", "desktopEditAction must be blocked when no public edit invocation contract exists")
-                require(desktop_edit_action.get("readyForDesktopEditAction") is False, "desktopEditAction readiness must be false")
-                blocker = desktop_edit_action.get("blocker")
-                require(isinstance(blocker, dict), "desktopEditAction.blocker must be an object")
-                if isinstance(blocker, dict):
-                    require(blocker.get("kind") == "missing-desktop-edit-action-contract", "desktopEditAction blocker must name missing-desktop-edit-action-contract")
-                    require(
-                        blocker.get("message") == "missing public CodeEditor/CodeComposite edit invocation contract",
-                        "desktopEditAction blocker must name the missing public CodeEditor/CodeComposite edit invocation contract",
-                    )
-        else:
-            require(False, "observedTarget.readyForDesktopEditAction must be true or false")
+        require(observed.get("readyForDesktopEditAction") is True, "edit-ready observedTarget must record edit-action readiness")
+    require(isinstance(desktop_edit_action, dict), "edit-ready artifact must include desktopEditAction readiness evidence")
+    if isinstance(desktop_edit_action, dict):
+        require(desktop_edit_action.get("status") == "ready", "desktopEditAction.status must be ready")
+        require(desktop_edit_action.get("readyForDesktopEditAction") is True, "desktopEditAction readiness must be true")
+        nested_blocker = desktop_edit_action.get("blocker")
+        require(isinstance(nested_blocker, dict) and nested_blocker == blocker, "desktopEditAction.blocker must mirror the top-level blocker")
 
 out_of_scope = artifact.get("outOfScope")
 require(isinstance(out_of_scope, list), "artifact outOfScope must be a list")
@@ -319,6 +325,7 @@ if isinstance(out_of_scope, list):
         "save",
         "rendering correctness",
         "learner assessment",
+        "creative assessment",
         "full first-lesson completion",
     ):
         require(required in normalized, f"artifact outOfScope must include {required}")
@@ -500,15 +507,21 @@ def require(condition, message):
         errors.append(message)
 
 
-require(artifact.get("status") == "observed", "mock probe must observe the live procedure/code-editor target")
-require(artifact.get("blocker") == "none", "target observation itself must not be blocked")
-require(artifact.get("downstreamBlockedStep") == "desktop-procedure-edit", "artifact must keep the downstream edit boundary")
+require(artifact.get("status") == "blocked", "mock probe must produce the accepted no-go action-seam blocker, not target-only observed")
+require(artifact.get("seam") == "live-first-lesson-procedure-target-to-desktop-edit-action", "mock probe must report the action seam")
+require(artifact.get("downstreamBlockedStep") == "desktop-procedure-edit-action-proof", "artifact must keep the downstream edit-action proof boundary")
+
+top_level_blocker = artifact.get("blocker")
+require(isinstance(top_level_blocker, dict), "top-level blocker must be an object")
+if isinstance(top_level_blocker, dict):
+    require(top_level_blocker.get("kind") == "missing-desktop-edit-action-contract", "top-level blocker kind must be exact")
+    require(top_level_blocker.get("message") == expected_missing_contract, "top-level blocker message must name the missing public CodeEditor/CodeComposite edit invocation contract")
 
 observed = artifact.get("observedTarget")
 require(isinstance(observed, dict), "observed artifact must include observedTarget")
 if isinstance(observed, dict):
-    require(observed.get("procedureSelector") == expected_selector, "observedTarget must bind scene.eatmeFirstLesson")
-    require(observed.get("targetKind") == "code-editor", "mock observed target must be a code-editor target")
+    require(observed.get("procedureName") == expected_selector, "observedTarget must bind scene.eatmeFirstLesson")
+    require(observed.get("kind") == "code-editor", "mock observed target must be a code-editor target")
     require(observed.get("readyForDesktopEditAction") is False, "observed target must not claim desktop edit-action readiness without a public contract")
 
 desktop_edit_action = artifact.get("desktopEditAction")
@@ -521,14 +534,19 @@ if isinstance(desktop_edit_action, dict):
     if isinstance(blocker, dict):
         require(blocker.get("kind") == "missing-desktop-edit-action-contract", "desktopEditAction blocker kind must be exact")
         require(blocker.get("message") == expected_missing_contract, "desktopEditAction blocker message must name the missing public CodeEditor/CodeComposite edit invocation contract")
+        require(blocker == top_level_blocker, "desktopEditAction.blocker must mirror the top-level blocker")
     require(
-        desktop_edit_action.get("requiredContract") == "public CodeEditor/CodeComposite edit invocation contract",
-        "desktopEditAction must name the required public CodeEditor/CodeComposite contract",
+        desktop_edit_action.get("invocationContract") is None,
+        "blocked desktopEditAction must not claim an invocation contract",
     )
 
 out_of_scope = {str(item).lower() for item in artifact.get("outOfScope", [])}
-for forbidden_claim in ("save", "rendering correctness", "learner assessment", "full first-lesson completion"):
+for forbidden_claim in ("save", "rendering correctness", "learner assessment", "creative assessment", "full first-lesson completion"):
     require(forbidden_claim in out_of_scope, f"artifact must keep {forbidden_claim} out of scope")
+
+does_not_claim = {str(item).lower() for item in desktop_edit_action.get("doesNotClaim", [])} if isinstance(desktop_edit_action, dict) else set()
+for forbidden_claim in ("save", "rendering correctness", "learner assessment", "creative assessment", "full first-lesson completion"):
+    require(forbidden_claim in does_not_claim, f"desktopEditAction must keep {forbidden_claim} out of scope")
 
 if errors:
     raise AssertionError("\n".join(errors))

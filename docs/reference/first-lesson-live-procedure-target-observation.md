@@ -1,15 +1,14 @@
-# [PLANNED - Implementation Pending] First-Lesson Live Procedure Target Action Seam
+# First-Lesson Live Procedure Target Action Seam
 
-This reference defines the intended next outside-in QA contract for opening the
-configured first-lesson flow starter through Select Project, observing the live
-`scene.eatmeFirstLesson` procedure/code-editor target, and recording whether
-that target is ready for a public desktop edit action.
+This reference defines the outside-in QA contract for opening the configured
+first-lesson flow starter through Select Project, observing the live
+`scene.eatmeFirstLesson` procedure/code-editor target, and recording whether that
+target is ready for a public desktop edit action.
 
 The scenario ID, workflow, and artifact filename retain the existing
 `first-lesson-live-procedure-target-observation` names for catalog stability.
-The artifact fields in this document are the contract to implement before this
-shard can be treated as current action-seam proof. A target-only observation
-artifact is not compliant with this planned contract.
+The artifact fields in this document are the current action-seam proof contract.
+A target-only observation artifact is not compliant with this contract.
 
 ## Contents
 
@@ -17,7 +16,7 @@ artifact is not compliant with this planned contract.
 - [Runner interface](#runner-interface)
 - [Scenario contract](#scenario-contract)
 - [Artifact API](#artifact-api)
-- [Implementation requirements](#implementation-requirements)
+- [Acceptance requirements](#acceptance-requirements)
 - [Configuration](#configuration)
 - [Examples](#examples)
 - [Security and safety rules](#security-and-safety-rules)
@@ -26,7 +25,7 @@ artifact is not compliant with this planned contract.
 
 ## Scope
 
-The planned shard covers exactly one transition in the first-lesson flow:
+The shard covers exactly one transition in the first-lesson flow:
 
 ```text
 Select Project opens the first-lesson project
@@ -64,7 +63,7 @@ export NODE_OPTIONS=--max-old-space-size=32768
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 ```
 
-Run the planned live procedure target action seam shard:
+Run the live procedure target action seam shard:
 
 ```bash
 rm -rf /tmp/alice-first-lesson-live-procedure-target
@@ -121,11 +120,11 @@ Scenario identity:
 | `targetStarter.displayName` | `Africa Full`, the configured starter selected through the Select Project shard. |
 | `targetStarter.repositoryPath` | `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
 
-Planned required evidence:
+Required evidence:
 
 | Artifact | Purpose |
 | --- | --- |
-| `first-lesson-live-procedure-target-observation.json` | Planned machine-readable edit-ready or named-blocker decision for the first-lesson procedure/code-editor action seam. |
+| `first-lesson-live-procedure-target-observation.json` | Machine-readable edit-ready or named-blocker decision for the first-lesson procedure/code-editor action seam. |
 | `status.txt` | Final runner status, including the action-seam status and outcome. |
 | `tab-click-observation.json` | Supporting Select Project evidence that the target starter was selected and opened. |
 | `post-project-open-observation.json` | Supporting post-open main-window evidence. |
@@ -141,8 +140,7 @@ symlink artifact targets.
 
 ## Artifact API
 
-The planned `first-lesson-live-procedure-target-observation.json` artifact uses
-schema:
+The `first-lesson-live-procedure-target-observation.json` artifact uses schema:
 
 ```text
 eatme.first-lesson-live-procedure-target-observation/v1
@@ -227,7 +225,7 @@ Structured run failure `blocker.kind` values:
 Structured run failure blockers are useful diagnostics, but they are not accepted
 action-seam proof for the next first-lesson action slice. Resolve the supporting
 run failure or use the adjacent runtime/display/accessibility shard before
-claiming this planned seam.
+claiming this seam.
 
 For the next first-lesson action slice, the focused artifact test accepts only
 two action-seam outcomes:
@@ -245,9 +243,9 @@ two action-seam outcomes:
 Target-only observation with no edit-readiness classification is not a passing
 artifact for this shard.
 
-## Implementation requirements
+## Acceptance requirements
 
-Implement the planned contract before presenting this shard as current behavior:
+The focused artifact test enforces this current contract:
 
 1. Emit `status=edit-ready` or `status=blocked`; do not emit target-only
    `status=observed` for the action-seam proof.
@@ -262,8 +260,8 @@ Implement the planned contract before presenting this shard as current behavior:
    `desktopEditAction.blocker`.
 6. Include `creative assessment` in both top-level `outOfScope` and
    `desktopEditAction.doesNotClaim`.
-7. Update the focused artifact test to pass only the edit-ready evidence or the
-   exact `missing-desktop-edit-action-contract` no-go artifact described above.
+7. Pass only the edit-ready evidence or the exact
+   `missing-desktop-edit-action-contract` no-go artifact described above.
 
 ## Configuration
 
@@ -280,7 +278,7 @@ read-only after Select Project opens the first-lesson starter.
 
 ## Examples
 
-Planned edit-ready decision artifact:
+Edit-ready decision artifact:
 
 ```json
 {
@@ -343,7 +341,7 @@ Planned edit-ready decision artifact:
 }
 ```
 
-Planned named no-go decision artifact when the target is observed but the public
+Named no-go decision artifact when the target is observed but the public
 edit invocation contract is missing:
 
 ```json
@@ -426,7 +424,7 @@ edit invocation contract is missing:
 
 ## Claim boundaries
 
-This planned shard may claim only:
+This shard may claim only:
 
 - Select Project opened the configured first-lesson starter when supporting
   `tab-click-observation.json` says so.

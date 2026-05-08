@@ -1480,7 +1480,7 @@ write_first_lesson_procedure_target_blocker() {
   FIRST_LESSON_PROCEDURE_TARGET_OPENED="$opened_via_select_project" \
   FIRST_LESSON_PROCEDURE_TARGET_POST_OPEN="$post_open_window_observed" \
   FIRST_LESSON_PROCEDURE_TARGET_WORKFLOW="first-lesson-live-procedure-target-observation" \
-  FIRST_LESSON_PROCEDURE_TARGET_SEAM="live-first-lesson-project-open-to-procedure-target-observable" \
+  FIRST_LESSON_PROCEDURE_TARGET_SEAM="live-first-lesson-procedure-target-to-desktop-edit-action" \
   FIRST_LESSON_PROCEDURE_SELECTOR="$FIRST_LESSON_PROCEDURE_SELECTOR" \
   python3 - "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" <<'PY'
 import json
@@ -1493,6 +1493,30 @@ if output_path.exists() and output_path.is_symlink():
     print(f"refusing to overwrite symlink artifact: {output_path}", file=sys.stderr)
     sys.exit(2)
 
+OUT_OF_SCOPE = [
+    "desktop procedure edit mutation",
+    "Save",
+    "rendering correctness",
+    "learner assessment",
+    "creative assessment",
+    "full first-lesson completion",
+]
+RUN_FAILURE_BLOCKER_MESSAGES = {
+    "select-project-open-not-observed": "Select Project did not open the configured first-lesson starter",
+    "post-open-window-not-observed": "post-open Alice main window was not observed",
+    "procedure-target-not-found": "scene.eatmeFirstLesson procedure/code-editor target was not found",
+    "procedure-target-not-stable": "scene.eatmeFirstLesson target was not reacquirable through a stable automation path",
+    "at-spi-or-atk-unavailable": "AT-SPI/ATK accessibility infrastructure was unavailable",
+    "display-prerequisite-unavailable": "Xvfb display prerequisite was unavailable",
+}
+blocker_kind = os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER"]
+blocker = {
+    "kind": blocker_kind,
+    "message": RUN_FAILURE_BLOCKER_MESSAGES.get(
+        blocker_kind,
+        os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER_DETAIL"],
+    ),
+}
 payload = {
     "schemaVersion": "eatme.first-lesson-live-procedure-target-observation/v1",
     "scenario": os.environ["FIRST_LESSON_PROCEDURE_TARGET_SCENARIO_ID"],
@@ -1507,22 +1531,23 @@ payload = {
         "postOpenWindowObserved": os.environ.get("FIRST_LESSON_PROCEDURE_TARGET_POST_OPEN") == "true",
     },
     "requiredTarget": {
-        "procedureSelector": os.environ["FIRST_LESSON_PROCEDURE_SELECTOR"],
-        "targetKind": "procedure-tab-or-code-editor",
+        "procedureName": os.environ["FIRST_LESSON_PROCEDURE_SELECTOR"],
+        "kind": "procedure-or-code-editor-target",
         "minimumStableAutomationTarget": "reacquirable live desktop procedure tab or code-editor target",
     },
     "observedTarget": None,
-    "desktopEditAction": None,
-    "blocker": os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER"],
+    "desktopEditAction": {
+        "status": "blocked",
+        "readyForDesktopEditAction": False,
+        "targetSelector": os.environ["FIRST_LESSON_PROCEDURE_SELECTOR"],
+        "invocationContract": None,
+        "blocker": blocker,
+        "doesNotClaim": OUT_OF_SCOPE,
+    },
+    "blocker": blocker,
     "blockerDetail": os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER_DETAIL"],
-    "downstreamBlockedStep": "desktop-procedure-edit",
-    "outOfScope": [
-        "desktop procedure edit mutation",
-        "Save",
-        "rendering correctness",
-        "learner assessment",
-        "full first-lesson completion",
-    ],
+    "downstreamBlockedStep": "desktop-procedure-edit-action-proof",
+    "outOfScope": OUT_OF_SCOPE,
 }
 
 output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -1549,7 +1574,7 @@ write_first_lesson_procedure_target_status() {
     printf 'procedureTargetObservationEvidence=%s\n' "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT"
     printf 'procedureTargetObservationStatus=%s\n' "$status"
     printf 'procedureTargetObservationBlocker=%s\n' "$blocker"
-    printf 'downstreamBlockedStep=desktop-procedure-edit\n'
+    printf 'downstreamBlockedStep=desktop-procedure-edit-action-proof\n'
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -1966,7 +1991,7 @@ JSON
         printf 'procedureTargetObservationEvidence=%s\n' "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT"
         printf 'procedureTargetObservationStatus=blocked\n'
         printf 'procedureTargetObservationBlocker=display-prerequisite-unavailable\n'
-        printf 'downstreamBlockedStep=desktop-procedure-edit\n'
+        printf 'downstreamBlockedStep=desktop-procedure-edit-action-proof\n'
       fi
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     } > "$run_dir/status.txt"
@@ -2293,7 +2318,7 @@ JSON
       "$target_starter_display_name" \
       "$target_starter_repo_path"
     procedure_target_status=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" status)
-    procedure_target_blocker=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" blocker)
+    procedure_target_blocker=$(inventory_json_field "$run_dir/$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" blocker.kind)
   fi
   local runtime_display_status=not-requested runtime_display_blocker=not-requested
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
@@ -2391,7 +2416,7 @@ JSON
     fi
     printf 'procedureTargetObservationStatus=%s\n' "$procedure_target_status"
     printf 'procedureTargetObservationBlocker=%s\n' "$procedure_target_blocker"
-    printf 'downstreamBlockedStep=desktop-procedure-edit\n'
+    printf 'downstreamBlockedStep=desktop-procedure-edit-action-proof\n'
     printf 'timeoutSeconds=%s\n' "$run_timeout"
   } > "$run_dir/status.txt"
 
@@ -2529,7 +2554,9 @@ JSON
   fi
   if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ]; then
     scenario_outcome=blocked
-    if [ "$observation_status" = observed ] && [ "$procedure_target_status" = observed ]; then
+    if [ "$observation_status" = observed ] &&
+      { [ "$procedure_target_status" = edit-ready ] ||
+        { [ "$procedure_target_status" = blocked ] && [ "$procedure_target_blocker" = missing-desktop-edit-action-contract ]; }; }; then
       scenario_outcome=passed
     fi
     {
@@ -2565,7 +2592,9 @@ JSON
     printf 'Post-open runtime/display accessibility evidence blocked: %s; see %s/%s\n' "$runtime_display_blocker" "$run_dir" "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" >&2
     return 2
   fi
-  if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ] && [ "$procedure_target_status" != observed ]; then
+  if [ "$scenario_id" = "$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO" ] &&
+    ! { [ "$procedure_target_status" = edit-ready ] ||
+      { [ "$procedure_target_status" = blocked ] && [ "$procedure_target_blocker" = missing-desktop-edit-action-contract ]; }; }; then
     printf 'First-lesson procedure target observation blocked: %s; see %s/%s\n' "$procedure_target_blocker" "$run_dir" "$FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT" >&2
     return 2
   fi

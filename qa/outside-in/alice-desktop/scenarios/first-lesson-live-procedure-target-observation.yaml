@@ -19,14 +19,15 @@ userActions:
   - Launch Alice with the existing xvfb-real-alice AT-SPI Maven argv.
   - Reuse the supported Select Project path to select and open the configured first-lesson flow starter.
   - After tab-click-observation.json records the configured target starter opened and post-project-open-observation.json records postOpenWindowObserved=true, run the read-only first-lesson procedure target probe.
-  - Observe only whether the live desktop exposes a stable procedure tab or code-editor target for scene.eatmeFirstLesson.
+  - Observe only whether the live desktop exposes a stable procedure tab or code-editor target for scene.eatmeFirstLesson, then classify the public desktop edit-action seam as ready or explicitly blocked.
 expectedOutcomes:
   - status.txt records procedureTargetObservationEvidence=first-lesson-live-procedure-target-observation.json.
   - status.txt records procedureTargetObservationStatus and procedureTargetObservationBlocker.
-  - first-lesson-live-procedure-target-observation.json records seam=live-first-lesson-project-open-to-procedure-target-observable.
-  - first-lesson-live-procedure-target-observation.json records requiredTarget.procedureSelector=scene.eatmeFirstLesson and requiredTarget.targetKind=procedure-tab-or-code-editor.
-  - If status=observed, observedTarget names a stable procedure tab or code-editor automationPath for the next desktop edit shard and desktopEditAction either records readiness or names the missing public CodeEditor/CodeComposite edit invocation contract.
-  - If status=blocked, blockerDetail names the exact missing display, Select Project, post-open, AT-SPI, or procedure target condition.
+  - first-lesson-live-procedure-target-observation.json records seam=live-first-lesson-procedure-target-to-desktop-edit-action.
+  - first-lesson-live-procedure-target-observation.json records requiredTarget.procedureName=scene.eatmeFirstLesson and requiredTarget.kind=procedure-or-code-editor-target.
+  - If status=edit-ready, observedTarget names a stable procedure tab or code-editor automationPath and desktopEditAction records readiness for a public desktop edit invocation contract.
+  - If status=blocked after the target is observed, blocker.kind=missing-desktop-edit-action-contract and blocker.message=missing public CodeEditor/CodeComposite edit invocation contract.
+  - If status=blocked before the target is observed, blockerDetail names the exact missing display, Select Project, post-open, AT-SPI, or procedure target condition.
   - The shard is observation-only and does not perform a desktop procedure edit, Save, rendering correctness check, learner assessment, grading, creative assessment, or full first-lesson completion.
 automation:
   cwd: alice-ide
@@ -42,7 +43,7 @@ automation:
   readyWaitSeconds: 60
 evidence:
   required:
-    - status.txt recording scenario, automationMode, outcome, procedureTargetObservationEvidence, procedureTargetObservationStatus, procedureTargetObservationBlocker, and downstreamBlockedStep=desktop-procedure-edit.
+    - status.txt recording scenario, automationMode, outcome, procedureTargetObservationEvidence, procedureTargetObservationStatus, procedureTargetObservationBlocker, and downstreamBlockedStep=desktop-procedure-edit-action-proof.
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry.
