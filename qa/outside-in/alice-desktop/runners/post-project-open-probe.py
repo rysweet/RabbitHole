@@ -250,10 +250,14 @@ def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict
     target = tab_click.get("targetStarter")
     status = tab_click.get("evidenceStatus")
     opened = tab_click.get("openedStarter")
+    selected = tab_click.get("targetStarterSelected")
+    open_attempted = tab_click.get("targetStarterOpenAttempted")
     blocker_detail = (
         f"{tab_click_path.name} contains targetStarter metadata but does not record "
-        "evidenceStatus=opened with openedStarter matching targetStarter; generic "
-        "main-window observation cannot prove the Africa Full starter was opened."
+        "evidenceStatus=opened with targetStarterSelected=true, "
+        "targetStarterOpenAttempted=true, openedStarter matching targetStarter, "
+        "and projectOpenObserved=true; generic main-window observation cannot "
+        "prove the Africa Full starter was opened."
     )
     return post_open_payload(
         status="blocked",
@@ -264,6 +268,8 @@ def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict
             "targetStarter": target,
             "evidenceStatus": status,
             "openedStarter": opened,
+            "targetStarterSelected": selected,
+            "targetStarterOpenAttempted": open_attempted,
         },
     )
 
@@ -297,6 +303,8 @@ def target_opened_context(tab_click: dict[str, Any]) -> dict[str, Any]:
         "targetStarter": tab_click.get("targetStarter"),
         "openedStarter": tab_click.get("openedStarter"),
         "evidenceStatus": tab_click.get("evidenceStatus"),
+        "targetStarterSelected": tab_click.get("targetStarterSelected"),
+        "targetStarterOpenAttempted": tab_click.get("targetStarterOpenAttempted"),
         "targetProjectOpenObserved": bool(tab_click.get("projectOpenObserved", False)),
         "targetProjectOpenDetail": tab_click.get("projectOpenDetail", ""),
         "selectProjectWindowContext": tab_click.get("selectProjectWindowContext"),
@@ -344,6 +352,8 @@ def target_starter_gate_payload(
     if (
         tab_click.get("evidenceStatus") != "opened"
         or tab_click.get("openedStarter") != target_starter
+        or tab_click.get("targetStarterSelected") is not True
+        or tab_click.get("targetStarterOpenAttempted") is not True
         or not tab_click.get("projectOpenObserved", False)
     ):
         return target_starter_open_not_proven_payload(tab_click_path, tab_click)

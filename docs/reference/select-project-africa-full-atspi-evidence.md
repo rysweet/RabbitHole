@@ -61,7 +61,7 @@ The Select Project probe writes `tab-click-observation.json`. Existing tab inven
 | `evidenceStatus` | enum | `opened`, `selected`, `blocked`, or `failed`. |
 | `blocker` | string or null | Existing machine-readable blocker code. Preserve this field for compatibility with current artifacts and tests. |
 | `blockerDetail` | string or object or null | Existing human-readable blocker detail. Preserve this field for compatibility with current artifacts and tests. |
-| `targetStarterBlocker` | object or null | Structured target-specific blocker details for `selected`, `blocked`, and `failed` statuses. |
+| `nextBlocker` | object or null | Structured target-specific blocker details for `selected`, `blocked`, and `failed` statuses. |
 
 ### `targetStarterObserved`
 
@@ -85,7 +85,7 @@ When the target is found, the observation records the AT-SPI node shape:
 | `parentSelectionAvailable` | boolean | Whether the containing starter list exposes a usable selection interface. |
 | `activeListCandidates` | object list | Safe summaries of the active Starters list candidates inspected during target discovery. |
 
-If the target is not found, `targetStarterObserved` is null; `blocker`, `blockerDetail`, and `targetStarterBlocker` explain the active Starters context and discovered candidate names.
+If the target is not found, `targetStarterObserved` is null; `blocker`, `blockerDetail`, and `nextBlocker` explain the active Starters context and discovered candidate names.
 
 ### Select Project and PID context
 
@@ -130,9 +130,9 @@ Every non-`opened` terminal result preserves existing blocker compatibility and 
 | --- | --- |
 | `blocker` | Stable machine-readable blocker code, such as `target-starter-selection-unavailable`. |
 | `blockerDetail` | Concise existing-style explanation for humans and current tests. |
-| `targetStarterBlocker` | Structured target-specific blocker evidence. |
+| `nextBlocker` | Structured target-specific blocker evidence. |
 
-`targetStarterBlocker` contains:
+`nextBlocker` contains:
 
 | Field | Meaning |
 | --- | --- |

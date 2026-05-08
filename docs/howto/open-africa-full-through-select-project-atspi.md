@@ -99,7 +99,7 @@ The run must also include Alice Java/window context in `x-window-inventory.json`
 
 ## Review blocked evidence
 
-If AT-SPI can see the Select Project window but cannot complete target-specific selection/opening, `tab-click-observation.json` must preserve the existing blocker shape with a string `blocker` code and `blockerDetail`, then add structured target-specific details in `targetStarterBlocker`:
+If AT-SPI can see the Select Project window but cannot complete target-specific selection/opening, `tab-click-observation.json` must preserve the existing blocker shape with a string `blocker` code and `blockerDetail`, then add structured target-specific details in `nextBlocker`:
 
 ```json
 {
@@ -122,7 +122,7 @@ If AT-SPI can see the Select Project window but cannot complete target-specific 
   "evidenceStatus": "blocked",
   "blocker": "target-starter-selection-unavailable",
   "blockerDetail": "Africa Full is visible in the active Starters context but exposes no click/activate action and no usable parent selection interface.",
-  "targetStarterBlocker": {
+  "nextBlocker": {
     "observedAtspiState": "Africa Full panel is visible in the active Starters context but exposes no click/activate action and no usable parent selection interface.",
     "actionAttempted": "Activated Starters tab, located Africa Full, inspected actions and parent selection support.",
     "expectedNextAction": "Provide a supported AT-SPI selection/click path for the Africa Full starter before clicking OK/Open.",
