@@ -3,12 +3,13 @@ package org.lgna.issue;
 import org.junit.Test;
 import org.lgna.common.LgnaRuntimeException;
 
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 
 public class AbstractUncaughtExceptionHandlerTest {
   @Test
@@ -17,14 +18,9 @@ public class AbstractUncaughtExceptionHandlerTest {
     Thread thread = new Thread("issue-reporting-plain");
     Throwable throwable = new Throwable("plain");
 
-    handler.uncaughtException(thread, throwable);
+    recordUncaughtException(handler, thread, throwable);
 
-    assertEquals(List.of("generic"), handler.callbacks);
-    assertEquals(0, handler.lgnaInvocationCount);
-    assertEquals(1, handler.genericInvocationCount);
-    assertSame(thread, handler.genericThread);
-    assertSame(throwable, handler.genericOriginalThrowable);
-    assertSame(throwable, handler.genericResolvedThrowable);
+    assertEquals(List.of(new Callback("generic", thread, throwable, throwable)), handler.callbacks);
   }
 
   @Test
@@ -33,14 +29,9 @@ public class AbstractUncaughtExceptionHandlerTest {
     Thread thread = new Thread("issue-reporting-lgna");
     TestLgnaRuntimeException throwable = new TestLgnaRuntimeException("lgna");
 
-    handler.uncaughtException(thread, throwable);
+    recordUncaughtException(handler, thread, throwable);
 
-    assertEquals(List.of("lgna"), handler.callbacks);
-    assertEquals(1, handler.lgnaInvocationCount);
-    assertEquals(0, handler.genericInvocationCount);
-    assertSame(thread, handler.lgnaThread);
-    assertSame(throwable, handler.lgnaOriginalThrowable);
-    assertSame(throwable, handler.lgnaResolvedThrowable);
+    assertEquals(List.of(new Callback("lgna", thread, throwable, throwable)), handler.callbacks);
   }
 
   @Test
@@ -49,17 +40,12 @@ public class AbstractUncaughtExceptionHandlerTest {
     Thread thread = new Thread("issue-reporting-lgna-fallback");
     TestLgnaRuntimeException throwable = new TestLgnaRuntimeException("not handled");
 
-    handler.uncaughtException(thread, throwable);
+    recordUncaughtException(handler, thread, throwable);
 
-    assertEquals(List.of("lgna", "generic"), handler.callbacks);
-    assertEquals(1, handler.lgnaInvocationCount);
-    assertEquals(1, handler.genericInvocationCount);
-    assertSame(thread, handler.lgnaThread);
-    assertSame(throwable, handler.lgnaOriginalThrowable);
-    assertSame(throwable, handler.lgnaResolvedThrowable);
-    assertSame(thread, handler.genericThread);
-    assertSame(throwable, handler.genericOriginalThrowable);
-    assertSame(throwable, handler.genericResolvedThrowable);
+    assertEquals(List.of(
+        new Callback("lgna", thread, throwable, throwable),
+        new Callback("generic", thread, throwable, throwable)
+    ), handler.callbacks);
   }
 
   @Test
@@ -69,27 +55,27 @@ public class AbstractUncaughtExceptionHandlerTest {
     TestLgnaRuntimeException target = new TestLgnaRuntimeException("target");
     Throwable throwable = new Throwable("wrapper", new InvocationTargetException(target));
 
-    handler.uncaughtException(thread, throwable);
+    recordUncaughtException(handler, thread, throwable);
 
-    assertEquals(List.of("lgna"), handler.callbacks);
-    assertEquals(1, handler.lgnaInvocationCount);
-    assertEquals(0, handler.genericInvocationCount);
-    assertSame(thread, handler.lgnaThread);
-    assertSame(throwable, handler.lgnaOriginalThrowable);
-    assertSame(target, handler.lgnaResolvedThrowable);
+    assertEquals(List.of(new Callback("lgna", thread, throwable, target)), handler.callbacks);
+  }
+
+  private record Callback(String name, Thread thread, Throwable originalThrowable, Throwable resolvedThrowable) {
+  }
+
+  private static void recordUncaughtException(RecordingHandler handler, Thread thread, Throwable throwable) {
+    PrintStream originalErr = System.err;
+    try (PrintStream silentErr = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setErr(silentErr);
+      handler.uncaughtException(thread, throwable);
+    } finally {
+      System.setErr(originalErr);
+    }
   }
 
   private static final class RecordingHandler extends AbstractUncaughtExceptionHandler {
     private final boolean lgnaHandlingResult;
-    private final List<String> callbacks = new ArrayList<>();
-    private int lgnaInvocationCount;
-    private int genericInvocationCount;
-    private Thread lgnaThread;
-    private Thread genericThread;
-    private Throwable lgnaOriginalThrowable;
-    private Throwable genericOriginalThrowable;
-    private LgnaRuntimeException lgnaResolvedThrowable;
-    private Throwable genericResolvedThrowable;
+    private final List<Callback> callbacks = new ArrayList<>(2);
 
     private RecordingHandler(boolean lgnaHandlingResult) {
       this.lgnaHandlingResult = lgnaHandlingResult;
@@ -97,21 +83,13 @@ public class AbstractUncaughtExceptionHandlerTest {
 
     @Override
     protected boolean handleUncaughtLgnaRuntimeException(Thread thread, Throwable originalThrowable, LgnaRuntimeException originalThrowableOrTarget) {
-      this.callbacks.add("lgna");
-      this.lgnaInvocationCount++;
-      this.lgnaThread = thread;
-      this.lgnaOriginalThrowable = originalThrowable;
-      this.lgnaResolvedThrowable = originalThrowableOrTarget;
+      this.callbacks.add(new Callback("lgna", thread, originalThrowable, originalThrowableOrTarget));
       return this.lgnaHandlingResult;
     }
 
     @Override
     protected void handleUncaughtException(Thread thread, Throwable originalThrowable, Throwable originalThrowableOrTarget) {
-      this.callbacks.add("generic");
-      this.genericInvocationCount++;
-      this.genericThread = thread;
-      this.genericOriginalThrowable = originalThrowable;
-      this.genericResolvedThrowable = originalThrowableOrTarget;
+      this.callbacks.add(new Callback("generic", thread, originalThrowable, originalThrowableOrTarget));
     }
   }
 
