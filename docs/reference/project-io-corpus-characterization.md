@@ -198,17 +198,22 @@ Tweedle decoder. Covered boundaries include:
 - safe resource entry names and manifest resource references.
 
 The decoder itself is still intentionally narrow. It decodes simple Tweedle class
-declarations, supported superclass/type names, and primitive field values. It does
-not yet decode method bodies, constructor bodies, broad null semantics, or the full
+declarations, supported superclass/type names, primitive field values, and only
+the explicitly documented method/constructor body slices. It does not broadly
+decode method bodies, constructor bodies, broad null semantics, or the full
 Tweedle language.
 
-The next larger implementation should start with a decoder design/spec before more
-one-off boundary tests. That design should spell out the supported Tweedle subset,
-how null values map into Alice AST nodes, how method and constructor bodies map to
-statements and expressions, how sibling type references are resolved, and which
-archive failures should remain clear `IOException`s at the `IoUtilities` boundary.
-It should also decide whether the legacy resource-only player recovery path stays
-as-is, becomes more explicit, or is retired behind new compatibility tests.
+For the narrow generated JSON `.a3c` constructor assignment slice, see
+[JSON `.a3c` Constructor Assignment Characterization](./json-a3c-constructor-assignment-characterization.md).
+
+The next larger implementation beyond focused slices should start with a decoder
+design/spec before more one-off boundary tests. That design should spell out the
+supported Tweedle subset, how null values map into Alice AST nodes, how method and
+constructor bodies map to statements and expressions, how sibling type references
+are resolved, and which archive failures should remain clear `IOException`s at
+the `IoUtilities` boundary. It should also decide whether the legacy
+resource-only player recovery path stays as-is, becomes more explicit, or is
+retired behind new compatibility tests.
 
 ### Type `.a3c` XML fallback archive
 

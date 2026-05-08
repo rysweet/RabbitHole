@@ -249,15 +249,17 @@ def project_not_opened_payload(tab_click_path: Path) -> dict[str, Any]:
 def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict[str, Any]) -> dict[str, Any]:
     target = tab_click.get("targetStarter")
     status = tab_click.get("evidenceStatus")
+    observed = tab_click.get("targetStarterObserved")
     opened = tab_click.get("openedStarter")
     selected = tab_click.get("targetStarterSelected")
     open_attempted = tab_click.get("targetStarterOpenAttempted")
     blocker_detail = (
         f"{tab_click_path.name} contains targetStarter metadata but does not record "
-        "evidenceStatus=opened with targetStarterSelected=true, "
-        "targetStarterOpenAttempted=true, openedStarter matching targetStarter, "
-        "and projectOpenObserved=true; generic main-window observation cannot "
-        "prove the Africa Full starter was opened."
+        "evidenceStatus=opened with targetStarterObserved identifying the target, "
+        "targetStarterSelected=true, targetStarterOpenAttempted=true, "
+        "openedStarter matching targetStarter, and projectOpenObserved=true; "
+        "generic main-window observation cannot prove the Africa Full starter "
+        "was opened."
     )
     return post_open_payload(
         status="blocked",
@@ -267,6 +269,7 @@ def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict
         extra={
             "targetStarter": target,
             "evidenceStatus": status,
+            "targetStarterObserved": observed,
             "openedStarter": opened,
             "targetStarterSelected": selected,
             "targetStarterOpenAttempted": open_attempted,
@@ -301,6 +304,7 @@ def target_starter_metadata_invalid_payload(
 def target_opened_context(tab_click: dict[str, Any]) -> dict[str, Any]:
     return {
         "targetStarter": tab_click.get("targetStarter"),
+        "targetStarterObserved": tab_click.get("targetStarterObserved"),
         "openedStarter": tab_click.get("openedStarter"),
         "evidenceStatus": tab_click.get("evidenceStatus"),
         "targetStarterSelected": tab_click.get("targetStarterSelected"),
@@ -340,6 +344,13 @@ def read_json_or_blocked(
         return None, blocked_payload(path, exc)
 
 
+def target_starter_observed_matches(observed: Any, target_starter: dict[str, Any]) -> bool:
+    return (
+        isinstance(observed, dict)
+        and observed.get("name") == target_starter.get("displayName")
+    )
+
+
 def target_starter_gate_payload(
     tab_click_path: Path,
     tab_click: dict[str, Any],
@@ -352,6 +363,7 @@ def target_starter_gate_payload(
     if (
         tab_click.get("evidenceStatus") != "opened"
         or tab_click.get("openedStarter") != target_starter
+        or not target_starter_observed_matches(tab_click.get("targetStarterObserved"), target_starter)
         or tab_click.get("targetStarterSelected") is not True
         or tab_click.get("targetStarterOpenAttempted") is not True
         or not tab_click.get("projectOpenObserved", False)

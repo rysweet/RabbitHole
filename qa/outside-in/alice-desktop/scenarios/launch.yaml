@@ -32,7 +32,7 @@ evidence:
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution, or naming the exact missing distribution/Maven phase blocker.
     - Launch log containing Alice startup output.
     - Screenshot of the Alice desktop window or first ready project shell.
-    - x-window-inventory.json naming visible X window title, class, process, and geometry after launch readiness wait.
+    - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry after launch readiness wait.
     - application-root-error.json when a Java window titled Application Root Error appears before the Alice desktop.
     - license-dialog.json naming the exact first-run License Agreement title/controls when that dialog blocks project interaction, or not-observed when absent.
     - license-acceptance.json naming the isolated java.util.prefs.userRoot state used only when ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 is explicitly set.

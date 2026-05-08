@@ -27,6 +27,7 @@
     "workflow": {
       "type": "string",
       "enum": [
+        "archive-fixture-smoke",
         "export",
         "exported-project-smoke",
         "failure-path-smoke",
@@ -41,12 +42,14 @@
         "project-io-smoke",
         "run-debug",
         "save-load",
+        "save-menu-dialog-write-proof",
         "scene-creation",
         "select-project-interaction-smoke",
         "select-project-widget-introspection-smoke",
         "select-project-atk-exec-smoke",
         "select-project-tab-click-smoke",
         "post-project-open-window-state-smoke",
+        "post-open-runtime-display-accessibility-evidence",
         "tweedle-decoder-boundary-smoke",
         "tweedle-decoder-this-call-smoke",
         "wizard-palette-completion-smoke"
@@ -130,6 +133,34 @@
                   "const": "-Dinstall4j.skip"
                 },
                 {
+                  "const": "-Dcheckstyle.skip"
+                },
+                {
+                  "const": "-DskipTests"
+                },
+                {
+                  "const": "compile"
+                },
+                {
+                  "const": "exec:exec@alice-ide-atk"
+                }
+              ],
+              "items": false,
+              "minItems": 7,
+              "maxItems": 7
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
                   "const": "-Dsurefire.failIfNoSpecifiedTests=false"
                 },
                 {
@@ -164,19 +195,56 @@
                   "const": "-Dinstall4j.skip"
                 },
                 {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
                   "const": "-Dsurefire.failIfNoSpecifiedTests=false"
                 },
                 {
                   "const": "-pl"
                 },
                 {
-                  "const": "core/ide"
+                  "const": "core/story-api-migration"
                 },
                 {
                   "const": "-am"
                 },
                 {
-                  "const": "-Dtest=org.alice.ide.ProjectSaveTargetPlanTest"
+                  "const": "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/story-api-migration"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.lgna.project.io.IoUtilitiesTest"
                 },
                 {
                   "const": "test"
@@ -253,6 +321,43 @@
               "items": false,
               "minItems": 9,
               "maxItems": 9
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ide"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
             },
             {
               "prefixItems": [

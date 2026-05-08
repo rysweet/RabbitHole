@@ -1,6 +1,6 @@
 # Alice desktop outside-in QA tutorial
 
-This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, and complete manual save/load evidence.
+This tutorial walks through an outside-in QA evidence pass: validate the catalog, collect real launch evidence, review post-open runtime/display accessibility evidence, and complete manual save/load evidence.
 
 ## What you will do
 
@@ -9,8 +9,9 @@ You will:
 1. Validate the scenario catalog.
 2. List the executable scenario catalog.
 3. Run Alice under Xvfb for the launch workflow.
-4. Generate a save/load evidence checklist.
-5. Add user-visible evidence to the generated run directory.
+4. Review post-open runtime/display accessibility evidence.
+5. Generate a save/load evidence checklist.
+6. Add user-visible evidence to the generated run directory.
 
 ## Before you start
 
@@ -31,7 +32,7 @@ Run:
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 ```
 
-The catalog is ready when the command reports all eleven scenarios as valid.
+The catalog is ready when the command reports the active scenario directory and a valid scenario count.
 
 ## Step 2: List the scenario catalog
 
@@ -41,20 +42,12 @@ Run:
 qa/outside-in/alice-desktop/runners/run-scenario.sh list
 ```
 
-The list includes:
+Confirm the output includes the scenario IDs used later in this tutorial:
 
 ```text
 alice-desktop-launch
-alice-desktop-instructor-student-setup
-alice-desktop-scene-creation
-alice-desktop-run-debug
+alice-desktop-post-open-runtime-display-accessibility-evidence
 alice-desktop-save-load
-alice-desktop-export
-alice-desktop-exported-project-smoke
-alice-desktop-netbeans-package-smoke
-alice-desktop-project-io-smoke
-alice-desktop-failure-path-smoke
-alice-desktop-future-ui-smoke
 ```
 
 You can run scenarios by ID or by direct YAML path. In later steps, use the ID form shown in the commands. When reviewing a scenario file, replace the ID with the direct path:
@@ -88,7 +81,46 @@ The screenshot captures the observed desktop state. The launch log and status fi
 
 If the command exits before producing this full set, keep the generated fallback checklist and diagnostics. A fallback checklist is useful for manual follow-up, but it is not accepted launch evidence by itself.
 
-## Step 4: Generate a save/load checklist
+## Step 4: Review post-open runtime/display accessibility evidence
+
+Run the bounded post-open scenario:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-post-open-runtime-display-accessibility-evidence \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs \
+  --timeout-seconds 300
+```
+
+Open the generated run directory and review:
+
+```text
+post-open-runtime-display-accessibility-evidence.json
+runtime-display-accessibility-status.txt
+status.txt
+tab-click-observation.json
+post-project-open-observation.json
+x-window-inventory.json
+controlled-display-pixel-observation.json
+launch.log
+xvfb.log
+screenshot.png or screenshot.xwd
+```
+
+Review the decision artifact without modifying the run:
+
+```bash
+python3 -m json.tool \
+  <run-directory>/post-open-runtime-display-accessibility-evidence.json
+
+sed -n '1,120p' <run-directory>/status.txt
+```
+
+Accept this tutorial step only when `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. `runtime-display-accessibility-status.txt` is probe-local; use final `status.txt` for the overall pass/block decision. Use `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` to understand the supporting project-open and controlled-display setup. If the artifact or final status records a blocker, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
+
+## Step 5: Generate a save/load checklist
 
 Run:
 
@@ -105,7 +137,7 @@ Open:
 qa/outside-in/alice-desktop/evidence/tutorial-runs/alice-desktop-save-load/<timestamp>/manual-evidence-checklist.txt
 ```
 
-## Step 5: Perform the save/load workflow
+## Step 6: Perform the save/load workflow
 
 Follow the checklist in Alice:
 
@@ -129,7 +161,7 @@ review-notes.txt
 
 The save/load scenario is complete only after the workflow has been performed in Alice and the required evidence, including `review-notes.txt`, has been added to the run directory.
 
-## Step 6: Prepare a gated command smoke
+## Step 7: Prepare a gated command smoke
 
 Prepare gated smoke evidence without enabling heavy execution:
 
@@ -147,7 +179,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
   --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
 ```
 
-## Step 7: Keep evidence out of commits
+## Step 8: Keep evidence out of commits
 
 Evidence files are local run artifacts. Keep them for review or attach them to the relevant review record, but do not commit them.
 

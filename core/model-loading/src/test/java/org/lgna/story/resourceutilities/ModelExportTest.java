@@ -19,6 +19,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +32,7 @@ import java.util.stream.Stream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -89,6 +91,22 @@ public class ModelExportTest {
     assertTrue(javaCode.contains("public enum TestPropResource implements org.lgna.story.resources.PropResource"));
     assertTrue(javaCode.contains("DEFAULT;"));
     assertTrue(javaCode.contains("createImplementation"));
+    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
+  }
+
+  @Test
+  public void modelExporterPreservesDeprecatedMetadataInXmlAndGeneratedJava() throws Exception {
+    ModelResourceExporter exporter = createSyntheticPropExporter();
+    exporter.setIsDeprecated(true);
+
+    Document xml = parseXml(exporter.createXMLString());
+    String javaCode = exporter.createJavaCode();
+
+    assertEquals("TRUE", xml.getDocumentElement().getAttribute("deprecated"));
+    assertFalse(((Element) xml.getDocumentElement().getElementsByTagName("Resource").item(0)).hasAttribute("deprecated"));
+    assertTrue(javaCode.contains("@Deprecated"));
+    assertAppearsBefore(javaCode, "@Deprecated", "public enum TestPropResource");
+    assertTrue(javaCode.contains("public enum TestPropResource implements org.lgna.story.resources.PropResource"));
     assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
   }
 
@@ -192,6 +210,79 @@ public class ModelExportTest {
     assertEquals("2.0", max.getAttribute("x"));
     assertEquals("4.0", max.getAttribute("y"));
     assertEquals("5.0", max.getAttribute("z"));
+  }
+
+  @Test
+  public void modelResourceExporterDoesNotExposeLiveBoundingBoxMap() {
+    for (Method method : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse(
+          "Bounding box state must be updated through explicit exporter methods: " + method,
+          "getBoundingBoxes".equals(method.getName()));
+    }
+  }
+
+  @Test
+  public void createXmlStringPersistsComputedClassBoundingBoxInExporterState() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addResource("FirstProp", "Default", "ALICE", null, null);
+    exporter.addResource("SecondProp", "Default", "ALICE", null, null);
+    exporter.setBoundingBox("FirstProp", AxisAlignedBox.createAxisAlignedBox(-1.0, 0.0, -2.0, 1.0, 3.0, 2.0));
+    exporter.setBoundingBox("SecondProp", AxisAlignedBox.createAxisAlignedBox(-3.0, -1.0, -4.0, 2.0, 4.0, 5.0));
+
+    assertNull(exporter.getBoundingBox("TestProp"));
+
+    assertNotNull(exporter.createXMLString());
+
+    assertBoundingBox(exporter.getBoundingBox("TestProp"), -3.0, -1.0, -4.0, 2.0, 4.0, 5.0);
+  }
+
+  @Test
+  public void createXmlStringPersistsRegisteredSubResourceBoundingBoxInExporterState() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+    AxisAlignedBox variantBox = AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5);
+    exporter.setBoundingBox("VariantProp", variantBox);
+    ModelSubResourceExporter subResource = exporter.getSubResources().get(0);
+
+    assertNull(subResource.getBbox());
+
+    assertNotNull(exporter.createXMLString());
+
+    assertEquals(variantBox, subResource.getBbox());
+  }
+
+  @Test
+  public void createXmlStringRefreshesSubResourceBoundingBoxFromExporterState() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+    AxisAlignedBox staleBox = AxisAlignedBox.createAxisAlignedBox(10.0, 10.0, 10.0, 11.0, 11.0, 11.0);
+    AxisAlignedBox registeredBox = AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5);
+    ModelSubResourceExporter subResource = exporter.getSubResources().get(0);
+    subResource.setBbox(staleBox);
+    exporter.setBoundingBox("VariantProp", registeredBox);
+
+    assertNotNull(exporter.createXMLString());
+
+    assertEquals(registeredBox, subResource.getBbox());
+  }
+
+  @Test
+  public void createXmlFileWithFreshGenerationPersistsMissingBoundingBoxes() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addResource("VariantProp", "Default", "ALICE", null, null);
+    AxisAlignedBox variantBox = AxisAlignedBox.createAxisAlignedBox(-0.5, 0.0, -0.5, 0.5, 1.0, 0.5);
+    exporter.setBoundingBox("VariantProp", variantBox);
+    ModelSubResourceExporter subResource = exporter.getSubResources().get(0);
+    Path root = newTestWorkDir("xml-file-bounding-box-state");
+
+    assertNull(exporter.getBoundingBox("TestProp"));
+    assertNull(subResource.getBbox());
+
+    File xmlFile = exporter.createXMLFile(root.toString(), true);
+
+    assertTrue(Files.isRegularFile(xmlFile.toPath()));
+    assertEquals(variantBox, exporter.getBoundingBox("TestProp"));
+    assertEquals(variantBox, subResource.getBbox());
   }
 
   @Test
@@ -330,6 +421,16 @@ public class ModelExportTest {
     assertTrue(first + " should be present", firstIndex >= 0);
     assertTrue(second + " should be present", secondIndex >= 0);
     assertTrue(first + " should appear before " + second, firstIndex < secondIndex);
+  }
+
+  private static void assertBoundingBox(AxisAlignedBox boundingBox, double xMinimum, double yMinimum, double zMinimum, double xMaximum, double yMaximum, double zMaximum) {
+    assertNotNull(boundingBox);
+    assertEquals(xMinimum, boundingBox.getXMinimum(), 0.0);
+    assertEquals(yMinimum, boundingBox.getYMinimum(), 0.0);
+    assertEquals(zMinimum, boundingBox.getZMinimum(), 0.0);
+    assertEquals(xMaximum, boundingBox.getXMaximum(), 0.0);
+    assertEquals(yMaximum, boundingBox.getYMaximum(), 0.0);
+    assertEquals(zMaximum, boundingBox.getZMaximum(), 0.0);
   }
 
   private static void assertCompiles(String sourcePath, String source) throws Exception {

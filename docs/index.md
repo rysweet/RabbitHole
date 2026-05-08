@@ -7,11 +7,14 @@ repository.
 ## Project save and export characterization
 
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, and characterization seams.
+- [Save Menu Dialog Write Proof](./reference/save-menu-dialog-write-proof.md) - Reference for the bounded Save menu item, Swing `JFileChooser`, and `.a3p` write proof shard.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
+- [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
 - [ProjectMigrationManager Migration Characterization](./reference/project-migration-manager-characterization.md) - Reference for generated XML-string characterization around versioned Alice project text migrations.
 - [Exported NetBeans Ant Project Behavior](./reference/exported-netbeans-ant-project-behavior.md) - Reference for exported launcher evidence, deterministic display no-go behavior, Ant `run` metadata, and no-Sims characterization.
 - [Generated Story API Listener Source Characterization](./reference/generated-story-api-listener-source-characterization.md) - Reference for the headless generated-source evidence lane for synthetic listener registration calls, compilation, and no-GUI boundaries.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to add or review compatibility tests for save/export operations.
+- [Run the Save Menu Dialog Write Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused desktop-safe Save menu/dialog/write proof with Xvfb when needed.
 - [Characterize Project IO Corpus Behavior](./howto/characterize-project-io-corpus.md) - How to add deterministic LFS-free IO corpus characterization around Alice archive readers and writers.
 - [Tutorial: Add a Save Operation Characterization Test](./tutorials/save-operation-characterization-test.md) - A guided example for the first direct Save operation characterization test.
 - [Tutorial: Add a Project IO Corpus Characterization](./tutorials/project-io-corpus-characterization.md) - A guided example for protecting generated `.a3p` archive behavior.
@@ -24,6 +27,7 @@ repository.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
+- [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, and claim boundaries for the narrow runtime/display evidence lane.
 - [Desktop procedure edit and Save automation](./reference/desktop-procedure-edit-and-save-automation.md) - checked-in hook points, next tests, and unproven limits for procedure tab selection and project Save automation.
 - [Gadugi exported launcher evidence scenario](./reference/gadugi-exported-launcher-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for exported launcher evidence checks.
 - [Headless-safe desktop action characterization](./reference/headless-safe-desktop-action-characterization.md) - JavaFX/Swing headless startup contract, Croquet action-flow seams, validation commands, and compatibility rules.
@@ -41,7 +45,9 @@ repository.
 - [Modernization corpus manifest](./reference/modernization-corpus-manifest.md) - representative, LFS-independent corpus evidence manifest and validation contract.
 - [Maintain the modernization corpus manifest](./howto/maintain-modernization-corpus-manifest.md) - how to update representative corpus evidence without adding binary payloads or Git LFS objects.
 - [Tutorial: Add a modernization corpus manifest entry](./tutorials/add-modernization-corpus-manifest-entry.md) - guided example for documenting a new generated fixture shape and refreshing scorecard evidence.
+- [Characterize ModelResourceExporter behavior](./howto/characterize-model-resource-exporter.md) - how to add focused, behavior-backed model resource exporter coverage before protected hotspot work.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
+- [Tutorial: Characterize ModelResourceExporter bounding-box state](./tutorials/model-resource-exporter-bounding-box-state.md) - guided example for protecting the intentional stateful XML bounding-box behavior.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
 - [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments.
 - [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice.

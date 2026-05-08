@@ -31,10 +31,12 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 final class ModelResourceThumbnailWriter {
   private ModelResourceThumbnailWriter() {
@@ -61,7 +63,7 @@ final class ModelResourceThumbnailWriter {
       Map<ModelSubResourceExporter, Image> thumbnails,
       List<ModelSubResourceExporter> subResources) throws IOException {
     List<File> thumbnailFiles = new LinkedList<File>();
-    List<String> thumbnailsCreated = new LinkedList<String>();
+    Set<String> thumbnailsCreated = new HashSet<String>();
     if ((existingThumbnails != null) && !existingThumbnails.isEmpty()) {
       for (Entry<String, File> entry : existingThumbnails.entrySet()) {
         if (entry.getValue().exists()) {
@@ -74,9 +76,8 @@ final class ModelResourceThumbnailWriter {
     }
     for (Entry<ModelSubResourceExporter, Image> entry : thumbnails.entrySet()) {
       String thumbnailName = AliceResourceUtilities.getThumbnailResourceFileName(entry.getKey().getModelName(), entry.getKey().getTextureName());
-      if (!thumbnailsCreated.contains(thumbnailName)) {
+      if (thumbnailsCreated.add(thumbnailName)) {
         File f = saveImageToFile(getThumbnailPath(root, packageString, className, thumbnailName), entry.getValue());
-        thumbnailsCreated.add(thumbnailName);
         thumbnailFiles.add(f);
       }
     }

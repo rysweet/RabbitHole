@@ -91,6 +91,10 @@ write_target_selected_not_opened() {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
   },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
   "targetStarterSelected": true,
   "targetStarterOpenAttempted": true,
   "openedStarter": null,
@@ -107,6 +111,34 @@ JSON
 
 # --- Helper: target-starter opening proof from tab-click probe ---
 write_target_opened() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetStarterSelected": true,
+  "targetStarterOpenAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "nextBlocker": null
+}
+JSON
+}
+
+write_target_opened_without_observed() {
   local path=$1
   cat > "$path" <<'JSON'
 {
@@ -142,6 +174,10 @@ write_target_opened_without_selection_flag() {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
   },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
   "targetStarterOpenAttempted": true,
   "openedStarter": {
     "displayName": "Africa Full",
@@ -164,6 +200,10 @@ write_target_opened_without_open_attempt() {
   "targetStarter": {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
   },
   "targetStarterSelected": true,
   "targetStarterOpenAttempted": false,
@@ -188,6 +228,10 @@ write_wrong_target_opened() {
   "targetStarter": {
     "displayName": "Wonderland",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/Wonderland.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Wonderland",
+    "role": "panel"
   },
   "targetStarterSelected": true,
   "targetStarterOpenAttempted": true,
@@ -340,7 +384,22 @@ assert_contains "$target_selected_out" '"blocker": "target-starter-open-not-prov
 assert_contains "$target_selected_out" '"postOpenWindowObserved": false' "target-selected-not-opened does not claim post-open window observation"
 assert_contains "$target_selected_out" '"mainWindowObservationBlocker": "target-starter-open-not-proven"' "target-selected-not-opened names exact mainWindowObservationBlocker"
 
-# ---- 10. Opened status without target selection proof is not enough ----
+# ---- 10. Opened status without target observation proof is not enough ----
+inventory10c="$tmp_root/inventory10c.json"
+write_alice_inventory "$inventory10c"
+missing_observed_tab="$tmp_root/missing-observed-tab.json"
+write_target_opened_without_observed "$missing_observed_tab"
+missing_observed_out="$tmp_root/missing-observed-out.json"
+python3 "$PROBE" "$inventory10c" "$missing_observed_tab" "$missing_observed_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence omits targetStarterObserved"
+assert_contains "$missing_observed_out" '"status": "blocked"' "missing targetStarterObserved records blocked status"
+assert_contains "$missing_observed_out" '"blocker": "target-starter-open-not-proven"' "missing targetStarterObserved refuses post-open proof"
+assert_contains "$missing_observed_out" '"targetStarterSelected": true' "missing targetStarterObserved preserves target selection proof"
+assert_contains "$missing_observed_out" '"targetStarterOpenAttempted": true' "missing targetStarterObserved preserves target open-attempt proof"
+assert_contains "$missing_observed_out" '"postOpenWindowObserved": false' "missing targetStarterObserved does not claim post-open observation"
+
+# ---- 11. Opened status without target selection proof is not enough ----
 inventory10a="$tmp_root/inventory10a.json"
 write_alice_inventory "$inventory10a"
 missing_selection_tab="$tmp_root/missing-selection-tab.json"
@@ -354,7 +413,7 @@ assert_contains "$missing_selection_out" '"blocker": "target-starter-open-not-pr
 assert_contains "$missing_selection_out" '"targetStarterOpenAttempted": true' "missing targetStarterSelected preserves the open-attempt flag"
 assert_contains "$missing_selection_out" '"postOpenWindowObserved": false' "missing targetStarterSelected does not claim post-open observation"
 
-# ---- 11. Opened status without target open-attempt proof is not enough ----
+# ---- 12. Opened status without target open-attempt proof is not enough ----
 inventory10b="$tmp_root/inventory10b.json"
 write_alice_inventory "$inventory10b"
 missing_open_attempt_tab="$tmp_root/missing-open-attempt-tab.json"
@@ -369,7 +428,7 @@ assert_contains "$missing_open_attempt_out" '"targetStarterSelected": true' "fal
 assert_contains "$missing_open_attempt_out" '"targetStarterOpenAttempted": false' "false targetStarterOpenAttempted is preserved"
 assert_contains "$missing_open_attempt_out" '"postOpenWindowObserved": false' "false targetStarterOpenAttempted does not claim post-open observation"
 
-# ---- 12. Target opened evidence survives post-open AT-SPI blockers ----
+# ---- 13. Target opened evidence survives post-open AT-SPI blockers ----
 inventory10="$tmp_root/inventory10.json"
 write_alice_inventory "$inventory10"
 target_opened_tab="$tmp_root/target-opened-tab.json"
@@ -383,12 +442,13 @@ assert_contains "$target_opened_out" '"displayName": "Africa Full"' "target-open
 assert_contains "$target_opened_out" '"repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull\.a3p"' "target-opened post-open evidence preserves target repository path"
 assert_contains "$target_opened_out" '"openedStarter": \{' "target-opened post-open evidence preserves openedStarter"
 assert_contains "$target_opened_out" '"evidenceStatus": "opened"' "target-opened post-open evidence preserves opened evidenceStatus"
+assert_contains "$target_opened_out" '"targetStarterObserved": \{' "target-opened post-open evidence preserves target observation proof"
 assert_contains "$target_opened_out" '"targetStarterSelected": true' "target-opened post-open evidence preserves target selection proof"
 assert_contains "$target_opened_out" '"targetStarterOpenAttempted": true' "target-opened post-open evidence preserves target open-attempt proof"
 assert_contains "$target_opened_out" '"targetProjectOpenObserved": true' "target-opened post-open evidence preserves the Select Project project-open observation"
 assert_contains "$target_opened_out" '"javaPid": 2468' "target-opened post-open evidence preserves the Alice Java/window PID"
 
-# ---- 13. Wrong target metadata is not accepted as Africa Full proof ----
+# ---- 14. Wrong target metadata is not accepted as Africa Full proof ----
 inventory11="$tmp_root/inventory11.json"
 write_alice_inventory "$inventory11"
 wrong_target_tab="$tmp_root/wrong-target-tab.json"
@@ -402,11 +462,11 @@ assert_contains "$wrong_target_out" '"blocker": "target-starter-metadata-invalid
 assert_contains "$wrong_target_out" '"postOpenWindowObserved": false' "wrong target metadata does not claim post-open observation"
 assert_contains "$wrong_target_out" '"displayName": "Africa Full"' "wrong target metadata records the expected Africa Full target"
 
-# ---- 14. Probe output is valid JSON ----
+# ---- 15. Probe output is valid JSON ----
 for out_file in "$missing_out" "$missing_tab_out" "$malformed_inv_out" "$malformed_tab_out" \
                 "$not_opened_out" "$no_java_out" "$non_alice_java_out" "$atk_out" \
-                "$target_selected_out" "$missing_selection_out" "$missing_open_attempt_out" \
-                "$target_opened_out" "$wrong_target_out"; do
+                "$target_selected_out" "$missing_observed_out" "$missing_selection_out" \
+                "$missing_open_attempt_out" "$target_opened_out" "$wrong_target_out"; do
   python3 - "$out_file" <<'PY'
 import json, sys
 try:

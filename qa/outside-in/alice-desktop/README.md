@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -59,6 +59,26 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desk
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
 
+To collect the narrow post-open runtime/display accessibility evidence:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-post-open-runtime-display-accessibility-evidence \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/post-open-runtime-display \
+  --timeout-seconds 300
+```
+
+Review `post-open-runtime-display-accessibility-evidence.json` as the decision
+artifact and `tab-click-observation.json` plus
+`post-project-open-observation.json` as supporting setup artifacts. An observed
+result is limited to a live post-open runtime/display accessibility signal; a
+blocked result remains a precise blocker and does not prove visible rendering
+correctness, deployed installer success, full world execution, grading, lesson
+completion, active Save behavior, active Select Project behavior, or decoder
+behavior.
+
 The Gadugi exported launcher evidence scenario is a separate CLI scenario under
 `gadugi/`, not a custom Alice scenario under `scenarios/`. Validate and run it
 with `gadugi-test` installed on `PATH`:
@@ -85,11 +105,13 @@ completion.
 For branch-installable outside-in checks, run the thin `amplihack` wrapper from a checkout of the branch:
 
 ```bash
-uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa-outside-in amplihack alice-qa list
-uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa-outside-in amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa list
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-The wrapper delegates to the same repo-owned runners and intentionally requires an Alice checkout as the current working tree.
+Replace `<branch>` with the PR branch or commit you are reviewing. The wrapper
+delegates to the same repo-owned runners and intentionally requires an Alice
+checkout as the current working tree.
 
 The launch scenario first verifies the Alice exec root-directory property and
 prepares the distribution root if it is missing:
@@ -111,7 +133,35 @@ mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -DskipTests compile e
 
 Scenario automation stores executable steps as argv lists, not shell command strings. The validator and runner allow only the checked-in Alice QA argv set, including custom catalogs selected with `ALICE_QA_SCENARIO_DIR`.
 
-The runner records evidence under `qa/outside-in/alice-desktop/evidence/<scenario-id>/<timestamp>/`. Successful Xvfb launch evidence includes `root-directory-prep.json`, an environment summary, Xvfb log, Alice launch log, screenshot (`screenshot.png` or `screenshot.xwd`), `x-window-inventory.json`, `application-root-error.json`, `license-dialog.json`, `license-acceptance.json`, `select-project-window.json`, `controlled-display-pixel-observation.json`, optional screenshot pixel stats, and status file. The root-directory prep artifact records whether `core/resources/target/distribution` was already present or prepared with Maven phase `process-resources`, and blocked cases name the exact missing property, distribution path, or Maven failure. The window inventory records visible X window title, class, process, and geometry after the readiness wait. When a Java window titled `Application Root Error` appears, `application-root-error.json` maps that exact blocker to the observed JVM `org.alice.ide.rootDirectory` condition, expected dialog text, and next invocation change; it does not infer text without that exact window. When a first-run License Agreement appears, `license-dialog.json` records the exact title, expected JEulaPane header/controls, preference class/package/key, and test-only bypass runner. When a Java window titled `Select Project` appears, `select-project-window.json` records the exact title, class, process, and geometry; widget labels are resource-contract evidence only until a live Swing accessibility/Jemmy probe exists, and the artifact names `swing-widget-inventory-not-collected` instead of pretending widget observation. `license-acceptance.json` records either the explicit opt-in blocker or the isolated `java.util.prefs.userRoot` state files under `.java/.userPrefs/` prepared when `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` is set. The controlled display artifact records the exact blocker when root-directory preparation, Xvfb, display allocation, screenshot capture, process lifetime, Alice-window detection, application-root detection, first-run license detection, or screenshot pixel analysis prevents pixel observation; it does not assert Alice rendering correctness. Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
+The runner records evidence under `qa/outside-in/alice-desktop/evidence/<scenario-id>/<timestamp>/`. Successful Xvfb launch evidence includes `root-directory-prep.json`, an environment summary, Xvfb log, Alice launch log, screenshot (`screenshot.png` or `screenshot.xwd`), `x-window-inventory.json`, `application-root-error.json`, `license-dialog.json`, `license-acceptance.json`, `select-project-window.json`, `controlled-display-pixel-observation.json`, optional screenshot pixel stats, and status file. The root-directory prep artifact records whether `core/resources/target/distribution` was already present or prepared with Maven phase `process-resources`, and blocked cases name the exact missing property, distribution path, or Maven failure. The window inventory records Alice-related visible X window title, class, process, and geometry after the readiness wait; unrelated visible desktop windows are not written to the JSON artifact. When a Java window titled `Application Root Error` appears, `application-root-error.json` maps that exact blocker to the observed JVM `org.alice.ide.rootDirectory` condition, expected dialog text, and next invocation change; it does not infer text without that exact window. When a first-run License Agreement appears, `license-dialog.json` records the exact title, expected JEulaPane header/controls, preference class/package/key, and test-only bypass runner. When a Java window titled `Select Project` appears, `select-project-window.json` records the exact title, class, process, and geometry; widget labels are resource-contract evidence only until a live Swing accessibility/Jemmy probe exists, and the artifact names `swing-widget-inventory-not-collected` instead of pretending widget observation. `license-acceptance.json` records either the explicit opt-in blocker or the isolated `java.util.prefs.userRoot` state files under `.java/.userPrefs/` prepared when `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` is set. The controlled display artifact records the exact blocker when root-directory preparation, Xvfb, display allocation, screenshot capture, process lifetime, Alice-window detection, application-root detection, first-run license detection, or screenshot pixel analysis prevents pixel observation; it does not assert Alice rendering correctness.
+
+The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
+goes one step beyond launch, window, and pixel evidence. It uses the existing
+Xvfb and AT-SPI setup, reuses the supported project-open setup, then runs the
+read-only `post-open-runtime-display-probe.py` probe against the live Alice
+accessibility tree.
+
+| Artifact | Role |
+| --- | --- |
+| `post-open-runtime-display-accessibility-evidence.json` | Runtime/display accessibility decision artifact. Observed requires `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, at least one runtime/display candidate, and `blocker=none`. |
+| `status.txt` | Final scenario status. Pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`. |
+| `runtime-display-accessibility-status.txt` | Probe-local status written before final scenario status; useful for debugging, not the final pass/fail artifact. |
+| `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
+| `controlled-display-pixel-observation.json` | Supporting controlled-display pixel artifact. Pixel blockers keep final `outcome=blocked` even when runtime/display accessibility is observed. |
+
+If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
+`python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, project-open
+setup, or the runtime/display candidate is unavailable, the JSON/status
+artifacts record `status=blocked` or `outcome=blocked` plus precise blocker
+fields; the runner must not silently pass. This evidence supports only a live
+post-open runtime/display accessibility signal. It does not prove full visible
+rendering correctness, deployed installer success, full world execution,
+grading, lesson completion, active Save behavior, active Select Project
+behavior, or decoder behavior. The stable artifact API, configuration, examples,
+and review rules are documented in [Post-open runtime/display accessibility
+evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
+
+Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
 
 ## Configuration
 

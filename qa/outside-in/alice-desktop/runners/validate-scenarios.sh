@@ -37,6 +37,7 @@ EXPECTED_TARGET_STARTER = {
 TARGET_STARTER_SCENARIO_IDS = {
     "alice-desktop-select-project-tab-click-exec",
     "alice-desktop-post-project-open-window-state",
+    "alice-desktop-post-open-runtime-display-accessibility-evidence",
 }
 workflow_values = {
     "archive-fixture-smoke",
@@ -54,11 +55,13 @@ workflow_values = {
     "scene-creation",
     "run-debug",
     "save-load",
+    "save-menu-dialog-write-proof",
     "select-project-interaction-smoke",
     "select-project-widget-introspection-smoke",
     "select-project-atk-exec-smoke",
     "select-project-tab-click-smoke",
     "post-project-open-window-state-smoke",
+    "post-open-runtime-display-accessibility-evidence",
     "tweedle-decoder-boundary-smoke",
     "tweedle-decoder-this-call-smoke",
     "export",
@@ -135,6 +138,21 @@ allowed_automation = {
             "core/story-api-migration",
             "-am",
             "-Dtest=org.lgna.project.io.IoUtilitiesTest",
+            "test",
+        ),
+    ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
+            "core/ide",
+            "-am",
+            "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest",
             "test",
         ),
     ),
@@ -372,7 +390,7 @@ def validate_automation_cwd(errors, cwd):
 def validate_target_starter(errors, scenario_id, value):
     if value is None:
         if scenario_id in TARGET_STARTER_SCENARIO_IDS:
-            errors.append("targetStarter is required for target-specific Select Project evidence scenarios")
+            errors.append("targetStarter is required for target-specific project-open evidence scenarios")
         return
     if not isinstance(value, dict):
         errors.append("targetStarter must be a mapping")
@@ -395,11 +413,11 @@ def validate_target_starter(errors, scenario_id, value):
 
     if scenario_id in TARGET_STARTER_SCENARIO_IDS:
         if display_name != EXPECTED_TARGET_STARTER["displayName"]:
-            errors.append("targetStarter.displayName must be Africa Full for target-specific Select Project evidence scenarios")
+            errors.append("targetStarter.displayName must be Africa Full for target-specific project-open evidence scenarios")
         if repository_path != EXPECTED_TARGET_STARTER["repositoryPath"]:
             errors.append(
                 "targetStarter.repositoryPath must be "
-                f"{EXPECTED_TARGET_STARTER['repositoryPath']} for target-specific Select Project evidence scenarios"
+                f"{EXPECTED_TARGET_STARTER['repositoryPath']} for target-specific project-open evidence scenarios"
             )
 
 
