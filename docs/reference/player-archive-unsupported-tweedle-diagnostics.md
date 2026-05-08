@@ -16,9 +16,10 @@ broader Tweedle method-call decode support.
 
 The planned adjacent supported shard is a non-resource field initialized with
 literal-only arithmetic, for example `WholeNumber count <- 1 + 2`, in a
-manifest-declared JSON player type. After implementation, that source no longer
-belongs to the unsupported-diagnostics path. The player reader decodes the field
-initializer as an AST expression and still rejects broader initializer forms.
+manifest-declared JSON `.a3w` player program type. After implementation, that
+source no longer belongs to the unsupported-diagnostics path. The player reader
+decodes the field initializer as an AST expression and still rejects broader
+initializer forms. This planned shard does not add `.a3c` type archive support.
 
 ## Usage
 
@@ -41,7 +42,8 @@ and whose Tweedle source contains only a literal arithmetic field initializer
 such as `WholeNumber count <- 1 + 2`, `IoUtilities.readProject(File)` returns
 the decoded project. The returned program type contains the `count` field with
 an arithmetic AST initializer. The reader does not evaluate the expression and
-does not enable general Tweedle field-initializer support.
+does not enable general Tweedle field-initializer or `.a3c` type archive
+support.
 
 ## Supported archive context
 
@@ -236,8 +238,9 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
 This feature does not decode argument-bearing method calls, bind labeled
 arguments, evaluate argument expressions, apply optional parameters, resolve
 overloads, infer implicit receivers, decode non-literal field initializer
-references, decode initializer method calls, bind resource initializers, or add
-general Tweedle/player decode support.
+references, decode initializer method calls, bind resource initializers, extend
+the planned arithmetic shard to `.a3c` type archives, or add general
+Tweedle/player decode support.
 
 Unsupported manifest-declared Tweedle types remain unsupported. The archive
 reader reports the reason clearly and fails closed.

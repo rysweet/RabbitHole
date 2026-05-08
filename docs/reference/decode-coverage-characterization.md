@@ -14,10 +14,11 @@ mocks. Test archives may be constructed in memory, but they must flow through
 the same public readers and parsers used by Alice project loading.
 
 > **[PLANNED - Implementation Pending]** The literal-only arithmetic field
-> initializer shard below describes the intended decoder contract, not the
-> current behavior. Remove this marker once the decoder and characterization
-> tests accept `WholeNumber count <- 1 + 2` while preserving the unsupported
-> boundaries named here.
+> initializer shard below describes the intended direct Tweedle and generated
+> JSON `.a3w` player archive contract, not the current behavior. Remove this
+> marker once the decoder and characterization tests accept
+> `WholeNumber count <- 1 + 2` while preserving the unsupported boundaries named
+> here.
 
 ## Build contract and non-goals
 
@@ -28,9 +29,10 @@ Build the coverage as a compatibility safety net, not as a decoder redesign.
   with `IOException` when a manifest-declared expected program/type cannot be
   decoded.
 - **[PLANNED]** Treat literal-only arithmetic field initializers on
-  non-resource fields as the supported shard. The decoder constructs AST
-  expression nodes; it does not evaluate arithmetic or broaden
-  field-initializer support.
+  non-resource fields as the supported shard for direct Tweedle decode and the
+  generated JSON `.a3w` player reader. The decoder constructs AST expression
+  nodes; it does not evaluate arithmetic, broaden field-initializer support, or
+  extend this shard to `.a3c` type archives.
 - Treat unsupported player-program superclass decoding as a characterized
   fail-closed boundary. A JSON player archive with `class Program extends
   MissingSuper {}` does not return a partial project shell for normal
@@ -58,6 +60,7 @@ Build the coverage as a compatibility safety net, not as a decoder redesign.
 | Tweedle resource field initializer boundary | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
 | Project archive round trip | `IoUtilities.writeProject(File, Project)`, `IoUtilities.readProject(File)`, and structural `IoUtilities.exportProject(File, Project)` output | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Player archive decode | `IoUtilities.readProject(File)` for `.a3w` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
+| Generated JSON player arithmetic field initializer decode **[PLANNED]** | `IoUtilities.readProject(File)` for generated `.a3w` JSON player files | `core/story-api-migration/src/test/java/org/lgna/project/io/HistoricalArchiveRoundTripCharacterizationTest.java` |
 | Type archive decode | `IoUtilities.readType(File)` for `.a3c` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Resource decode | JSON manifest-backed image and audio entries plus XML `resources.xml` archive entries | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 
@@ -73,6 +76,9 @@ The intended coverage covers successful decode behavior and known edge behavior:
 - **[PLANNED]** non-resource fields initialized with literal-only arithmetic
   expressions, such as `WholeNumber count <- 1 + 2`, decoded through the
   existing expression AST path without evaluating the expression;
+- **[PLANNED]** generated JSON `.a3w` player archives whose
+  manifest-declared program type uses the same literal-only arithmetic
+  initializer shard;
 - same-type zero-argument `this.method()` calls decoded to Alice
   `MethodInvocation` statements in method and constructor bodies, with
   argument-bearing explicit `this.method(label: value, ...)` calls rejected
@@ -205,7 +211,7 @@ field-initializer binding boundary.
 
 The planned supported field-initializer shard is limited to non-resource fields
 whose initializer expression tree contains only numeric literals and arithmetic
-operators.
+operators. Its archive coverage is the generated JSON `.a3w` player path only.
 
 Supported Tweedle source:
 
@@ -238,7 +244,8 @@ class Program extends SProgram {
 `IoUtilities.readProject(File)` returns a project whose decoded program type
 contains the `count` field with the arithmetic initializer attached. The player
 reader is still only exercising the existing JSON archive and Tweedle decode
-path; this is not broad player decode support.
+path; this is not broad player decode support and does not add `.a3c` type
+archive arithmetic coverage.
 
 Unsupported initializer examples:
 
@@ -262,7 +269,7 @@ class SyntheticType {
 
 Those examples fail with `UnsupportedTweedleDecodeException` when decoded
 directly and fail closed with archive `IOException` when they are the
-manifest-declared expected type in a JSON player or type archive. The boundary
+manifest-declared expected program type in a JSON player archive. The boundary
 rejects references, calls, explicit `this`, constructor calls, resource
 initializers, and mixed expression trees before using the expression decoder.
 
@@ -835,7 +842,7 @@ or pull request.
 | Unsupported JSON manifest references are ignored without becoming binary project resources. | `IoUtilitiesTest.ignoresUnsupportedJsonResourceReferencesWithoutCrashing`; `IoUtilitiesTest.readsExportedPlayerArchiveModelAndGeneratedTypeReferencesWithoutBinaryResources` |
 | JSON player archive with `class Program extends MissingSuper {}` fails closed instead of returning a project shell with no decoded program type. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleSuperclassFailsClosed` |
 | JSON player archive with supported Tweedle fields and manifest-backed image resources decodes the program and keeps resources readable. | `IoUtilitiesTest.jsonPlayerManifestTypeReadsFieldAndKeepsResourcesReadable` |
-| **[PLANNED]** Generated JSON player archive with a manifest-declared program containing `WholeNumber count <- 1 + 2` decodes the program field initializer through the player reader. | `HistoricalArchiveRoundTripCharacterizationTest.jsonPlayerArchiveDecodesLiteralArithmeticFieldInitializer` |
+| **[PLANNED]** Generated JSON `.a3w` player archive with a manifest-declared program containing `WholeNumber count <- 1 + 2` decodes the program field initializer through the player reader. This is not `.a3c` type archive support. | `HistoricalArchiveRoundTripCharacterizationTest.jsonPlayerArchiveDecodesLiteralArithmeticFieldInitializer` |
 | Type archives with supported Tweedle decode types through `IoUtilities.readType(File)`. | `IoUtilitiesTest.readsSimpleJsonTypeArchiveTweedleClass` |
 | JSON type manifest mismatches and missing type references fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsManifestNameMismatchInsteadOfFallback`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTypeReferenceInsteadOfReturningNull` |
 | JSON type archives with non-`tweedle`, missing, or malformed type entries fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsUnsupportedTypeReferenceFormat`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTweedleTypeEntry`; `IoUtilitiesTest.jsonTypeReaderWrapsMalformedTweedleTypeEntry` |
