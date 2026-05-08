@@ -303,9 +303,11 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     assertTrue(json, json.contains("\"marker_present\": false"));
     assertTrue(json, json.contains("\"Save menu/control/dialog/write/readback/marker path\""));
     assertTrue(json, json.contains("\"requiresNextEvidence\""));
+    assertTrue(json, json.contains("\"full desktop Save completion\""));
     assertTrue(json, json.contains("\"physical user click\""));
     assertFalse(json, json.contains("\"claim\""));
     assertFalse(json, json.contains("\"wroteFile\": true"));
+    assertFalse(json, json.contains("\"Save menu/control/dialog/write path\""));
     assertFalse(json, json.contains("approved the selected .a3p path"));
     assertFalse(json, json.contains("wrote a non-empty project file"));
   }
