@@ -70,6 +70,8 @@ for required in (
     "postOpenRuntimeDisplayAccessibilityObserved",
     "runtimeDisplayCandidateCount",
     "runtimeDisplayCandidates",
+    "controlledDisplayPixelStatus",
+    "runtime-display-accessibility-status.txt",
 ):
     if required not in evidence_text and required not in expected_outcomes:
         errors.append(f"scenario must require machine-readable {required} evidence")
@@ -167,6 +169,8 @@ if [ "$run_dir_status" -eq 0 ]; then
   assert_contains "$status_file" "^runtimeDisplayAccessibilityEvidence=$ARTIFACT$" "status points to runtime/display artifact"
   assert_contains "$status_file" '^runtimeDisplayAccessibilityStatus=blocked$' "status records runtime/display blocked status"
   assert_contains "$status_file" '^runtimeDisplayAccessibilityBlocker=x-server-unavailable$' "status records exact display blocker"
+  assert_contains "$status_file" '^controlledDisplayPixelStatus=blocked$' "status records controlled display blocked status"
+  assert_contains "$status_file" '^controlledDisplayPixelBlocker=x-server-unavailable$' "status records exact controlled display blocker"
   assert_contains "$artifact_file" '"status": "blocked"' "artifact records blocked status"
   assert_contains "$artifact_file" '"blocker": "x-server-unavailable"' "artifact names missing X server blocker"
   assert_contains "$artifact_file" '"claim": "post-open-runtime-display-accessibility-evidence"' "artifact uses narrow claim token"

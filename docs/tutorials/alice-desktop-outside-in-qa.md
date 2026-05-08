@@ -98,10 +98,12 @@ Open the generated run directory and review:
 
 ```text
 post-open-runtime-display-accessibility-evidence.json
+runtime-display-accessibility-status.txt
 status.txt
 tab-click-observation.json
 post-project-open-observation.json
 x-window-inventory.json
+controlled-display-pixel-observation.json
 launch.log
 xvfb.log
 screenshot.png or screenshot.xwd
@@ -116,7 +118,7 @@ python3 -m json.tool \
 sed -n '1,120p' <run-directory>/status.txt
 ```
 
-Accept this tutorial step only when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. Use `tab-click-observation.json` and `post-project-open-observation.json` to understand the supporting project-open setup, especially if the blocker is `post-open-window-not-observed`. If the artifact records `status=blocked`, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
+Accept this tutorial step only when `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. `runtime-display-accessibility-status.txt` is probe-local; use final `status.txt` for the overall pass/block decision. Use `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` to understand the supporting project-open and controlled-display setup. If the artifact or final status records a blocker, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 ## Step 5: Generate a save/load checklist
 

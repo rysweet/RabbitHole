@@ -978,6 +978,8 @@ PY
     printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
     printf 'runtimeDisplayAccessibilityStatus=blocked\n'
     printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$blocker"
+    printf 'controlledDisplayPixelStatus=blocked\n'
+    printf 'controlledDisplayPixelBlocker=%s\n' "$blocker"
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -1324,6 +1326,8 @@ JSON
         printf 'runtimeDisplayAccessibilityEvidence=%s\n' "$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
         printf 'runtimeDisplayAccessibilityStatus=blocked\n'
         printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$root_directory_prep_blocker"
+        printf 'controlledDisplayPixelStatus=blocked\n'
+        printf 'controlledDisplayPixelBlocker=%s\n' "$root_directory_prep_blocker"
       fi
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     } > "$run_dir/status.txt"

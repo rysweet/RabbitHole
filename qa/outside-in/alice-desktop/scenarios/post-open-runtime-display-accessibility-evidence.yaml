@@ -19,6 +19,7 @@ userActions:
   - Record only read-only runtime/display accessibility evidence in post-open-runtime-display-accessibility-evidence.json and status.txt.
 expectedOutcomes:
   - status.txt records runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json.
+  - status.txt records outcome=passed only when runtimeDisplayAccessibilityStatus=observed and controlledDisplayPixelStatus=observed.
   - post-open-runtime-display-accessibility-evidence.json records status=observed only when postOpenRuntimeDisplayAccessibilityObserved=true.
   - post-open-runtime-display-accessibility-evidence.json records runtimeDisplayCandidateCount greater than zero when observed.
   - post-open-runtime-display-accessibility-evidence.json records runtimeDisplayCandidates for live visible AT-SPI runtime/display components beyond launch, window, and pixel checks.
@@ -45,10 +46,12 @@ evidence:
     - tab-click-observation.json from existing project-open setup.
     - post-project-open-observation.json recording postOpenWindowObserved=true.
     - post-open-runtime-display-accessibility-evidence.json recording claim=post-open-runtime-display-accessibility-evidence, status, blocker, postOpenRuntimeDisplayAccessibilityObserved, runtimeDisplayCandidateCount, and runtimeDisplayCandidates.
+    - runtime-display-accessibility-status.txt recording the probe-local runtime/display accessibility status before final scenario status is assembled.
+    - controlled-display-pixel-observation.json recording observed controlled-display pixels or the exact display, screenshot, process, or pixel blocker.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If Xvfb, display allocation, AT-SPI, python3-pyatspi, the Java ATK wrapper, or the post-open project setup is unavailable, record status=blocked with a precise blocker in status.txt and post-open-runtime-display-accessibility-evidence.json.
+    - If root-directory prep, license prep, Xvfb, display allocation/startup, screenshot or pixel capture, AT-SPI, python3-pyatspi, the Java ATK wrapper, or the post-open project setup is unavailable, record status=blocked with a precise blocker in post-open-runtime-display-accessibility-evidence.json and outcome=blocked with the matching status fields in status.txt.
     - If only launcher, License Agreement, or Select Project surfaces are accessible, record blocker=runtime-display-accessible-candidate-not-found.
     - Do not claim postOpenRuntimeDisplayAccessibilityObserved=true unless the JSON artifact explicitly records at least one runtime/display candidate.
     - This evidence is limited to a live post-open runtime/display accessibility signal and does not assert full visible rendering correctness, deployed installer success, full world execution, grading, lesson completion, active Save behavior, active Select Project behavior, or decoder behavior.

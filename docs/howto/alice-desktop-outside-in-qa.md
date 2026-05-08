@@ -92,14 +92,15 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 The repository exposes a small `amplihack alice-qa` command so reviewers can install the command wrapper from a PR branch and execute the checked-out QA lane:
 
 ```bash
-uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa-outside-in \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa list
 
-uvx --from git+https://github.com/rysweet/alice3-modernization.git@feat/alice-qa-outside-in \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
 Run these commands from the root of a checkout of the same branch. The installed wrapper delegates to `qa/outside-in/alice-desktop/runners/` in that checkout so the output and evidence contract match direct runner usage.
+Replace `<branch>` with the PR branch or commit you are reviewing.
 
 ## Run the real Alice launch scenario
 
@@ -246,6 +247,8 @@ x-window-inventory.json
 tab-click-observation.json
 post-project-open-observation.json
 post-open-runtime-display-accessibility-evidence.json
+runtime-display-accessibility-status.txt
+controlled-display-pixel-observation.json
 status.txt
 screenshot.png or screenshot.xwd
 ```
@@ -316,7 +319,7 @@ If an implementation or environment prerequisite is missing, the runner still wr
 }
 ```
 
-Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json` and `post-project-open-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed`.
+Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus` and `controlledDisplayPixelBlocker`. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
 
 To review the latest run directory without changing it:
 
@@ -330,11 +333,14 @@ python3 -m json.tool \
   "$run_dir/post-open-runtime-display-accessibility-evidence.json"
 ```
 
-Accept the run only when the JSON decision artifact records `status=observed`,
-`blocker=none`, `postOpenRuntimeDisplayAccessibilityObserved=true`, and
+Accept the run only when `status.txt` records `outcome=passed`,
+`runtimeDisplayAccessibilityStatus=observed`, and
+`controlledDisplayPixelStatus=observed`, and the JSON decision artifact records
+`status=observed`, `blocker=none`,
+`postOpenRuntimeDisplayAccessibilityObserved=true`, and
 `runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
-or runtime/display candidate is unavailable.
+controlled-display pixels, or runtime/display candidate is unavailable.
 
 ## Prepare evidence for manual workflows
 

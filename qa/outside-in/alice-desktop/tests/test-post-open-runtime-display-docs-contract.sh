@@ -52,6 +52,7 @@ artifact_name = "post-open-runtime-display-accessibility-evidence.json"
 supporting_artifacts = [
     "tab-click-observation.json",
     "post-project-open-observation.json",
+    "controlled-display-pixel-observation.json",
 ]
 decision_fields = [
     "automationMode",
@@ -81,6 +82,13 @@ for name in ("reference", "howto", "tutorial", "qa_reference", "readme"):
     for artifact in supporting_artifacts:
         if artifact not in text:
             errors.append(f"{name} doc must name supporting setup artifact {artifact}")
+    for required_status in (
+        "runtime-display-accessibility-status.txt",
+        "controlledDisplayPixelStatus",
+        "outcome=passed",
+    ):
+        if required_status not in text:
+            errors.append(f"{name} doc must document final/probe status contract: {required_status}")
 
 reference_text = texts["reference"]
 for field in decision_fields:
@@ -101,6 +109,8 @@ for field in candidate_fields:
 scenario_text = texts["scenario"]
 for required in [
     "status=blocked with a precise blocker",
+    "controlledDisplayPixelStatus=observed",
+    "runtime-display-accessibility-status.txt",
     "Do not claim postOpenRuntimeDisplayAccessibilityObserved=true",
     "does not assert full visible rendering correctness",
 ]:
