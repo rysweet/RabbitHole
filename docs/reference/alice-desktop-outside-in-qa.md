@@ -432,12 +432,24 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
 | `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency evidence with `worldCanvasPixelTarget` target-ready or blocked metadata. Target readiness is only a sampling handoff, not visible rendered-world proof. |
+| `visible-rendering-pixel-target-blocker.json` | Exact blocker when the runner cannot identify one valid Run-window/world-canvas screen-coordinate target. |
+| `visible-rendering-pixel-sampling-blocker.json` | Exact blocker after target readiness when real rendered-world pixels are unavailable, unsampled, unchecked, stale, or inconclusive. The current blocker keeps `sampleCount=0` and does not claim visible rendered-world correctness. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
 For launch runs, `status.txt` records whether the process stayed alive, whether a visible window was detected when a detector is available, whether window inventory was captured, and whether screenshot capture succeeded. Acceptance still requires reviewing the generated evidence, especially `x-window-inventory.json` and `launch.log`; the runner does not currently scan the log for every possible uncaught application exception.
 
-For post-open runtime/display accessibility runs, `status.txt` records `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. `runtime-display-accessibility-status.txt` is probe-local; use `status.txt` for the final scenario decision because it also accounts for controlled-display pixel status. The JSON artifact is the runtime/display machine-readable contract:
+For post-open runtime/display accessibility runs, `status.txt` records
+`runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`,
+`runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`,
+`controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`,
+`visibleRenderingPixelTargetStatus`, `visibleRenderingPixelSamplingStatus`, and
+`outcome=passed` or `outcome=blocked`. `runtime-display-accessibility-status.txt`
+is probe-local; use `status.txt` for the final scenario decision because it also
+accounts for controlled-display pixel status and the fail-closed
+post-target-readiness pixel-sampling seam. The JSON artifact is the
+runtime/display machine-readable contract:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -454,7 +466,15 @@ For post-open runtime/display accessibility runs, `status.txt` records `runtimeD
 | `status` | enum | `observed` or `blocked`. |
 | `traversalErrors` | array | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
 
-The artifact must not include environment variables, credentials, process dumps, unrelated desktop windows, saved project contents, decoder output, grading state, lesson state, or world execution traces. Acceptance requires both the JSON runtime/display artifact and final `status.txt`: JSON `status=observed` alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted, and JSON `status=blocked` remains the machine-readable runtime/display gap report.
+The artifact must not include environment variables, credentials, process dumps,
+unrelated desktop windows, saved project contents, decoder output, grading
+state, lesson state, or world execution traces. Acceptance requires both the
+JSON runtime/display artifact and final `status.txt`: JSON `status=observed`
+alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted,
+and JSON `status=blocked` remains the machine-readable runtime/display gap
+report. Target-ready metadata is also not enough for visible rendered-world
+proof; `visible-rendering-pixel-sampling-blocker.json` is the expected rendered
+pixel decision until actual rendered pixels are sampled and checked.
 
 Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, most scenarios do not write `status.txt` because launch did not reach the evidence-capture phase. The post-open runtime/display accessibility scenario is the exception: it writes `post-open-runtime-display-accessibility-evidence.json` and `status.txt` with a blocked runtime/display accessibility outcome when an early prerequisite prevents collection.
 
@@ -466,7 +486,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
-| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt` with `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. |
+| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt` with `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `visible-rendering-pixel-target-blocker.json` when target readiness is blocked, `visible-rendering-pixel-sampling-blocker.json` when target readiness exists but rendered pixels are unavailable or unchecked, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. Target readiness alone must not be treated as visible rendered-world proof. |
 | Select Project tab-click smoke | `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened`, matching `openedStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`, or existing `blocker`/`blockerDetail` fields plus structured target-specific `nextBlocker` details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |
@@ -505,7 +525,13 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 9. Uses only the supported YAML subset: mappings, nested mappings, scalar values, and scalar lists with spaces for indentation.
 10. Uses `automation.argv` rather than a shell command string; only the allowlisted Alice QA argv set is accepted.
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
-12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
+12. Keeps post-open runtime/display evidence narrow: do not use that scenario to
+    claim full rendering correctness, full world execution, grading, lesson
+    completion, deployed installer success, Save behavior, active Select Project
+    behavior, or decoder behavior. A visible rendered-world success claim
+    requires actual rendered pixels to be sampled and checked; missing,
+    unavailable, unsampled, unchecked, stale, or inconclusive pixels remain
+    blocked evidence.
 13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-work grading, rubric scoring, correctness assessment, or creativity assessment.
 
 ## Extension rules

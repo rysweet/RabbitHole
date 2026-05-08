@@ -147,19 +147,24 @@ implemented runtime/display decision artifact. Review
 `controlled-display-pixel-observation.json` as the controlled-display
 screenshot-consistency artifact. `worldCanvasPixelTarget.status=target-ready`
 means exactly one visible/showing runtime/display candidate exposed valid
-screen-coordinate extents for future pixel sampling. `status=blocked` means
-`visible-rendering-pixel-target-blocker.json` names the exact missing target and
-next unblocker. `geometryStatus=ambiguous-candidates` is reserved for more than
+screen-coordinate extents for pixel sampling. It is not visible rendered-world
+proof. `status=blocked` means `visible-rendering-pixel-target-blocker.json`
+names the exact missing target and next unblocker.
+`visible-rendering-pixel-sampling-blocker.json` records the next seam after
+target readiness: rendered-world pixels are unavailable, unsampled, and
+unchecked, so visible rendered-world correctness remains blocked with
+`sampleCount=0`. `geometryStatus=ambiguous-candidates` is reserved for more than
 one visible/showing candidate with valid positive screen-coordinate extents; a
 larger raw candidate count with missing, zero, negative, malformed, or otherwise
 invalid geometry stays fail-closed without being reported as ambiguous.
 `tab-click-observation.json` and
 `post-project-open-observation.json` are supporting setup artifacts. An observed
 result is limited to a live post-open runtime/display accessibility signal,
-controlled-display screenshot consistency, and pixel target readiness or its
-exact blocker. It does not prove world-canvas pixel correctness, deployed
-installer success, full world execution, grading, lesson completion, active Save
-behavior, active Select Project behavior, or decoder behavior.
+controlled-display screenshot consistency, pixel target readiness or its exact
+blocker, and a fail-closed rendered-pixel sampling blocker. It does not prove
+world-canvas pixel correctness, deployed installer success, full world
+execution, grading, lesson completion, active Save behavior, active Select
+Project behavior, or decoder behavior.
 
 To collect only the target-specific Select Project proof for the committed
 `Africa Full` starter:
@@ -249,6 +254,7 @@ The runner records evidence under
 | `select-project-window.json` | Exact `Select Project` title, class, process, and geometry; widget labels remain resource-contract evidence until a live Swing accessibility/Jemmy probe exists. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, screenshot dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget`, and explicit unsupported claims. |
 | `visible-rendering-pixel-target-blocker.json` | Machine-readable blocker for world-canvas pixel target readiness when the Run-window target is missing, invalid, or ambiguous. |
+| `visible-rendering-pixel-sampling-blocker.json` | Machine-readable blocker for the post-target-readiness rendered-pixel sampling seam. It records that target readiness is not rendered-world proof and keeps `renderedPixelsAvailable=false`, `renderedPixelsSampled=false`, `renderedPixelsChecked=false`, and `sampleCount=0` until real rendered pixels are observed and checked. |
 
 The controlled-display screenshot-consistency artifact does not assert Alice
 world rendering correctness.
@@ -262,11 +268,12 @@ accessibility tree.
 | Artifact | Role |
 | --- | --- |
 | `post-open-runtime-display-accessibility-evidence.json` | Runtime/display accessibility decision artifact. Observed requires `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, at least one runtime/display candidate, and `blocker=none`. |
-| `status.txt` | Final scenario status. Pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`; it also records `visibleRenderingPixelTargetStatus` and `visibleRenderingPixelTargetArtifact`. |
+| `status.txt` | Final scenario status. Pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`; it also records `visibleRenderingPixelTargetStatus`, `visibleRenderingPixelTargetArtifact`, `visibleRenderingPixelSamplingStatus`, and the rendered-pixel sampling blocker artifact. |
 | `runtime-display-accessibility-status.txt` | Probe-local status written before final scenario status; useful for debugging, not the final pass/fail artifact. |
 | `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
-| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, target-ready or blocked `worldCanvasPixelTarget`, and unsupported claims. Pixel blockers keep final `outcome=blocked`. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, target-ready or blocked `worldCanvasPixelTarget`, and unsupported claims. Controlled-display blockers keep final `outcome=blocked`; the rendered-pixel sampling blocker blocks only the visible rendered-world claim. |
 | `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the exact next unblocker for missing, invalid, or ambiguous world-canvas pixel target readiness. Ambiguous means more than one visible/showing candidate has valid extents, not merely more than one raw candidate. |
+| `visible-rendering-pixel-sampling-blocker.json` | Blocker artifact naming `reliable-rendered-world-pixel-observation` as the next unblocker after target readiness. Target-ready metadata alone must not be accepted as sampled or checked rendered pixels. |
 
 If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
 `python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, screenshot
@@ -276,13 +283,13 @@ precise blocker fields; the runner must not silently pass. Target-ready metadata
 is emitted only when one visible/showing candidate has valid positive
 screen-coordinate extents; otherwise the exact blocker artifact is preserved.
 This evidence supports only a live post-open runtime/display accessibility
-signal, controlled-display screenshot consistency, and pixel target readiness or
-its exact blocker. It does not prove
+signal, controlled-display screenshot consistency, pixel target readiness or
+its exact blocker, and a fail-closed pixel-sampling blocker. It does not prove
 world-canvas pixel correctness, deployed installer success, full world
 execution, grading, lesson completion, active Save behavior, active Select
 Project behavior, or decoder behavior. The stable artifact API, target
-readiness contract, configuration, examples, and review
-rules are documented in [Post-open
+readiness and post-readiness pixel-sampling contracts, configuration, examples,
+and review rules are documented in [Post-open
 runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
 
 The first-lesson live procedure target observation seam goes one step beyond the
