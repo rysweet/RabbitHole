@@ -1,19 +1,16 @@
 # Post-open runtime/display accessibility evidence
 
 This reference documents the implemented Alice desktop outside-in QA scenario
-contract for post-open runtime/display accessibility evidence and
-controlled-display screenshot-consistency evidence. It also documents the
-planned Run-window world-canvas pixel sampling target-readiness contract.
+contract for post-open runtime/display accessibility evidence, controlled-display
+screenshot-consistency evidence, and Run-window world-canvas pixel sampling
+target readiness.
 
 The implemented scenario proves two narrow claims: after Alice opens a project
 through the existing supported launch/open path, the live accessibility tree
 exposes at least one runtime/display candidate, and the controlled-display
 screenshot artifact is internally consistent with the pixel metadata recorded
-for that same artifact. The current implementation always keeps
-`worldCanvasPixelTarget` unresolved with the exact missing unblocker
-`reliable-run-window-world-canvas-pixel-sampling-target`. The planned
-target-readiness feature will replace that blocker-only result with either one
-bounded screen-coordinate target or the exact blocker that prevents target
+for that same artifact. It also records either one bounded screen-coordinate
+world-canvas pixel sampling target or the exact blocker that prevents target
 identification. None of these claims prove world-canvas pixel correctness,
 deployed installer success, full world execution, grading, lesson completion,
 active Save behavior, active Select Project behavior, or decoder behavior.
@@ -26,8 +23,7 @@ active Save behavior, active Select Project behavior, or decoder behavior.
 - [Scenario interface](#scenario-interface)
 - [Evidence API](#evidence-api)
 - [Controlled-display screenshot-consistency API](#controlled-display-screenshot-consistency-api)
-- [Current world-canvas pixel target blocker](#current-world-canvas-pixel-target-blocker)
-- [World-canvas pixel target readiness API planned](#world-canvas-pixel-target-readiness-api-planned)
+- [World-canvas pixel target readiness API](#world-canvas-pixel-target-readiness-api)
 - [Review workflow](#review-workflow)
 - [Examples](#examples)
 - [Review rules](#review-rules)
@@ -51,14 +47,14 @@ runner starts Alice with the `alice-ide-atk` Maven execution, performs the
 supported project-open setup, captures a controlled-display screenshot, then
 invokes the read-only runtime/display probe. The implemented probe records
 bounded runtime/display candidate summaries: `name`, `role`, `path`,
-`childCount`, and `states`. It does not yet collect AT-SPI component extents.
+`childCount`, `states`, `geometryStatus`, and `screenExtents`.
 
 The controlled-display artifact records screenshot-consistency metadata for
-that same screenshot and currently includes `worldCanvasPixelTarget` with
-`identified=false`, `status=not-identified`, and
-`missingUnblocker=reliable-run-window-world-canvas-pixel-sampling-target`. The
-runner also writes `visible-rendering-pixel-target-blocker.json` as the exact
-current blocker for pixel target readiness.
+that same screenshot and embeds `worldCanvasPixelTarget`. The target is
+`target-ready` only when exactly one visible/showing runtime/display candidate
+has positive screen-coordinate extents. Otherwise the runner writes
+`visible-rendering-pixel-target-blocker.json` with the exact missing target and
+next unblocker.
 
 The probe, screenshot-consistency step, and target-readiness step are
 observational. They do not click controls, save projects, select new starters,
@@ -98,17 +94,13 @@ qa/outside-in/alice-desktop/evidence/post-open-runtime-display/
 ```
 
 Generated evidence is local run output. Keep it uncommitted. Use
-`post-open-runtime-display-accessibility-evidence.json` for the implemented
-runtime/display accessibility decision and
-`controlled-display-pixel-observation.json` for the controlled-display
-screenshot-consistency decision. The current implementation records
-`worldCanvasPixelTarget.identified=false`,
-`worldCanvasPixelTarget.status=not-identified`, and
-`worldCanvasPixelTarget.missingUnblocker=reliable-run-window-world-canvas-pixel-sampling-target`,
-then writes `visible-rendering-pixel-target-blocker.json` with the same exact
-unblocker. The planned target-readiness feature will keep that blocker path for
-missing, invalid, or ambiguous geometry and add a target-ready path only when
-one valid screen-coordinate Run-window/world-canvas target is available.
+`post-open-runtime-display-accessibility-evidence.json` for the runtime/display
+accessibility decision and `controlled-display-pixel-observation.json` for the
+controlled-display screenshot-consistency decision. Review
+`worldCanvasPixelTarget.status`: `target-ready` means the runner found exactly
+one repeatable screen-coordinate target for future pixel sampling; `blocked`
+means `visible-rendering-pixel-target-blocker.json` names the exact missing
+target and next unblocker.
 
 ## Configuration
 
@@ -156,10 +148,10 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 | Automation mode | `xvfb-real-alice` |
 | Launch path | Existing Alice IDE Maven launch path with the AT-SPI wrapper execution. |
 | Decision artifact | `post-open-runtime-display-accessibility-evidence.json` |
-| Final status artifact | `status.txt` with `outcome=passed` only when runtime/display accessibility and controlled-display screenshot consistency are both observed. The current status file links the target blocker with `visibleRenderingPixelTargetBlocker=visible-rendering-pixel-target-blocker.json`. |
+| Final status artifact | `status.txt` with `outcome=passed` only when runtime/display accessibility and controlled-display screenshot consistency are both observed. It records `visibleRenderingPixelTargetStatus` and points `visibleRenderingPixelTargetArtifact` to the controlled-display artifact for `target-ready` or to the blocker artifact when blocked. |
 | Probe-local status artifact | `runtime-display-accessibility-status.txt`, written by the probe before the runner writes final scenario status. Use it for debugging the probe result, not as the final pass/fail decision. |
-| Screenshot-consistency artifact | `controlled-display-pixel-observation.json` with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, dimensions when metadata is available, pixel-observation metadata, current blocker-only `worldCanvasPixelTarget`, and explicit unsupported claims. |
-| World-pixel blocker artifact | `visible-rendering-pixel-target-blocker.json`, written by the current implementation to name `reliable-run-window-world-canvas-pixel-sampling-target` as the next unblocker. The planned feature will continue writing it only when the target is missing, invalid, or ambiguous. |
+| Screenshot-consistency artifact | `controlled-display-pixel-observation.json` with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget`, and explicit unsupported claims. |
+| World-pixel blocker artifact | `visible-rendering-pixel-target-blocker.json`, written only when target identification is missing, invalid, or ambiguous. |
 | Supporting setup artifacts | `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and environment summary. |
 | Default evidence root | `qa/outside-in/alice-desktop/evidence/` unless `--evidence-dir` is supplied. |
 
@@ -315,7 +307,7 @@ The full artifact fields are:
 | `postOpenRuntimeDisplayAccessibilityObserved` | `true` only when accepted runtime/display candidates were found. |
 | `postOpenWindowObserved` | Whether `post-project-open-observation.json` already recorded the prerequisite post-open window signal. |
 | `runtimeDisplayCandidateCount` | Count of accepted runtime/display candidates emitted in the artifact. |
-| `runtimeDisplayCandidates` | Bounded AT-SPI summaries for accepted candidates: `childCount`, `name`, `path`, `role`, and `states`. The planned target-readiness feature will add geometry metadata when it is implemented. |
+| `runtimeDisplayCandidates` | Bounded AT-SPI summaries for accepted candidates: `childCount`, `name`, `path`, `role`, `states`, `geometryStatus`, and `screenExtents`. |
 | `scenario` | Scenario ID that produced the artifact. |
 | `status` | `observed` or `blocked`. |
 | `traversalErrors` | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
@@ -324,7 +316,7 @@ The artifact must stay small and safe: no credentials, environment dumps,
 arbitrary process dumps, unrelated desktop windows, saved project contents,
 decoder output, grading state, lesson state, or world execution traces.
 
-Planned candidate `geometryStatus` values are:
+Candidate `geometryStatus` values are:
 
 | Value | Meaning |
 | --- | --- |
@@ -379,9 +371,23 @@ An observed result emits these fields. Field order is not part of the contract.
     "detail": "Screenshot is 1280x900 with non-black pixel data."
   },
   "worldCanvasPixelTarget": {
-    "identified": false,
-    "status": "not-identified",
-    "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target"
+    "identified": true,
+    "status": "target-ready",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "candidatePath": "application/0/3",
+    "candidateName": "Scene display",
+    "candidateRole": "canvas",
+    "candidateStates": ["enabled", "showing", "visible"],
+    "geometryStatus": "available",
+    "screenExtents": {
+      "coordinateType": "screen",
+      "x": 144,
+      "y": 188,
+      "width": 996,
+      "height": 642
+    },
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents",
+    "runtimeDisplayCandidateCount": 1
   },
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
@@ -416,9 +422,16 @@ The minimum decision fields for accepting screenshot-consistency evidence are:
     "consistentWithScreenshot": true
   },
   "worldCanvasPixelTarget": {
-    "identified": false,
-    "status": "not-identified",
-    "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target"
+    "identified": true,
+    "status": "target-ready",
+    "geometryStatus": "available",
+    "screenExtents": {
+      "coordinateType": "screen",
+      "x": 144,
+      "y": 188,
+      "width": 996,
+      "height": 642
+    }
   },
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
@@ -429,10 +442,10 @@ The minimum decision fields for accepting screenshot-consistency evidence are:
 
 An observed screenshot-consistency result means only that the runner captured a
 controlled-display screenshot, read its dimensions, and recorded pixel metadata
-that points back to that same screenshot. In the current implementation, the
-same artifact also records the unresolved world-canvas target blocker. It does
-not mean the runner sampled pixels inside a world canvas or validated
-rendered-world content.
+that points back to that same screenshot. A `target-ready`
+`worldCanvasPixelTarget` means only that the runner found a repeatable
+screen-coordinate region for future pixel sampling. It does not mean the runner
+sampled pixels inside a world canvas or validated rendered-world content.
 
 ### Blocked screenshot-consistency artifact
 
@@ -464,8 +477,12 @@ world-pixel blocker artifact described below.
   },
   "worldCanvasPixelTarget": {
     "identified": false,
-    "status": "not-identified",
-    "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target"
+    "status": "blocked",
+    "missingTarget": "run-window-world-canvas-screen-extents",
+    "exactNextUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    "geometryStatus": "missing-extents",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "runtimeDisplayCandidateCount": 0
   },
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
@@ -479,56 +496,9 @@ world-pixel blocker artifact described below.
 }
 ```
 
-## Current world-canvas pixel target blocker
+## World-canvas pixel target readiness API
 
-The current implementation always writes this blocker artifact:
-
-```text
-visible-rendering-pixel-target-blocker.json
-```
-
-The artifact names the one current missing unblocker. It does not mean geometry
-was inspected and rejected; geometry collection is not implemented yet.
-
-```json
-{
-  "schemaVersion": 1,
-  "status": "blocked",
-  "blocker": "world-canvas-pixel-target-not-identified",
-  "blockerDetail": "No reliable Run-window/world-canvas pixel sampling target has been identified. Controlled-display screenshots can support screenshot consistency only; they cannot prove rendered-world pixel correctness.",
-  "claimScope": "visible-rendering-world-canvas-pixel-target",
-  "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
-  "sourceArtifact": "controlled-display-pixel-observation.json",
-  "controlledDisplayStatus": "observed",
-  "controlledDisplayBlocker": "none",
-  "screenshotPath": "screenshot.png",
-  "screenshotStatus": "screenshot-captured",
-  "screenshotPixelStatus": "non-black-pixels",
-  "worldCanvasPixelTarget": {
-    "identified": false,
-    "status": "not-identified",
-    "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target"
-  },
-  "unsupportedClaims": [
-    "world-canvas-pixel-correctness",
-    "full-visible-rendering-correctness",
-    "full-ui-automation",
-    "world-execution",
-    "grading",
-    "save-behavior",
-    "first-lesson-completion"
-  ]
-}
-```
-
-## World-canvas pixel target readiness API planned
-
-**[PLANNED - Implementation Pending]** This section describes the feature this
-lane is meant to grow into. The current implementation does not emit
-`target-ready`, `missingTarget`, `exactNextUnblocker`, `geometryStatus`, or
-`screenExtents`; it emits `status=not-identified` plus `missingUnblocker`.
-
-The planned world-canvas pixel target readiness contract has two valid outcomes:
+The world-canvas pixel target readiness contract has two valid outcomes:
 
 1. `controlled-display-pixel-observation.json` embeds
    `worldCanvasPixelTarget.identified=true` when exactly one visible/showing
@@ -570,9 +540,9 @@ Target-ready evidence is valid only when:
 - `screenExtents.height > 0`
 - exactly one accepted runtime/display candidate satisfies those rules
 
-Target-ready evidence will be the handoff point for a later pixel sampler. That
+Target-ready evidence is the handoff point for a later pixel sampler. That
 sampler may crop or sample inside `screenExtents` from the same controlled
-display screenshot. This planned shard does not define color expectations, image
+display screenshot. This shard does not define color expectations, image
 baselines, visual diffs, grading rules, world execution assertions, or rendered
 content pass/fail logic.
 
@@ -584,8 +554,8 @@ The blocker artifact is:
 visible-rendering-pixel-target-blocker.json
 ```
 
-In the planned contract, it is the machine-readable next blocker when the runner
-cannot identify a reliable Run-window/world-canvas pixel sampling target:
+It is the machine-readable next blocker when the runner cannot identify a
+reliable Run-window/world-canvas pixel sampling target:
 
 ```json
 {
@@ -605,7 +575,10 @@ cannot identify a reliable Run-window/world-canvas pixel sampling target:
     "identified": false,
     "status": "blocked",
     "missingTarget": "run-window-world-canvas-screen-extents",
-    "exactNextUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target"
+    "exactNextUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    "geometryStatus": "missing-extents",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "runtimeDisplayCandidateCount": 1
   },
   "claimScopeDetail": "target-readiness-only",
   "unsupportedClaims": [
@@ -643,14 +616,14 @@ Use this review sequence for every run:
     `schemaVersion=1`, `status=observed`,
     `claimScope=controlled-display-screenshot-consistency`, a relative screenshot
     path, non-null screenshot dimensions,
-    `pixelObservation.consistentWithScreenshot=true`,
-    current blocker-only `worldCanvasPixelTarget`, and explicit
-    `unsupportedClaims`.
-4. Confirm the current target blocker path: `worldCanvasPixelTarget.identified`
-    is `false`, `worldCanvasPixelTarget.status` is `not-identified`,
-    `worldCanvasPixelTarget.missingUnblocker` is
-    `reliable-run-window-world-canvas-pixel-sampling-target`, and
-    `visible-rendering-pixel-target-blocker.json` is present.
+    `pixelObservation.consistentWithScreenshot=true`, `worldCanvasPixelTarget`,
+    and explicit `unsupportedClaims`.
+4. Confirm the target path. If `worldCanvasPixelTarget.status=target-ready`,
+    `screenExtents.coordinateType=screen` and width/height are positive. If
+    `worldCanvasPixelTarget.status=blocked`,
+    `visible-rendering-pixel-target-blocker.json` is present and names
+    `missingTarget=run-window-world-canvas-screen-extents` plus
+    `exactNextUnblocker=reliable-run-window-world-canvas-pixel-sampling-target`.
 5. Review `tab-click-observation.json` and
     `post-project-open-observation.json` to understand the supporting project-open
     setup.
@@ -660,7 +633,7 @@ Use this review sequence for every run:
      `status=observed`, `blocker=none`,
      `postOpenRuntimeDisplayAccessibilityObserved=true`,
      `runtimeDisplayCandidateCount` greater than zero, and the evidence directory
-     contains the exact current target blocker.
+     contains either target-ready metadata or the exact blocker artifact.
 
 If the decision artifact is `status=blocked`, preserve it as the run result. A
 blocked artifact is useful evidence about the missing prerequisite or missing
@@ -671,10 +644,8 @@ correctness, deployed installer success, full world execution, grading, lesson
 completion, active Save behavior, active Select Project behavior, or decoder
 behavior.
 
-When the planned target-readiness feature is implemented, the review workflow
-should allow either `target-ready` metadata with valid screen extents or the
-planned exact blocker artifact. Until then, `target-ready` is not an accepted
-repo-owned output.
+Target-ready metadata is accepted only as pixel sampling target readiness. It is
+not a rendering correctness assertion.
 
 ## Examples
 
@@ -698,7 +669,8 @@ runtimeDisplayAccessibilityStatus=observed
 runtimeDisplayAccessibilityBlocker=none
 controlledDisplayPixelStatus=observed
 controlledDisplayPixelBlocker=none
-visibleRenderingPixelTargetBlocker=visible-rendering-pixel-target-blocker.json
+visibleRenderingPixelTargetStatus=<target-ready|blocked>
+visibleRenderingPixelTargetArtifact=<controlled-display-pixel-observation.json|visible-rendering-pixel-target-blocker.json>
 ```
 
 and the JSON artifact records:
@@ -715,9 +687,8 @@ Also review `tab-click-observation.json`,
 `x-window-inventory.json`, and the captured screenshot as supporting evidence for
 the project-open setup and run environment. Review
 `controlled-display-pixel-observation.json` for screenshot-consistency evidence
-and the embedded unresolved `worldCanvasPixelTarget`. Review
-`visible-rendering-pixel-target-blocker.json` for the exact current next
-unblocker.
+and the embedded `worldCanvasPixelTarget`. If the target is blocked, review
+`visible-rendering-pixel-target-blocker.json` for the exact next unblocker.
 
 ### Review a blocked run
 
@@ -754,14 +725,12 @@ screenshot.dimensions.height > 0
 pixelObservation.status=non-black-pixels
 pixelObservation.pixelsObserved=true
 pixelObservation.consistentWithScreenshot=true
-worldCanvasPixelTarget.identified=false
-worldCanvasPixelTarget.status=not-identified
-worldCanvasPixelTarget.missingUnblocker=reliable-run-window-world-canvas-pixel-sampling-target
+worldCanvasPixelTarget.status=<target-ready|blocked>
 ```
 
-Also keep `visible-rendering-pixel-target-blocker.json` with the run evidence.
-It is the precise current blocker for target readiness, not a substitute for
-target-ready evidence.
+If the target is blocked, keep `visible-rendering-pixel-target-blocker.json` with
+the run evidence. It is the precise blocker for target readiness, not a
+substitute for target-ready evidence.
 
 ## Review rules
 
@@ -773,12 +742,12 @@ target-ready evidence.
 4. `controlled-display-pixel-observation.json` is accepted only as
    screenshot-consistency evidence, with
    `claimScope=controlled-display-screenshot-consistency`.
-5. Current `worldCanvasPixelTarget.identified=false` and
-   `visible-rendering-pixel-target-blocker.json` mean the exact unblocker is
+5. `worldCanvasPixelTarget.identified=true` means only that the runner has
+   identified a repeatable screen-coordinate target for future pixel sampling. It
+   does not prove Run-window/world-canvas pixel correctness.
+6. `visible-rendering-pixel-target-blocker.json` means target readiness is
+   blocked and the exact unblocker is
    `reliable-run-window-world-canvas-pixel-sampling-target`.
-6. Planned `worldCanvasPixelTarget.identified=true` will mean only that the
-   runner has identified a repeatable screen-coordinate target for future pixel
-   sampling. It will not prove Run-window/world-canvas pixel correctness.
 7. `status=blocked` is an honest blocked result, not a failed documentation
    claim and not a success substitute.
 8. `tab-click-observation.json`, `post-project-open-observation.json`, launch,
@@ -805,11 +774,9 @@ The current contract tests cover schema/validator/runner parity, the
 runtime/display artifact name, status fields, blocked fallback behavior,
 runtime/display candidate summaries, and the narrow runtime/display claim token.
 The visible-rendering evidence contract test covers the screenshot-consistency
-artifact fields, current blocker-only `worldCanvasPixelTarget` shape, blocked
-fallback behavior, forbidden overclaiming language, and narrow
-screenshot-consistency claim tokens. Planned target-readiness implementation
-should add tests for `target-ready`, geometry metadata, and the exact planned
-blocker shape before removing the implementation-pending markers above.
+artifact fields, `target-ready` shape, exact blocker shape, geometry metadata,
+blocked fallback behavior, forbidden overclaiming language, and narrow
+screenshot-consistency claim tokens.
 
 ## Troubleshooting
 

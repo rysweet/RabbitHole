@@ -1,0 +1,35 @@
+{
+  "blocker": "world-canvas-pixel-target-not-identified",
+  "blockerDetail": "No reliable Run-window/world-canvas screen-coordinate pixel sampling target has been identified. Controlled-display screenshots can support screenshot consistency only; they cannot prove rendered-world pixel correctness.",
+  "claimScope": "visible-rendering-world-canvas-pixel-target",
+  "claimScopeDetail": "target-readiness-only",
+  "controlledDisplayBlocker": "none",
+  "controlledDisplayStatus": "observed",
+  "exactNextUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+  "geometryStatus": "missing-extents",
+  "missingTarget": "run-window-world-canvas-screen-extents",
+  "runtimeDisplayCandidateCount": 1,
+  "schemaVersion": 1,
+  "screenshotPath": "screenshot.png",
+  "screenshotPixelStatus": "non-black-pixels",
+  "screenshotStatus": "screenshot-captured",
+  "sourceArtifact": "controlled-display-pixel-observation.json",
+  "status": "blocked",
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
+  ],
+  "worldCanvasPixelTarget": {
+    "exactNextUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    "geometryStatus": "missing-extents",
+    "identified": false,
+    "missingTarget": "run-window-world-canvas-screen-extents",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "status": "blocked"
+  }
+}

@@ -566,6 +566,7 @@ write_controlled_display_pixel_observation() {
   local window_inventory_status=${18:-not-attempted}
   local window_inventory_file=${19:-x-window-inventory.json}
   local alice_window_candidate_count=${20:-0}
+  local runtime_display_artifact=${21:-}
 
   CONTROLLED_DISPLAY_STATUS="$status" \
   CONTROLLED_DISPLAY_BLOCKER="$blocker" \
@@ -586,13 +587,25 @@ write_controlled_display_pixel_observation() {
   CONTROLLED_DISPLAY_WINDOW_INVENTORY_STATUS="$window_inventory_status" \
   CONTROLLED_DISPLAY_WINDOW_INVENTORY_FILE="$window_inventory_file" \
   CONTROLLED_DISPLAY_ALICE_WINDOW_CANDIDATE_COUNT="$alice_window_candidate_count" \
+  CONTROLLED_DISPLAY_RUNTIME_DISPLAY_ARTIFACT="$runtime_display_artifact" \
   python3 - "$run_dir/controlled-display-pixel-observation.json" <<'PY'
 import json
+import math
 import os
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+MISSING_TARGET = "run-window-world-canvas-screen-extents"
+NEXT_UNBLOCKER = "reliable-run-window-world-canvas-pixel-sampling-target"
+SOURCE_ARTIFACT = "post-open-runtime-display-accessibility-evidence.json"
+SELECTION_RULE = "single-visible-showing-runtime-display-candidate-with-valid-screen-extents"
+BLOCKED_GEOMETRY_STATUSES = {
+    "missing-component-interface",
+    "missing-extents",
+    "invalid-extents",
+    "ambiguous-candidates",
+}
 
 def value(name):
     return os.environ.get(name, "")
@@ -628,11 +641,116 @@ def parse_screenshot_dimensions(output_path):
             dimensions[key] = int(raw_value)
     return dimensions, "screenshot-pixels.txt.raw"
 
+def is_number(raw_value):
+    return isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool) and math.isfinite(raw_value)
+
+def valid_screen_extents(candidate):
+    extents = candidate.get("screenExtents")
+    if not isinstance(extents, dict):
+        return None
+    if extents.get("coordinateType") != "screen":
+        return None
+    for key in ("x", "y", "width", "height"):
+        if not is_number(extents.get(key)):
+            return None
+    if extents["width"] <= 0 or extents["height"] <= 0:
+        return None
+    return {
+        "coordinateType": "screen",
+        "x": extents["x"],
+        "y": extents["y"],
+        "width": extents["width"],
+        "height": extents["height"],
+    }
+
+def visible_showing(candidate):
+    states = candidate.get("states")
+    if not isinstance(states, list):
+        return False
+    state_set = {str(state).lower() for state in states}
+    return "visible" in state_set and "showing" in state_set
+
+def derived_geometry_status(candidate):
+    status = str(candidate.get("geometryStatus") or "")
+    if status in BLOCKED_GEOMETRY_STATUSES or status == "available":
+        return status
+    extents = candidate.get("screenExtents")
+    if extents is None:
+        return "missing-extents"
+    if not isinstance(extents, dict):
+        return "invalid-extents"
+    if extents.get("coordinateType") != "screen":
+        return "invalid-extents"
+    return "available" if valid_screen_extents(candidate) is not None else "invalid-extents"
+
+def blocked_world_canvas_target(geometry_status, candidate_count):
+    return {
+        "identified": False,
+        "status": "blocked",
+        "missingTarget": MISSING_TARGET,
+        "exactNextUnblocker": NEXT_UNBLOCKER,
+        "geometryStatus": geometry_status,
+        "sourceArtifact": SOURCE_ARTIFACT,
+        "runtimeDisplayCandidateCount": candidate_count,
+    }
+
+def target_ready_payload(candidate, candidate_count):
+    extents = valid_screen_extents(candidate)
+    return {
+        "identified": True,
+        "status": "target-ready",
+        "sourceArtifact": SOURCE_ARTIFACT,
+        "candidatePath": str(candidate.get("path", "")),
+        "candidateName": str(candidate.get("name", "")),
+        "candidateRole": str(candidate.get("role", "")),
+        "candidateStates": candidate.get("states") if isinstance(candidate.get("states"), list) else [],
+        "geometryStatus": "available",
+        "screenExtents": extents,
+        "selectionRule": SELECTION_RULE,
+        "runtimeDisplayCandidateCount": candidate_count,
+    }
+
+def world_canvas_target_from_runtime_display(runtime_display_path):
+    if not runtime_display_path:
+        return blocked_world_canvas_target("missing-extents", 0)
+    try:
+        runtime_display = json.loads(Path(runtime_display_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return blocked_world_canvas_target("missing-extents", 0)
+    if not isinstance(runtime_display, dict):
+        return blocked_world_canvas_target("missing-extents", 0)
+    candidates = runtime_display.get("runtimeDisplayCandidates")
+    if not isinstance(candidates, list):
+        candidates = []
+    reported_count = runtime_display.get("runtimeDisplayCandidateCount")
+    candidate_count = reported_count if isinstance(reported_count, int) and reported_count >= 0 else len(candidates)
+    valid_candidates = [
+        candidate
+        for candidate in candidates
+        if isinstance(candidate, dict)
+        and visible_showing(candidate)
+        and derived_geometry_status(candidate) == "available"
+        and valid_screen_extents(candidate) is not None
+    ]
+    if len(valid_candidates) == 1:
+        return target_ready_payload(valid_candidates[0], candidate_count)
+    if len(valid_candidates) > 1 or len(candidates) > 1:
+        return blocked_world_canvas_target("ambiguous-candidates", candidate_count)
+    if len(candidates) == 1 and isinstance(candidates[0], dict):
+        geometry_status = derived_geometry_status(candidates[0])
+        if geometry_status == "available":
+            geometry_status = "invalid-extents"
+        return blocked_world_canvas_target(geometry_status, candidate_count)
+    return blocked_world_canvas_target("missing-extents", candidate_count)
+
 pixels_observed = value("CONTROLLED_DISPLAY_PIXELS_OBSERVED") == "true"
 screenshot_status = value("CONTROLLED_DISPLAY_SCREENSHOT_STATUS")
 screenshot_file = nullable_relative_path(value("CONTROLLED_DISPLAY_SCREENSHOT_FILE"))
 screenshot_pixel_status = value("CONTROLLED_DISPLAY_SCREENSHOT_PIXEL_STATUS")
 screenshot_dimensions, screenshot_metadata_source = parse_screenshot_dimensions(path)
+world_canvas_pixel_target = world_canvas_target_from_runtime_display(
+    value("CONTROLLED_DISPLAY_RUNTIME_DISPLAY_ARTIFACT")
+)
 consistent_with_screenshot = (
     pixels_observed
     and screenshot_status == "screenshot-captured"
@@ -676,11 +794,7 @@ payload = {
         "pixelsObserved": pixels_observed,
         "consistentWithScreenshot": consistent_with_screenshot,
     },
-    "worldCanvasPixelTarget": {
-        "identified": False,
-        "status": "not-identified",
-        "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
-    },
+    "worldCanvasPixelTarget": world_canvas_pixel_target,
     "unsupportedClaims": [
         "world-canvas-pixel-correctness",
         "full-visible-rendering-correctness",
@@ -708,14 +822,17 @@ write_visible_rendering_pixel_target_blocker() {
   local screenshot_file=${4:-}
   local screenshot_status=${5:-not-attempted}
   local screenshot_pixel_status=${6:-not-attempted}
+  local runtime_display_artifact=${7:-}
 
   VISIBLE_RENDERING_CONTROLLED_DISPLAY_STATUS="$controlled_display_status" \
   VISIBLE_RENDERING_CONTROLLED_DISPLAY_BLOCKER="$controlled_display_blocker" \
   VISIBLE_RENDERING_SCREENSHOT_FILE="$screenshot_file" \
   VISIBLE_RENDERING_SCREENSHOT_STATUS="$screenshot_status" \
   VISIBLE_RENDERING_SCREENSHOT_PIXEL_STATUS="$screenshot_pixel_status" \
+  VISIBLE_RENDERING_RUNTIME_DISPLAY_ARTIFACT="$runtime_display_artifact" \
   python3 - "$run_dir/$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER" <<'PY'
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -723,6 +840,15 @@ from pathlib import Path
 output_path = Path(sys.argv[1])
 screenshot_file = os.environ.get("VISIBLE_RENDERING_SCREENSHOT_FILE", "")
 screenshot_path = Path(screenshot_file).name if screenshot_file else None
+MISSING_TARGET = "run-window-world-canvas-screen-extents"
+NEXT_UNBLOCKER = "reliable-run-window-world-canvas-pixel-sampling-target"
+SOURCE_ARTIFACT = "post-open-runtime-display-accessibility-evidence.json"
+BLOCKED_GEOMETRY_STATUSES = {
+    "missing-component-interface",
+    "missing-extents",
+    "invalid-extents",
+    "ambiguous-candidates",
+}
 unsupported_claims = [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
@@ -732,28 +858,108 @@ unsupported_claims = [
     "save-behavior",
     "first-lesson-completion",
 ]
+
+def is_number(raw_value):
+    return isinstance(raw_value, (int, float)) and not isinstance(raw_value, bool) and math.isfinite(raw_value)
+
+def valid_screen_extents(candidate):
+    extents = candidate.get("screenExtents")
+    if not isinstance(extents, dict):
+        return None
+    if extents.get("coordinateType") != "screen":
+        return None
+    for key in ("x", "y", "width", "height"):
+        if not is_number(extents.get(key)):
+            return None
+    if extents["width"] <= 0 or extents["height"] <= 0:
+        return None
+    return extents
+
+def visible_showing(candidate):
+    states = candidate.get("states")
+    if not isinstance(states, list):
+        return False
+    state_set = {str(state).lower() for state in states}
+    return "visible" in state_set and "showing" in state_set
+
+def derived_geometry_status(candidate):
+    status = str(candidate.get("geometryStatus") or "")
+    if status in BLOCKED_GEOMETRY_STATUSES or status == "available":
+        return status
+    extents = candidate.get("screenExtents")
+    if extents is None:
+        return "missing-extents"
+    if not isinstance(extents, dict):
+        return "invalid-extents"
+    if extents.get("coordinateType") != "screen":
+        return "invalid-extents"
+    return "available" if valid_screen_extents(candidate) is not None else "invalid-extents"
+
+def blocker_metadata(runtime_display_path):
+    if not runtime_display_path:
+        return "missing-extents", 0
+    try:
+        runtime_display = json.loads(Path(runtime_display_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "missing-extents", 0
+    if not isinstance(runtime_display, dict):
+        return "missing-extents", 0
+    candidates = runtime_display.get("runtimeDisplayCandidates")
+    if not isinstance(candidates, list):
+        candidates = []
+    reported_count = runtime_display.get("runtimeDisplayCandidateCount")
+    candidate_count = reported_count if isinstance(reported_count, int) and reported_count >= 0 else len(candidates)
+    valid_candidates = [
+        candidate
+        for candidate in candidates
+        if isinstance(candidate, dict)
+        and visible_showing(candidate)
+        and derived_geometry_status(candidate) == "available"
+        and valid_screen_extents(candidate) is not None
+    ]
+    if len(valid_candidates) > 1 or len(candidates) > 1:
+        return "ambiguous-candidates", candidate_count
+    if len(candidates) == 1 and isinstance(candidates[0], dict):
+        geometry_status = derived_geometry_status(candidates[0])
+        if geometry_status == "available":
+            geometry_status = "invalid-extents"
+        return geometry_status, candidate_count
+    return "missing-extents", candidate_count
+
+geometry_status, candidate_count = blocker_metadata(
+    os.environ.get("VISIBLE_RENDERING_RUNTIME_DISPLAY_ARTIFACT", "")
+)
+target = {
+    "identified": False,
+    "status": "blocked",
+    "missingTarget": MISSING_TARGET,
+    "exactNextUnblocker": NEXT_UNBLOCKER,
+    "geometryStatus": geometry_status,
+    "sourceArtifact": SOURCE_ARTIFACT,
+    "runtimeDisplayCandidateCount": candidate_count,
+}
 payload = {
     "schemaVersion": 1,
     "status": "blocked",
     "blocker": "world-canvas-pixel-target-not-identified",
     "blockerDetail": (
-        "No reliable Run-window/world-canvas pixel sampling target has been "
+        "No reliable Run-window/world-canvas screen-coordinate pixel sampling target has been "
         "identified. Controlled-display screenshots can support screenshot "
         "consistency only; they cannot prove rendered-world pixel correctness."
     ),
     "claimScope": "visible-rendering-world-canvas-pixel-target",
-    "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
+    "claimScopeDetail": "target-readiness-only",
+    "missingTarget": MISSING_TARGET,
+    "exactNextUnblocker": NEXT_UNBLOCKER,
     "sourceArtifact": "controlled-display-pixel-observation.json",
     "controlledDisplayStatus": os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_STATUS", ""),
     "controlledDisplayBlocker": os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_BLOCKER", ""),
     "screenshotPath": screenshot_path,
     "screenshotStatus": os.environ.get("VISIBLE_RENDERING_SCREENSHOT_STATUS", ""),
     "screenshotPixelStatus": os.environ.get("VISIBLE_RENDERING_SCREENSHOT_PIXEL_STATUS", ""),
-    "worldCanvasPixelTarget": {
-        "identified": False,
-        "status": "not-identified",
-        "missingUnblocker": "reliable-run-window-world-canvas-pixel-sampling-target",
-    },
+    "runtimeDisplayCandidateCount": candidate_count,
+    "geometryStatus": geometry_status,
+    "worldCanvasPixelTarget": target,
     "unsupportedClaims": unsupported_claims,
 }
 with output_path.open("w", encoding="utf-8") as stream:
@@ -1175,6 +1381,8 @@ PY
     printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$blocker"
     printf 'controlledDisplayPixelStatus=blocked\n'
     printf 'controlledDisplayPixelBlocker=%s\n' "$blocker"
+    printf 'visibleRenderingPixelTargetStatus=blocked\n'
+    printf 'visibleRenderingPixelTargetArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
     printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
@@ -1524,6 +1732,8 @@ JSON
         printf 'runtimeDisplayAccessibilityBlocker=%s\n' "$root_directory_prep_blocker"
         printf 'controlledDisplayPixelStatus=blocked\n'
         printf 'controlledDisplayPixelBlocker=%s\n' "$root_directory_prep_blocker"
+        printf 'visibleRenderingPixelTargetStatus=blocked\n'
+        printf 'visibleRenderingPixelTargetArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
         printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
       fi
       printf 'timeoutSeconds=%s\n' "$run_timeout"
@@ -1958,6 +2168,11 @@ JSON
     pixels_observed=false
     observation_claim=no-visible-pixel-proof
   fi
+  local runtime_display_artifact_path=
+  if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
+    runtime_display_artifact_path="$run_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT"
+  fi
+
   write_controlled_display_pixel_observation \
     "$run_dir" \
     "$observation_status" \
@@ -1978,16 +2193,26 @@ JSON
     after-readiness-wait \
     "$window_inventory_status" \
     x-window-inventory.json \
-    "$alice_window_candidate_count"
+    "$alice_window_candidate_count" \
+    "$runtime_display_artifact_path"
 
   if [ "$scenario_id" = "$POST_OPEN_RUNTIME_DISPLAY_SCENARIO" ]; then
-    write_visible_rendering_pixel_target_blocker \
-      "$run_dir" \
-      "$observation_status" \
-      "$observation_blocker" \
-      "$screenshot_file" \
-      "$screenshot_status" \
-      "$screenshot_pixel_status"
+    local visible_rendering_pixel_target_status visible_rendering_pixel_target_artifact
+    visible_rendering_pixel_target_status=$(inventory_json_field "$run_dir/controlled-display-pixel-observation.json" worldCanvasPixelTarget.status)
+    if [ "$visible_rendering_pixel_target_status" = target-ready ]; then
+      visible_rendering_pixel_target_artifact=controlled-display-pixel-observation.json
+    else
+      visible_rendering_pixel_target_status=blocked
+      visible_rendering_pixel_target_artifact="$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
+      write_visible_rendering_pixel_target_blocker \
+        "$run_dir" \
+        "$observation_status" \
+        "$observation_blocker" \
+        "$screenshot_file" \
+        "$screenshot_status" \
+        "$screenshot_pixel_status" \
+        "$runtime_display_artifact_path"
+    fi
     scenario_outcome=blocked
     if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ]; then
       scenario_outcome=passed
@@ -1997,7 +2222,11 @@ JSON
       printf 'outcome=%s\n' "$scenario_outcome"
       printf 'controlledDisplayPixelStatus=%s\n' "$observation_status"
       printf 'controlledDisplayPixelBlocker=%s\n' "$observation_blocker"
-      printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
+      printf 'visibleRenderingPixelTargetStatus=%s\n' "$visible_rendering_pixel_target_status"
+      printf 'visibleRenderingPixelTargetArtifact=%s\n' "$visible_rendering_pixel_target_artifact"
+      if [ "$visible_rendering_pixel_target_artifact" = "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER" ]; then
+        printf 'visibleRenderingPixelTargetBlocker=%s\n' "$VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER"
+      fi
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi

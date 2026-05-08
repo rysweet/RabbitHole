@@ -1,0 +1,58 @@
+{
+  "blocker": "none",
+  "claim": "controlled-display-pixels-observed-rendering-not-asserted",
+  "claimScope": "controlled-display-screenshot-consistency",
+  "pixelObservation": {
+    "consistentWithScreenshot": true,
+    "detail": "Screenshot is 640x480 with non-black pixel data.",
+    "pixelsObserved": true,
+    "status": "non-black-pixels"
+  },
+  "schemaVersion": 1,
+  "screenshot": {
+    "dimensions": {
+      "height": 480,
+      "width": 640
+    },
+    "metadataSource": "screenshot-pixels.txt.raw",
+    "path": "screenshot.png",
+    "status": "screenshot-captured",
+    "tool": "import"
+  },
+  "screenshotFile": "screenshot.png",
+  "screenshotPixelStatus": "non-black-pixels",
+  "screenshotStatus": "screenshot-captured",
+  "status": "observed",
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
+  ],
+  "worldCanvasPixelTarget": {
+    "candidateName": "Scene display",
+    "candidatePath": "application/0/3",
+    "candidateRole": "canvas",
+    "candidateStates": [
+      "enabled",
+      "showing",
+      "visible"
+    ],
+    "geometryStatus": "available",
+    "identified": true,
+    "runtimeDisplayCandidateCount": 1,
+    "screenExtents": {
+      "coordinateType": "screen",
+      "height": 240,
+      "width": 320,
+      "x": 160,
+      "y": 120
+    },
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "status": "target-ready"
+  }
+}

@@ -175,6 +175,60 @@ def add_state_summary(summary: dict[str, Any], accessible: Any) -> dict[str, Any
     return candidate
 
 
+def read_rect_value(extents: Any, field: str, index: int) -> Any:
+    if hasattr(extents, field):
+        return getattr(extents, field)
+    try:
+        return extents[index]
+    except (TypeError, IndexError):
+        return None
+
+
+def numeric(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def screen_extents(accessible: Any, pyatspi: Any) -> tuple[dict[str, Any] | None, str]:
+    try:
+        component = accessible.queryComponent()
+    except Exception:
+        return None, "missing-component-interface"
+    if component is None:
+        return None, "missing-component-interface"
+
+    desktop_coords = getattr(pyatspi, "DESKTOP_COORDS", None)
+    if desktop_coords is None:
+        return None, "missing-extents"
+
+    try:
+        extents = component.getExtents(desktop_coords)
+    except Exception:
+        return None, "missing-extents"
+    if extents is None:
+        return None, "missing-extents"
+
+    payload = {
+        "coordinateType": "screen",
+        "x": read_rect_value(extents, "x", 0),
+        "y": read_rect_value(extents, "y", 1),
+        "width": read_rect_value(extents, "width", 2),
+        "height": read_rect_value(extents, "height", 3),
+    }
+    if not all(numeric(payload[key]) for key in ("x", "y", "width", "height")):
+        return payload, "invalid-extents"
+    if payload["width"] <= 0 or payload["height"] <= 0:
+        return payload, "invalid-extents"
+    return payload, "available"
+
+
+def add_runtime_candidate_summary(summary: dict[str, Any], accessible: Any, pyatspi: Any) -> dict[str, Any]:
+    candidate = add_state_summary(summary, accessible)
+    extents, geometry_status = screen_extents(accessible, pyatspi)
+    candidate["geometryStatus"] = geometry_status
+    candidate["screenExtents"] = extents
+    return candidate
+
+
 def is_select_project_surface(summary: dict[str, Any]) -> bool:
     text = f"{summary.get('name', '')} {summary.get('role', '')}".lower()
     return "select project" in text or "select-project" in text
@@ -249,7 +303,7 @@ def collect_candidates(pyatspi: Any, alice_app: Any) -> tuple[list[dict[str, Any
 
         if visible and is_runtime_display_candidate(summary):
             try:
-                candidates.append(add_state_summary(summary, accessible))
+                candidates.append(add_runtime_candidate_summary(summary, accessible, pyatspi))
             except RuntimeError as exc:
                 traversal_errors.append(str(exc))
 
@@ -312,6 +366,16 @@ def probe_runtime_display(java_pid: int, scenario_id: str, automation_mode: str)
 
     candidates, candidate_errors = collect_candidates(pyatspi, alice_app)
     traversal_errors = app_errors + candidate_errors
+    available_candidates = [
+        candidate
+        for candidate in candidates
+        if candidate.get("geometryStatus") == "available"
+        and isinstance(candidate.get("screenExtents"), dict)
+    ]
+    if len(available_candidates) > 1:
+        for candidate in candidates:
+            if candidate.get("geometryStatus") == "available":
+                candidate["geometryStatus"] = "ambiguous-candidates"
     if not candidates:
         return base_payload(
             status="blocked",
