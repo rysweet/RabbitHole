@@ -62,7 +62,7 @@ manifest metadata, not a field on the type reference.
 
 The source uses Alice Tweedle assignment syntax:
 
-```java
+```text
 class GeneratedJsonTypeWithConstructorAssignmentBoundary extends SProgram {
   WholeNumber count;
 
@@ -90,7 +90,7 @@ The expected decoded shape is:
 | --- | --- |
 | Type name | `GeneratedJsonTypeWithConstructorAssignmentBoundary` |
 | Supertype | `SProgram` |
-| Declared field | one `UserField` named `count` with type `WholeNumber` |
+| Declared field | one `UserField` named `count` with value type `JavaType.getInstance(Integer.class)`, decoded from Tweedle `WholeNumber` |
 | Constructors | one `NamedUserConstructor` |
 | Constructor body | one statement |
 | Body statement | `ExpressionStatement` |

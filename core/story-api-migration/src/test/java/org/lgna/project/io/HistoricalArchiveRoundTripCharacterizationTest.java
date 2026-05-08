@@ -819,11 +819,25 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
 
     String typeSourceEntry = "src/GeneratedJsonTypeWithConstructorAssignmentBoundary.twe";
     try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
       Set<String> entryNames = zipFile.stream().map(ZipEntry::getName).collect(Collectors.toSet());
       assertEquals(
           "Constructor-assignment JSON .a3c fixture should contain only version, manifest, and Tweedle source entries",
           new HashSet<>(Arrays.asList(ProjectIo.VERSION_ENTRY_NAME, ProjectIo.MANIFEST_ENTRY_NAME, typeSourceEntry)),
           entryNames);
+      assertEquals(IoUtilities.TYPE_EXTENSION, manifest.metadata.fileType);
+      assertEquals("GeneratedJsonTypeWithConstructorAssignmentBoundary", manifest.metadata.identifier.name);
+      assertEquals(Manifest.ProjectType.Library, manifest.metadata.identifier.type);
+      assertEquals("GeneratedJsonTypeWithConstructorAssignmentBoundary", manifest.description.name);
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithConstructorAssignmentBoundary",
+          typeSourceEntry);
+      ZipEntry typeEntry = zipFile.getEntry(typeSourceEntry);
+      assertNotNull(
+          "Constructor-assignment JSON .a3c fixture should contain the manifest-declared type source",
+          typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("this.count <- 1"));
     }
 
     TypeResourcesPair typeResourcesPair = IoUtilities.readType(typeArchive);
