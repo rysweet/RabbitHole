@@ -7,6 +7,7 @@ project.
 ## Contents
 
 - [Scope](#scope)
+- [Usage](#usage)
 - [Executable proof](#executable-proof)
 - [Artifact contract](#artifact-contract)
 - [API reference](#api-reference)
@@ -34,6 +35,54 @@ The proof is an AST/project edit seam for `scene.eatmeFirstLesson` on a
 generated starter project. It is not proof of the full first-lesson project
 shape, desktop rendering, grading, creative assessment, Save, launcher, model
 exporter, hotspot, or Select Project PID behavior.
+
+## Usage
+
+Use the seam when a review needs evidence that a deterministic object placement
+artifact is accepted by the deterministic procedure-edit step.
+
+Run the focused handoff proof:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff \
+  test
+```
+
+Run the outside-in QA wrapper for the same handoff command:
+
+```bash
+rm -rf /tmp/alice-procedure-edit-handoff
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-procedure-edit-handoff-smoke \
+  --evidence-dir /tmp/alice-procedure-edit-handoff \
+  --timeout-seconds 900
+```
+
+Run the narrower procedure-edit seam smoke when the review is about edit
+artifacts and the precise desktop edit-action no-go artifact rather than the
+object-placement handoff:
+
+```bash
+rm -rf /tmp/alice-procedure-edit-seam
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-procedure-edit-seam-smoke \
+  --evidence-dir /tmp/alice-procedure-edit-seam \
+  --timeout-seconds 900
+```
+
+Review only the evidence files named by the scenario and the focused JUnit
+assertions. Do not substitute Save, launcher, model exporter, hotspot, Select
+Project PID, rendering, lesson-completion, grading, or creative-assessment
+evidence for this seam.
 
 ## Executable proof
 
@@ -81,6 +130,29 @@ generated `.a3p` or JSON evidence files.
 | `procedure-tab-selection.json` | `EatmeEditProcedure` | `eatme.alice-procedure-tab-selection/v1` | In-editor procedure tab selection evidence for the targeted `UserMethod`. |
 | `procedure-ui-action-no-go.json` | `EatmeEditProcedure` | `eatme.alice-code-procedure-ui-action-no-go/v1` | Precise blocker when a desktop code-editor edit action target is not available. |
 
+`EatmePlaceObject` also writes one JSON result object to standard output:
+
+| Field | Meaning |
+| --- | --- |
+| `schema_version` | `eatme.alice-object-placement-result/v1`. |
+| `status` | `placed` when the project archive and placement evidence were written. |
+| `object_identifier` | The requested object identifier. |
+| `placement_artifact` | Always `placement.json`. |
+| `scene_or_project_diff` | Always `scene.diff.json`. |
+
+`EatmeEditProcedure` writes one JSON result object to standard output:
+
+| Field | Meaning |
+| --- | --- |
+| `schema_version` | `eatme.alice-procedure-edit-result/v1`. |
+| `status` | `edited` when the project archive and edit evidence were written. |
+| `procedure_selector` | The requested selector, such as `scene.eatmeFirstLesson`. |
+| `edited_project_artifact` | Always `edited-project.a3p`. |
+| `procedure_edit_command` | Always `procedure-edit-command.json`. |
+| `procedure_or_code_diff` | Always `procedure.diff.json`. |
+| `procedure_tab_selection` | Always `procedure-tab-selection.json`. |
+| `procedure_ui_action_no_go` | Always `procedure-ui-action-no-go.json`. |
+
 ## API reference
 
 These seams are implementation/test utilities in `org.alice.tools`. They are not
@@ -108,6 +180,10 @@ Exit codes:
 | `0` | Placement succeeded and artifacts were written. |
 | `2` | Invalid arguments, unsupported object identifier, missing project, or unsupported project version. |
 | `3` | Runtime placement failure. |
+
+Placement writes a private managed `SBiped` field backed by
+`org.lgna.story.resources.biped.BunnyResource.DEFAULT`. If `bunny` already
+exists, the utility chooses the next available `bunny<N>` field name.
 
 ### `EatmeEditProcedure.run(...)`
 
@@ -137,10 +213,22 @@ The supported selector form is `scene.<methodName>`, where `<methodName>` is one
 Java-style identifier. `EatmeEditProcedure` finds that scene method or creates it
 when missing. The supported edit form is `append-comment:<non-blank text>`.
 
+The edit is accepted only after `edited-project.a3p` is written. Reopening the
+archive must show the selected scene method and the appended AST `Comment`
+statement. In the chained handoff proof, reopening the archive must also show
+that the placed bunny field survived the edit.
+
 ## Configuration
 
-No runtime product preference is required for the seam. The proof uses JUnit
-temporary directories and hard-coded deterministic tool arguments.
+No runtime product preference is required for the seam. The proof uses temporary
+evidence directories and deterministic tool arguments.
+
+| Setting | Required value | Used by |
+| --- | --- | --- |
+| `NODE_OPTIONS` | `--max-old-space-size=32768` | Surrounding Node-based orchestration and QA wrapper commands. |
+| `ALICE_QA_RUN_GATED_SMOKES` | `1` | `run-scenario.sh` when executing `gated-command-smoke` scenarios. |
+| `--evidence-dir` | A writable directory outside committed source, such as `/tmp/alice-procedure-edit-handoff`. | Placement/edit utilities and QA scenario runner. |
+| `tweedle-lang` submodule | Initialized with `git submodule update --init tweedle-lang`. | Focused Maven reactor validation. |
 
 Use the saved orchestration memory setting when invoking Maven through the
 Node-based workflow wrapper:
@@ -158,14 +246,15 @@ test -d tweedle-lang/Grammar
 
 ## Validation
 
-Run the focused `core/ide` characterization:
+Run the focused handoff characterization:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -pl core/ide -am \
+mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.tools.EatmeEditProcedureTest \
+  -pl core/ide -am \
+  -Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff \
   test
 ```
 

@@ -10,8 +10,9 @@ You will:
 
 1. Prepare the repository for focused `core/ide` validation.
 2. Run the chained placement-to-edit characterization.
-3. Review the generated artifact contract.
-4. Check the narrow evidence boundaries.
+3. Run the QA smoke wrapper for the same handoff path.
+4. Review the generated artifact contract.
+5. Check the narrow evidence boundaries.
 
 ## Before you start
 
@@ -32,14 +33,15 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 ## Step 1: Run the focused characterization
 
-Run the chained test in `EatmeEditProcedureTest`:
+Run the handoff test in `EatmeEditProcedureTest`:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -pl core/ide -am \
+mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.tools.EatmeEditProcedureTest \
+  -pl core/ide -am \
+  -Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff \
   test
 ```
 
@@ -47,7 +49,25 @@ That test owns the narrow proof. It creates a temporary starter project, runs
 `EatmePlaceObject.run(...)`, then runs `EatmeEditProcedure.run(...)` against the
 generated `placed-project.a3p`.
 
-## Step 2: Follow the proof chain
+## Step 2: Run the QA smoke wrapper
+
+The outside-in QA runner has a gated smoke for the same handoff proof:
+
+```bash
+rm -rf /tmp/alice-procedure-edit-handoff
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-procedure-edit-handoff-smoke \
+  --evidence-dir /tmp/alice-procedure-edit-handoff \
+  --timeout-seconds 900
+```
+
+Use this path when a review needs scenario-runner evidence in addition to the
+focused Maven test. It still proves only the handoff and deterministic AST edit;
+it does not become a full desktop UI automation proof.
+
+## Step 3: Follow the proof chain
 
 The test follows this chain:
 
@@ -79,7 +99,7 @@ The proof is accepted only after the edited project is reopened, the placed
 bunny field is still present, and the targeted scene procedure contains the
 expected appended `Comment` statement.
 
-## Step 3: Review placement evidence
+## Step 4: Review placement evidence
 
 The placement step writes:
 
@@ -97,7 +117,7 @@ Use this evidence only for object-placement facts on the generated starter
 project. It does not prove the full first-lesson project shape, rendering,
 lesson completion, grading, or Save behavior.
 
-## Step 4: Review procedure-edit evidence
+## Step 5: Review procedure-edit evidence
 
 The procedure-edit step writes:
 
@@ -121,7 +141,7 @@ The key review points are:
 The final assertion reopens `edited-project.a3p`; the JSON files are evidence,
 not a substitute for the AST/project assertion.
 
-## Step 5: Handle the desktop edit-action blocker
+## Step 6: Handle the desktop edit-action blocker
 
 When the AST edit succeeds but the repository does not expose a stable desktop
 code-editor edit action, the proof writes exactly one blocker:
@@ -148,12 +168,14 @@ grading
 creative assessment
 ```
 
-## Step 6: Keep generated evidence local
+## Step 7: Keep generated evidence local
 
 The test writes evidence under a JUnit temporary directory. Do not commit
 generated `.a3p` archives or generated JSON evidence. Commit only durable
 documentation and the focused characterization test that reproduces the
 artifacts.
 
+For task-oriented commands, see
+[Run the First-Lesson Procedure/Edit Handoff Proof](../howto/run-first-lesson-procedure-edit-handoff.md).
 For the full artifact and API contract, see the
 [First-Lesson Procedure/Edit Seam reference](../reference/first-lesson-procedure-edit-seam.md).

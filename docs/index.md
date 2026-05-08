@@ -28,6 +28,7 @@ repository.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, and claim boundaries for the narrow runtime/display evidence lane.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - intended target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [First-Lesson Procedure/Edit Seam](./reference/first-lesson-procedure-edit-seam.md) - narrow executable proof that chains deterministic object placement into AST-level procedure editing.
+- [Run the First-Lesson Procedure/Edit Handoff Proof](./howto/run-first-lesson-procedure-edit-handoff.md) - how to run the focused Maven and QA smoke evidence path for the procedure/edit handoff.
 - [Tutorial: Trace the First-Lesson Procedure/Edit Seam](./tutorials/trace-first-lesson-procedure-edit-seam.md) - guided review of placement evidence, procedure-edit artifacts, and strict evidence boundaries.
 - [Desktop procedure edit and Save automation](./reference/desktop-procedure-edit-and-save-automation.md) - checked-in hook points, next tests, and unproven limits for procedure tab selection and project Save automation.
 - [Gadugi exported launcher evidence scenario](./reference/gadugi-exported-launcher-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for exported launcher evidence checks.
