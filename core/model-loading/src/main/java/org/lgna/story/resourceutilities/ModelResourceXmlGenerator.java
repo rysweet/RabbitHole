@@ -55,9 +55,11 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 final class ModelResourceXmlGenerator {
   private ModelResourceXmlGenerator() {
@@ -91,13 +93,25 @@ final class ModelResourceXmlGenerator {
   private static Document createXMLDocument(ModelResourceExporter exporter) {
     try {
       Document doc = XMLUtilities.createDocument();
+      String className = exporter.getClassName();
+      String attributionName = exporter.getAttributionName();
+      String attributionYear = exporter.getAttributionYear();
+      List<String> tags = exporter.getTags();
+      List<String> groupTags = exporter.getGroupTags();
+      List<String> themeTags = exporter.getThemeTags();
+      Map<String, AxisAlignedBox> boundingBoxes = exporter.getBoundingBoxes();
+      List<ModelSubResourceExporter> subResources = exporter.getSubResources();
+      Set<String> tagSet = new HashSet<String>(tags);
+      Set<String> groupTagSet = new HashSet<String>(groupTags);
+      Set<String> themeTagSet = new HashSet<String>(themeTags);
+
       Element modelRoot = doc.createElement("AliceModel");
-      modelRoot.setAttribute("name", exporter.getClassName());
-      if ((exporter.getAttributionName() != null) && (exporter.getAttributionName().length() > 0)) {
-        modelRoot.setAttribute("creator", exporter.getAttributionName());
+      modelRoot.setAttribute("name", className);
+      if ((attributionName != null) && (attributionName.length() > 0)) {
+        modelRoot.setAttribute("creator", attributionName);
       }
-      if ((exporter.getAttributionYear() != null) && (exporter.getAttributionYear().length() > 0)) {
-        modelRoot.setAttribute("creationYear", exporter.getAttributionYear());
+      if ((attributionYear != null) && (attributionYear.length() > 0)) {
+        modelRoot.setAttribute("creationYear", attributionYear);
       }
       if (exporter.isDeprecated()) {
         modelRoot.setAttribute("deprecated", "TRUE");
@@ -106,23 +120,23 @@ final class ModelResourceXmlGenerator {
         modelRoot.setAttribute("placeOnGround", "TRUE");
       }
       doc.appendChild(modelRoot);
-      if (exporter.getBoundingBoxes().get(exporter.getClassName()) == null) {
+      if (boundingBoxes.get(className) == null) {
         AxisAlignedBox superBox = AxisAlignedBox.NaN;
-        for (Entry<String, AxisAlignedBox> entry : exporter.getBoundingBoxes().entrySet()) {
+        for (Entry<String, AxisAlignedBox> entry : boundingBoxes.entrySet()) {
           superBox = superBox.union(entry.getValue());
         }
-        exporter.getBoundingBoxes().put(exporter.getClassName(), superBox);
+        boundingBoxes.put(className, superBox);
       }
-      modelRoot.appendChild(createBoundingBoxElement(doc, exporter.getBoundingBoxes().get(exporter.getClassName())));
-      modelRoot.appendChild(createTagsElement(doc, exporter.getTags()));
-      modelRoot.appendChild(createGroupTagsElement(doc, exporter.getGroupTags()));
-      modelRoot.appendChild(createThemeTagsElement(doc, exporter.getThemeTags()));
+      modelRoot.appendChild(createBoundingBoxElement(doc, boundingBoxes.get(className)));
+      modelRoot.appendChild(createTagsElement(doc, tags));
+      modelRoot.appendChild(createGroupTagsElement(doc, groupTags));
+      modelRoot.appendChild(createThemeTagsElement(doc, themeTags));
 
-      for (ModelSubResourceExporter subResource : exporter.getSubResources()) {
-        if (!subResource.getModelName().equalsIgnoreCase(exporter.getClassName()) && exporter.getBoundingBoxes().containsKey(subResource.getModelName())) {
-          subResource.setBbox(exporter.getBoundingBoxes().get(subResource.getModelName()));
+      for (ModelSubResourceExporter subResource : subResources) {
+        if (!subResource.getModelName().equalsIgnoreCase(className) && boundingBoxes.containsKey(subResource.getModelName())) {
+          subResource.setBbox(boundingBoxes.get(subResource.getModelName()));
         }
-        modelRoot.appendChild(createSubResourceElement(doc, subResource, exporter));
+        modelRoot.appendChild(createSubResourceElement(doc, subResource, exporter, tagSet, groupTagSet, themeTagSet));
       }
 
       return doc;
@@ -179,12 +193,14 @@ final class ModelResourceXmlGenerator {
     return tagsElement;
   }
 
-  private static Element createSubResourceElement(Document doc, ModelSubResourceExporter subResource, ModelResourceExporter exporter) {
+  private static Element createSubResourceElement(Document doc, ModelSubResourceExporter subResource, ModelResourceExporter exporter, Set<String> parentTags, Set<String> parentGroupTags, Set<String> parentThemeTags) {
     Element resourceElement = doc.createElement("Resource");
-    resourceElement.setAttribute("textureName", AliceResourceUtilities.makeEnumName(subResource.getTextureName()));
-    resourceElement.setAttribute("resourceName", ModelResourceExporter.createResourceEnumName(exporter, subResource));
-    if (subResource.getModelName() != null) {
-      resourceElement.setAttribute("modelName", subResource.getModelName());
+    String modelName = subResource.getModelName();
+    String textureName = subResource.getTextureName();
+    resourceElement.setAttribute("textureName", AliceResourceUtilities.makeEnumName(textureName));
+    resourceElement.setAttribute("resourceName", exporter.createResourceEnumName(modelName, textureName));
+    if (modelName != null) {
+      resourceElement.setAttribute("modelName", modelName);
     }
     if (subResource.getAttributionName() != null) {
       resourceElement.setAttribute("creator", subResource.getAttributionName());
@@ -192,39 +208,31 @@ final class ModelResourceXmlGenerator {
     if (subResource.getAttributionYear() != null) {
       resourceElement.setAttribute("creationYear", subResource.getAttributionYear());
     }
-    if (subResource.getModelName() != null) {
-      resourceElement.setAttribute("modelName", subResource.getModelName());
-    }
     if (subResource.getBbox() != null) {
       resourceElement.appendChild(createBoundingBoxElement(doc, subResource.getBbox()));
     }
-    appendUniqueTags(doc, resourceElement, "Tags", "Tag", subResource.getTags(), exporter.getTags());
-    appendUniqueTags(doc, resourceElement, "GroupTags", "GroupTag", subResource.getGroupTags(), exporter.getGroupTags());
-    appendUniqueTags(doc, resourceElement, "ThemeTags", "ThemeTag", subResource.getThemeTags(), exporter.getThemeTags());
+    appendUniqueTags(doc, resourceElement, "Tags", "Tag", subResource.getTags(), parentTags);
+    appendUniqueTags(doc, resourceElement, "GroupTags", "GroupTag", subResource.getGroupTags(), parentGroupTags);
+    appendUniqueTags(doc, resourceElement, "ThemeTags", "ThemeTag", subResource.getThemeTags(), parentThemeTags);
     return resourceElement;
   }
 
-  private static void appendUniqueTags(Document doc, Element resourceElement, String groupName, String itemName, List<String> resourceTags, List<String> parentTags) {
+  private static void appendUniqueTags(Document doc, Element resourceElement, String groupName, String itemName, List<String> resourceTags, Set<String> parentTags) {
     if (!resourceTags.isEmpty()) {
-      List<String> uniqueTags = new ArrayList<String>();
+      Element tagsElement = null;
       for (String tag : resourceTags) {
         if ((parentTags == null) || !parentTags.contains(tag)) {
-          uniqueTags.add(tag);
+          if (tagsElement == null) {
+            tagsElement = doc.createElement(groupName);
+          }
+          Element tagElement = doc.createElement(itemName);
+          tagElement.setTextContent(tag);
+          tagsElement.appendChild(tagElement);
         }
       }
-      if (!uniqueTags.isEmpty()) {
-        resourceElement.appendChild(createNamedTagsElement(doc, groupName, itemName, uniqueTags));
+      if (tagsElement != null) {
+        resourceElement.appendChild(tagsElement);
       }
     }
-  }
-
-  private static Element createNamedTagsElement(Document doc, String groupName, String itemName, List<String> tagList) {
-    Element tagsElement = doc.createElement(groupName);
-    for (String tag : tagList) {
-      Element tagElement = doc.createElement(itemName);
-      tagElement.setTextContent(tag);
-      tagsElement.appendChild(tagElement);
-    }
-    return tagsElement;
   }
 }

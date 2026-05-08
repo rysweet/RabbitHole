@@ -1216,8 +1216,8 @@ public class ModelResourceExporter {
 
   File createXMLFile(String root, boolean forceRebuild) throws IOException {
     File outputFile = getXMLFile(root);
+    ensureOutputFile(outputFile, "XML resource");
     if (!forceRebuild && (this.xmlFile != null) && this.xmlFile.exists()) {
-      ensureOutputFile(outputFile, "XML resource");
       FileUtilities.copyFile(this.xmlFile, outputFile);
       return outputFile;
     } else {
@@ -1227,7 +1227,6 @@ public class ModelResourceExporter {
 
       //This path does indenting
       String xmlString = this.createXMLString();
-      ensureOutputFile(outputFile, "XML resource");
       try (FileWriter fw = new FileWriter(outputFile)) {
         fw.write(xmlString);
       }

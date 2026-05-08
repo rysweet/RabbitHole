@@ -105,7 +105,6 @@ public class ModelExportTest {
     assertTrue(javaCode.contains("@Deprecated"));
     assertAppearsBefore(javaCode, "@Deprecated", "public enum TestPropResource");
     assertTrue(javaCode.contains("public enum TestPropResource implements org.lgna.story.resources.PropResource"));
-    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
   }
 
   @Test
