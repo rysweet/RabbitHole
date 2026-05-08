@@ -114,25 +114,50 @@ outcome=<passed|blocked>
 
 ### Observed artifact
 
-An observed result has this shape:
+An observed result emits these fields. Field order is not part of the contract.
 
 ```json
 {
+  "automationMode": "xvfb-real-alice",
+  "blocker": "none",
+  "blockerDetail": "",
+  "claim": "post-open-runtime-display-accessibility-evidence",
+  "javaPid": 12345,
+  "postOpenRuntimeDisplayAccessibilityObserved": true,
+  "postOpenWindowObserved": true,
+  "runtimeDisplayCandidateCount": 1,
+  "runtimeDisplayCandidates": [
+    {
+      "childCount": 0,
+      "name": "Scene display",
+      "path": "application/0/3",
+      "role": "canvas",
+      "states": ["enabled", "showing", "visible"]
+    }
+  ],
   "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
   "status": "observed",
-  "claim": "post-open-runtime-display-accessibility-evidence",
+  "traversalErrors": []
+}
+```
+
+The minimum decision fields for accepting an observed result are:
+
+```json
+{
+  "status": "observed",
   "postOpenRuntimeDisplayAccessibilityObserved": true,
   "runtimeDisplayCandidateCount": 1,
   "runtimeDisplayCandidates": [
     {
-      "role": "canvas",
-      "name": "Scene display",
       "childCount": 0,
+      "name": "Scene display",
+      "path": "application/0/3",
+      "role": "canvas",
       "states": ["enabled", "showing", "visible"]
     }
   ],
-  "blocker": "none",
-  "blockerDetail": ""
+  "blocker": "none"
 }
 ```
 
@@ -148,14 +173,18 @@ artifact with a precise blocker:
 
 ```json
 {
-  "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
-  "status": "blocked",
+  "automationMode": "xvfb-real-alice",
+  "blocker": "runtime-display-accessible-candidate-not-found",
+  "blockerDetail": "No visible AT-SPI accessible component matched the narrow runtime/display candidate criteria after the post-open window state was observed.",
   "claim": "post-open-runtime-display-accessibility-evidence",
+  "javaPid": 12345,
   "postOpenRuntimeDisplayAccessibilityObserved": false,
+  "postOpenWindowObserved": true,
   "runtimeDisplayCandidateCount": 0,
   "runtimeDisplayCandidates": [],
-  "blocker": "runtime-display-accessible-candidate-not-found",
-  "blockerDetail": "No accepted runtime/display candidate was found after project open."
+  "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
+  "status": "blocked",
+  "traversalErrors": []
 }
 ```
 
@@ -172,6 +201,23 @@ Supported blocker values include:
 | `runtime-display-accessible-candidate-not-found` | The probe reached the accessibility tree but found no accepted runtime/display candidate. |
 | `java-pid-not-in-inventory` | The probe could not map the Alice Java process from the window inventory. |
 | `input-unreadable` | A required input artifact could not be read. |
+
+The full artifact fields are:
+
+| Field | Meaning |
+| --- | --- |
+| `automationMode` | Scenario automation mode, currently `xvfb-real-alice`. |
+| `blocker` | `none` on an observed result, otherwise the exact blocker. |
+| `blockerDetail` | Human-readable blocker detail. Empty only when `blocker=none`. |
+| `claim` | Stable claim token: `post-open-runtime-display-accessibility-evidence`. |
+| `javaPid` | Alice Java process ID used for AT-SPI lookup, or `null` when unavailable. |
+| `postOpenRuntimeDisplayAccessibilityObserved` | `true` only when accepted runtime/display candidates were found. |
+| `postOpenWindowObserved` | Whether `post-project-open-observation.json` already recorded the prerequisite post-open window signal. |
+| `runtimeDisplayCandidateCount` | Count of accepted runtime/display candidates emitted in the artifact. |
+| `runtimeDisplayCandidates` | Bounded AT-SPI summaries for accepted candidates: `childCount`, `name`, `path`, `role`, and `states`. |
+| `scenario` | Scenario ID that produced the artifact. |
+| `status` | `observed` or `blocked`. |
+| `traversalErrors` | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
 
 The artifact must stay small and safe: no credentials, environment dumps,
 arbitrary process dumps, unrelated desktop windows, saved project contents,
@@ -200,8 +246,10 @@ runtimeDisplayCandidateCount > 0
 blocker=none
 ```
 
-Also review `launch.log`, `xvfb.log`, `x-window-inventory.json`, and the
-captured screenshot as supporting evidence for the run environment.
+Also review `tab-click-observation.json`,
+`post-project-open-observation.json`, `launch.log`, `xvfb.log`,
+`x-window-inventory.json`, and the captured screenshot as supporting evidence
+for the project-open setup and run environment.
 
 ### Review a blocked run
 
@@ -223,8 +271,9 @@ Save, Select Project, installer success, or decoder behavior passed.
    runtime/display candidate.
 3. `status=blocked` is an honest blocked result, not a failed documentation
    claim and not a success substitute.
-4. Launch, window, pixel, and post-open accessibility artifacts support this
-   lane, but none of them expands it into full rendering correctness.
+4. `tab-click-observation.json`, `post-project-open-observation.json`, launch,
+   window, pixel, and post-open accessibility artifacts support this lane, but
+   none of them expands it into full rendering correctness.
 5. Generated evidence stays under `qa/outside-in/alice-desktop/evidence/` or a
    caller-provided evidence directory and remains uncommitted.
 

@@ -242,30 +242,57 @@ license-dialog.json
 xvfb.log
 launch.log
 x-window-inventory.json
+tab-click-observation.json
+post-project-open-observation.json
 post-open-runtime-display-accessibility-evidence.json
 status.txt
 screenshot.png or screenshot.xwd
 ```
 
-`post-open-runtime-display-accessibility-evidence.json` is the decision artifact. A passing observation has this shape:
+`post-open-runtime-display-accessibility-evidence.json` is the decision artifact. A passing observation emits these fields:
 
 ```json
 {
+  "automationMode": "xvfb-real-alice",
+  "blocker": "none",
+  "blockerDetail": "",
+  "claim": "post-open-runtime-display-accessibility-evidence",
+  "javaPid": 12345,
+  "postOpenRuntimeDisplayAccessibilityObserved": true,
+  "postOpenWindowObserved": true,
+  "runtimeDisplayCandidateCount": 1,
+  "runtimeDisplayCandidates": [
+    {
+      "childCount": 0,
+      "name": "Scene display",
+      "path": "application/0/3",
+      "role": "canvas",
+      "states": ["enabled", "showing", "visible"]
+    }
+  ],
   "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
   "status": "observed",
-  "claim": "post-open-runtime-display-accessibility-evidence",
+  "traversalErrors": []
+}
+```
+
+For acceptance, check the minimum decision fields:
+
+```json
+{
+  "status": "observed",
   "postOpenRuntimeDisplayAccessibilityObserved": true,
   "runtimeDisplayCandidateCount": 1,
   "runtimeDisplayCandidates": [
     {
-      "role": "canvas",
-      "name": "Scene display",
       "childCount": 0,
+      "name": "Scene display",
+      "path": "application/0/3",
+      "role": "canvas",
       "states": ["enabled", "showing", "visible"]
     }
   ],
-  "blocker": "none",
-  "blockerDetail": ""
+  "blocker": "none"
 }
 ```
 
@@ -273,18 +300,22 @@ If an implementation or environment prerequisite is missing, the runner still wr
 
 ```json
 {
-  "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
-  "status": "blocked",
+  "automationMode": "xvfb-real-alice",
+  "blocker": "pyatspi-not-installed",
+  "blockerDetail": "python3-pyatspi is not installed.",
   "claim": "post-open-runtime-display-accessibility-evidence",
+  "javaPid": 12345,
   "postOpenRuntimeDisplayAccessibilityObserved": false,
+  "postOpenWindowObserved": true,
   "runtimeDisplayCandidateCount": 0,
   "runtimeDisplayCandidates": [],
-  "blocker": "pyatspi-not-installed",
-  "blockerDetail": "python3-pyatspi is not installed."
+  "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
+  "status": "blocked",
+  "traversalErrors": []
 }
 ```
 
-Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, and `outcome=passed` or `outcome=blocked`.
+Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json` and `post-project-open-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed`.
 
 ## Prepare evidence for manual workflows
 
@@ -386,6 +417,8 @@ Every run directory is timestamped and self-contained. Review these files first:
 | `xvfb.log` | Xvfb startup and display output. |
 | `x-window-inventory.json` | Alice-related visible X window title, class, process, and geometry captured after launch readiness wait, or an explicit unsupported/blocker record. |
 | `select-project-window.json` | Select Project proof artifact recording exact title/class/process/geometry when observed, or an exact missing-window/widget-introspection blocker. |
+| `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
+| `post-project-open-observation.json` | Supporting project-open setup artifact recording whether the post-open Alice window signal was observed. |
 | `post-open-runtime-display-accessibility-evidence.json` | Read-only AT-SPI observation for the post-open runtime/display accessibility scenario, with `status`, `postOpenRuntimeDisplayAccessibilityObserved`, runtime/display candidates, and exact blocker fields. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop state. |
 | `manual-evidence-checklist.txt` | Repeatable checklist for manual scenarios. |

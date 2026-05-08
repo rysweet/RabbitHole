@@ -365,6 +365,8 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `status.txt` | Scenario ID, automation mode, display, readiness status, process status, screenshot status, window inventory status, Select Project status when applicable, Alice candidate count, and timeout. |
 | `x-window-inventory.json` | Alice-related visible X window title, class, process, and geometry after launch readiness wait, or an explicit unsupported/blocker record. |
 | `select-project-window.json` | Select Project title/class/process/geometry proof when the exact chooser window is observed; otherwise records the exact missing-window blocker. Widget labels are resource-contract evidence only and name `swing-widget-inventory-not-collected` until live Swing widget introspection exists. |
+| `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
+| `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
@@ -375,14 +377,18 @@ For post-open runtime/display accessibility runs, `status.txt` records `runtimeD
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `scenario` | string | Always `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
-| `status` | enum | `observed` or `blocked`. |
-| `claim` | string | Always `post-open-runtime-display-accessibility-evidence`. |
-| `postOpenRuntimeDisplayAccessibilityObserved` | boolean | `true` only when the post-open runtime/display candidate was observed. |
-| `runtimeDisplayCandidateCount` | integer | Number of accepted runtime/display candidates. |
-| `runtimeDisplayCandidates` | array | Bounded AT-SPI metadata for accepted candidates: role, name, child count, and visible/enabled state names. |
+| `automationMode` | string | Scenario automation mode, currently `xvfb-real-alice`. |
 | `blocker` | string | `none` on success, otherwise a precise blocker such as `x-server-unavailable`, `display-allocation-unavailable`, `pyatspi-not-installed`, `at-spi-registry-unavailable`, `atk-wrapper-not-loaded`, `post-open-window-not-observed`, `runtime-display-accessible-candidate-not-found`, `java-pid-not-in-inventory`, or `input-unreadable`. |
 | `blockerDetail` | string | Human-readable detail for the blocker. |
+| `claim` | string | Always `post-open-runtime-display-accessibility-evidence`. |
+| `javaPid` | integer or null | Alice Java process ID used for AT-SPI lookup, or `null` when unavailable. |
+| `postOpenRuntimeDisplayAccessibilityObserved` | boolean | `true` only when the post-open runtime/display candidate was observed. |
+| `postOpenWindowObserved` | boolean | `true` only when `post-project-open-observation.json` recorded the prerequisite post-open window signal. |
+| `runtimeDisplayCandidateCount` | integer | Number of accepted runtime/display candidates. |
+| `runtimeDisplayCandidates` | array | Bounded AT-SPI metadata for accepted candidates: child count, name, accessibility tree path, role, and visible/enabled state names. |
+| `scenario` | string | Always `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
+| `status` | enum | `observed` or `blocked`. |
+| `traversalErrors` | array | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
 
 The artifact must not include environment variables, credentials, process dumps, unrelated desktop windows, saved project contents, decoder output, grading state, lesson state, or world execution traces.
 
@@ -396,7 +402,7 @@ Manual scenarios are complete only after a human performs the workflow and place
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
-| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus `status.txt`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the same JSON artifact records `status=blocked` with a precise blocker. |
+| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the same JSON artifact records `status=blocked` with a precise blocker. |
 | Select Project tab-click smoke | Current tab activation/open evidence, then under the target-specific feature contract `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened` plus target selection/open evidence, or existing `blocker`/`blockerDetail` fields plus structured target-specific blocker details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
 | Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. Under the target-specific feature contract it must be gated by prior `tab-click-observation.json` Africa Full evidence; generic main-window presence is not Africa Full proof. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |

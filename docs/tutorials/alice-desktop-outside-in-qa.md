@@ -42,20 +42,12 @@ Run:
 qa/outside-in/alice-desktop/runners/run-scenario.sh list
 ```
 
-The list includes:
+Confirm the output includes the scenario IDs used later in this tutorial:
 
 ```text
 alice-desktop-launch
-alice-desktop-instructor-student-setup
-alice-desktop-scene-creation
-alice-desktop-run-debug
+alice-desktop-post-open-runtime-display-accessibility-evidence
 alice-desktop-save-load
-alice-desktop-export
-alice-desktop-exported-project-smoke
-alice-desktop-netbeans-package-smoke
-alice-desktop-project-io-smoke
-alice-desktop-failure-path-smoke
-alice-desktop-future-ui-smoke
 ```
 
 You can run scenarios by ID or by direct YAML path. In later steps, use the ID form shown in the commands. When reviewing a scenario file, replace the ID with the direct path:
@@ -106,13 +98,15 @@ Open the generated run directory and review:
 ```text
 post-open-runtime-display-accessibility-evidence.json
 status.txt
+tab-click-observation.json
+post-project-open-observation.json
 x-window-inventory.json
 launch.log
 xvfb.log
 screenshot.png or screenshot.xwd
 ```
 
-Accept this tutorial step only when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. If the artifact records `status=blocked`, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
+Accept this tutorial step only when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. Use `tab-click-observation.json` and `post-project-open-observation.json` to understand the supporting project-open setup, especially if the blocker is `post-open-window-not-observed`. If the artifact records `status=blocked`, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 ## Step 5: Generate a save/load checklist
 
