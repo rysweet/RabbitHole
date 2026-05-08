@@ -15,8 +15,10 @@ import org.lgna.common.Resource;
 import org.lgna.common.resources.ImageResource;
 import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
+import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.CrawlPolicy;
+import org.lgna.project.ast.ExpressionStatement;
 import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
@@ -26,6 +28,7 @@ import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ResourceExpression;
 import org.lgna.project.ast.ReturnStatement;
+import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
@@ -795,6 +798,46 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void constructorAssignmentJsonTypeArchiveDecodesFieldAssignment() throws Exception {
+    File typeArchive = temporaryFolder.newFile("constructor-assignment-json-a3c-boundary.a3c");
+
+    writeJsonTypeArchive(
+        typeArchive,
+        "GeneratedJsonTypeWithConstructorAssignmentBoundary",
+        "class GeneratedJsonTypeWithConstructorAssignmentBoundary extends SProgram { "
+            + "WholeNumber count; "
+            + "GeneratedJsonTypeWithConstructorAssignmentBoundary() { this.count <- 1; } "
+            + "}");
+
+    try (ZipFile zipFile = new ZipFile(typeArchive)) {
+      TypeManifest manifest = readTypeManifest(zipFile);
+      assertEquals(3, zipFile.size());
+      assertNotNull("Constructor-assignment JSON .a3c fixture should declare a version",
+          zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
+      assertEquals(IoUtilities.TYPE_EXTENSION, manifest.metadata.fileType);
+      assertEquals(1, manifest.resources.size());
+      ZipEntry typeEntry = zipFile.getEntry("src/GeneratedJsonTypeWithConstructorAssignmentBoundary.twe");
+      assertNotNull(
+          "Constructor-assignment JSON .a3c fixture should contain the manifest-declared type source",
+          typeEntry);
+      assertTrue(readEntry(zipFile, typeEntry).contains("this.count <- 1"));
+      assertTypeReference(
+          manifest,
+          "GeneratedJsonTypeWithConstructorAssignmentBoundary",
+          "src/GeneratedJsonTypeWithConstructorAssignmentBoundary.twe");
+    }
+    TypeResourcesPair typeResourcesPair = IoUtilities.readType(typeArchive);
+
+    NamedUserType readType = typeResourcesPair.getType();
+    assertNotNull("Constructor-assignment JSON .a3c fixture should decode the type", readType);
+    assertEquals("GeneratedJsonTypeWithConstructorAssignmentBoundary", readType.getName());
+    assertEquals("SProgram", readType.getSuperType().getName());
+    assertConstructorAssignsIntegerField(readType, "count", 1);
+    assertTrue("Generated constructor-assignment JSON .a3c fixture should not require resources",
+        typeResourcesPair.getResources().isEmpty());
+  }
+
+  @Test
   public void complexInitializerJsonTypeArchiveIsRejectedWithoutPartialTypeDecode() throws Exception {
     ImageResource imageResource = generatedImageResource("json-type-complex-initializer-boundary-texture.png", 0xFF666633);
     File typeArchive = temporaryFolder.newFile("complex-initializer-json-a3c-boundary.a3c");
@@ -1134,6 +1177,33 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   private static void writeJsonTypeArchive(
       File archive,
       String typeName,
+      String tweedleSource) throws Exception {
+    TypeManifest manifest = new TypeManifest();
+    manifest.description.name = typeName;
+    manifest.metadata.fileType = IoUtilities.TYPE_EXTENSION;
+    manifest.metadata.identifier.name = typeName;
+    manifest.metadata.identifier.type = Manifest.ProjectType.Library;
+    manifest.resources.add(new TypeReference(typeName, "src/" + typeName + ".twe", "tweedle"));
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(archive))) {
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.VERSION_ENTRY_NAME,
+          ProjectVersion.getCurrentVersion().toString().getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.MANIFEST_ENTRY_NAME,
+          ManifestEncoderDecoder.toJson(manifest).getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "src/" + typeName + ".twe",
+          tweedleSource.getBytes(StandardCharsets.UTF_8));
+    }
+  }
+
+  private static void writeJsonTypeArchive(
+      File archive,
+      String typeName,
       String tweedleSource,
       ImageResource imageResource) throws Exception {
     TypeManifest manifest = new TypeManifest();
@@ -1362,6 +1432,32 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
     assertTrue(constructor.getRequiredParameters().isEmpty());
     assertTrue(constructor.body.getValue().statements.isEmpty());
+  }
+
+  private static void assertConstructorAssignsIntegerField(NamedUserType type, String expectedFieldName, int expectedValue) {
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals(expectedFieldName, field.getName());
+    assertSame(JavaType.getInstance(Integer.class), field.getValueType());
+
+    assertEquals(1, type.getDeclaredConstructors().size());
+    NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
+    assertTrue(constructor.getRequiredParameters().isEmpty());
+    assertEquals(1, constructor.body.getValue().statements.size());
+    assertTrue(constructor.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement expressionStatement = (ExpressionStatement) constructor.body.getValue().statements.get(0);
+    assertTrue(expressionStatement.expression.getValue() instanceof AssignmentExpression);
+    AssignmentExpression assignment = (AssignmentExpression) expressionStatement.expression.getValue();
+    assertSame(JavaType.getInstance(Integer.class), assignment.expressionType.getValue());
+    assertEquals(AssignmentExpression.Operator.ASSIGN, assignment.operator.getValue());
+    assertTrue(assignment.leftHandSide.getValue() instanceof FieldAccess);
+    FieldAccess fieldAccess = (FieldAccess) assignment.leftHandSide.getValue();
+    assertTrue(fieldAccess.expression.getValue() instanceof ThisExpression);
+    assertSame(field, fieldAccess.field.getValue());
+    assertTrue(assignment.rightHandSide.getValue() instanceof IntegerLiteral);
+    assertEquals(
+        expectedValue,
+        ((IntegerLiteral) assignment.rightHandSide.getValue()).value.getValue().intValue());
   }
 
   private static void assertPrimitiveReturnMethod(NamedUserType type, String expectedName, int expectedValue) {

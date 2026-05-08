@@ -8,6 +8,7 @@ repository.
 
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, and characterization seams.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
+- [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
 - [ProjectMigrationManager Migration Characterization](./reference/project-migration-manager-characterization.md) - Reference for generated XML-string characterization around versioned Alice project text migrations.
 - [Exported NetBeans Ant Project Behavior](./reference/exported-netbeans-ant-project-behavior.md) - Reference for exported launcher evidence, deterministic display no-go behavior, Ant `run` metadata, and no-Sims characterization.
 - [Generated Story API Listener Source Characterization](./reference/generated-story-api-listener-source-characterization.md) - Reference for the headless generated-source evidence lane for synthetic listener registration calls, compilation, and no-GUI boundaries.
