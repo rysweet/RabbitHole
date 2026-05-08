@@ -1,8 +1,8 @@
 # First-Lesson Procedure/Edit Seam
 
 This reference describes the narrow executable seam that chains deterministic
-object placement into deterministic procedure editing on a generated starter
-project.
+object placement into deterministic procedure editing on a synthetic/generated
+test project.
 
 ## Contents
 
@@ -21,8 +21,8 @@ project.
 
 The seam proves one repository-owned behavior:
 
-1. `EatmePlaceObject.run(...)` loads a starter Alice project and writes
-   `placed-project.a3p` plus narrow placement evidence.
+1. `EatmePlaceObject.run(...)` loads a synthetic/generated test Alice project
+   and writes `placed-project.a3p` plus narrow placement evidence.
 2. `EatmeEditProcedure.run(...)` loads that `placed-project.a3p`, selects
    `scene.eatmeFirstLesson`, finds or creates the targeted scene method, applies
    the supported deterministic procedure edit, and writes `edited-project.a3p`
@@ -32,9 +32,10 @@ The seam proves one repository-owned behavior:
    `Comment` statement exists in the targeted scene procedure.
 
 The proof is an AST/project edit seam for `scene.eatmeFirstLesson` on a
-generated starter project. It is not proof of the full first-lesson project
-shape, desktop rendering, grading, creative assessment, Save, launcher, model
-exporter, hotspot, or Select Project PID behavior.
+synthetic/generated test project. It is not proof of a real first-lesson starter
+file, the full first-lesson project shape, desktop rendering, grading, creative
+assessment, Save, launcher, model exporter, hotspot, or Select Project PID
+behavior.
 
 ## Usage
 
@@ -66,8 +67,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Run the narrower procedure-edit seam smoke when the review is about edit
-artifacts and the precise desktop edit-action no-go artifact rather than the
-object-placement handoff:
+artifact assertions and the precise desktop edit-action no-go artifact rather
+than the object-placement handoff:
 
 ```bash
 rm -rf /tmp/alice-procedure-edit-seam
@@ -79,10 +80,12 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 900
 ```
 
-Review only the evidence files named by the scenario and the focused JUnit
-assertions. Do not substitute Save, launcher, model exporter, hotspot, Select
-Project PID, rendering, lesson-completion, grading, or creative-assessment
-evidence for this seam.
+Review the focused JUnit assertions as the durable handoff proof. The Maven test
+asserts the generated evidence files in a JUnit temporary workspace; the QA
+runner records command-level smoke evidence for that Maven proof rather than
+preserving those JSON and `.a3p` artifacts for review. Do not substitute Save,
+launcher, model exporter, hotspot, Select Project PID, rendering,
+lesson-completion, grading, or creative-assessment evidence for this seam.
 
 ## Executable proof
 
@@ -111,12 +114,22 @@ Accepted success criteria:
 | Placement | `placed-project.a3p`, `placement.json`, and `scene.diff.json` exist in the evidence directory. |
 | Edit | `edited-project.a3p`, `procedure-edit.json`, `procedure-edit-command.json`, `procedure.diff.json`, and `procedure-tab-selection.json` exist in the evidence directory. |
 | AST assertion | Reopening `edited-project.a3p` finds the placed bunny field and finds or creates `scene.eatmeFirstLesson` with the deterministic appended `Comment` statement. |
-| UI boundary | If the AST edit succeeds but no desktop code-editor edit action is exposed, exactly one `procedure-ui-action-no-go.json` blocker artifact records that missing UI action target. |
+| UI boundary | Every successful procedure-edit run emits exactly one `procedure-ui-action-no-go.json` blocker artifact recording the missing desktop code-editor edit action target. |
+
+The focused Maven test creates these artifacts inside a JUnit `TemporaryFolder`
+and asserts their contents before the workspace is discarded. The
+`alice-desktop-procedure-edit-handoff-smoke` QA scenario is a gated command
+smoke for that Maven proof; its reviewable evidence is the scenario status and
+command log, not a retained copy of the JSON or `.a3p` artifact chain.
 
 ## Artifact contract
 
-All artifacts are generated under the test evidence directory. Do not commit
-generated `.a3p` or JSON evidence files.
+All artifacts are generated under the test evidence directory owned by the tool
+or JUnit run. Do not commit generated `.a3p` or JSON evidence files. In the
+focused JUnit proof, the files below are asserted artifacts, not retained review
+artifacts. In the QA smoke, the scenario evidence proves that the focused Maven
+command completed successfully; it does not persist the JSON or `.a3p` artifacts
+from the JUnit temporary workspace.
 
 | Artifact | Producer | Schema | Purpose |
 | --- | --- | --- | --- |
@@ -127,7 +140,7 @@ generated `.a3p` or JSON evidence files.
 | `procedure-edit.json` | `EatmeEditProcedure` | `eatme.alice-procedure-edit-artifact/v1` | Procedure selector, edit spec, input project artifact, scene type, method name, method creation flag, statement counts, and edited project file name. |
 | `procedure-edit-command.json` | `EatmeEditProcedure` | `eatme.alice-procedure-edit-command/v1` | Command-level append-comment result and statement-count delta. |
 | `procedure.diff.json` | `EatmeEditProcedure` | `eatme.alice-procedure-edit-diff/v1` | Scene method names before and after the edit plus statement-count delta. |
-| `procedure-tab-selection.json` | `EatmeEditProcedure` | `eatme.alice-procedure-tab-selection/v1` | In-editor procedure tab selection evidence for the targeted `UserMethod`. |
+| `procedure-tab-selection.json` | `EatmeEditProcedure` | `eatme.alice-procedure-tab-selection/v1` | Croquet/DeclarationsEditor tab-selection helper evidence for the targeted `UserMethod`. |
 | `procedure-ui-action-no-go.json` | `EatmeEditProcedure` | `eatme.alice-code-procedure-ui-action-no-go/v1` | Precise blocker when a desktop code-editor edit action target is not available. |
 
 `EatmePlaceObject` also writes one JSON result object to standard output:
@@ -227,7 +240,7 @@ evidence directories and deterministic tool arguments.
 | --- | --- | --- |
 | `NODE_OPTIONS` | `--max-old-space-size=32768` | Surrounding Node-based orchestration and QA wrapper commands. |
 | `ALICE_QA_RUN_GATED_SMOKES` | `1` | `run-scenario.sh` when executing `gated-command-smoke` scenarios. |
-| `--evidence-dir` | A writable directory outside committed source, such as `/tmp/alice-procedure-edit-handoff`. | Placement/edit utilities and QA scenario runner. |
+| `--evidence-dir` | A writable directory outside committed source. In the focused JUnit proof this is a temporary folder; in the QA smoke it is the scenario evidence directory, such as `/tmp/alice-procedure-edit-handoff`. | Placement/edit utilities and QA scenario runner. |
 | `tweedle-lang` submodule | Initialized with `git submodule update --init tweedle-lang`. | Focused Maven reactor validation. |
 
 Use the saved orchestration memory setting when invoking Maven through the
@@ -270,9 +283,11 @@ lookup/creation, or AST editing cannot be exercised, the characterization must
 fail or surface that error directly; it must not repurpose
 `procedure-ui-action-no-go.json` as a general placement-to-AST blocker.
 
-When the AST edit succeeds but no stable desktop edit action is available, the
-blocker artifact uses schema `eatme.alice-code-procedure-ui-action-no-go/v1`. It
-must include:
+For the current seam, every successful `EatmeEditProcedure` run emits
+`procedure-ui-action-no-go.json` because the AST edit is implemented but no
+stable desktop code-editor edit action target is available yet. The blocker
+artifact uses schema `eatme.alice-code-procedure-ui-action-no-go/v1` and must
+include:
 
 | Field | Required content |
 | --- | --- |
@@ -295,8 +310,8 @@ This seam may claim only:
 - `placed-project.a3p` is accepted as the input to the deterministic edit step.
 - `edited-project.a3p` reopens, still contains the placed bunny field, and
   contains the expected AST-level procedure edit.
-- The procedure tab selection helper selected the targeted method when its
-  artifact is present.
+- The Croquet/DeclarationsEditor tab-selection helper selected the targeted
+  method when its artifact is present.
 
 This seam must not claim:
 
@@ -311,7 +326,8 @@ This seam must not claim:
 
 ## Example evidence flow
 
-The successful chained proof writes a single evidence directory shaped like:
+The successful chained proof asserts a single temporary evidence directory shaped
+like:
 
 ```text
 evidence/
@@ -326,7 +342,9 @@ evidence/
   scene.diff.json
 ```
 
-The proof accepts `procedure-ui-action-no-go.json` only as a narrow blocker for
-desktop code-editor action invocation. The AST/project chain remains proven by
-reopening `edited-project.a3p`, checking that the placed bunny field survived
-the handoff, and checking the targeted `UserMethod` body.
+The focused Maven test asserts this shape in a JUnit temporary directory. The QA
+smoke records that the Maven proof ran successfully; it does not preserve this
+directory. The proof accepts `procedure-ui-action-no-go.json` only as a narrow
+blocker for desktop code-editor action invocation. The AST/project chain remains
+proven by reopening `edited-project.a3p`, checking that the placed bunny field
+survived the handoff, and checking the targeted `UserMethod` body.

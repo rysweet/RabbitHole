@@ -7,9 +7,9 @@ placement is handed into deterministic procedure editing for
 ## When to use this guide
 
 Use it when reviewing the procedure/edit seam or the outside-in QA registry entry
-for the handoff smoke. The proof is limited to one generated starter project, one
-placed bunny artifact, one deterministic procedure edit, and the focused
-assertions that reopen the edited project.
+for the handoff smoke. The proof is limited to one synthetic/generated test
+project, one placed bunny artifact, one deterministic procedure edit, and the
+focused assertions that reopen the edited project.
 
 For the full artifact and API contract, see the
 [First-Lesson Procedure/Edit Seam reference](../reference/first-lesson-procedure-edit-seam.md).
@@ -36,10 +36,11 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-This command is the canonical handoff proof. It creates a temporary starter
-project, runs object placement, passes the resulting `placed-project.a3p` to the
-procedure-edit utility, reopens `edited-project.a3p`, and checks both the placed
-bunny field and the appended `Comment` statement.
+This command is the canonical handoff proof. It creates a synthetic/generated
+test project in a JUnit temporary workspace, runs object placement, passes the
+resulting `placed-project.a3p` to the procedure-edit utility, reopens
+`edited-project.a3p`, and checks both the placed bunny field and the appended
+`Comment` statement.
 
 ## Run the QA handoff smoke
 
@@ -62,13 +63,14 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 900
 ```
 
-The runner writes command evidence for the focused Maven proof. If
-`ALICE_QA_RUN_GATED_SMOKES` is not set to `1`, the scenario records a
-`gated-not-run` status instead of executing the Maven command.
+The runner writes command-level evidence for the focused Maven proof. It does
+not retain the JSON or `.a3p` artifacts created inside the JUnit temporary
+workspace. If `ALICE_QA_RUN_GATED_SMOKES` is not set to `1`, the scenario
+records a `gated-not-run` status instead of executing the Maven command.
 
 ## Review the evidence
 
-The handoff proof accepts this artifact chain:
+The focused Maven proof asserts this temporary artifact chain:
 
 ```text
 starter-project.a3p
@@ -78,7 +80,8 @@ starter-project.a3p
   -> edited-project.a3p
 ```
 
-Review these facts:
+The focused test asserts these facts before the temporary workspace is
+discarded:
 
 | Evidence | Required fact |
 | --- | --- |
@@ -87,12 +90,12 @@ Review these facts:
 | `procedure-edit.json` | `input_project_artifact` is `placed-project.a3p`. |
 | `procedure-edit-command.json` | The `append-comment` command completed and increased the statement count by one. |
 | `procedure.diff.json` | The targeted scene method is present after the edit. |
-| `procedure-tab-selection.json` | The in-editor procedure tab selection helper selected `eatmeFirstLesson`. |
+| `procedure-tab-selection.json` | The Croquet/DeclarationsEditor tab-selection helper selected `eatmeFirstLesson`. |
 | `edited-project.a3p` | Reopening the archive finds the placed bunny field and the appended `Comment` statement. |
 
-`procedure-ui-action-no-go.json` is allowed only as the narrow blocker for the
-missing desktop code-editor edit action target. It is not evidence that a desktop
-UI edit action completed.
+`procedure-ui-action-no-go.json` is currently emitted on every successful
+procedure-edit run as the narrow blocker for the missing desktop code-editor edit
+action target. It is not evidence that a desktop UI edit action completed.
 
 ## Claim boundaries
 
@@ -100,8 +103,7 @@ This proof may claim that the object-placement artifact is handed into the
 procedure-edit utility and that the edited project preserves the placed bunny
 while adding the deterministic procedure comment.
 
-Do not cite this proof as evidence for full first-lesson completion, grading,
-creative assessment, visible rendering correctness, full UI automation, active
-Save completion, launcher behavior, model exporter behavior, hotspot behavior, or
-Select Project PID behavior.
-
+Do not cite this proof as evidence for a real first-lesson starter file, full
+first-lesson completion, grading, creative assessment, visible rendering
+correctness, full UI automation, active Save completion, launcher behavior, model
+exporter behavior, hotspot behavior, or Select Project PID behavior.

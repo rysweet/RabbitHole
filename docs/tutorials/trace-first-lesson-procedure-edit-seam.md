@@ -1,8 +1,8 @@
 # Tutorial: Trace the First-Lesson Procedure/Edit Seam
 
 This tutorial shows how to review the executable proof that chains deterministic
-object placement into deterministic procedure editing on a generated starter
-project.
+object placement into deterministic procedure editing on a synthetic/generated
+test project.
 
 ## What you will do
 
@@ -11,7 +11,7 @@ You will:
 1. Prepare the repository for focused `core/ide` validation.
 2. Run the chained placement-to-edit characterization.
 3. Run the QA smoke wrapper for the same handoff path.
-4. Review the generated artifact contract.
+4. Review the asserted artifact contract.
 5. Check the narrow evidence boundaries.
 
 ## Before you start
@@ -45,9 +45,9 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-That test owns the narrow proof. It creates a temporary starter project, runs
-`EatmePlaceObject.run(...)`, then runs `EatmeEditProcedure.run(...)` against the
-generated `placed-project.a3p`.
+That test owns the narrow proof. It creates a synthetic/generated test project
+in a JUnit temporary workspace, runs `EatmePlaceObject.run(...)`, then runs
+`EatmeEditProcedure.run(...)` against the generated `placed-project.a3p`.
 
 ## Step 2: Run the QA smoke wrapper
 
@@ -65,14 +65,16 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Use this path when a review needs scenario-runner evidence in addition to the
 focused Maven test. It still proves only the handoff and deterministic AST edit;
-it does not become a full desktop UI automation proof.
+it records scenario status and command log evidence rather than preserving the
+JUnit JSON or `.a3p` artifacts, and it does not become a full desktop UI
+automation proof.
 
 ## Step 3: Follow the proof chain
 
 The test follows this chain:
 
 ```text
-temporary starter project
+temporary synthetic test project
   -> object placement
   -> placed-project.a3p
   -> procedure edit
@@ -113,9 +115,10 @@ scene.diff.json
 resource, and placed project file name. `scene.diff.json` identifies the scene
 field list before and after placement.
 
-Use this evidence only for object-placement facts on the generated starter
-project. It does not prove the full first-lesson project shape, rendering,
-lesson completion, grading, or Save behavior.
+Use this evidence only for object-placement facts on the synthetic/generated
+test project. It does not prove a real first-lesson starter file, the full
+first-lesson project shape, rendering, lesson completion, grading, or Save
+behavior.
 
 ## Step 5: Review procedure-edit evidence
 
@@ -136,15 +139,17 @@ The key review points are:
 | `procedure-edit.json` | Names `scene.eatmeFirstLesson`, the edit spec, `placed-project.a3p` input handoff, statement counts, and `edited-project.a3p`. |
 | `procedure-edit-command.json` | Confirms the deterministic `append-comment` command completed and changed the statement count by one. |
 | `procedure.diff.json` | Records method names before and after the edit and the statement-count delta. |
-| `procedure-tab-selection.json` | Records the in-editor procedure tab selection helper result for the selected method. |
+| `procedure-tab-selection.json` | Records the Croquet/DeclarationsEditor tab-selection helper result for the selected method. |
 
-The final assertion reopens `edited-project.a3p`; the JSON files are evidence,
-not a substitute for the AST/project assertion.
+The final assertion reopens `edited-project.a3p`; the JSON files are asserted
+artifacts in the JUnit temporary workspace, not a substitute for the AST/project
+assertion and not retained by the QA smoke.
 
 ## Step 6: Handle the desktop edit-action blocker
 
-When the AST edit succeeds but the repository does not expose a stable desktop
-code-editor edit action, the proof writes exactly one blocker:
+Because the AST edit succeeds but the repository does not expose a stable desktop
+code-editor edit action, every successful procedure-edit run currently writes
+exactly one blocker:
 
 ```text
 procedure-ui-action-no-go.json
