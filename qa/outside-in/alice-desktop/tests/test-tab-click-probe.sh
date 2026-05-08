@@ -13,6 +13,7 @@ trap 'rm -rf "$tmp_root"' EXIT
 
 python3 - "$PROBE" >"$tmp_root/tab-click-probe-contract.out" 2>"$tmp_root/tab-click-probe-contract.err" <<'PY'
 import importlib.util
+import json
 import os
 import sys
 import types
@@ -224,9 +225,11 @@ def make_fixture(
 
 
 def assert_blocker_shape(payload):
-    blocker = payload.get("targetStarterBlocker")
+    blocker = payload.get("nextBlocker")
     if not isinstance(blocker, dict):
-        raise AssertionError("blocked target-starter evidence must include targetStarterBlocker")
+        raise AssertionError("blocked target-starter evidence must include nextBlocker")
+    if "nextBlocker" in payload.get("projectOpenAttempt", {}):
+        raise AssertionError("blocked target-starter evidence must publish only one top-level nextBlocker")
     for field in (
         "observedAtspiState",
         "actionAttempted",
@@ -235,7 +238,21 @@ def assert_blocker_shape(payload):
     ):
         value = blocker.get(field)
         if not isinstance(value, str) or not value.strip():
-            raise AssertionError(f"targetStarterBlocker.{field} must be a non-empty string")
+            raise AssertionError(f"nextBlocker.{field} must be a non-empty string")
+
+
+def assert_widget_tree_minimized(payload):
+    for field in ("allWidgetTree", "allWidgetTreeAfterClick"):
+        tree = payload.get(field)
+        if not isinstance(tree, list):
+            raise AssertionError(f"{field} must be a list")
+        rendered = json.dumps(tree, sort_keys=True)
+        for forbidden in ("Wonderland", TARGET_DISPLAY_NAME):
+            if forbidden in rendered:
+                raise AssertionError(f"{field} must redact arbitrary widget text, found {forbidden!r}")
+        for entry in tree:
+            if entry.get("description"):
+                raise AssertionError(f"{field} must redact widget descriptions: {entry!r}")
 
 
 probe = load_probe(Path(sys.argv[1]))
@@ -289,6 +306,9 @@ if starters_safety.get("targetSearchScope") != "active-starters-tab":
     raise AssertionError(f"target search must be scoped to the active Starters tab, got {starters_safety!r}")
 if success.get("nextBlocker") is not None:
     raise AssertionError(f"opened evidence must not publish a next blocker, got {success.get('nextBlocker')!r}")
+if "nextBlocker" in success.get("projectOpenAttempt", {}):
+    raise AssertionError("opened evidence must not duplicate nextBlocker inside projectOpenAttempt")
+assert_widget_tree_minimized(success)
 if success_counters["wonderland"] != 0:
     raise AssertionError("probe must not click/open the first starter when it is not Africa Full")
 if success_counters["africa"] != 1:
@@ -314,9 +334,6 @@ if absent.get("targetStarterOpenAttempted") is not False:
 if absent_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when only a non-active/hidden Africa Full node was observed")
 assert_blocker_shape(absent)
-if absent.get("nextBlocker") != absent.get("targetStarterBlocker"):
-    raise AssertionError("blocked target evidence must publish exactly one nextBlocker matching targetStarterBlocker")
-
 tab_blocked_counters = make_fixture(
     active_starter_names=[TARGET_DISPLAY_NAME],
     target_action=True,
@@ -339,9 +356,6 @@ if tab_blocked_counters["africa"] != 0:
 if tab_blocked_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when Starters tab activation fails")
 assert_blocker_shape(tab_blocked)
-if tab_blocked.get("nextBlocker") != tab_blocked.get("targetStarterBlocker"):
-    raise AssertionError("Starters-tab blocked evidence must publish exactly one nextBlocker matching targetStarterBlocker")
-
 blocked_counters = make_fixture(
     active_starter_names=[TARGET_DISPLAY_NAME],
     target_action=False,
@@ -374,6 +388,16 @@ assert_contains "$output" '"targetStarter": \{' "blocked probe output preserves 
 assert_contains "$output" '"displayName": "Africa Full"' "blocked probe output records target display name"
 assert_contains "$output" '"repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull\.a3p"' "blocked probe output records target repository path"
 assert_contains "$output" '"evidenceStatus": "blocked"' "blocked probe output uses blocked evidenceStatus"
-assert_contains "$output" '"targetStarterBlocker": \{' "blocked probe output includes structured target blocker"
+assert_contains "$output" '"nextBlocker": \{' "blocked probe output includes structured next blocker"
+
+invalid_target_output="$tmp_root/invalid-target-output.json"
+TARGET_STARTER_DISPLAY_NAME="Wonderland" \
+TARGET_STARTER_REPO_PATH="core/resources/src/application/resources/starter-projects/Wonderland.a3p" \
+python3 "$PROBE" "$inventory" "$invalid_target_output"
+status=$?
+assert_success "$status" "tab-click probe exits 0 for invalid target metadata"
+assert_contains "$invalid_target_output" '"status": "failed"' "invalid target metadata records failed status"
+assert_contains "$invalid_target_output" '"blocker": "target-starter-metadata-invalid"' "invalid target metadata names exact blocker"
+assert_contains "$invalid_target_output" 'Africa Full' "invalid target metadata error names the required target"
 
 finish

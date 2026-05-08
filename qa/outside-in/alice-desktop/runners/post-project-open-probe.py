@@ -43,6 +43,10 @@ from typing import Any
 
 EXPECTED_SELECT_PROJECT_TITLE = "Select Project"
 EXPECTED_ALICE_TITLE = "Alice 3"
+EXPECTED_TARGET_STARTER = {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p",
+}
 POST_OPEN_WAIT_SECONDS = 5
 
 
@@ -143,12 +147,11 @@ def top_level_frame_state(alice_app: Any) -> tuple[list[str], list[int]]:
     return frame_names, frame_child_counts
 
 
-def probe_post_open(java_pid: int) -> dict[str, Any]:
-    """Connect to AT-SPI and enumerate alice_app frames after project open."""
+def atspi_desktop_or_payload(java_pid: int) -> tuple[Any | None, dict[str, Any] | None]:
     try:
         import pyatspi  # noqa: PLC0415
     except ImportError:
-        return post_open_payload(
+        return None, post_open_payload(
             status="blocked",
             blocker="pyatspi-not-installed",
             blocker_detail="python3-pyatspi is not installed.",
@@ -158,12 +161,45 @@ def probe_post_open(java_pid: int) -> dict[str, Any]:
     try:
         desktop = pyatspi.Registry.getDesktop(0)
     except Exception as exc:
-        return post_open_payload(
+        return None, post_open_payload(
             status="blocked",
             blocker="at-spi-registry-unavailable",
             blocker_detail=f"Cannot connect to AT-SPI registry: {exc}",
             java_pid=java_pid,
         )
+    return desktop, None
+
+
+def post_open_frame_payload(
+    *,
+    java_pid: int,
+    frame_names: list[str],
+    frame_child_counts: list[int],
+) -> dict[str, Any]:
+    post_open_observed = any(name != EXPECTED_SELECT_PROJECT_TITLE for name in frame_names)
+    blocker = "none" if post_open_observed else "no-non-select-project-frame-visible"
+    blocker_detail = ""
+    if not post_open_observed:
+        blocker_detail = (
+            "After project-open wait, no top-level AT-SPI frame other than "
+            f"'Select Project' is visible. Frames seen: {frame_names}"
+        )
+    return post_open_payload(
+        status="observed" if post_open_observed else "not-observed",
+        blocker=blocker,
+        blocker_detail=blocker_detail,
+        java_pid=java_pid,
+        post_open_observed=post_open_observed,
+        frame_names=frame_names,
+        frame_child_counts=frame_child_counts,
+    )
+
+
+def probe_post_open(java_pid: int) -> dict[str, Any]:
+    """Connect to AT-SPI and enumerate alice_app frames after project open."""
+    desktop, payload = atspi_desktop_or_payload(java_pid)
+    if payload is not None:
+        return payload
 
     alice_app, app_count = find_alice_app(desktop, java_pid)
     if alice_app is None:
@@ -181,23 +217,8 @@ def probe_post_open(java_pid: int) -> dict[str, Any]:
     time.sleep(POST_OPEN_WAIT_SECONDS)
 
     frame_names, frame_child_counts = top_level_frame_state(alice_app)
-
-    # The proof criterion: at least one frame present that is NOT "Select Project".
-    post_open_observed = any(name != EXPECTED_SELECT_PROJECT_TITLE for name in frame_names)
-    blocker = "none" if post_open_observed else "no-non-select-project-frame-visible"
-
-    blocker_detail = ""
-    if not post_open_observed:
-        blocker_detail = (
-            "After project-open wait, no top-level AT-SPI frame other than "
-            f"'Select Project' is visible. Frames seen: {frame_names}"
-        )
-    return post_open_payload(
-        status="observed" if post_open_observed else "not-observed",
-        blocker=blocker,
-        blocker_detail=blocker_detail,
+    return post_open_frame_payload(
         java_pid=java_pid,
-        post_open_observed=post_open_observed,
         frame_names=frame_names,
         frame_child_counts=frame_child_counts,
     )
@@ -247,6 +268,30 @@ def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict
     )
 
 
+def target_starter_metadata_invalid_payload(
+    tab_click_path: Path,
+    tab_click: dict[str, Any],
+) -> dict[str, Any]:
+    target = tab_click.get("targetStarter")
+    blocker_detail = (
+        f"{tab_click_path.name} contains targetStarter metadata that does not match "
+        "the committed Africa Full target; refusing to use it as target-specific "
+        "post-open proof."
+    )
+    return post_open_payload(
+        status="blocked",
+        blocker="target-starter-metadata-invalid",
+        blocker_detail=blocker_detail,
+        java_pid=None,
+        extra={
+            "targetStarter": target,
+            "expectedTargetStarter": EXPECTED_TARGET_STARTER,
+            "evidenceStatus": tab_click.get("evidenceStatus"),
+            "openedStarter": tab_click.get("openedStarter"),
+        },
+    )
+
+
 def target_opened_context(tab_click: dict[str, Any]) -> dict[str, Any]:
     return {
         "targetStarter": tab_click.get("targetStarter"),
@@ -272,6 +317,64 @@ def no_java_pid_payload(inventory_path: Path) -> dict[str, Any]:
     )
 
 
+def write_payload(output_path: Path, payload: dict[str, Any]) -> None:
+    output_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def read_json_or_blocked(
+    path: Path,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), None
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, blocked_payload(path, exc)
+
+
+def target_starter_gate_payload(
+    tab_click_path: Path,
+    tab_click: dict[str, Any],
+) -> dict[str, Any] | None:
+    target_starter = tab_click.get("targetStarter")
+    if not isinstance(target_starter, dict):
+        return None
+    if target_starter != EXPECTED_TARGET_STARTER:
+        return target_starter_metadata_invalid_payload(tab_click_path, tab_click)
+    if (
+        tab_click.get("evidenceStatus") != "opened"
+        or tab_click.get("openedStarter") != target_starter
+        or not tab_click.get("projectOpenObserved", False)
+    ):
+        return target_starter_open_not_proven_payload(tab_click_path, tab_click)
+    return None
+
+
+def post_open_result_payload(
+    inventory: dict[str, Any],
+    inventory_path: Path,
+    tab_click_path: Path,
+    tab_click: dict[str, Any],
+) -> dict[str, Any]:
+    gated_payload = target_starter_gate_payload(tab_click_path, tab_click)
+    if gated_payload is not None:
+        return gated_payload
+
+    target_starter = tab_click.get("targetStarter")
+    if not tab_click.get("projectOpenObserved", False):
+        return project_not_opened_payload(tab_click_path)
+
+    java_pid = find_java_pid(inventory)
+    if java_pid is None:
+        payload = no_java_pid_payload(inventory_path)
+    else:
+        payload = probe_post_open(java_pid)
+
+    if isinstance(target_starter, dict):
+        payload.update(target_opened_context(tab_click))
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("inventory", help="Path to x-window-inventory.json")
@@ -283,65 +386,18 @@ def main() -> int:
     tab_click_path = Path(args.tab_click)
     output_path = Path(args.output)
 
-    # Load inventory.
-    try:
-        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        payload = blocked_payload(inventory_path, exc)
-        output_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+    inventory, payload = read_json_or_blocked(inventory_path)
+    if payload is not None:
+        write_payload(output_path, payload)
         return 0
 
-    # Load tab-click observation.
-    try:
-        tab_click = json.loads(tab_click_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        payload = blocked_payload(tab_click_path, exc)
-        output_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+    tab_click, payload = read_json_or_blocked(tab_click_path)
+    if payload is not None:
+        write_payload(output_path, payload)
         return 0
 
-    # Target-specific scenarios must prove the selected/opened starter before the
-    # generic main-window state can be used as downstream evidence.
-    target_starter = tab_click.get("targetStarter")
-    if isinstance(target_starter, dict):
-        if (
-            tab_click.get("evidenceStatus") != "opened"
-            or tab_click.get("openedStarter") != target_starter
-            or not tab_click.get("projectOpenObserved", False)
-        ):
-            payload = target_starter_open_not_proven_payload(tab_click_path, tab_click)
-            output_path.write_text(
-                json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-            )
-            return 0
-
-    # Require projectOpenObserved=true before connecting to AT-SPI.
-    if not tab_click.get("projectOpenObserved", False):
-        payload = project_not_opened_payload(tab_click_path)
-        output_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
-        return 0
-
-    java_pid = find_java_pid(inventory)
-    if java_pid is None:
-        payload = no_java_pid_payload(inventory_path)
-        if isinstance(target_starter, dict):
-            payload.update(target_opened_context(tab_click))
-        output_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
-        return 0
-
-    payload = probe_post_open(java_pid)
-    if isinstance(target_starter, dict):
-        payload.update(target_opened_context(tab_click))
-    output_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    payload = post_open_result_payload(inventory, inventory_path, tab_click_path, tab_click)
+    write_payload(output_path, payload)
     return 0
 
 

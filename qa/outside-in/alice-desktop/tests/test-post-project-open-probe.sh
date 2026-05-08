@@ -95,7 +95,7 @@ write_target_selected_not_opened() {
   "targetStarterOpenAttempted": true,
   "openedStarter": null,
   "evidenceStatus": "selected",
-  "targetStarterBlocker": {
+  "nextBlocker": {
     "observedAtspiState": "Africa Full selection evidence exists, but openedStarter is not Africa Full.",
     "actionAttempted": "Click OK/Open after selecting Africa Full.",
     "expectedNextAction": "Observe projectOpenObserved=true with openedStarter set to Africa Full.",
@@ -125,7 +125,31 @@ write_target_opened() {
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
   },
   "evidenceStatus": "opened",
-  "targetStarterBlocker": null
+  "nextBlocker": null
+}
+JSON
+}
+
+write_wrong_target_opened() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Wonderland",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/Wonderland.a3p"
+  },
+  "targetStarterSelected": true,
+  "targetStarterOpenAttempted": true,
+  "openedStarter": {
+    "displayName": "Wonderland",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/Wonderland.a3p"
+  },
+  "evidenceStatus": "opened",
+  "nextBlocker": null
 }
 JSON
 }
@@ -286,10 +310,24 @@ assert_contains "$target_opened_out" '"evidenceStatus": "opened"' "target-opened
 assert_contains "$target_opened_out" '"targetProjectOpenObserved": true' "target-opened post-open evidence preserves the Select Project project-open observation"
 assert_contains "$target_opened_out" '"javaPid": 2468' "target-opened post-open evidence preserves the Alice Java/window PID"
 
-# ---- 11. Probe output is valid JSON ----
+# ---- 11. Wrong target metadata is not accepted as Africa Full proof ----
+inventory11="$tmp_root/inventory11.json"
+write_alice_inventory "$inventory11"
+wrong_target_tab="$tmp_root/wrong-target-tab.json"
+write_wrong_target_opened "$wrong_target_tab"
+wrong_target_out="$tmp_root/wrong-target-out.json"
+python3 "$PROBE" "$inventory11" "$wrong_target_tab" "$wrong_target_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence names the wrong target"
+assert_contains "$wrong_target_out" '"status": "blocked"' "wrong target metadata records blocked status"
+assert_contains "$wrong_target_out" '"blocker": "target-starter-metadata-invalid"' "wrong target metadata names exact blocker"
+assert_contains "$wrong_target_out" '"postOpenWindowObserved": false' "wrong target metadata does not claim post-open observation"
+assert_contains "$wrong_target_out" '"displayName": "Africa Full"' "wrong target metadata records the expected Africa Full target"
+
+# ---- 12. Probe output is valid JSON ----
 for out_file in "$missing_out" "$missing_tab_out" "$malformed_inv_out" "$malformed_tab_out" \
                 "$not_opened_out" "$no_java_out" "$non_alice_java_out" "$atk_out" \
-                "$target_selected_out" "$target_opened_out"; do
+                "$target_selected_out" "$target_opened_out" "$wrong_target_out"; do
   python3 - "$out_file" <<'PY'
 import json, sys
 try:
