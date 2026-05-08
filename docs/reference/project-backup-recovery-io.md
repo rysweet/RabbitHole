@@ -63,8 +63,8 @@ backup recovery:
 
 | Temporary input | Loader behavior |
 | --- | --- |
-| Generated `.a3p` written by `IoUtilities.writeProject(...)` | The same-package test calls the protected `FileProjectLoader.load()` seam and receives a non-null `Project` whose generated program metadata is still readable. |
-| Corrupt `.a3p` containing deterministic invalid bytes | The same protected loader seam returns `null`, matching the current safe rejection behavior used by recovery code. |
+| Generated `.a3p` written by `IoUtilities.writeProject(...)` | The same-package test calls the protected `FileProjectLoader.load()` seam and receives a non-null `Project` whose generated program type name is still readable. |
+| Corrupt `.a3p` containing deterministic invalid bytes | The same protected loader seam returns `null`, matching the current null-on-load-failure behavior used by recovery code. |
 
 These tests create both files with JUnit `TemporaryFolder`. They do not read
 sample projects, user files, external paths, LFS assets, or committed binary
@@ -116,9 +116,10 @@ decision points directly testable.
 
 ## Characterization examples
 
-### Load a saved temporary project and reject a corrupt temporary project
+### Load a saved temporary generated project
 
-Create a generated project archive with the existing project writer:
+Mirror `FileProjectLoaderTest.savedTemporaryProjectLoadsAndCorruptTemporaryProjectIsRejected`
+by creating a generated project archive with the existing project writer:
 
 ```java
 File savedProject = temporaryFolder.newFile("saved-generated-world.a3p");
@@ -136,13 +137,12 @@ Project loadedProject = new FileProjectLoader(savedProject).load();
 
 assertNotNull(loadedProject);
 assertEquals("GeneratedProgram", loadedProject.getProgramType().getName());
-assertEquals(
-    Project.SceneCameraType.WindowCamera,
-    loadedProject.createSaveManifest().projectStructure.sceneCameraType);
 ```
 
-Then create a second real temporary `.a3p` file with deterministic invalid bytes
-and assert the current rejection behavior through `FileProjectLoader`:
+### Reject a corrupt temporary project
+
+Create a second real temporary `.a3p` file with deterministic invalid bytes and
+assert the current null-on-load-failure behavior through `FileProjectLoader`:
 
 ```java
 File corruptProject = temporaryFolder.newFile("corrupt-generated-world.a3p");
@@ -157,9 +157,11 @@ assertNull(rejectedProject);
 ```
 
 Keep helper code limited to constructing the minimal generated `Project` and
-avoid adding fixtures, dependencies, or production rewrites. The saved-project
-and corrupt-project checks should remain in one focused characterization method
-so the test does not imply broader recovery coverage.
+avoid adding fixtures, dependencies, or production rewrites. The stable saved
+project assertions stop at the non-null loaded project and generated program
+type name. The saved-project and corrupt-project checks should remain in one
+focused characterization method so the test does not imply broader recovery
+coverage.
 
 ### Recover from a readable older backup
 
