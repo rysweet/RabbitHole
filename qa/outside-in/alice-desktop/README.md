@@ -133,7 +133,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Review `first-lesson-live-procedure-target-observation.json` as the
-observed-or-blocked decision artifact for the narrow
+edit-ready-or-named-blocker action-seam artifact for the narrow
 `scene.eatmeFirstLesson` procedure tab/code-editor target. The shard is
 read-only; it does not edit the procedure, Save, prove rendering correctness,
 assess learner work, or claim full first-lesson completion.
@@ -301,14 +301,17 @@ readiness contract, configuration, examples, and review
 rules are documented in [Post-open
 runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
 
-The first-lesson live procedure target observation seam goes one step beyond the
+The first-lesson live procedure target action seam goes one step beyond the
 Select Project first-lesson open path by observing whether the live post-open
 desktop exposes a stable procedure tab or code-editor target for
 `scene.eatmeFirstLesson`, then writing
-`first-lesson-live-procedure-target-observation.json` with `status=observed` or
-an exact `status=blocked` reason. It must not mutate a procedure, Save, assert
-rendering correctness, assess learner work, or claim full first-lesson
-completion. The artifact API, configuration, examples, and review rules are
+`first-lesson-live-procedure-target-observation.json` with `status=edit-ready`
+or the exact no-go blocker
+`blocker.kind=missing-desktop-edit-action-contract`. Display, AT-SPI, and
+target-not-found blockers are structured run failures, not accepted action-seam
+proof. The shard must not mutate a procedure, Save, assert rendering
+correctness, assess learner work, or claim full first-lesson completion. The
+artifact API, configuration, examples, and review rules are
 documented in [First-Lesson Live Procedure Target
 Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md).
 

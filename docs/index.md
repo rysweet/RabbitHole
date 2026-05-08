@@ -30,6 +30,7 @@ repository.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, claim boundaries, and world-canvas pixel target readiness contract.
 - [First-Lesson Live Procedure Target Action Seam](./reference/first-lesson-live-procedure-target-observation.md) - read-only live desktop shard contract for opening the first-lesson starter through Select Project and producing edit-ready-or-named-blocker evidence.
+- [Run the First-Lesson Live Procedure Target Action Seam](./howto/run-first-lesson-live-procedure-target-action-seam.md) - how to collect and review the read-only first-lesson procedure/code-editor action-seam evidence.
 - [First-Lesson Procedure/Edit Seam](./reference/first-lesson-procedure-edit-seam.md) - narrow executable proof that chains deterministic object placement into AST-level procedure editing.
 - [Run the First-Lesson Procedure/Edit Handoff Proof](./howto/run-first-lesson-procedure-edit-handoff.md) - how to run the focused Maven proof and QA command smoke for the procedure/edit handoff.
 - [Tutorial: Trace the First-Lesson Procedure/Edit Seam](./tutorials/trace-first-lesson-procedure-edit-seam.md) - guided review of asserted placement evidence, procedure-edit artifacts, and strict evidence boundaries.

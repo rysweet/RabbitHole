@@ -227,18 +227,15 @@ action-seam proof for the next first-lesson action slice. Resolve the supporting
 run failure or use the adjacent runtime/display/accessibility shard before
 claiming this seam.
 
-For the next first-lesson action slice, the focused artifact test accepts only
-two action-seam outcomes:
+The focused artifact test validates three artifact categories, but only the
+first two are accepted action-seam outcomes for the next first-lesson action
+slice:
 
-1. `status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`,
-   `desktopEditAction.status=ready`, `desktopEditAction.blocker.kind=none`, and
-   top-level `blocker.kind=none`.
-2. `status=blocked`, `observedTarget.procedureName=scene.eatmeFirstLesson`,
-   `observedTarget.readyForDesktopEditAction=false`,
-   `desktopEditAction.blocker.kind=missing-desktop-edit-action-contract`,
-   top-level `blocker.kind=missing-desktop-edit-action-contract`, and
-   `blocker.message=missing public CodeEditor/CodeComposite edit invocation
-   contract`.
+| Category | Meaning | Required fields |
+| --- | --- | --- |
+| Accepted proof | The target was observed and is ready for the next desktop edit proof. | `status=edit-ready`, `observedTarget.readyForDesktopEditAction=true`, `desktopEditAction.status=ready`, `desktopEditAction.blocker.kind=none`, top-level `blocker.kind=none`, and `downstreamBlockedStep=none`. |
+| Accepted no-go | The target was observed, but the public desktop edit invocation contract is missing. | `status=blocked`, `observedTarget.procedureName=scene.eatmeFirstLesson`, `observedTarget.readyForDesktopEditAction=false`, `desktopEditAction.blocker.kind=missing-desktop-edit-action-contract`, top-level `blocker.kind=missing-desktop-edit-action-contract`, `blocker.message=missing public CodeEditor/CodeComposite edit invocation contract`, and `downstreamBlockedStep=desktop-procedure-edit-action-proof`. |
+| Structured run failure diagnostic | The shard could not reach the target because of display, AT-SPI, Select Project, post-open, or target discovery prerequisites. | `status=blocked`, `observedTarget=null`, a supported run-failure `blocker.kind`, non-empty `blockerDetail`, and `downstreamBlockedStep=desktop-procedure-edit-action-proof`. This is valid diagnostic shape, not accepted action-seam proof. |
 
 Target-only observation with no edit-readiness classification is not a passing
 artifact for this shard.
@@ -254,13 +251,16 @@ The focused artifact test enforces this current contract:
    `observedTarget.procedureName` instead of `procedureSelector`, and
    `observedTarget.kind` instead of `targetKind`.
 4. Emit `observedTarget.readyForDesktopEditAction` and a `desktopEditAction`
-   object on every action-seam artifact.
+   object on accepted action-seam outcomes. Structured run-failure diagnostics
+   keep `observedTarget=null` and use `blockerDetail` to name the prerequisite
+   failure.
 5. Emit top-level `blocker.kind` and `blocker.message` as an object. For the two
    accepted action-seam outcomes, this top-level blocker must mirror
    `desktopEditAction.blocker`.
 6. Include `creative assessment` in both top-level `outOfScope` and
    `desktopEditAction.doesNotClaim`.
-7. Pass only the edit-ready evidence or the exact
+7. Treat structured run-failure blockers as valid diagnostics only; accepted
+   action-seam proof is limited to edit-ready evidence or the exact
    `missing-desktop-edit-action-contract` no-go artifact described above.
 
 ## Configuration
@@ -459,6 +459,7 @@ desktop procedure edit attempt. It is the live-desktop target/action link betwee
 these references:
 
 - [Select Project Africa Full AT-SPI evidence](./select-project-africa-full-atspi-evidence.md)
+- [Run the First-Lesson Live Procedure Target Action Seam](../howto/run-first-lesson-live-procedure-target-action-seam.md)
 - [First-Lesson Procedure/Edit Seam](./first-lesson-procedure-edit-seam.md)
 - [Desktop Procedure Edit and Save Automation](./desktop-procedure-edit-and-save-automation.md)
 - [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md)

@@ -337,7 +337,7 @@ if errors:
     raise AssertionError("\n".join(errors))
 PY
   artifact_status=$?
-  assert_success "$artifact_status" "first-lesson procedure target artifact has observed-or-blocked machine-readable shape"
+  assert_success "$artifact_status" "first-lesson procedure target artifact has structured machine-readable shape"
 else
   fail "first-lesson procedure target fallback artifacts could not be inspected"
 fi

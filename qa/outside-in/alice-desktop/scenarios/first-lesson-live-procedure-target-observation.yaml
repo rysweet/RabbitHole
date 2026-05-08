@@ -43,7 +43,7 @@ automation:
   readyWaitSeconds: 60
 evidence:
   required:
-    - status.txt recording scenario, automationMode, outcome, procedureTargetObservationEvidence, procedureTargetObservationStatus, procedureTargetObservationBlocker, and downstreamBlockedStep=desktop-procedure-edit-action-proof.
+    - status.txt recording scenario, automationMode, outcome, procedureTargetObservationEvidence, procedureTargetObservationStatus, procedureTargetObservationBlocker, and downstreamBlockedStep=none for edit-ready or downstreamBlockedStep=desktop-procedure-edit-action-proof for blocked.
     - root-directory-prep.json confirming org.alice.ide.rootDirectory resolves to core/resources/target/distribution.
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - x-window-inventory.json naming Alice-related visible X window title, class, process, and geometry.

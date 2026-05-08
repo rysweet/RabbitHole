@@ -37,7 +37,7 @@ file, the full first-lesson project shape, desktop rendering, grading, creative
 assessment, Save, launcher, model exporter, hotspot, or Select Project PID
 behavior.
 
-The planned adjacent live-desktop seam is [First-Lesson Live Procedure Target
+The adjacent live-desktop seam is [First-Lesson Live Procedure Target
 Action Seam](./first-lesson-live-procedure-target-observation.md). That shard
 starts after Select Project opens the first-lesson starter and records whether
 the live `scene.eatmeFirstLesson` procedure/code-editor target is ready for a
