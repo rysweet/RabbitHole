@@ -56,6 +56,7 @@ required_workflows = [
     "exported-project-smoke",
     "failure-path-smoke",
     "file-loader-smoke",
+    "first-lesson-live-procedure-target-observation",
     "future-ui-smoke",
     "instructor-student-setup",
     "launch",

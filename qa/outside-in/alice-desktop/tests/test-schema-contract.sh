@@ -56,6 +56,12 @@ if "(?!/)" not in repo_pattern or "\\.\\." not in repo_pattern:
 if repo_schema.get("minLength") != 1:
     raise AssertionError("targetStarter.repositoryPath must be a non-empty string")
 
+workflow_enum = set(schema["properties"]["workflow"]["enum"])
+if "first-lesson-live-procedure-target-observation" not in workflow_enum:
+    raise AssertionError(
+        "schema workflow enum must include first-lesson-live-procedure-target-observation"
+    )
+
 required_automation = set(automation.get("required", []))
 expected_automation = {"cwd", "argv", "timeoutSeconds", "readyWaitSeconds"}
 missing_automation = sorted(expected_automation - required_automation)
