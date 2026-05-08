@@ -791,6 +791,26 @@ print(value)
 PY
 }
 
+inventory_json_compact_field() {
+  local inventory_path=$1
+  local field=$2
+  python3 - "$inventory_path" "$field" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+for part in sys.argv[2].split("."):
+    value = value.get(part, "") if isinstance(value, dict) else ""
+if value == "":
+    print("")
+elif value is None:
+    print("null")
+else:
+    print(json.dumps(value, sort_keys=True, separators=(",", ":")))
+PY
+}
+
 write_application_root_error_probe() {
   local inventory_path=$1
   local output_path=$2
@@ -1334,6 +1354,16 @@ JSON
     swing_widget_blocker=$(inventory_json_field "$run_dir/swing-widget-observation.json" blocker)
   fi
   local tab_click_status=not-requested tab_click_blocker=not-requested
+  local select_project_evidence_status=not-requested
+  local select_project_target_display_name=not-requested
+  local select_project_target_repo_path=not-requested
+  local select_project_opened_display_name=not-requested
+  local select_project_opened_repo_path=not-requested
+  local select_project_project_open_observed=not-requested
+  local select_project_next_blocker=not-requested
+  local select_project_window_context=not-requested
+  local select_project_alice_java_pid=not-requested
+  local select_project_starters_tab_safety=not-requested
   if [ "$needs_tab_click_probe" -eq 1 ]; then
     # Allow the Swing accessibility tree to build before probing, then run
     # the tab structure diagnosis and click attempt.
@@ -1345,6 +1375,16 @@ JSON
       "$target_starter_repo_path"
     tab_click_status=$(inventory_json_field "$run_dir/tab-click-observation.json" status)
     tab_click_blocker=$(inventory_json_field "$run_dir/tab-click-observation.json" blocker)
+    select_project_evidence_status=$(inventory_json_field "$run_dir/tab-click-observation.json" evidenceStatus)
+    select_project_target_display_name=$(inventory_json_field "$run_dir/tab-click-observation.json" targetStarter.displayName)
+    select_project_target_repo_path=$(inventory_json_field "$run_dir/tab-click-observation.json" targetStarter.repositoryPath)
+    select_project_opened_display_name=$(inventory_json_field "$run_dir/tab-click-observation.json" openedStarter.displayName)
+    select_project_opened_repo_path=$(inventory_json_field "$run_dir/tab-click-observation.json" openedStarter.repositoryPath)
+    select_project_project_open_observed=$(inventory_json_field "$run_dir/tab-click-observation.json" projectOpenObserved)
+    select_project_next_blocker=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" nextBlocker)
+    select_project_window_context=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" selectProjectWindowContext)
+    select_project_alice_java_pid=$(inventory_json_field "$run_dir/tab-click-observation.json" javaPid)
+    select_project_starters_tab_safety=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" startersTabSafety)
   fi
   local post_open_status=not-requested post_open_blocker=not-requested
   if [ "$scenario_id" = alice-desktop-post-project-open-window-state ]; then
@@ -1412,6 +1452,16 @@ JSON
     printf 'tabClickObservation=%s\n' tab-click-observation.json
     printf 'tabClickStatus=%s\n' "$tab_click_status"
     printf 'tabClickBlocker=%s\n' "$tab_click_blocker"
+    printf 'selectProjectEvidenceStatus=%s\n' "$select_project_evidence_status"
+    printf 'selectProjectTargetDisplayName=%s\n' "$select_project_target_display_name"
+    printf 'selectProjectTargetRepositoryPath=%s\n' "$select_project_target_repo_path"
+    printf 'selectProjectOpenedStarterDisplayName=%s\n' "$select_project_opened_display_name"
+    printf 'selectProjectOpenedStarterRepositoryPath=%s\n' "$select_project_opened_repo_path"
+    printf 'selectProjectProjectOpenObserved=%s\n' "$select_project_project_open_observed"
+    printf 'selectProjectNextBlocker=%s\n' "$select_project_next_blocker"
+    printf 'selectProjectWindowContext=%s\n' "$select_project_window_context"
+    printf 'selectProjectAliceJavaPid=%s\n' "$select_project_alice_java_pid"
+    printf 'selectProjectStartersTabSafety=%s\n' "$select_project_starters_tab_safety"
     printf 'postProjectOpenObservation=%s\n' post-project-open-observation.json
     printf 'postProjectOpenStatus=%s\n' "$post_open_status"
     printf 'postProjectOpenBlocker=%s\n' "$post_open_blocker"

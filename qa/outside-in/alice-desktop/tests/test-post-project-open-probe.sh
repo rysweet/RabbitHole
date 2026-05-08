@@ -105,6 +105,31 @@ write_target_selected_not_opened() {
 JSON
 }
 
+# --- Helper: target-starter opening proof from tab-click probe ---
+write_target_opened() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterSelected": true,
+  "targetStarterOpenAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "targetStarterBlocker": null
+}
+JSON
+}
+
 # ---- 1. Missing inventory → blocked ----
 missing_out="$tmp_root/missing-inventory-out.json"
 python3 "$PROBE" "$tmp_root/no-inventory.json" "$tmp_root/no-tab-click.json" "$missing_out"
@@ -244,9 +269,27 @@ assert_contains "$target_selected_out" '"blocker": "target-starter-open-not-prov
 assert_contains "$target_selected_out" '"postOpenWindowObserved": false' "target-selected-not-opened does not claim post-open window observation"
 assert_contains "$target_selected_out" '"mainWindowObservationBlocker": "target-starter-open-not-proven"' "target-selected-not-opened names exact mainWindowObservationBlocker"
 
-# ---- 10. Probe output is valid JSON ----
+# ---- 10. Target opened evidence survives post-open AT-SPI blockers ----
+inventory10="$tmp_root/inventory10.json"
+write_alice_inventory "$inventory10"
+target_opened_tab="$tmp_root/target-opened-tab.json"
+write_target_opened "$target_opened_tab"
+target_opened_out="$tmp_root/target-opened-out.json"
+python3 "$PROBE" "$inventory10" "$target_opened_tab" "$target_opened_out"
+status=$?
+assert_success "$status" "probe exits 0 after target-specific opened Select Project evidence"
+assert_contains "$target_opened_out" '"targetStarter": \{' "target-opened post-open evidence preserves targetStarter"
+assert_contains "$target_opened_out" '"displayName": "Africa Full"' "target-opened post-open evidence preserves target display name"
+assert_contains "$target_opened_out" '"repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull\.a3p"' "target-opened post-open evidence preserves target repository path"
+assert_contains "$target_opened_out" '"openedStarter": \{' "target-opened post-open evidence preserves openedStarter"
+assert_contains "$target_opened_out" '"evidenceStatus": "opened"' "target-opened post-open evidence preserves opened evidenceStatus"
+assert_contains "$target_opened_out" '"targetProjectOpenObserved": true' "target-opened post-open evidence preserves the Select Project project-open observation"
+assert_contains "$target_opened_out" '"javaPid": 2468' "target-opened post-open evidence preserves the Alice Java/window PID"
+
+# ---- 11. Probe output is valid JSON ----
 for out_file in "$missing_out" "$missing_tab_out" "$malformed_inv_out" "$malformed_tab_out" \
-                "$not_opened_out" "$no_java_out" "$non_alice_java_out" "$atk_out" "$target_selected_out"; do
+                "$not_opened_out" "$no_java_out" "$non_alice_java_out" "$atk_out" \
+                "$target_selected_out" "$target_opened_out"; do
   python3 - "$out_file" <<'PY'
 import json, sys
 try:

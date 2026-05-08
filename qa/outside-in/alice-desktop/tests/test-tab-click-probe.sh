@@ -271,6 +271,24 @@ if success.get("projectOpenObserved") is not True:
     raise AssertionError("opened target evidence must still require projectOpenObserved=true")
 if success.get("projectOpenAttempt", {}).get("startersTabClick", {}).get("success") is not True:
     raise AssertionError("target starter opening must confirm Starters tab activation before target search")
+window_context = success.get("selectProjectWindowContext")
+if not isinstance(window_context, dict):
+    raise AssertionError("opened evidence must include selectProjectWindowContext")
+if window_context.get("title") != "Select Project":
+    raise AssertionError(f"selectProjectWindowContext must name Select Project, got {window_context!r}")
+if window_context.get("javaPid") != 2468:
+    raise AssertionError(f"selectProjectWindowContext must include the Alice Java/window PID, got {window_context!r}")
+starters_safety = success.get("startersTabSafety")
+if not isinstance(starters_safety, dict):
+    raise AssertionError("opened evidence must include startersTabSafety")
+if starters_safety.get("tabName") != "Starters":
+    raise AssertionError(f"startersTabSafety must identify the Starters tab, got {starters_safety!r}")
+if starters_safety.get("activatedBeforeTargetSearch") is not True:
+    raise AssertionError(f"startersTabSafety must prove Starters activation before target search, got {starters_safety!r}")
+if starters_safety.get("targetSearchScope") != "active-starters-tab":
+    raise AssertionError(f"target search must be scoped to the active Starters tab, got {starters_safety!r}")
+if success.get("nextBlocker") is not None:
+    raise AssertionError(f"opened evidence must not publish a next blocker, got {success.get('nextBlocker')!r}")
 if success_counters["wonderland"] != 0:
     raise AssertionError("probe must not click/open the first starter when it is not Africa Full")
 if success_counters["africa"] != 1:
@@ -296,6 +314,8 @@ if absent.get("targetStarterOpenAttempted") is not False:
 if absent_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when only a non-active/hidden Africa Full node was observed")
 assert_blocker_shape(absent)
+if absent.get("nextBlocker") != absent.get("targetStarterBlocker"):
+    raise AssertionError("blocked target evidence must publish exactly one nextBlocker matching targetStarterBlocker")
 
 tab_blocked_counters = make_fixture(
     active_starter_names=[TARGET_DISPLAY_NAME],
@@ -319,6 +339,8 @@ if tab_blocked_counters["africa"] != 0:
 if tab_blocked_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when Starters tab activation fails")
 assert_blocker_shape(tab_blocked)
+if tab_blocked.get("nextBlocker") != tab_blocked.get("targetStarterBlocker"):
+    raise AssertionError("Starters-tab blocked evidence must publish exactly one nextBlocker matching targetStarterBlocker")
 
 blocked_counters = make_fixture(
     active_starter_names=[TARGET_DISPLAY_NAME],

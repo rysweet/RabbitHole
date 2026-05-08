@@ -247,6 +247,18 @@ def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict
     )
 
 
+def target_opened_context(tab_click: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "targetStarter": tab_click.get("targetStarter"),
+        "openedStarter": tab_click.get("openedStarter"),
+        "evidenceStatus": tab_click.get("evidenceStatus"),
+        "targetProjectOpenObserved": bool(tab_click.get("projectOpenObserved", False)),
+        "targetProjectOpenDetail": tab_click.get("projectOpenDetail", ""),
+        "selectProjectWindowContext": tab_click.get("selectProjectWindowContext"),
+        "startersTabSafety": tab_click.get("startersTabSafety"),
+    }
+
+
 def no_java_pid_payload(inventory_path: Path) -> dict[str, Any]:
     return post_open_payload(
         status="blocked",
@@ -317,12 +329,16 @@ def main() -> int:
     java_pid = find_java_pid(inventory)
     if java_pid is None:
         payload = no_java_pid_payload(inventory_path)
+        if isinstance(target_starter, dict):
+            payload.update(target_opened_context(tab_click))
         output_path.write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
         return 0
 
     payload = probe_post_open(java_pid)
+    if isinstance(target_starter, dict):
+        payload.update(target_opened_context(tab_click))
     output_path.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

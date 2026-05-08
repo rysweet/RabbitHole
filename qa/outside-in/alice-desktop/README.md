@@ -30,7 +30,7 @@ Each scenario uses the same fields:
 - `evidence.required`
 - `fallback`
 
-The planned target-specific Select Project feature will use `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
+The target-specific Select Project scenario uses `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
 
 Allowed `automationMode` values are:
 
@@ -125,14 +125,14 @@ The runner records evidence under `qa/outside-in/alice-desktop/evidence/<scenari
 | `ALICE_QA_RUN_GATED_SMOKES` | Execute gated command smoke scenarios when set to `1`; otherwise they write `gated-not-run` evidence and exit non-zero unless `--prepare-only` is requested. |
 | `NODE_OPTIONS` | Optional for surrounding Node-based orchestrators. Use `--max-old-space-size=32768` when needed; this lane itself does not require Node. |
 
-The planned Select Project Africa Full feature must pass `targetStarter.displayName` and `targetStarter.repositoryPath` to the AT-SPI probe as `TARGET_STARTER_DISPLAY_NAME` and `TARGET_STARTER_REPO_PATH`. These variables are runner-managed evidence metadata, not user configuration knobs.
+The Select Project Africa Full scenario passes `targetStarter.displayName` and `targetStarter.repositoryPath` to the AT-SPI probe as `TARGET_STARTER_DISPLAY_NAME` and `TARGET_STARTER_REPO_PATH`. These variables are runner-managed evidence metadata, not user configuration knobs.
 
 ## Scenario authoring checklist
 
 Before adding or changing a scenario:
 
 1. Keep actions and outcomes observable from the user-visible Alice desktop.
-2. Use one of the supported workflows: `launch`, `instructor-student-setup`, `scene-creation`, `run-debug`, `save-load`, `select-project-interaction-smoke`, `open-load-save`, `export`, `exported-project-smoke`, `netbeans-package-smoke`, `package-install-smoke`, `project-io-smoke`, `failure-path-smoke`, `future-ui-smoke`, `menu-action-smoke`, `tweedle-decoder-boundary-smoke`, `tweedle-decoder-this-call-smoke`, or `wizard-palette-completion-smoke`.
+2. Use one of the supported [workflow values](../../../docs/reference/alice-desktop-outside-in-qa.md#workflow-values).
 3. Use `xvfb-real-alice` only when the runner can execute the real Alice command and collect logs/screenshots.
 4. Use `manual-evidence-required` when human Swing interaction is required.
 5. Name concrete required artifacts in `evidence.required`; manual workflows also require `review-notes.txt` for acceptance.

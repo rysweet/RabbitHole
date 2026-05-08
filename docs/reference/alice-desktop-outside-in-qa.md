@@ -25,6 +25,8 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `qa/outside-in/alice-desktop/schema/scenario.schema.json` | Published JSON Schema contract for the scenario model. |
 | `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` | Catalog validator and scenario JSON dumper. |
 | `qa/outside-in/alice-desktop/runners/run-scenario.sh` | Scenario listing, validation, real launch execution, and manual checklist generation. |
+| `qa/outside-in/alice-desktop/runners/tab-click-probe.py` | AT-SPI Select Project tab and starter selection/opening probe for the target-specific Africa Full evidence path. |
+| `qa/outside-in/alice-desktop/runners/post-project-open-probe.py` | AT-SPI post-open main-window probe gated by prior target-specific Select Project opened evidence. |
 | `qa/outside-in/alice-desktop/evidence/` | Local generated evidence. Contents are ignored by Git except `.gitignore`. |
 
 ## Scenario catalog
@@ -33,8 +35,10 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | --- | --- | --- | --- |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
 | `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
-| `alice-desktop-select-project-tab-click-exec` | `select-project-tab-click-smoke` | `xvfb-real-alice` | Uses the AT-SPI exec:exec launch path to activate Select Project tabs. The target-specific feature contract will bind this scenario to `Africa Full` and either prove target-specific selection/opening or record the exact blocker. |
-| `alice-desktop-post-project-open-window-state` | `post-project-open-window-state-smoke` | `xvfb-real-alice` | Characterizes the Alice main-window AT-SPI frame state after project open. Under the target-specific feature contract, it must be gated by prior Africa Full Select Project evidence. |
+| `alice-desktop-select-project-widget-introspection` | `select-project-widget-introspection-smoke` | `xvfb-real-alice` | Enumerates the Select Project frame through AT-SPI or records the exact ATK/AT-SPI blocker. |
+| `alice-desktop-select-project-atk-exec` | `select-project-atk-exec-smoke` | `xvfb-real-alice` | Runs the ATK-enabled exec:exec launch path and records Select Project widget introspection evidence. |
+| `alice-desktop-select-project-tab-click-exec` | `select-project-tab-click-smoke` | `xvfb-real-alice` | Uses the AT-SPI exec:exec launch path to activate Select Project tabs, select/open the committed `Africa Full` starter, or record the exact blocker. |
+| `alice-desktop-post-project-open-window-state` | `post-project-open-window-state-smoke` | `xvfb-real-alice` | Characterizes the Alice main-window AT-SPI frame state after project open. It is gated by prior Africa Full Select Project evidence. |
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
 | `alice-desktop-scene-creation` | `scene-creation` | `manual-evidence-required` | Covers creating or selecting a starter scene and saving it as an Alice project. |
 | `alice-desktop-run-debug` | `run-debug` | `manual-evidence-required` | Covers program run controls plus the closest baseline debug-like control, such as fast-forward or statement execution. |
@@ -45,6 +49,8 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
+| `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers direct saved-project and corrupt-project loader characterization. |
+| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers generated LFS-independent archive fixture boundary characterization. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -264,8 +270,8 @@ supportingEvidence:
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
 | `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
-| `targetStarter.displayName` | string | Planned target-specific field: display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec` when the target-specific feature lands. |
-| `targetStarter.repositoryPath` | string | Planned target-specific field: repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
+| `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec`. |
+| `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
 | `supportingEvidence` | string list | Scenario IDs or evidence sources that support this scenario. |
 | `tags` | string list | Additional scenario labels. |
 
@@ -274,22 +280,29 @@ supportingEvidence:
 ### Workflow values
 
 ```text
-instructor-student-setup
-launch
+archive-fixture-smoke
+export
 exported-project-smoke
 failure-path-smoke
+file-loader-smoke
 future-ui-smoke
+instructor-student-setup
+launch
+menu-action-smoke
 netbeans-package-smoke
 open-load-save
 package-install-smoke
 post-project-open-window-state-smoke
 project-io-smoke
-scene-creation
 run-debug
 save-load
+scene-creation
+select-project-atk-exec-smoke
 select-project-interaction-smoke
 select-project-tab-click-smoke
-export
+select-project-widget-introspection-smoke
+tweedle-decoder-boundary-smoke
+tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
 
@@ -365,8 +378,8 @@ Manual scenarios are complete only after a human performs the workflow and place
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
-| Select Project tab-click smoke | Current tab activation/open evidence, then under the target-specific feature contract `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened` plus target selection/open evidence, or existing `blocker`/`blockerDetail` fields plus structured target-specific blocker details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
-| Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. Under the target-specific feature contract it must be gated by prior `tab-click-observation.json` Africa Full evidence; generic main-window presence is not Africa Full proof. |
+| Select Project tab-click smoke | `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened` plus target selection/open evidence, or existing `blocker`/`blockerDetail` fields plus structured target-specific blocker details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
+| Post-project open window-state smoke | `post-project-open-observation.json` characterizing main-window AT-SPI state. It must be gated by prior `tab-click-observation.json` Africa Full evidence; generic main-window presence is not Africa Full proof. |
 | Instructor/student setup | Instructor launch log, starter project screenshot, starter `.a3p`, student launch or open log, loaded project screenshot, student copy `.a3p`, `review-notes.txt`. |
 | Scene creation | Screenshot before scene creation, screenshot after object or scene appears, saved `.a3p`, notes identifying the selected template or object in `review-notes.txt`. |
 | Run/debug | Screenshot before run, screenshot or screen capture during execution, notes naming run/debug-like controls in `review-notes.txt`, launch or run log, saved `.a3p`. |

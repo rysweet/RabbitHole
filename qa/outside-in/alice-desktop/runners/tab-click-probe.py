@@ -160,9 +160,31 @@ def add_target_metadata(
             "openedStarter": None,
             "evidenceStatus": evidence_status,
             "targetStarterBlocker": blocker,
+            "nextBlocker": blocker,
         }
     )
     return payload
+
+
+def select_project_window_context(java_pid: int, select_project_frame: Any) -> dict[str, Any]:
+    return {
+        "title": safe_node_name(select_project_frame) or EXPECTED_SELECT_PROJECT_TITLE,
+        "role": safe_role_name(select_project_frame),
+        "javaPid": java_pid,
+        "childCount": safe_child_count(select_project_frame),
+        "states": state_names(select_project_frame),
+    }
+
+
+def starters_tab_safety(starters_tab_click: dict[str, Any]) -> dict[str, Any]:
+    activated = bool(starters_tab_click.get("success", False))
+    return {
+        "tabName": "Starters",
+        "activationAttempted": bool(starters_tab_click.get("attempted", False)),
+        "activatedBeforeTargetSearch": activated,
+        "activationDetail": str(starters_tab_click.get("detail", "")),
+        "targetSearchScope": "active-starters-tab" if activated else "not-started",
+    }
 
 
 def state_names(node: Any) -> list[str]:
@@ -594,6 +616,7 @@ def probe_tab_click(java_pid: int) -> dict[str, Any]:
 
     # Dump the full tree including unnamed nodes.
     all_widgets_before = enumerate_all_widgets(select_project_frame, depth=0)
+    window_context = select_project_window_context(java_pid, select_project_frame)
 
     role_counts: dict[str, int] = {}
     for w in all_widgets_before:
@@ -677,6 +700,9 @@ def probe_tab_click(java_pid: int) -> dict[str, Any]:
                 "openedStarter": project_open_result.get("openedStarter"),
                 "evidenceStatus": project_open_result.get("evidenceStatus", "blocked"),
                 "targetStarterBlocker": project_open_result.get("targetStarterBlocker"),
+                "nextBlocker": project_open_result.get("nextBlocker"),
+                "selectProjectWindowContext": window_context,
+                "startersTabSafety": project_open_result.get("startersTabSafety"),
             }
         )
     return payload
@@ -1078,6 +1104,7 @@ def apply_target_blocker(
             "blocker": blocker_name,
             "blockerDetail": blocker["reasonProgressStopped"],
             "targetStarterBlocker": blocker,
+            "nextBlocker": blocker,
             "projectOpenDetail": blocker["reasonProgressStopped"],
         }
     )
@@ -1106,9 +1133,12 @@ def attempt_target_project_open(
         "blocker": "target-starter-not-found",
         "blockerDetail": "",
         "targetStarterBlocker": None,
+        "nextBlocker": None,
+        "startersTabSafety": starters_tab_safety({}),
     }
 
     record["startersTabClick"] = select_starters_tab(select_project_frame)
+    record["startersTabSafety"] = starters_tab_safety(record["startersTabClick"])
     if not record["startersTabClick"]["success"]:
         detail = record["startersTabClick"].get("detail") or "Starters tab click did not succeed."
         blocker = target_blocker(
@@ -1206,6 +1236,7 @@ def attempt_target_project_open(
                 "blockerDetail": "",
                 "openedStarter": target_starter,
                 "targetStarterBlocker": None,
+                "nextBlocker": None,
             }
         )
         return record
