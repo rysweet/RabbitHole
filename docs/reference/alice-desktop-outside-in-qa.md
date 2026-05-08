@@ -59,7 +59,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
-| `alice-desktop-save-menu-dialog-write-proof` | `save-menu-dialog-write-proof` | `gated-command-smoke` | Covers the bounded Robot File-menu Save -> controlled chooser -> written `.a3p` -> readback marker seam. |
+| `alice-desktop-save-menu-dialog-write-proof` | `save-menu-dialog-write-proof` | `gated-command-smoke` | Covers the bounded Robot File-menu Save -> controlled chooser -> written `.a3p` -> readback marker seam through `RobotSaveMenuDialogWriteReadbackProofTest`. |
 | `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` | `gated-command-smoke` | Covers unsupported adjacent Tweedle method-call boundaries for the narrow decoder slice. |
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
@@ -515,7 +515,7 @@ grading or creative assessment can be claimed.
 | Project save, reopen, edit, save again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for metadata and export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. |
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
-| Save menu dialog write proof | `status.txt`, `command.log`, focused Robot Save menu/dialog/write/readback proof test output, and `robot-save-menu-dialog-write-readback-proof.json` with either the bounded readback marker proof or the exact Robot/Swing blocker named by the test. |
+| Save menu dialog write/readback proof | `status.txt`, `command.log`, focused Robot Save menu/dialog/write/readback proof test output naming `RobotSaveMenuDialogWriteReadbackProofTest`, and `robot-save-menu-dialog-write-readback-proof.json` with either the bounded readback marker proof or the exact Robot/Swing blocker named by the test. Stale `StageIdeSaveMenuDoClickToWriteProofTest` output or `save-menu-dialog-write-proof.json` artifacts do not satisfy this scenario. |
 | Wizard/palette/completion smoke | `status.txt`, `command.log`, focused test output for wizard validation, palette wiring, and completion resources; manual screenshot notes when desktop evidence is added. |
 
 ## Scenario authoring rules
