@@ -54,8 +54,11 @@ repository.
 - [Tutorial: Characterize ModelResourceExporter bounding-box state](./tutorials/model-resource-exporter-bounding-box-state.md) - guided example for protecting the intentional stateful XML bounding-box behavior.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, player/type archive, and resource decode tests.
 - [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments and the argument-bearing explicit `this.method(label: value, ...)` fail-fast boundary.
+- [Player archive unsupported Tweedle diagnostics](./reference/player-archive-unsupported-tweedle-diagnostics.md) - narrow JSON `.a3w` archive contract for surfacing unsupported argument-bearing explicit `this` call reasons without broadening Tweedle/player decode support.
 - [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice and named argument-bearing boundary.
+- [Characterize player archive unsupported Tweedle diagnostics](./howto/characterize-player-archive-unsupported-tweedle-diagnostics.md) - how to add generated `.a3w` characterization for archive-level unsupported decode reason reporting.
 - [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage and unsupported-neighbor assertions without broadening decoder claims.
+- [Tutorial: Trace a player archive unsupported this-call diagnostic](./tutorials/player-archive-unsupported-this-call-diagnostic.md) - guided example for checking fail-closed `.a3w` diagnostics around `this.helper(value: 1)`.
 
 ## Formal specification lane
 
