@@ -94,6 +94,77 @@ public class SaveOperationFlowTest {
   }
 
   @Test
+  public void backupSaveWithoutMainProjectPromptsWithEmptySuggestedName() throws Exception {
+    File targetProject = new File(temporaryFolder.getRoot(), "untitled-copy.a3p");
+    FakeContext context = new FakeContext(temporaryFolder.getRoot());
+    context.currentFile = temporaryFolder.newFile("world.a3p");
+    context.backup = true;
+    context.promptFiles.add(targetProject);
+    List<File> savedFiles = new ArrayList<>();
+
+    SaveOperationFlow.Result result = SaveOperationFlow.run(
+        context,
+        file -> {
+          fail("Backup saves should not consult the current-file prompt rule");
+          return true;
+        },
+        PROJECT_EXTENSION,
+        savedFiles::add);
+
+    assertEquals(1, context.dialogRequests.size());
+    assertEquals(new DialogRequest(temporaryFolder.getRoot(), "", PROJECT_EXTENSION), context.dialogRequests.get(0));
+    assertEquals(Arrays.asList(targetProject), savedFiles);
+    assertEquals(Arrays.asList("showWaitCursor", "hideWaitCursor", "finish"), context.events);
+    assertTrue(context.finished);
+    assertFalse(context.canceled);
+    assertTrue(result.finished());
+    assertFalse(result.canceled());
+    assertEquals(1, result.promptCount());
+    assertEquals(1, result.saveAttempts());
+    assertEquals(targetProject, result.savedFile());
+  }
+
+  @Test
+  public void backupIOExceptionRetriesWithMainProjectCopyNameUntilSuccess() throws Exception {
+    File failedBackup = new File(temporaryFolder.getRoot(), "world-copy-failed.a3p");
+    File retryBackup = new File(temporaryFolder.getRoot(), "world-copy-retry.a3p");
+    FakeContext context = new FakeContext(temporaryFolder.getRoot());
+    context.currentFile = temporaryFolder.newFile("world.a3p");
+    context.backup = true;
+    context.mainProjectFile = new File(temporaryFolder.getRoot(), "world.a3p");
+    context.promptFiles.add(failedBackup);
+    context.promptFiles.add(retryBackup);
+    List<File> savedFiles = new ArrayList<>();
+    AtomicInteger attempts = new AtomicInteger();
+
+    SaveOperationFlow.Result result = SaveOperationFlow.run(context, file -> false, PROJECT_EXTENSION, file -> {
+      savedFiles.add(file);
+      if (attempts.getAndIncrement() == 0) {
+        throw new IOException("backup volume unavailable");
+      }
+    });
+
+    assertEquals(Arrays.asList(failedBackup, retryBackup), savedFiles);
+    assertEquals(Arrays.asList(
+        new DialogRequest(temporaryFolder.getRoot(), "world Copy", PROJECT_EXTENSION),
+        new DialogRequest(temporaryFolder.getRoot(), "world Copy", PROJECT_EXTENSION)), context.dialogRequests);
+    assertEquals(Arrays.asList(new ErrorMessage("Unable to save file", "backup volume unavailable")), context.errorMessages);
+    assertEquals(Arrays.asList(
+        "showWaitCursor",
+        "hideWaitCursor",
+        "showWaitCursor",
+        "hideWaitCursor",
+        "finish"), context.events);
+    assertTrue(context.finished);
+    assertFalse(context.canceled);
+    assertTrue(result.finished());
+    assertFalse(result.canceled());
+    assertEquals(2, result.promptCount());
+    assertEquals(2, result.saveAttempts());
+    assertEquals(retryBackup, result.savedFile());
+  }
+
+  @Test
   public void ioExceptionShowsErrorThenRetriesWithPreviousProjectBaseName() throws Exception {
     File currentProject = temporaryFolder.newFile("world.a3p");
     File retryProject = new File(temporaryFolder.getRoot(), "world-retry.a3p");
