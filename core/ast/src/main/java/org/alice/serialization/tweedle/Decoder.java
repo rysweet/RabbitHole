@@ -1088,7 +1088,8 @@ public class Decoder {
   private UnsupportedTweedleDecodeException unsupportedResourceFieldInitializer(TweedleField property) {
     return new UnsupportedTweedleDecodeException(
         "Tweedle resource field initializer with a non-null value is not yet supported by the AST decoder "
-            + "because no archive resource manifest or binding context is available: "
+            + "because no archive resource manifest or binding context is available. "
+            + "Only null resource field initializers can be decoded without archive resource context: "
             + property.getType().getName() + " " + property.getName());
   }
 

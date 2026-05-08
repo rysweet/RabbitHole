@@ -145,6 +145,17 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithAudioResourceNullInitializedFieldCreatesNullLiteralInitializer() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { AudioResource sound <- null; }");
+
+    assertEquals(1, type.getDeclaredFields().size());
+    UserField field = type.getDeclaredFields().get(0);
+    assertEquals("sound", field.getName());
+    assertSame(JavaType.getInstance(AudioResource.class), field.getValueType());
+    assertTrue(field.initializer.getValue() instanceof NullLiteral);
+  }
+
+  @Test
   public void decodeClassWithResourceIdentifierInitializedFieldReportsUnsupportedBoundary() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -1923,6 +1934,7 @@ public class TweedleEncoderDecoderTest {
     assertTrue(thrown.getMessage(), thrown.getMessage().contains("non-null"));
     assertTrue(thrown.getMessage(), thrown.getMessage().contains("not yet supported"));
     assertTrue(thrown.getMessage(), thrown.getMessage().contains("manifest or binding context"));
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains("Only null resource field initializers"));
     assertTrue(thrown.getMessage(), thrown.getMessage().contains(expectedFieldName));
   }
 

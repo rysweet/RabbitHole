@@ -56,8 +56,9 @@ The intended coverage covers successful decode behavior and known edge behavior:
 - unsupported Tweedle declarations, unsupported superclasses, and unsupported
   adjacent method-call forms around the zero-argument `this.method()`
   slice;
-- resource fields initialized to `null`, plus explicit fail-fast diagnostics for
-  non-null resource field initializers that require archive binding context;
+- resource fields initialized to `null`, plus explicit fail-fast diagnostics
+  that only `null` resource field initializers decode without archive binding
+  context;
 - same-type zero-argument `this.method()` calls decoded to Alice
   `MethodInvocation` statements in method and constructor bodies;
 - missing or malformed Tweedle entries in player archives;
