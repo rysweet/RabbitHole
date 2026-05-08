@@ -352,7 +352,7 @@
                   "const": "-am"
                 },
                 {
-                  "const": "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest"
+                  "const": "-Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest"
                 },
                 {
                   "const": "test"

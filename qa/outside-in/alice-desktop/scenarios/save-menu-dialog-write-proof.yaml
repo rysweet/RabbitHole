@@ -1,5 +1,5 @@
 id: alice-desktop-save-menu-dialog-write-proof
-title: Save menu dialog control and project write proof
+title: Robot Save menu dialog control and project write/readback proof
 workflow: save-menu-dialog-write-proof
 automationMode: gated-command-smoke
 preconditions:
@@ -7,15 +7,15 @@ preconditions:
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
   - A non-headless AWT display is available, such as Xvfb, for the full proof path.
-  - StageIdeSaveMenuDoClickToWriteProofTest is available in the checkout.
+  - RobotSaveMenuDialogWriteReadbackProofTest is available in the checkout.
 userActions:
   - Enable gated smokes in a workspace prepared for core IDE module tests.
-  - Run the focused Save menu dialog/write proof under a desktop-capable display.
-  - Review the proof artifact for Save menu item doClick, Swing JFileChooser approval, and a non-empty a3p file write.
+  - Run the focused Robot Save menu dialog/write/readback proof under a desktop-capable display.
+  - Review the proof artifact for Robot File-menu Save activation, Swing JFileChooser approval, a non-empty a3p file write, readable project readback, and marker verification.
 expectedOutcomes:
-  - The proof starts from the production Save menu item doClick path, not a direct SaveOperationFlow call.
-  - The focused proof controls a live Swing JFileChooser and approves the selected a3p target when a display is available.
-  - The proof records a non-empty a3p file write or the precise executable blocker No available non-headless AWT display.
+  - The proof starts from Robot File-menu Save activation of the production Save action, not doClick, fire, SaveOperationFlow, or a direct save helper.
+  - The focused proof controls a live Swing JFileChooser, approves the selected a3p target, writes the file, reads it back, and verifies the marker when a display is available.
+  - The proof records robot-save-menu-dialog-write-readback-proof.json with status proven, or a precise blocked artifact naming the missing Robot/Swing precondition.
 automation:
   cwd: .
   argv:
@@ -27,21 +27,21 @@ automation:
     - -pl
     - core/ide
     - -am
-    - -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest
+    - -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest
     - test
   timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the focused Save menu dialog/write proof command.
-    - Surefire output naming StageIdeSaveMenuDoClickToWriteProofTest.
-    - stageide-save-menu-doclick-write-proof.json recording status=proven and wroteFile=true, or the precise non-headless AWT display blocker.
+    - command.log from the focused Robot Save menu dialog/write/readback proof command.
+    - Surefire output naming RobotSaveMenuDialogWriteReadbackProofTest.
+    - robot-save-menu-dialog-write-readback-proof.json recording status=proven with Robot File-menu Save activation, chooser approval, file write, readable-project readback, and marker verification, or the precise blocked Robot/Swing precondition.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If a desktop display is unavailable, attach the executable blocker artifact from StageIdeSaveMenuDoClickToWriteProofTest.
-    - Do not claim full lesson completion, visible rendering correctness, grading, broad UI automation, or native dialog coverage from this proof.
+    - If a desktop display or Robot control is unavailable, attach the executable blocked artifact from RobotSaveMenuDialogWriteReadbackProofTest.
+    - Do not claim full desktop Save completion, Save As coverage, full lesson completion, visible rendering correctness, grading, broad UI automation, native dialog coverage, or all Save variants from this bounded seam.
 supportingEvidence:
   - alice-desktop-menu-action-smoke
   - alice-desktop-project-io-smoke

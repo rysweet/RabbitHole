@@ -226,7 +226,7 @@ validate_allowed_automation() {
     [ "$6" = -pl ] &&
     [ "$7" = core/ide ] &&
     [ "$8" = -am ] &&
-    [ "$9" = -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest ] &&
+    [ "$9" = -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest ] &&
     [ "${10}" = test ]; then
     return 0
   fi

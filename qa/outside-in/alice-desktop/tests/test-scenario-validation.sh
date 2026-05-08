@@ -11,6 +11,7 @@ RUNNER="$BASE_DIR/runners/run-scenario.sh"
 
 TARGET_SCENARIO_ID=alice-desktop-select-project-tab-click-exec
 POST_OPEN_SCENARIO_ID=alice-desktop-post-project-open-window-state
+SAVE_MENU_SCENARIO_ID=alice-desktop-save-menu-dialog-write-proof
 TARGET_DISPLAY_NAME="Africa Full"
 TARGET_REPOSITORY_PATH="core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
 
@@ -68,6 +69,57 @@ if target.get("repositoryPath") != expected_repository_path:
     )
 PY
 assert_success "$?" "Post-project-open scenario declares Africa Full target starter metadata"
+
+"$VALIDATOR" --dump-json "$SAVE_MENU_SCENARIO_ID" >"$tmp_root/save-menu-scenario.json" 2>"$tmp_root/save-menu-scenario.err"
+status=$?
+assert_success "$status" "validator dumps the Save menu dialog write proof scenario"
+python3 - "$tmp_root/save-menu-scenario.json" <<'PY'
+import json
+import sys
+
+scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+expected_argv = [
+    "mvn",
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-DfailIfNoTests=false",
+    "-Dsurefire.failIfNoSpecifiedTests=false",
+    "-pl",
+    "core/ide",
+    "-am",
+    "-Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest",
+    "test",
+]
+if scenario["workflow"] != "save-menu-dialog-write-proof":
+    raise AssertionError("Save menu scenario workflow must remain save-menu-dialog-write-proof")
+if scenario["automation"]["argv"] != expected_argv:
+    raise AssertionError("Save menu scenario must invoke the Robot Save menu dialog write/readback proof")
+scenario_text = json.dumps(scenario, sort_keys=True)
+for required in (
+    "RobotSaveMenuDialogWriteReadbackProofTest",
+    "robot-save-menu-dialog-write-readback-proof.json",
+    "Robot File-menu Save activation",
+    "readback",
+    "marker",
+):
+    if required not in scenario_text:
+        raise AssertionError(f"Save menu scenario must document bounded Robot proof evidence: {required}")
+for stale in (
+    "StageIdeSaveMenuDoClickToWriteProofTest",
+    "stageide-save-menu-doclick-write-proof.json",
+):
+    if stale in scenario_text:
+        raise AssertionError(f"Save menu scenario must not keep stale Stage proof dependency: {stale}")
+for non_claim in (
+    "full desktop Save completion",
+    "Save As coverage",
+    "native dialog coverage",
+    "all Save variants",
+):
+    if non_claim not in scenario_text:
+        raise AssertionError(f"Save menu scenario must preserve non-claim wording: {non_claim}")
+PY
+assert_success "$?" "Save menu scenario targets the Robot proof and drops stale Stage evidence"
 
 python3 - "$tmp_root/target-scenario.json" "$TARGET_REPOSITORY_PATH" <<'PY'
 import json

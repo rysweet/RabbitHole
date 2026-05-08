@@ -156,7 +156,7 @@ allowed_automation = {
             "-pl",
             "core/ide",
             "-am",
-            "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest",
+            "-Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest",
             "test",
         ),
     ),

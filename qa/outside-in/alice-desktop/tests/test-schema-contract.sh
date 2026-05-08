@@ -79,6 +79,30 @@ allowed_argv = {
     tuple(item.get("const") for item in option.get("prefixItems", []))
     for option in argv_schema.get("oneOf", [])
 }
+robot_save_menu_argv = (
+    "mvn",
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-DfailIfNoTests=false",
+    "-Dsurefire.failIfNoSpecifiedTests=false",
+    "-pl",
+    "core/ide",
+    "-am",
+    "-Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest",
+    "test",
+)
+stale_stage_save_menu_argv = (
+    "mvn",
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-DfailIfNoTests=false",
+    "-Dsurefire.failIfNoSpecifiedTests=false",
+    "-pl",
+    "core/ide",
+    "-am",
+    "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest",
+    "test",
+)
 expected_argv = {
     (
         "mvn",
@@ -155,18 +179,7 @@ expected_argv = {
         "-Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest",
         "test",
     ),
-    (
-        "mvn",
-        "-DincludeSims=false",
-        "-Dinstall4j.skip",
-        "-DfailIfNoTests=false",
-        "-Dsurefire.failIfNoSpecifiedTests=false",
-        "-pl",
-        "core/ide",
-        "-am",
-        "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest",
-        "test",
-    ),
+    robot_save_menu_argv,
     (
         "mvn",
         "-DincludeSims=false",
@@ -251,6 +264,10 @@ expected_argv = {
 }
 if allowed_argv != expected_argv:
     raise AssertionError("automation.argv must be restricted to the allowed Alice QA argv set")
+if robot_save_menu_argv not in allowed_argv:
+    raise AssertionError("schema must allow the Robot Save menu dialog write/readback proof argv")
+if stale_stage_save_menu_argv in allowed_argv:
+    raise AssertionError("schema must not keep the stale Stage doClick proof argv for the QA scenario")
 for option in argv_schema.get("oneOf", []):
     size = len(option.get("prefixItems", []))
     if option.get("minItems") != size or option.get("maxItems") != size or option.get("items") is not False:
