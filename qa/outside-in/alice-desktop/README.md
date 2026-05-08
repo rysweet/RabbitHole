@@ -126,12 +126,16 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 Review `post-open-runtime-display-accessibility-evidence.json` as the
 implemented runtime/display decision artifact. Review
 `controlled-display-pixel-observation.json` as the controlled-display
-screenshot-consistency artifact and
-`visible-rendering-pixel-target-blocker.json` as the exact blocker for true
-world-canvas pixel evidence. `tab-click-observation.json` and
+screenshot-consistency artifact. That artifact also records
+`worldCanvasPixelTarget` when exactly one visible/showing runtime/display
+candidate exposes valid screen-coordinate extents for future sampling. If the
+target is missing, invalid, or ambiguous, review
+`visible-rendering-pixel-target-blocker.json` as the exact blocker for target
+readiness. `tab-click-observation.json` and
 `post-project-open-observation.json` are supporting setup artifacts. An observed
-result is limited to a live post-open runtime/display accessibility signal plus
-controlled-display screenshot consistency. It does not prove world-canvas pixel
+result is limited to a live post-open runtime/display accessibility signal,
+controlled-display screenshot consistency, and either world-canvas pixel target
+readiness or an exact target blocker. It does not prove world-canvas pixel
 correctness, deployed installer success, full world execution, grading, lesson
 completion, active Save behavior, active Select Project behavior, or decoder
 behavior.
@@ -222,8 +226,8 @@ The runner records evidence under
 | `application-root-error.json` | Exact `Application Root Error` window blocker, observed JVM `org.alice.ide.rootDirectory` condition, expected dialog text, and next invocation change. |
 | `license-dialog.json` and `license-acceptance.json` | Exact first-run License Agreement blocker details or the isolated `java.util.prefs.userRoot` state files under `.java/.userPrefs/` prepared when `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` is set. |
 | `select-project-window.json` | Exact `Select Project` title, class, process, and geometry; widget labels remain resource-contract evidence until a live Swing accessibility/Jemmy probe exists. |
-| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, screenshot dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget.identified=false`, and explicit unsupported claims. |
-| `visible-rendering-pixel-target-blocker.json` | Machine-readable next blocker for true world-canvas pixel evidence: `reliable-run-window-world-canvas-pixel-sampling-target`. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, screenshot dimensions when metadata is available, pixel-observation metadata, target-ready or target-blocked `worldCanvasPixelTarget`, and explicit unsupported claims. |
+| `visible-rendering-pixel-target-blocker.json` | Machine-readable next blocker for world-canvas pixel target readiness when the Run-window target is missing, invalid, or ambiguous: `reliable-run-window-world-canvas-pixel-sampling-target`. |
 
 The controlled-display screenshot-consistency artifact does not assert Alice
 world rendering correctness.
@@ -237,25 +241,27 @@ accessibility tree.
 | Artifact | Role |
 | --- | --- |
 | `post-open-runtime-display-accessibility-evidence.json` | Runtime/display accessibility decision artifact. Observed requires `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, at least one runtime/display candidate, and `blocker=none`. |
-| `status.txt` | Final scenario status. Pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`; it also links `visibleRenderingPixelTargetBlocker=visible-rendering-pixel-target-blocker.json`. |
+| `status.txt` | Final scenario status. Pass requires `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`; it also records `visibleRenderingPixelTargetStatus=<target-ready|blocked>` and the target artifact name. |
 | `runtime-display-accessibility-status.txt` | Probe-local status written before final scenario status; useful for debugging, not the final pass/fail artifact. |
 | `tab-click-observation.json` and `post-project-open-observation.json` | Supporting project-open setup artifacts. |
-| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, `worldCanvasPixelTarget.identified=false`, and unsupported claims. Pixel blockers keep final `outcome=blocked`. |
-| `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the next unblocker for true world-canvas pixel evidence: a reliable Run-window/world-canvas pixel sampling target. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact with screenshot path, dimensions when available, pixel-observation metadata, target-ready or target-blocked `worldCanvasPixelTarget`, and unsupported claims. Pixel blockers keep final `outcome=blocked`. |
+| `visible-rendering-pixel-target-blocker.json` | Blocker artifact naming the next unblocker for world-canvas pixel target readiness when valid Run-window screen extents are unavailable or ambiguous. |
 
 If Xvfb, display allocation/startup, root-directory prep, license prep, AT-SPI,
 `python3-pyatspi`, the Java ATK wrapper, screenshot/pixel capture, screenshot
 metadata, project-open setup, or the runtime/display candidate is unavailable,
 the JSON/status artifacts record `status=blocked` or `outcome=blocked` plus
-precise blocker fields; the runner must not silently pass. This evidence
-supports only a live post-open runtime/display accessibility signal and
-controlled-display screenshot consistency. It does not prove world-canvas pixel
-correctness, deployed installer success, full world execution, grading, lesson
-completion, active Save behavior, active Select Project behavior, or decoder
-behavior. True rendered-world pixel correctness remains blocked until the runner
-has a reliable Run-window/world-canvas pixel sampling target. The stable
-artifact API, visible-rendering blocker contract, configuration, examples, and
-review rules are documented in [Post-open
+precise blocker fields; the runner must not silently pass. When runtime/display
+candidates exist but no single valid screen-coordinate Run-window target can be
+selected, the run preserves `visible-rendering-pixel-target-blocker.json`
+instead of emitting success-shaped target evidence. This evidence supports only
+a live post-open runtime/display accessibility signal, controlled-display
+screenshot consistency, and world-canvas pixel target readiness or an exact
+target blocker. It does not prove world-canvas pixel correctness, deployed
+installer success, full world execution, grading, lesson completion, active Save
+behavior, active Select Project behavior, or decoder behavior. The stable
+artifact API, target/blocker contract, configuration, examples, and review rules
+are documented in [Post-open
 runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md).
 
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
