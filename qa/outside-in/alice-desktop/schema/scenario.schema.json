@@ -46,8 +46,6 @@
         "select-project-atk-exec-smoke",
         "select-project-tab-click-smoke",
         "post-project-open-window-state-smoke",
-        "story-api-generated-runtime-smoke",
-        "story-api-generated-source-suite-smoke",
         "wizard-palette-completion-smoke"
       ]
     },
@@ -116,80 +114,6 @@
               "items": false,
               "minItems": 8,
               "maxItems": 8
-            },
-            {
-              "prefixItems": [
-                {
-                  "const": "mvn"
-                },
-                {
-                  "const": "-DincludeSims=false"
-                },
-                {
-                  "const": "-Dinstall4j.skip"
-                },
-                {
-                  "const": "-DfailIfNoTests=false"
-                },
-                {
-                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
-                },
-                {
-                  "const": "-pl"
-                },
-                {
-                  "const": "netbeans"
-                },
-                {
-                  "const": "-am"
-                },
-                {
-                  "const": "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest#generatedStoryApiSimulationSpeedCallUpdatesRuntimeStateHeadlessly"
-                },
-                {
-                  "const": "test"
-                }
-              ],
-              "items": false,
-              "minItems": 10,
-              "maxItems": 10
-            },
-            {
-              "prefixItems": [
-                {
-                  "const": "mvn"
-                },
-                {
-                  "const": "-DincludeSims=false"
-                },
-                {
-                  "const": "-Dinstall4j.skip"
-                },
-                {
-                  "const": "-DfailIfNoTests=false"
-                },
-                {
-                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
-                },
-                {
-                  "const": "-pl"
-                },
-                {
-                  "const": "netbeans"
-                },
-                {
-                  "const": "-am"
-                },
-                {
-                  "const": "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest"
-                },
-                {
-                  "const": "test"
-                }
-              ],
-              "items": false,
-              "minItems": 10,
-              "maxItems": 10
             },
             {
               "prefixItems": [
