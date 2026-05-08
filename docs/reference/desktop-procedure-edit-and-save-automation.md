@@ -10,7 +10,7 @@ seam, and the behavior that remains outside this slice.
 
 | User step | Class | What can be observed without launching the full desktop |
 | --- | --- | --- |
-| Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, reports the selected procedure and `CodeComposite`, and observes the selected tab's backing `CodeEditor.getCode()` model. |
+| Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, and reports the selected procedure. The selected `CodeComposite` and backing `CodeEditor.getCode()` observations are planned, not checked in. |
 | Run the current procedure edit implementation | `org.alice.tools.ProcedureEditCommand` | Applies the supported `append-comment` edit to the selected `UserMethod` and returns statement counts for `procedure-edit-command.json`. This is an implementation command, not a desktop code-editor command. |
 | Select a procedure tab in Alice | `org.alice.ide.declarationseditor.DeclarationTabState` | Owns the real tab-selection operation used by the desktop declarations editor. |
 | Show procedure code | `org.alice.ide.declarationseditor.CodeComposite` | Wraps the selected `UserMethod` and creates the code view when the desktop activates the tab. |
@@ -22,17 +22,18 @@ seam, and the behavior that remains outside this slice.
 
 `ProcedureTabSelection` is intentionally small. It does not edit code. It gives a
 desktop automation runner one stable place to ask, "which real Croquet operation
-selects this procedure tab?" and one read-only way to prove that the selected
-procedure tab is backed by the expected code-editor code model. The helper
-refuses to fire the guarded live selection operation until a live Alice IDE is
-active, because the tab change creates the desktop code view.
+selects this procedure tab?" and one read-only way to confirm the selected
+procedure. The planned backing seam will add a read-only selected-`CodeComposite`
+and selected-`CodeEditor.getCode()` observation. The guarded live helper refuses
+to fire the selection operation until a live Alice IDE is active, because the tab
+change creates the desktop code view.
 
 `RobotSaveMenuDialogWriteReadbackProofTest` is the joined Save seam. It either
 proves AWT Robot File-menu Save activation, live Swing chooser control,
 proof-root `.a3p` write, `IoUtilities.readProject(File)` readback, and marker
 verification, or writes a machine-readable blocker artifact.
 
-## Live target action seam and code-editor backing hook
+## Live target action seam and planned code-editor backing hook
 
 The live target action seam owns the smallest unevidenced transition
 after Select Project opens the configured first-lesson flow starter:
@@ -72,15 +73,15 @@ read-only: it does not mutate the procedure, save the project, assert rendering
 correctness, assess learner work, assess creative quality, or claim full
 first-lesson completion.
 
-The next checked-in hook after the live target/action seam is the procedure tab
-code-editor backing proof. Its contract is documented in [First-Lesson Procedure
-Tab Code-Editor Backing](./first-lesson-procedure-tab-code-editor-backing.md).
-It proves that selecting `scene.eatmeFirstLesson` lands on the expected
-`CodeComposite` and that the selected tab's backing code-editor model reports
-the same `UserMethod` from `getCode()`. It remains read-only: it does not invoke
-a desktop edit action, mutate AST statements, save the project, assert
-rendering, assess learner work, assess creative quality, or claim first-lesson
-completion.
+The next planned hook after the live target/action seam is the procedure tab
+code-editor backing proof. Its intended contract is documented in [First-Lesson
+Procedure Tab Code-Editor Backing](./first-lesson-procedure-tab-code-editor-backing.md).
+After it is implemented, it will prove that selecting `scene.eatmeFirstLesson`
+lands on the expected `CodeComposite` and that the selected tab's backing
+code-editor model reports the same `UserMethod` from `getCode()`. It must remain
+read-only: it must not invoke a desktop edit action, mutate AST statements, save
+the project, assert rendering, assess learner work, assess creative quality, or
+claim first-lesson completion.
 
 Add the remaining hooks in order, each with a focused test before changing
 behavior:
@@ -96,7 +97,8 @@ behavior:
 
 ## Test plan
 
-Run the headless procedure target test:
+Run the current headless procedure target test when the existing selection
+operation or selected-procedure behavior changes:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip \
@@ -104,6 +106,17 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.ide.declarationseditor.ProcedureTabSelectionTest \
+  test
+```
+
+After the planned code-editor backing seam lands, run its canonical method:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.declarationseditor.ProcedureTabSelectionTest#selectProcedureLandsOnCodeEditorBackedByExpectedMethodCode \
   test
 ```
 
