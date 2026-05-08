@@ -220,7 +220,7 @@ For the full evidence contract, see [Select Project Africa Full AT-SPI evidence 
 
 ## Collect post-open runtime/display accessibility evidence
 
-The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario collects evidence for one narrow post-open runtime/display signal. It reuses the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and project-open setup, then runs a read-only AT-SPI probe against the live Alice accessibility tree. The claim is limited to accessibility-visible runtime/display state after a project is open; it is not a full rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder proof.
+The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario collects evidence for one narrow post-open runtime/display signal. It reuses the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and project-open setup, then runs a read-only AT-SPI probe against the live Alice accessibility tree. The claim is limited to accessibility-visible runtime/display state after a project is open; it is not a full rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder proof. For the complete artifact API and review contract, see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 Command from the repository root:
 

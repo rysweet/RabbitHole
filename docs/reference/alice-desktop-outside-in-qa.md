@@ -147,7 +147,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-This command uses the existing Alice launch/open path and the same Xvfb/AT-SPI infrastructure as the live Swing probes. The runner invokes `post-open-runtime-display-probe.py` after the supported project-open setup and writes `post-open-runtime-display-accessibility-evidence.json`. Success means the probe found at least one live runtime/display accessibility candidate after project open. Failure or missing runtime dependencies are recorded as structured JSON blockers.
+This command uses the existing Alice launch/open path and the same Xvfb/AT-SPI infrastructure as the live Swing probes. The runner invokes `post-open-runtime-display-probe.py` after the supported project-open setup and writes `post-open-runtime-display-accessibility-evidence.json`. Success means the probe found at least one live runtime/display accessibility candidate after project open. Failure or missing runtime dependencies are recorded as structured JSON blockers. For the dedicated usage, configuration, artifact API, examples, and review boundaries, see [Post-open runtime/display accessibility evidence](./post-open-runtime-display-accessibility-evidence.md).
 
 ### Prepare a gated smoke without execution
 
