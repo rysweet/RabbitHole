@@ -45,6 +45,8 @@ required_workflows = [
     "failure-path-smoke",
     "future-ui-smoke",
     "wizard-palette-completion-smoke",
+    "story-api-generated-runtime-smoke",
+    "story-api-generated-source-suite-smoke",
 ]
 manual_scenarios = [
     "alice-desktop-instructor-student-setup",
@@ -63,6 +65,8 @@ gated_scenarios = [
     "alice-desktop-future-ui-smoke",
     "alice-desktop-menu-action-smoke",
     "alice-desktop-wizard-palette-completion-smoke",
+    "alice-desktop-story-api-generated-runtime-smoke",
+    "alice-desktop-story-api-generated-source-suite-smoke",
 ]
 errors = []
 

@@ -47,6 +47,8 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
+| `alice-desktop-story-api-generated-runtime-smoke` | `story-api-generated-runtime-smoke` | `gated-command-smoke` | Covers the focused generated Story API headless runtime-state characterization for `configureStory()` simulation speed mutation. |
+| `alice-desktop-story-api-generated-source-suite-smoke` | `story-api-generated-source-suite-smoke` | `gated-command-smoke` | Covers the generated Story API source and headless runtime characterization suite without claiming visible rendering or full world playback. |
 
 ## Runner commands
 
@@ -283,6 +285,8 @@ save-load
 select-project-interaction-smoke
 export
 wizard-palette-completion-smoke
+story-api-generated-runtime-smoke
+story-api-generated-source-suite-smoke
 ```
 
 ## Automation modes
