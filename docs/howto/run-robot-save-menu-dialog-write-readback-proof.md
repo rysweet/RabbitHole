@@ -1,16 +1,16 @@
-# [PLANNED - Implementation Pending] Run the Robot Save Menu Dialog Write/Readback Proof
+# Run the Robot Save Menu Dialog Write/Readback Proof
 
-Use this guide after `RobotSaveMenuDialogWriteReadbackProofTest` is implemented to run the focused proof that joins Robot File-menu Save activation to live Save dialog control, `.a3p` write, project readback, and marker verification.
+Use this guide to run the focused proof that joins Robot File-menu Save activation to live Save dialog control, `.a3p` write, project readback, and marker verification.
 
-## Implementation status
+## Proof shard
 
-This is document-driven guidance for the intended proof shard. The command becomes runnable when this file exists:
+The executable proof shard is:
 
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
 ```
 
-Until that test exists, do not cite the commands or example artifacts in this guide as evidence. They define the post-implementation validation contract only.
+Use the generated JSON artifact as evidence. Do not treat Maven success by itself as proof, because a safe display-precondition run can pass while writing `status: "blocked"`.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ Provide a non-headless AWT display. On Linux CI or a headless workstation, run t
 xvfb-run -a true
 ```
 
-## Run the focused proof after implementation
+## Run the focused proof
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -44,15 +44,15 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-After implementation, the proof must write `robot-save-menu-dialog-write-readback-proof.json` below:
+The proof writes `robot-save-menu-dialog-write-readback-proof.json` below:
 
 ```text
 core/ide/target/save-menu-proofs/
 ```
 
-## Run the regression baseline set after implementation
+## Run the regression baseline set
 
-After the test exists, run the joined Robot proof with the existing Save baselines before using the artifact in review:
+Run the joined Robot proof with the existing Save baselines before using the artifact in review:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
@@ -67,7 +67,7 @@ This command preserves the baseline evidence for menu-item `doClick()` write/rea
 
 ## Interpret the artifact
 
-After implementation, use the JSON artifact as the source of truth.
+Use the JSON artifact as the source of truth.
 
 | Status | Meaning |
 | --- | --- |

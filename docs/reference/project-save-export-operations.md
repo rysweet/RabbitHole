@@ -186,11 +186,11 @@ This proof target is stronger than direct operation tests and flow-seam tests be
 
 See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the evidence schema, unsupported display artifact contract, non-claims, and focused validation command.
 
-## Planned Robot Save menu dialog write/readback proof
+## Robot Save menu dialog write/readback proof
 
-The planned canonical joined Robot proof is `RobotSaveMenuDialogWriteReadbackProofTest`. Its target contract must prove one bounded path only: AWT Robot opens the rendered File menu, AWT Robot clicks the production Save menu item by `SaveProjectOperation` action identity, exactly one live Swing `JFileChooser` is controlled, a proof-root `.a3p` file is written, the file reads back through `IoUtilities.readProject(File)`, and the readback project contains `robotSaveMenuRoundTripMarker`.
+The canonical joined Robot proof is `RobotSaveMenuDialogWriteReadbackProofTest`. Its target contract proves one bounded path only: AWT Robot opens the rendered File menu, AWT Robot clicks the production Save menu item by `SaveProjectOperation` action identity, exactly one live Swing `JFileChooser` is controlled, a proof-root `.a3p` file is written, the file reads back through `IoUtilities.readProject(File)`, and the readback project contains `robotSaveMenuRoundTripMarker`.
 
-When implemented, this planned proof will be stronger than `JMenuBarRobotClickSaveProofTest` because it continues past menu dispatch into dialog control, file write, readback, and marker verification. It will be stronger than `StageIdeSaveMenuDoClickToWriteProofTest` for menu attribution because it uses Robot mouse events instead of `doClick()`. It still will not claim full desktop Save completion or all Save variants.
+This proof is stronger than `JMenuBarRobotClickSaveProofTest` because it continues past menu dispatch into dialog control, file write, readback, and marker verification. It is stronger than `StageIdeSaveMenuDoClickToWriteProofTest` for menu attribution because it uses Robot mouse events instead of `doClick()`. It still does not claim full desktop Save completion or all Save variants.
 
 | Proof boundary | Required observation |
 | --- | --- |
@@ -200,7 +200,7 @@ When implemented, this planned proof will be stronger than `JMenuBarRobotClickSa
 | Write/readback | The target `.a3p` exists, is non-empty, reads back with `IoUtilities.readProject(File)`, and contains `robotSaveMenuRoundTripMarker`. |
 | Evidence | `robot-save-menu-dialog-write-readback-proof.json` must report `status: proven` only after the complete chain succeeds, or `status: blocked` with a fixed `blocker.kind` when the environment or UI state prevents safe proof. |
 
-See [Robot Save Menu Dialog Write/Readback Proof](./robot-save-menu-dialog-write-readback-proof.md) for the artifact schema, blocker contract, non-claims, and post-implementation validation command.
+See [Robot Save Menu Dialog Write/Readback Proof](./robot-save-menu-dialog-write-readback-proof.md) for the artifact schema, blocker contract, non-claims, and validation command.
 
 ## Configuration
 
@@ -226,7 +226,7 @@ NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Din
   test
 ```
 
-After implementation, run the joined Robot Save menu/dialog/write/readback proof with the required baselines:
+Run the joined Robot Save menu/dialog/write/readback proof with the required baselines:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
