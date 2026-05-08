@@ -45,6 +45,8 @@ required_workflows = [
     "project-io-smoke",
     "failure-path-smoke",
     "future-ui-smoke",
+    "tweedle-decoder-boundary-smoke",
+    "tweedle-decoder-this-call-smoke",
     "wizard-palette-completion-smoke",
 ]
 manual_scenarios = [
@@ -64,6 +66,8 @@ gated_scenarios = [
     "alice-desktop-future-ui-smoke",
     "alice-desktop-menu-action-smoke",
     "alice-desktop-save-menu-dialog-write-proof",
+    "alice-desktop-tweedle-decoder-boundary-smoke",
+    "alice-desktop-tweedle-decoder-this-call-smoke",
     "alice-desktop-wizard-palette-completion-smoke",
 ]
 errors = []

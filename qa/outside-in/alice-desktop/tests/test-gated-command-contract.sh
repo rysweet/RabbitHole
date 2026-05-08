@@ -110,4 +110,26 @@ assert_contains "$wizard_run_dir/command.log" 'Alice3ProjectTemplateWizardIterat
 assert_contains "$wizard_run_dir/command.log" 'Alice3CompletionItemTest' "completion smoke passes focused test selector as argv"
 assert_contains "$wizard_run_dir/status.txt" '^outcome=passed$' "wizard smoke records pass outcome"
 
+tweedle_this_evidence="$tmp_root/tweedle-this-evidence"
+PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 \
+  "$RUNNER" run alice-desktop-tweedle-decoder-this-call-smoke --evidence-dir "$tweedle_this_evidence" >"$tmp_root/tweedle-this.out" 2>"$tmp_root/tweedle-this.err"
+status=$?
+assert_success "$status" "enabled Tweedle decoder this-call smoke executes argv directly"
+tweedle_this_run_dir=$(single_child_dir "$tweedle_this_evidence/alice-desktop-tweedle-decoder-this-call-smoke")
+status=$?
+assert_success "$status" "enabled Tweedle decoder this-call scenario creates one evidence directory"
+assert_contains "$tweedle_this_run_dir/command.log" 'zeroArgumentThisMethodCallDecodeCreatesMethodInvocation' "this-call smoke passes focused positive decoder test selector as argv"
+assert_contains "$tweedle_this_run_dir/status.txt" '^outcome=passed$' "this-call smoke records pass outcome"
+
+tweedle_boundary_evidence="$tmp_root/tweedle-boundary-evidence"
+PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 \
+  "$RUNNER" run alice-desktop-tweedle-decoder-boundary-smoke --evidence-dir "$tweedle_boundary_evidence" >"$tmp_root/tweedle-boundary.out" 2>"$tmp_root/tweedle-boundary.err"
+status=$?
+assert_success "$status" "enabled Tweedle decoder boundary smoke executes argv directly"
+tweedle_boundary_run_dir=$(single_child_dir "$tweedle_boundary_evidence/alice-desktop-tweedle-decoder-boundary-smoke")
+status=$?
+assert_success "$status" "enabled Tweedle decoder boundary scenario creates one evidence directory"
+assert_contains "$tweedle_boundary_run_dir/command.log" 'zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall' "boundary smoke passes focused rejection decoder test selector as argv"
+assert_contains "$tweedle_boundary_run_dir/status.txt" '^outcome=passed$' "boundary smoke records pass outcome"
+
 finish

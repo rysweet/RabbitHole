@@ -27,6 +27,7 @@ import org.alice.tweedle.ast.LocalVariableDeclaration;
 import org.alice.tweedle.ast.LogicalAndExpression;
 import org.alice.tweedle.ast.LogicalNotExpression;
 import org.alice.tweedle.ast.LogicalOrExpression;
+import org.alice.tweedle.ast.MethodCallExpression;
 import org.alice.tweedle.ast.MultiplicationExpression;
 import org.alice.tweedle.ast.NotEqualToExpression;
 import org.alice.tweedle.ast.StringConcatenationExpression;
@@ -73,6 +74,7 @@ import org.lgna.project.ast.UserParameter;
 import org.lgna.project.ast.WhileLoop;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -133,16 +135,37 @@ public class Decoder {
     for (TweedleField property : tweedleClass.getProperties()) {
       type.fields.add(decodeField(property));
     }
+    List<UserField> fields = type.getDeclaredFields();
+    List<UserMethod> userMethods = new ArrayList<>();
     for (TweedleMethod method : tweedleClass.getMethods()) {
-      type.methods.add(decodeMethod(method, type.getDeclaredFields()));
+      UserMethod userMethod = decodeMethodSignature(method);
+      type.methods.add(userMethod);
+      userMethods.add(userMethod);
+    }
+    Map<String, UserMethod> zeroArgumentMethods = zeroArgumentMethodsByName(tweedleClass.getMethods(), userMethods);
+    for (int i = 0; i < tweedleClass.getMethods().size(); i++) {
+      TweedleMethod tweedleMethod = tweedleClass.getMethods().get(i);
+      UserMethod userMethod = userMethods.get(i);
+      userMethod.body.setValue(decodeMethodBody(
+          tweedleMethod,
+          userMethod.getReturnType(),
+          userMethod.getRequiredParameters().toArray(UserParameter[]::new),
+          fields,
+          type,
+          zeroArgumentMethods));
     }
     for (TweedleConstructor constructor : tweedleClass.getConstructors()) {
-      type.constructors.add(decodeConstructor(tweedleClass, constructor, type.getDeclaredFields()));
+      type.constructors.add(decodeConstructor(tweedleClass, constructor, fields, type, zeroArgumentMethods));
     }
     return type;
   }
 
-  private NamedUserConstructor decodeConstructor(TweedleClass declaringClass, TweedleConstructor constructor, List<UserField> fields) {
+  private NamedUserConstructor decodeConstructor(
+      TweedleClass declaringClass,
+      TweedleConstructor constructor,
+      List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods) {
     if (!constructor.getName().equals(declaringClass.getName())) {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle constructor name does not match declaring class: " + constructor.getName());
@@ -151,11 +174,15 @@ public class Decoder {
         constructor.getRequiredParameters(), constructor.getOptionalParameters(), "constructor parameter");
     return new NamedUserConstructor(
         allParameters,
-        decodeConstructorBody(constructor, allParameters, fields));
+        decodeConstructorBody(constructor, allParameters, fields, declaringType, zeroArgumentMethods));
   }
 
   private ConstructorBlockStatement decodeConstructorBody(
-      TweedleConstructor constructor, UserParameter[] parameters, List<UserField> fields) {
+      TweedleConstructor constructor,
+      UserParameter[] parameters,
+      List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods) {
     List<Statement> statements = new ArrayList<>();
     List<UserLocal> locals = new ArrayList<>();
     for (TweedleStatement statement : constructor.getBody()) {
@@ -167,6 +194,10 @@ public class Decoder {
       } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
           && expressionStatement.getExpression() instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
         statements.add(decodeConstructorAssignmentStatement(constructor, assignment, parameters, locals, fields));
+      } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
+          && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
+        statements.add(decodeZeroArgumentThisMethodCallStatement(
+            declaringType, constructor.getName(), methodCall, zeroArgumentMethods));
       } else {
         throw unsupportedConstructorBody(constructor);
       }
@@ -199,21 +230,23 @@ public class Decoder {
     return all.toArray(UserParameter[]::new);
   }
 
-  private UserMethod decodeMethod(TweedleMethod method, List<UserField> fields) {
+  private UserMethod decodeMethodSignature(TweedleMethod method) {
     AbstractType<?, ?, ?> returnType = resolveReturnType(method.getType());
     UserParameter[] allParameters = decodeAllParameters(method.getRequiredParameters(), method.getOptionalParameters(), "method parameter");
     return new UserMethod(
         method.getName(),
         returnType,
         allParameters,
-        decodeMethodBody(method, returnType, allParameters, fields));
+        new BlockStatement());
   }
 
   private BlockStatement decodeMethodBody(
       TweedleMethod method,
       AbstractType<?, ?, ?> returnType,
       UserParameter[] allParameters,
-      List<UserField> fields) {
+      List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods) {
     if (method.getBody().isEmpty()) {
       if (returnType != JavaType.VOID_TYPE) {
         throw new UnsupportedTweedleDecodeException(
@@ -241,6 +274,10 @@ public class Decoder {
               "Tweedle while loops are only supported in void methods by the AST decoder: " + method.getName());
         }
         statements.add(decodeWhileLoop(method, allParameters, locals, fields, whileLoop));
+      } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
+          && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
+        statements.add(decodeZeroArgumentThisMethodCallStatement(
+            declaringType, method.getName(), methodCall, zeroArgumentMethods));
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
           && i == method.getBody().size() - 1) {
         statements.add(decodeReturnStatement(method, returnType, allParameters, locals, fields, returnStatement));
@@ -253,6 +290,26 @@ public class Decoder {
       throw unsupportedMethodBody(method);
     }
     return new BlockStatement(statements.toArray(Statement[]::new));
+  }
+
+  private Statement decodeZeroArgumentThisMethodCallStatement(
+      NamedUserType declaringType,
+      String ownerName,
+      MethodCallExpression methodCall,
+      Map<String, UserMethod> zeroArgumentMethods) {
+    if (!methodCall.hasExplicitTarget() || !(methodCall.getTarget() instanceof ThisExpression)) {
+      throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
+    }
+    if (!methodCall.getArguments().isEmpty()) {
+      throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
+    }
+    UserMethod targetMethod = zeroArgumentMethods.get(methodCall.getMethodName());
+    if (targetMethod == null) {
+      throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
+    }
+    return AstUtilities.createMethodInvocationStatement(
+        org.lgna.project.ast.ThisExpression.createInstanceThatCanExistWithoutAnAncestorType(declaringType),
+        targetMethod);
   }
 
   private ConditionalStatement decodeIfStatement(
@@ -802,6 +859,28 @@ public class Decoder {
     return null;
   }
 
+  private Map<String, UserMethod> zeroArgumentMethodsByName(List<TweedleMethod> tweedleMethods, List<UserMethod> userMethods) {
+    Map<String, UserMethod> methodsByName = null;
+    for (int i = 0; i < tweedleMethods.size(); i++) {
+      TweedleMethod tweedleMethod = tweedleMethods.get(i);
+      UserMethod userMethod = userMethods.get(i);
+      if (!tweedleMethod.isStatic()
+          && tweedleMethod.getRequiredParameters().isEmpty()
+          && tweedleMethod.getOptionalParameters().isEmpty()
+          && userMethod.getRequiredParameters().isEmpty()) {
+        if (methodsByName == null) {
+          methodsByName = new HashMap<>(userMethods.size());
+        }
+        if (methodsByName.put(userMethod.getName(), userMethod) != null) {
+          throw new UnsupportedTweedleDecodeException(
+              "Duplicate zero-argument Tweedle methods are not supported by the AST decoder: "
+                  + userMethod.getName());
+        }
+      }
+    }
+    return methodsByName != null ? methodsByName : Map.of();
+  }
+
   private AbstractType<?, ?, ?> resolveReturnType(TweedleType tweedleType) {
     if (tweedleType == TweedleVoidType.VOID) {
       return JavaType.VOID_TYPE;
@@ -931,6 +1010,15 @@ public class Decoder {
         "Tweedle method bodies are not yet supported by the AST decoder: " + method.getName());
   }
 
+  private UnsupportedTweedleDecodeException unsupportedZeroArgumentThisMethodCall(
+      String ownerName,
+      MethodCallExpression methodCall) {
+    return new UnsupportedTweedleDecodeException(
+        "Only explicit zero-argument this-method calls declared on the current Tweedle type "
+            + "are supported by the AST decoder: "
+            + ownerName + "." + describeMethodCall(methodCall));
+  }
+
   private UnsupportedTweedleDecodeException unsupportedConstructorBody(TweedleConstructor constructor) {
     return new UnsupportedTweedleDecodeException(
         "Tweedle constructor bodies are not yet supported by the AST decoder: " + constructor.getName());
@@ -966,6 +1054,26 @@ public class Decoder {
       return identifierReference.getName() + "." + fieldAccess.getFieldName();
     }
     return "<unsupported>." + fieldAccess.getFieldName();
+  }
+
+  private String describeMethodCall(MethodCallExpression methodCall) {
+    if (!methodCall.hasExplicitTarget()) {
+      return methodCall.getMethodName();
+    }
+    TweedleExpression target = methodCall.getTarget();
+    if (target instanceof ThisExpression) {
+      return "this." + methodCall.getMethodName();
+    }
+    if (target instanceof IdentifierReference identifierReference) {
+      return identifierReference.getName() + "." + methodCall.getMethodName();
+    }
+    if (target instanceof org.alice.tweedle.ast.FieldAccess fieldAccess) {
+      return describeMemberAccess(fieldAccess) + "." + methodCall.getMethodName();
+    }
+    if (target instanceof MethodCallExpression targetMethodCall) {
+      return describeMethodCall(targetMethodCall) + "." + methodCall.getMethodName();
+    }
+    return "<unsupported>." + methodCall.getMethodName();
   }
 
   private UnsupportedTweedleDecodeException unsupportedFieldInitializer(TweedleField property) {

@@ -206,6 +206,8 @@ Gated command smoke gaps:
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` |
+| `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` |
+| `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` |
 
 Gated command smokes are automation coverage, but they remain evidence gaps

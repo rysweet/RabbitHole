@@ -10,6 +10,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [List available scenarios](#list-available-scenarios)
 - [Run branch-installable checks with uvx](#run-branch-installable-checks-with-uvx)
 - [Run the real Alice launch scenario](#run-the-real-alice-launch-scenario)
+- [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
 - [Configure scenario and Xvfb runs](#configure-scenario-and-xvfb-runs)
@@ -195,6 +196,26 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-select-pro
 ```
 
 Review `swing-widget-observation.json`. If `status=observed`, the Java process and Swing widgets are visible through AT-SPI (`widgetCount>0`, `dialog` role). Tab labels are not currently enumerated via AT-SPI (`tabLabels` is empty, `tabLabelMatch` is false). If `status=blocked`, `blocker` and `blockerDetail` name the exact remaining condition.
+
+## Open Africa Full from Select Project
+
+The Select Project tab-click feature contract targets the committed starter project `core/resources/src/application/resources/starter-projects/AfricaFull.a3p` with display name `Africa Full`. It starts from the existing Select Project/main-window proof path and advances only through AT-SPI automation.
+
+Until the matching scenario metadata, schema, validator, runner, and probe changes land together, this section describes the intended target-specific evidence contract rather than the current tab-click artifact shape.
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-select-project-tab-click-exec \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
+```
+
+Review `tab-click-observation.json`. Success under the target-specific contract requires `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same target metadata, and `projectOpenObserved=true`.
+
+If the probe cannot safely prove target-specific selection/opening, it must preserve the existing string `blocker` and `blockerDetail` fields, then add structured target-specific blocker detail naming the observed AT-SPI state, action attempted, expected next action, and reason progress stopped. A blocked result is the correct output when continuing would turn generic Select Project dismissal or main-window state into an unsupported Africa Full claim.
+
+For the full evidence contract, see [Select Project Africa Full AT-SPI evidence reference](../reference/select-project-africa-full-atspi-evidence.md).
 
 ## Prepare evidence for manual workflows
 

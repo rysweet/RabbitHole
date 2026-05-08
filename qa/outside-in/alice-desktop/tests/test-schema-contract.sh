@@ -36,6 +36,26 @@ if missing:
     raise AssertionError(f"schema is missing required top-level fields: {missing}")
 
 automation = schema["properties"]["automation"]
+target_starter = schema["properties"].get("targetStarter")
+if not isinstance(target_starter, dict):
+    raise AssertionError("schema must accept targetStarter metadata for target-specific evidence scenarios")
+if target_starter.get("additionalProperties") is not False:
+    raise AssertionError("targetStarter must reject unknown metadata fields")
+required_target = set(target_starter.get("required", []))
+expected_target = {"displayName", "repositoryPath"}
+missing_target = sorted(expected_target - required_target)
+if missing_target:
+    raise AssertionError(f"targetStarter must require displayName and repositoryPath: {missing_target}")
+target_properties = target_starter.get("properties", {})
+if target_properties.get("displayName", {}).get("minLength") != 1:
+    raise AssertionError("targetStarter.displayName must be a non-empty string")
+repo_schema = target_properties.get("repositoryPath", {})
+repo_pattern = repo_schema.get("pattern", "")
+if "(?!/)" not in repo_pattern or "\\.\\." not in repo_pattern:
+    raise AssertionError("targetStarter.repositoryPath schema must reject absolute paths and parent traversal")
+if repo_schema.get("minLength") != 1:
+    raise AssertionError("targetStarter.repositoryPath must be a non-empty string")
+
 required_automation = set(automation.get("required", []))
 expected_automation = {"cwd", "argv", "timeoutSeconds", "readyWaitSeconds"}
 missing_automation = sorted(expected_automation - required_automation)
@@ -134,6 +154,30 @@ expected_argv = {
     ),
     ("qa/outside-in/alice-desktop/runners/netbeans-package-smoke.sh",),
     ("qa/outside-in/alice-desktop/runners/package-install-smoke.sh",),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/ast",
+        "-am",
+        "-Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeCreatesMethodInvocation",
+        "test",
+    ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/ast",
+        "-am",
+        "-Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+zeroArgumentThisMethodCallDecodeRejectsChainedCall+zeroArgumentThisMethodCallDecodeRejectsImplicitTarget",
+        "test",
+    ),
     (
         "mvn",
         "-DincludeSims=false",

@@ -29,7 +29,15 @@ required_top = [
     "evidence",
     "fallback",
 ]
-allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags"}
+allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter"}
+EXPECTED_TARGET_STARTER = {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p",
+}
+TARGET_STARTER_SCENARIO_IDS = {
+    "alice-desktop-select-project-tab-click-exec",
+    "alice-desktop-post-project-open-window-state",
+}
 workflow_values = {
     "archive-fixture-smoke",
     "exported-project-smoke",
@@ -52,6 +60,8 @@ workflow_values = {
     "select-project-atk-exec-smoke",
     "select-project-tab-click-smoke",
     "post-project-open-window-state-smoke",
+    "tweedle-decoder-boundary-smoke",
+    "tweedle-decoder-this-call-smoke",
     "export",
     "wizard-palette-completion-smoke",
 }
@@ -224,6 +234,36 @@ allowed_automation = {
             "qa/outside-in/alice-desktop/evidence/future-ui-launch",
         ),
     ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
+            "core/ast",
+            "-am",
+            "-Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeCreatesMethodInvocation",
+            "test",
+        ),
+    ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
+            "core/ast",
+            "-am",
+            "-Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+zeroArgumentThisMethodCallDecodeRejectsChainedCall+zeroArgumentThisMethodCallDecodeRejectsImplicitTarget",
+            "test",
+        ),
+    ),
 }
 
 
@@ -345,6 +385,40 @@ def validate_automation_cwd(errors, cwd):
         errors.append("automation.cwd must resolve inside repository root")
 
 
+def validate_target_starter(errors, scenario_id, value):
+    if value is None:
+        if scenario_id in TARGET_STARTER_SCENARIO_IDS:
+            errors.append("targetStarter is required for target-specific Select Project evidence scenarios")
+        return
+    if not isinstance(value, dict):
+        errors.append("targetStarter must be a mapping")
+        return
+
+    unknown_target = sorted(set(value) - {"displayName", "repositoryPath"})
+    if unknown_target:
+        errors.append(f"targetStarter has unknown field(s): {', '.join(unknown_target)}")
+
+    display_name = value.get("displayName")
+    repository_path = value.get("repositoryPath")
+    if not isinstance(display_name, str) or not display_name.strip():
+        errors.append("targetStarter.displayName must be a non-empty string")
+    if not isinstance(repository_path, str) or not repository_path.strip():
+        errors.append("targetStarter.repositoryPath must be a non-empty string")
+    elif Path(repository_path).is_absolute():
+        errors.append("targetStarter.repositoryPath must be repository-relative, not absolute")
+    elif any(part == ".." for part in Path(repository_path).parts):
+        errors.append("targetStarter.repositoryPath must not contain .. path traversal")
+
+    if scenario_id in TARGET_STARTER_SCENARIO_IDS:
+        if display_name != EXPECTED_TARGET_STARTER["displayName"]:
+            errors.append("targetStarter.displayName must be Africa Full for target-specific Select Project evidence scenarios")
+        if repository_path != EXPECTED_TARGET_STARTER["repositoryPath"]:
+            errors.append(
+                "targetStarter.repositoryPath must be "
+                f"{EXPECTED_TARGET_STARTER['repositoryPath']} for target-specific Select Project evidence scenarios"
+            )
+
+
 def validate(path, scenario):
     errors = []
     missing = [field for field in required_top if field not in scenario]
@@ -372,6 +446,8 @@ def validate(path, scenario):
     automation_mode = scenario.get("automationMode")
     if automation_mode not in mode_values:
         errors.append(f"automationMode must be one of: {', '.join(sorted(mode_values))}")
+
+    validate_target_starter(errors, scenario_id, scenario.get("targetStarter"))
 
     for name in ("preconditions", "userActions", "expectedOutcomes"):
         require_string_list(errors, path, name, scenario.get(name))

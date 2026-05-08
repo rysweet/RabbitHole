@@ -2,6 +2,9 @@ id: alice-desktop-post-project-open-window-state
 title: Prove Alice 3 main window AT-SPI state after Select Project dismissal
 workflow: post-project-open-window-state-smoke
 automationMode: xvfb-real-alice
+targetStarter:
+  displayName: Africa Full
+  repositoryPath: core/resources/src/application/resources/starter-projects/AfricaFull.a3p
 preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
@@ -43,13 +46,14 @@ evidence:
     - license-acceptance.json recording the isolated java.util.prefs.userRoot state.
     - license-dialog.json recording not-observed.
     - x-window-inventory.json naming visible X window title, class, process, and geometry.
-    - tab-click-observation.json recording projectOpenObserved=true (prerequisite from alice-desktop-select-project-tab-click-exec).
+    - tab-click-observation.json recording targetStarter displayName Africa Full, targetStarter repositoryPath core/resources/src/application/resources/starter-projects/AfricaFull.a3p, evidenceStatus=opened, openedStarter matching Africa Full, and projectOpenObserved=true.
     - post-project-open-observation.json recording status=observed, postOpenWindowObserved=true, mainFrameNames with at least one non-Select-Project entry, and mainFrameChildCounts confirming widget presence.
     - Screenshot of the Alice desktop state after project load.
     - Environment summary with Java version, Maven version, and DISPLAY value.
 fallback:
   mode: manual-evidence-required
   notes:
+    - If Africa Full is not specifically selected/opened, record blocker=target-starter-open-not-proven instead of using generic main-window evidence.
     - If AT-SPI is unavailable (pyatspi-not-installed or at-spi-registry-unavailable), record the exact blocker in post-project-open-observation.json and treat it as a machine-readable gap report (option c).
     - If the only frame visible is still "Select Project", record blocker=no-non-select-project-frame-visible; this is a precise gap report that names the missing target.
     - Do not claim postOpenWindowObserved=true unless post-project-open-observation.json explicitly records it.

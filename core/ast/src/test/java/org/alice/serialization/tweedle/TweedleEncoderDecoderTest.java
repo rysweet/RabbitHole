@@ -20,6 +20,7 @@ import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalAccess;
 import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.LogicalComplement;
+import org.lgna.project.ast.MethodInvocation;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
@@ -28,6 +29,7 @@ import org.lgna.project.ast.RelationalInfixExpression;
 import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.StringConcatenation;
 import org.lgna.project.ast.StringLiteral;
+import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserArrayType;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
@@ -1327,6 +1329,177 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void zeroArgumentThisMethodCallDecodeCreatesMethodInvocation() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          void caller() { this.helper(); }
+          void helper() { }
+        }
+        """);
+
+    UserMethod caller = userMethodNamed(type, "caller");
+    UserMethod helper = userMethodNamed(type, "helper");
+    assertEquals(1, caller.body.getValue().statements.size());
+    assertTrue(caller.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) caller.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.helper(value: 1); }
+          void helper(WholeNumber value) { }
+        }
+        """, "this.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.helper(); }
+          void helper(WholeNumber value <- 1) { }
+        }
+        """, "this.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsUnknownMethod() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.missing(); }
+        }
+        """, "this.missing");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              void caller() { this.helper(); }
+              void helper() { }
+              void helper() { }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("Duplicate zero-argument Tweedle methods"));
+    assertTrue(thrown.getMessage().contains("helper"));
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsNonThisTarget() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          TextString label <- "";
+          void caller() { label.helper(); }
+          void helper() { }
+        }
+        """, "label.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.helper(); }
+          static void helper() { }
+        }
+        """, "this.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsChainedCall() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { this.helper().other(); }
+          void helper() { }
+          void other() { }
+        }
+        """, "this.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallDecodeRejectsImplicitTarget() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          void caller() { helper(); }
+          void helper() { }
+        }
+        """, "helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallInConstructorDecodeCreatesMethodInvocation() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          SyntheticType() { this.helper(); }
+          void helper() { }
+        }
+        """);
+
+    NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
+    UserMethod helper = userMethodNamed(type, "helper");
+    assertEquals(1, constructor.body.getValue().statements.size());
+    assertTrue(constructor.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) constructor.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallInConstructorDecodeRejectsArgumentBearingCall() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          SyntheticType() { this.helper(value: 1); }
+          void helper(WholeNumber value) { }
+        }
+        """, "SyntheticType.this.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallInConstructorDecodeRejectsUnknownMethod() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          SyntheticType() { this.missing(); }
+        }
+        """, "SyntheticType.this.missing");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallInConstructorDecodeRejectsNonThisTarget() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          TextString label <- "";
+          SyntheticType() { label.helper(); }
+          void helper() { }
+        }
+        """, "SyntheticType.label.helper");
+  }
+
+  @Test
+  public void zeroArgumentThisMethodCallInConstructorDecodeRejectsStaticTargetMethod() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          SyntheticType() { this.helper(); }
+          static void helper() { }
+        }
+        """, "SyntheticType.this.helper");
+  }
+
+  @Test
   public void decodeEnumReportsOnlyClassDeclarationsSupported() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -1705,6 +1878,22 @@ public class TweedleEncoderDecoderTest {
     NamedUserType type = new NamedUserType();
     type.name.setValue(name);
     return type;
+  }
+
+  private static UserMethod userMethodNamed(NamedUserType type, String name) {
+    return type.getDeclaredMethods().stream()
+        .filter(method -> name.equals(method.getName()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("Missing method: " + name));
+  }
+
+  private void assertUnsupportedZeroArgumentThisMethodCallDecode(String source, String expectedDetail) {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode(source));
+
+    assertTrue(thrown.getMessage().contains("zero-argument this-method calls"));
+    assertTrue(thrown.getMessage().contains(expectedDetail));
   }
 
   private static void assertIntegerInitializer(UserField field, String expectedName, int expectedValue) {
