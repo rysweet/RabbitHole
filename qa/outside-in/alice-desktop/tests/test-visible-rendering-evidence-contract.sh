@@ -742,7 +742,7 @@ cat >"$target_multiple_invalid_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" <<'EOF'
   "javaPid": 12345,
   "postOpenRuntimeDisplayAccessibilityObserved": true,
   "postOpenWindowObserved": true,
-  "runtimeDisplayCandidateCount": 4,
+  "runtimeDisplayCandidateCount": 5,
   "runtimeDisplayCandidates": [
     {
       "childCount": 0,
@@ -774,8 +774,17 @@ cat >"$target_multiple_invalid_dir/$POST_OPEN_RUNTIME_DISPLAY_ARTIFACT" <<'EOF'
     {
       "childCount": 0,
       "geometryStatus": "available",
-      "name": "Scene display hidden",
+      "name": "Scene display non-screen",
       "path": "application/0/6",
+      "role": "canvas",
+      "screenExtents": {"coordinateType": "component", "height": 240, "width": 320, "x": 0, "y": 0},
+      "states": ["enabled", "showing", "visible"]
+    },
+    {
+      "childCount": 0,
+      "geometryStatus": "available",
+      "name": "Scene display hidden",
+      "path": "application/0/7",
       "role": "canvas",
       "screenExtents": {"coordinateType": "screen", "height": 240, "width": 320, "x": 1180, "y": 120},
       "states": ["enabled"]
@@ -809,7 +818,7 @@ bash -c '
     after-readiness-wait \
     observed \
     x-window-inventory.json \
-    4 \
+    5 \
     "$2/post-open-runtime-display-accessibility-evidence.json"
   write_visible_rendering_pixel_target_blocker \
     "$2" \
@@ -845,7 +854,7 @@ for label, payload in (("controlled", controlled), ("blocker", blocker)):
         raise AssertionError(f"{label} target must not be identified with invalid extents")
     if target.get("status") != "blocked":
         raise AssertionError(f"{label} target must stay blocked with invalid extents")
-    if target.get("runtimeDisplayCandidateCount") != 4:
+    if target.get("runtimeDisplayCandidateCount") != 5:
         raise AssertionError(f"{label} target must preserve raw candidate count")
 PY
   target_multiple_invalid_status=$?

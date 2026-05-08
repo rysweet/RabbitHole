@@ -678,6 +678,13 @@ def has_valid_visible_screen_extents(candidate):
         and valid_screen_extents(candidate) is not None
     )
 
+def valid_visible_screen_extent_candidates(candidates):
+    return [
+        candidate
+        for candidate in candidates
+        if has_valid_visible_screen_extents(candidate)
+    ]
+
 def derived_geometry_status(candidate):
     status = str(candidate.get("geometryStatus") or "")
     if status in BLOCKED_GEOMETRY_STATUSES or status == "available":
@@ -751,11 +758,7 @@ def world_canvas_target_from_runtime_display(runtime_display_path):
         candidates = []
     reported_count = runtime_display.get("runtimeDisplayCandidateCount")
     candidate_count = reported_count if isinstance(reported_count, int) and reported_count >= 0 else len(candidates)
-    valid_candidates = [
-        candidate
-        for candidate in candidates
-        if has_valid_visible_screen_extents(candidate)
-    ]
+    valid_candidates = valid_visible_screen_extent_candidates(candidates)
     if len(valid_candidates) == 1:
         return target_ready_payload(valid_candidates[0], candidate_count)
     if len(valid_candidates) > 1:
@@ -912,6 +915,13 @@ def has_valid_visible_screen_extents(candidate):
         and valid_screen_extents(candidate) is not None
     )
 
+def valid_visible_screen_extent_candidates(candidates):
+    return [
+        candidate
+        for candidate in candidates
+        if has_valid_visible_screen_extents(candidate)
+    ]
+
 def derived_geometry_status(candidate):
     status = str(candidate.get("geometryStatus") or "")
     if status in BLOCKED_GEOMETRY_STATUSES or status == "available":
@@ -958,11 +968,7 @@ def blocker_metadata(runtime_display_path):
         candidates = []
     reported_count = runtime_display.get("runtimeDisplayCandidateCount")
     candidate_count = reported_count if isinstance(reported_count, int) and reported_count >= 0 else len(candidates)
-    valid_candidates = [
-        candidate
-        for candidate in candidates
-        if has_valid_visible_screen_extents(candidate)
-    ]
+    valid_candidates = valid_visible_screen_extent_candidates(candidates)
     if len(valid_candidates) > 1:
         return "ambiguous-candidates", candidate_count
     return zero_valid_candidate_geometry_status(candidates), candidate_count
