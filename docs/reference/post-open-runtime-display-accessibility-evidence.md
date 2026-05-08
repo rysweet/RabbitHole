@@ -633,12 +633,14 @@ non-positive, malformed, or ambiguous.
 
 `ambiguous-candidates` is emitted only when more than one visible/showing
 candidate has valid positive screen-coordinate extents. If two or more
-runtime/display candidates exist but none has valid extents, the blocker keeps a
+runtime/display candidates exist but none is eligible, the blocker keeps a
 non-ambiguous geometry status such as `missing-extents` or `invalid-extents`.
 The blocked artifact must still keep `worldCanvasPixelTarget.identified=false`
 and must not claim readiness, rendered-world visibility, or pixel correctness.
 
 ### Candidate geometry examples
+
+The examples below show only the fields relevant to the geometry decision.
 
 Multiple missing or invalid candidates are blocked, but not ambiguous:
 
