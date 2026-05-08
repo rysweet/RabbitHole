@@ -411,6 +411,34 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
+  public void generatedJsonPlayerArchiveWithArgumentBearingExplicitThisMethodCallReportsUnsupportedDecodeBoundary() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-argument-this-call-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithArgumentThisCallBoundary",
+        """
+            class GeneratedProgramWithArgumentThisCallBoundary extends SProgram {
+              void caller() { this.helper(value: 1); }
+              void helper(WholeNumber value) { }
+            }
+            """,
+        "GeneratedArgumentThisCallBoundaryScene",
+        "class GeneratedArgumentThisCallBoundaryScene extends SScene {}");
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertTrue(thrown.getMessage().contains(
+        "Project archive manifest names program type 'GeneratedProgramWithArgumentThisCallBoundary'"));
+    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedArgumentThisCallBoundaryScene]"));
+    assertTrue(thrown.getMessage().contains(
+        "unsupported manifest-declared Tweedle type names are [GeneratedProgramWithArgumentThisCallBoundary]"));
+    assertTrue(thrown.getMessage().contains(
+        "GeneratedProgramWithArgumentThisCallBoundary: Tweedle argument-bearing explicit this method calls"));
+    assertTrue(thrown.getMessage().contains("caller.this.helper"));
+  }
+
+  @Test
   public void generatedJsonPlayerArchiveWithComplexInitializerSiblingTypeIsRejectedWithoutSilentOmission() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-complex-initializer-sibling-boundary.a3w");
 
