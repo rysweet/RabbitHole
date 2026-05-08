@@ -62,6 +62,22 @@ public class ModelExportTest {
   }
 
   @Test
+  public void addResourceOmitsRedundantAndBlankAttributionFromXml() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addAttribution("Alice Test", "2026");
+    exporter.addResource("MatchingAttributionProp", "Default", "ALICE", "Alice Test", "2026");
+    exporter.addResource("BlankAttributionProp", "Default", "ALICE", "", "");
+
+    Document xml = parseXml(exporter.createXMLString());
+    Element root = xml.getDocumentElement();
+    assertEquals("Alice Test", root.getAttribute("creator"));
+    assertEquals("2026", root.getAttribute("creationYear"));
+
+    assertNoResourceAttribution(findResourceByModelName(xml, "MatchingAttributionProp"));
+    assertNoResourceAttribution(findResourceByModelName(xml, "BlankAttributionProp"));
+  }
+
+  @Test
   public void modelExporterCreatesCompilableResourceJavaCode() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
 
@@ -289,6 +305,22 @@ public class ModelExportTest {
     NodeList nodes = parent.getElementsByTagName(childTag);
     assertEquals(1, nodes.getLength());
     assertEquals(expectedText, nodes.item(0).getTextContent());
+  }
+
+  private static void assertNoResourceAttribution(Element resource) {
+    assertFalse(resource.hasAttribute("creator"));
+    assertFalse(resource.hasAttribute("creationYear"));
+  }
+
+  private static Element findResourceByModelName(Document xml, String modelName) {
+    NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
+    for (int i = 0; i < resources.getLength(); i++) {
+      Element resource = (Element) resources.item(i);
+      if (modelName.equals(resource.getAttribute("modelName"))) {
+        return resource;
+      }
+    }
+    throw new AssertionError("Resource not found for modelName " + modelName);
   }
 
   private static void assertAppearsBefore(String text, String first, String second) {
