@@ -705,6 +705,7 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
 
   public final void saveProjectTo(File file) throws IOException {
     ProjectSaveTargetPlan saveTargetPlan = ProjectSaveTargetPlan.choose(uriProjectLoader, file);
+    UriProjectLoader previousLoader = uriProjectLoader;
 
     if (saveTargetPlan.shouldCopyDefaultBackupDirectory()) {
       projectFileUtilities.copyDefaultBackupDirectory(file);
@@ -714,7 +715,12 @@ public abstract class ProjectApplication extends PerspectiveApplication<ProjectD
 
     //    long startTime = System.currentTimeMillis();
 
-    projectFileUtilities.saveProjectTo(file, saveTargetPlan.isBackupSave());
+    try {
+      projectFileUtilities.saveProjectTo(file, saveTargetPlan.isBackupSave());
+    } catch (IOException e) {
+      uriProjectLoader = previousLoader;
+      throw e;
+    }
 
     if (saveTargetPlan.shouldCopyDefaultBackupDirectory()) {
       updateInterface();

@@ -22,6 +22,7 @@ import org.lgna.story.SProgram;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.List;
@@ -89,6 +90,24 @@ public class ProjectApplicationSaveProjectToTest {
     assertEquals(1, newTargetBackups.length);
     assertReadableProject(newTargetBackups[0], "RenamedProgram");
     assertFalse(new File(temporaryFolder.getRoot(), "original-world.bak").exists());
+  }
+
+  @Test
+  public void failedSaveAsKeepsPreviousTargetAndOriginalArchive() throws Exception {
+    File originalFile = new File(temporaryFolder.getRoot(), "stable-world.a3p");
+    IoUtilities.writeProject(originalFile, projectNamed("StableProgram"));
+    TestProjectApplication application = applicationWith(
+        projectNamed("UnsavedProgram"),
+        new FileProjectLoader(originalFile));
+    File invalidTarget = temporaryFolder.newFolder("directory-cannot-be-archive.a3p");
+
+    assertThrows(IOException.class, () -> application.saveProjectTo(invalidTarget));
+
+    assertReadableProject(originalFile, "StableProgram");
+    assertEquals(originalFile.toURI(), application.getUri());
+    assertEquals(originalFile.getCanonicalFile(), application.getMainProjectFile().getCanonicalFile());
+    assertFalse(application.isBackup());
+    assertFalse(new File(temporaryFolder.getRoot(), "directory-cannot-be-archive.bak").exists());
   }
 
   @Test
