@@ -276,6 +276,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertFalse(json, json.contains("\"status\": \"not_proven\""));
     assertTrue(json, json.contains("\"reason\": \"No available non-headless AWT display\""));
     assertTrue(json, json.contains("\"wroteFile\": false"));
     assertTrue(json, json.contains("\"Save menu/control/dialog/write path\""));
@@ -295,7 +296,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     probe.writeResult(evidenceDir);
 
     String json = Files.readString(probe.artifactPath(evidenceDir));
-    assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertTrue(json, json.contains("\"status\": \"not_proven\""));
+    assertFalse(json, json.contains("\"status\": \"unsupported\""));
     assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_e2e_not_completed\""));
     assertTrue(json, json.contains("\"wroteFile\": false"));
     assertTrue(json, json.contains("\"approved_selection\": false"));
@@ -318,7 +320,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
     probe.writeResult(evidenceDir);
 
     String json = Files.readString(probe.artifactPath(evidenceDir));
-    assertTrue(json, json.contains("\"status\": \"unsupported\""));
+    assertTrue(json, json.contains("\"status\": \"not_proven\""));
+    assertFalse(json, json.contains("\"status\": \"unsupported\""));
     assertTrue(json, json.contains("\"wroteFile\": false"));
     assertTrue(json, json.contains("\"file_written\": false"));
     assertFalse(json, json.contains("\"wroteFile\": true"));
@@ -374,7 +377,8 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
 
       probe.writeResult(evidenceDir);
       String json = Files.readString(probe.artifactPath(evidenceDir));
-      assertTrue(json, json.contains("\"status\": \"unsupported\""));
+      assertTrue(json, json.contains("\"status\": \"not_proven\""));
+      assertFalse(json, json.contains("\"status\": \"unsupported\""));
       assertTrue(json, json.contains("\"reason\": \"save_menu_doclick_e2e_not_completed\""));
       assertTrue(json, json.contains("\"poll_count\": 2"));
       assertTrue(json, json.contains("\"approved_selection\": false"));
@@ -541,7 +545,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
       boolean claimedWroteFile = proven && observedExpectedFile;
       boolean claimedFileWritten = proven && fileWritten;
       boolean claimedFileNonempty = proven && fileNonempty;
-      String status = proven ? "proven" : "unsupported";
+      String status = proven ? "proven" : "not_proven";
       String reason = proven
           ? "save_menu_doclick_approved_chooser_wrote_project_file"
           : this.failureReason == null ? "save_menu_doclick_e2e_not_completed" : this.failureReason;
