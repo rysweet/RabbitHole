@@ -56,8 +56,9 @@ characterization tests.
 - [Formal spec contracts reference](./reference/formal-spec-contracts.md) -
   Artifact inventory, archive contracts, recovery model details, configuration,
   and executable validation boundaries.
-- [Project Backup Recovery IO Characterization](./reference/project-backup-recovery-io.md) -
-  Reference for corrupt project load, backup selection, all-backups failure
-  dispatch, configuration, and focused `core/ide` validation.
+- [Project Load and Backup Recovery Characterization](./reference/project-backup-recovery-io.md) -
+  Reference for saved temporary project loading, corrupt project rejection,
+  backup selection, all-backups failure dispatch, configuration, and focused
+  `core/ide` validation.
 - [Trace save, load, export, and recovery behavior](./tutorials/trace-save-load-recovery.md) -
   A guided walkthrough from acceptance scenario to model rule to focused test.
