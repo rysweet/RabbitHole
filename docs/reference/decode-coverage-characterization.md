@@ -53,14 +53,16 @@ Build the coverage as a compatibility safety net, not as a decoder redesign.
 The intended coverage covers successful decode behavior and known edge behavior:
 
 - empty and malformed Tweedle source;
-- unsupported Tweedle declarations, unsupported superclasses, and unsupported
-  adjacent method-call forms around the zero-argument `this.method()`
-  slice;
+- unsupported Tweedle declarations, unsupported superclasses, and the named
+  argument-bearing explicit `this.method(arg...)` fail-fast boundary next to the
+  zero-argument `this.method()` slice;
 - resource fields initialized to `null`, plus explicit fail-fast diagnostics
   that only `null` resource field initializers decode without archive binding
   context;
 - same-type zero-argument `this.method()` calls decoded to Alice
-  `MethodInvocation` statements in method and constructor bodies;
+  `MethodInvocation` statements in method and constructor bodies, with
+  argument-bearing explicit `this.method(arg...)` calls rejected before argument
+  decode or method binding;
 - missing or malformed Tweedle entries in player archives;
 - JSON player archives that decode a simple Tweedle program;
 - JSON player and type archives whose unsupported manifest-declared Tweedle
@@ -127,7 +129,8 @@ Documented behavior, including the zero-argument this-method slice:
 | Resource field initializer `ImageResource picture <- null` | Decodes as a resource-typed field with a `NullLiteral` initializer. |
 | Non-null resource field initializers such as `ImageResource picture <- someImage` or `AudioResource sound <- sound0` | Throws `UnsupportedTweedleDecodeException` describing the resource field initializer, the fact that the initializer is non-null, the resource type, the field name, and the missing archive resource manifest/binding context. The diagnostic does not promise to include the initializer token such as `someImage`. This is a fail-fast boundary, not full resource binding support. |
 | Method or constructor body expression statement `this.helper();` where `helper` is a known same-type zero-argument method | Decodes to an `ExpressionStatement` containing a `MethodInvocation` that resolves to the declared `helper` `UserMethod`; the implementation registers same-type methods before decoding bodies so declaration order does not matter. |
-| Argument-bearing calls, unknown methods, non-`this` targets, implicit calls, static-style calls, object construction calls, or chained calls | Throws `UnsupportedTweedleDecodeException`; this is not general method-call support. Focused tests cover argument-bearing calls, unknown methods, and non-`this` targets; the remaining forms are documented non-goals unless a later slice routes them through this boundary. |
+| Method or constructor body expression statement `this.helper(1);` or any other explicit `this.method(arg...)` call | Throws `UnsupportedTweedleDecodeException` with the named boundary `argument-bearing explicit this method calls`. The decoder rejects this shape before argument-expression decode, method binding, overload resolution, or optional-parameter handling. |
+| Unknown methods, non-`this` targets, implicit calls, static-style calls, object construction calls, or chained calls | Throws `UnsupportedTweedleDecodeException`; this is not general method-call support. Focused tests cover unknown methods and non-`this` targets; the remaining forms are documented non-goals unless a later slice routes them through this boundary. |
 | Non-class declarations such as enums | Throws `UnsupportedTweedleDecodeException` describing the class-only boundary. |
 | Empty source | Throws `UnsupportedTweedleDecodeException` describing the class-only boundary. |
 
@@ -187,6 +190,52 @@ For the focused method-call slice, see
 That slice supports explicit zero-argument `this.method()` calls only; explicit
 `this.method(arg...)` calls intentionally fail fast as unsupported
 argument-bearing explicit `this` method calls.
+
+#### Argument-bearing explicit this-method boundary
+
+The argument-bearing explicit `this.method(arg...)` shard is an intentional
+unsupported boundary beside the supported zero-argument call form. It documents
+the finished decoder behavior for the nearest unsupported neighbor after the
+resource-initializer boundary and after zero-argument `this.method()` support.
+
+Supported source:
+
+```java
+class Program {
+  void helper() {
+  }
+
+  void run() {
+    this.helper();
+  }
+}
+```
+
+Unsupported source:
+
+```java
+class Program {
+  void helper(WholeNumber value) {
+  }
+
+  void run() {
+    this.helper(1);
+  }
+}
+```
+
+The unsupported source fails through the direct Tweedle decoder with
+`UnsupportedTweedleDecodeException`. The exception message identifies
+`argument-bearing explicit this method calls` so callers and tests can
+distinguish this planned boundary from unknown methods, non-`this` targets,
+malformed Tweedle, or broader archive failures.
+
+This boundary does not evaluate argument expressions, does not bind positional
+or named arguments, does not choose between overloads, does not apply optional
+parameters, and does not infer an implicit receiver. JSON player/type archive
+readers preserve their existing unsupported-Tweedle archive behavior by
+propagating this unsupported decode through the documented archive fail-closed
+path.
 
 ### Player `.a3w` archive decode
 
@@ -639,7 +688,8 @@ or pull request.
 | Non-null image resource field initializers fail fast with unsupported resource-binding context instead of being coerced or resolved. | `TweedleEncoderDecoderTest.decodeClassWithResourceIdentifierInitializedFieldReportsUnsupportedBoundary` |
 | Non-null audio resource field initializers fail fast with the same unsupported resource-binding boundary. | `TweedleEncoderDecoderTest.decodeClassWithAudioResourceIdentifierInitializedFieldReportsUnsupportedBoundary` |
 | Same-type zero-argument `this.method()` calls decode to Alice `MethodInvocation` statements after same-type methods are registered before body decode. | `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeCreatesMethodInvocation`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeCreatesMethodInvocation` |
-| Argument-bearing calls, unknown methods, and non-`this` targets remain unsupported next to the zero-argument this-method slice. | `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsUnknownMethod`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsNonThisTarget`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsArgumentBearingCall`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsUnknownMethod`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsNonThisTarget` |
+| Argument-bearing explicit `this.method(arg...)` calls fail fast with the named unsupported boundary before argument decode or method binding. | `TweedleEncoderDecoderTest.decodeClassWithArgumentBearingExplicitThisMethodCallReportsUnsupportedBoundary`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsArgumentBearingCall` |
+| Unknown methods and non-`this` targets remain unsupported next to the zero-argument this-method slice. | `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsUnknownMethod`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallDecodeRejectsNonThisTarget`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsUnknownMethod`; `TweedleEncoderDecoderTest.zeroArgumentThisMethodCallInConstructorDecodeRejectsNonThisTarget` |
 | Non-class and empty Tweedle source are rejected by the AST decoder. | `TweedleEncoderDecoderTest.decodeEnumReportsOnlyClassDeclarationsSupported`; `TweedleEncoderDecoderTest.decodeEmptySourceReportsOnlyClassDeclarationsSupported` |
 | Player archives with supported Tweedle decode program types through `IoUtilities.readProject(File)`. | `IoUtilitiesTest.readsSimpleJsonPlayerArchiveTweedleProgram`; `IoUtilitiesTest.jsonPlayerReaderDecodesProgramTypeWhenManifestReferencesSimpleTweedleSource` |
 | Saved `.a3p` archives reopen, accept edits on the reopened project, save again, reopen again with edited program metadata, and export with stable player archive structure. | `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported` |

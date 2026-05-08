@@ -15,8 +15,9 @@ to an Alice MethodInvocation targeting the current instance and resolving to the
 same-type UserMethod declaration.
 ```
 
-All neighboring call forms remain unsupported unless a separate decoder slice
-explicitly implements them.
+The nearest neighboring call form, explicit `this.method(arg...)`, is a named
+fail-fast boundary. All other neighboring call forms remain unsupported unless a
+separate decoder slice explicitly implements them.
 
 ## 1. Create the smallest Tweedle source
 
@@ -95,13 +96,22 @@ private decoder helper names.
 Add negative tests for the nearest adjacent unsupported forms:
 
 ```java
-this.helper(1);     // arguments are unsupported
+this.helper(1);     // argument-bearing explicit this calls fail fast
 this.missing();     // unknown methods are unsupported
 other.helper();     // non-this targets are unsupported
 ```
 
 Each test should call `coder.decode(...)` and assert
-`UnsupportedTweedleDecodeException`.
+`UnsupportedTweedleDecodeException`. For `this.helper(1);`, also assert the
+diagnostic contains the boundary label:
+
+```text
+argument-bearing explicit this method calls
+```
+
+That test describes the finished behavior for the selected shard: the decoder
+rejects argument-bearing explicit `this` calls before argument decode, method
+binding, overload resolution, or optional-parameter handling.
 
 Other unsupported forms, including implicit receiver calls, static-style calls,
 object construction calls, chained calls, and member access, are non-goals for
@@ -121,6 +131,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am \
   test
 ```
 
-The result protects only zero-argument `this.method()` decode. It does not prove
-general method calls, object construction calls, member access, or full
+The result protects only zero-argument `this.method()` decode and the
+argument-bearing explicit `this.method(arg...)` fail-fast boundary. It does not
+prove general method calls, object construction calls, member access, or full
 Tweedle/player decode support.
