@@ -13,6 +13,12 @@ This work intentionally exercises production decode paths instead of isolated
 mocks. Test archives may be constructed in memory, but they must flow through
 the same public readers and parsers used by Alice project loading.
 
+> **[PLANNED - Implementation Pending]** The literal-only arithmetic field
+> initializer shard below describes the intended decoder contract, not the
+> current behavior. Remove this marker once the decoder and characterization
+> tests accept `WholeNumber count <- 1 + 2` while preserving the unsupported
+> boundaries named here.
+
 ## Build contract and non-goals
 
 Build the coverage as a compatibility safety net, not as a decoder redesign.
@@ -21,9 +27,10 @@ Build the coverage as a compatibility safety net, not as a decoder redesign.
   `UnsupportedTweedleDecodeException`, while JSON archive readers fail closed
   with `IOException` when a manifest-declared expected program/type cannot be
   decoded.
-- Treat literal-only arithmetic field initializers on non-resource fields as the
-  supported shard. The decoder constructs AST expression nodes; it does not
-  evaluate arithmetic or broaden field-initializer support.
+- **[PLANNED]** Treat literal-only arithmetic field initializers on
+  non-resource fields as the supported shard. The decoder constructs AST
+  expression nodes; it does not evaluate arithmetic or broaden
+  field-initializer support.
 - Treat unsupported player-program superclass decoding as a characterized
   fail-closed boundary. A JSON player archive with `class Program extends
   MissingSuper {}` does not return a partial project shell for normal
@@ -47,7 +54,7 @@ Build the coverage as a compatibility safety net, not as a decoder redesign.
 | --- | --- | --- |
 | Tweedle parser | `TweedleUnlinkedParser.parseType(String)` | `core/tweedle/src/test/java/org/alice/tweedle/unlinked/TweedleParseTest.java` |
 | Tweedle AST decoder | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
-| Tweedle non-resource arithmetic field initializer decode | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
+| Tweedle non-resource arithmetic field initializer decode **[PLANNED]** | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
 | Tweedle resource field initializer boundary | `TweedleEncoderDecoder.decode(String)` | `core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java` |
 | Project archive round trip | `IoUtilities.writeProject(File, Project)`, `IoUtilities.readProject(File)`, and structural `IoUtilities.exportProject(File, Project)` output | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
 | Player archive decode | `IoUtilities.readProject(File)` for `.a3w` files | `core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java` |
@@ -63,9 +70,9 @@ The intended coverage covers successful decode behavior and known edge behavior:
 - resource fields initialized to `null`, plus explicit fail-fast diagnostics
   that only `null` resource field initializers decode without archive binding
   context;
-- non-resource fields initialized with literal-only arithmetic expressions, such
-  as `WholeNumber count <- 1 + 2`, decoded through the existing expression AST
-  path without evaluating the expression;
+- **[PLANNED]** non-resource fields initialized with literal-only arithmetic
+  expressions, such as `WholeNumber count <- 1 + 2`, decoded through the
+  existing expression AST path without evaluating the expression;
 - same-type zero-argument `this.method()` calls decoded to Alice
   `MethodInvocation` statements in method and constructor bodies, with
   argument-bearing explicit `this.method(label: value, ...)` calls rejected
@@ -133,8 +140,8 @@ Documented behavior, including the zero-argument this-method slice:
 | Unknown superclass | Throws `UnsupportedTweedleDecodeException` with the missing superclass name in the message. |
 | Malformed superclass syntax | Throws `IllegalArgumentException` describing the parser boundary. |
 | Supported class fields and supported method declarations | Decodes supported fields and supported `UserMethod` declarations. |
-| Non-resource numeric field initializer `WholeNumber count <- 1 + 2` | Decodes the field with an arithmetic AST initializer built from numeric literals and arithmetic operators. The decoder does not evaluate the expression. |
-| Non-resource field initializer references, calls, explicit `this`, constructor calls, or mixed unsupported expression trees | Throws `UnsupportedTweedleDecodeException` before delegating to expression decode. Literal-only arithmetic support is an allowlist, not general initializer support. |
+| **[PLANNED]** Non-resource numeric field initializer `WholeNumber count <- 1 + 2` | Decodes the field with an arithmetic AST initializer built from numeric literals and arithmetic operators. The decoder does not evaluate the expression. |
+| Non-resource field initializer references, calls, explicit `this`, constructor calls, or mixed unsupported expression trees | Throws `UnsupportedTweedleDecodeException` before delegating to expression decode. The planned literal-only arithmetic support is an allowlist, not general initializer support. |
 | Resource field initializer `ImageResource picture <- null` | Decodes as a resource-typed field with a `NullLiteral` initializer. |
 | Non-null resource field initializers such as `ImageResource picture <- someImage` or `AudioResource sound <- sound0` | Throws `UnsupportedTweedleDecodeException` describing the resource field initializer, the fact that the initializer is non-null, the resource type, the field name, and the missing archive resource manifest/binding context. The diagnostic does not promise to include the initializer token such as `someImage`. This is a fail-fast boundary, not full resource binding support. |
 | Method or constructor body expression statement `this.helper();` where `helper` is a known same-type zero-argument method | Decodes to an `ExpressionStatement` containing a `MethodInvocation` that resolves to the declared `helper` `UserMethod`; the implementation registers same-type methods before decoding bodies so declaration order does not matter. |
@@ -194,10 +201,10 @@ set.
 Manifest-backed image and audio resource coverage remains separate from this
 field-initializer binding boundary.
 
-#### Literal-only arithmetic field initializer support
+#### [PLANNED - Implementation Pending] Literal-only arithmetic field initializer support
 
-The supported field-initializer shard is limited to non-resource fields whose
-initializer expression tree contains only numeric literals and arithmetic
+The planned supported field-initializer shard is limited to non-resource fields
+whose initializer expression tree contains only numeric literals and arithmetic
 operators.
 
 Supported Tweedle source:
@@ -213,8 +220,8 @@ initializer is an Alice AST arithmetic expression whose operands are numeric
 literals. The decoder preserves the expression shape; it does not fold `1 + 2`
 to `3`.
 
-The same source shape is supported when it appears in a generated JSON player
-archive or type archive as a manifest-declared Tweedle type reference:
+After implementation, the same source shape is supported when it appears in a
+generated JSON player archive as a manifest-declared Tweedle type reference:
 
 ```text
 version.txt
@@ -344,7 +351,7 @@ Documented behavior:
 | Manifest references a missing Tweedle entry | Throws `IOException` that includes the missing entry path. |
 | Tweedle entry is malformed at the parser boundary | Throws `IOException` that includes `Unable to decode Tweedle type entry` and the entry path. |
 | Tweedle entry contains unsupported members or an unsupported superclass for the manifest-declared program type | Throws `IOException` with archive context, including the expected program type, decoded type names, and unsupported manifest-declared Tweedle type names when available. |
-| Manifest-declared program type contains `WholeNumber count <- 1 + 2` | Returns a project whose decoded program type includes the `count` field with a literal-only arithmetic AST initializer. |
+| **[PLANNED]** Manifest-declared program type contains `WholeNumber count <- 1 + 2` | Returns a project whose decoded program type includes the `count` field with a literal-only arithmetic AST initializer. |
 | Tweedle entry is `class Program extends MissingSuper {}` | Throws `IOException`; the normal player reader does not return a partial project shell for this unsupported manifest-declared program. |
 | Manifest declares a supported Tweedle `TypeReference` and a valid image resource | Returns a project whose program type and resource identity, name, original file name, content type, and bytes are preserved. |
 | Manifest references a non-`tweedle` type format | Throws `IOException` with type reference context. |
@@ -403,7 +410,6 @@ Documented behavior:
 | Archive shape | Required characterization result |
 | --- | --- |
 | JSON type manifest references supported Tweedle source | Returns the decoded type and manifest-backed resources. |
-| JSON type manifest references Tweedle source with `WholeNumber count <- 1 + 2` | Returns the decoded type with the `count` field and literal-only arithmetic AST initializer. |
 | Tweedle source contains unsupported members | Throws `IOException` with archive context instead of returning a `TypeResourcesPair` with a `null` type. |
 | Tweedle source contains an unsupported superclass | Throws `IOException` with archive context instead of returning a `TypeResourcesPair` with a `null` type. |
 | Tweedle entry is missing or malformed at the parser boundary | Throws `IOException` with entry context. |
@@ -646,7 +652,7 @@ as AST literals, while non-null resource identifiers are intentionally outside
 the direct decoder because no archive manifest or resource binding context is
 available.
 
-## Example: characterize literal-only arithmetic field initializer decode
+## Example: characterize literal-only arithmetic field initializer decode **[PLANNED]**
 
 Use this pattern when changing non-resource field initializer handling. Keep the
 direct decoder assertions in `TweedleEncoderDecoderTest`, then add the archive
@@ -810,8 +816,8 @@ or pull request.
 | Unknown Tweedle superclass reports unsupported decode context. | `TweedleEncoderDecoderTest.decodeUnknownSuperclassReportsUnsupportedTweedle` |
 | Malformed Tweedle superclass reports parser decode context. | `TweedleEncoderDecoderTest.decodeMalformedSuperclassReportsMalformedTweedle` |
 | Supported Tweedle fields, supported method declarations, expressions, while loops, and returns decode through the AST decoder. | `TweedleEncoderDecoderTest` focused field, method, expression, while-loop, and return tests. |
-| Non-resource literal-only arithmetic field initializers decode to AST initializer expressions without evaluation. | `TweedleEncoderDecoderTest.decodeClassWithLiteralArithmeticFieldInitializerCreatesExpressionInitializer` |
-| Non-resource field initializer references, calls, explicit `this`, constructor calls, and mixed unsupported expression trees remain unsupported. | `TweedleEncoderDecoderTest.decodeClassWithReferenceFieldInitializerReportsUnsupportedBoundary`; `TweedleEncoderDecoderTest.decodeClassWithCallFieldInitializerReportsUnsupportedBoundary`; `TweedleEncoderDecoderTest.decodeClassWithExplicitThisFieldInitializerReportsUnsupportedBoundary` |
+| **[PLANNED]** Non-resource literal-only arithmetic field initializers decode to AST initializer expressions without evaluation. | `TweedleEncoderDecoderTest.decodeClassWithLiteralArithmeticFieldInitializerCreatesExpressionInitializer` |
+| **[PLANNED]** Non-resource field initializer references, calls, explicit `this`, constructor calls, and mixed unsupported expression trees remain unsupported. | `TweedleEncoderDecoderTest.decodeClassWithReferenceFieldInitializerReportsUnsupportedBoundary`; `TweedleEncoderDecoderTest.decodeClassWithCallFieldInitializerReportsUnsupportedBoundary`; `TweedleEncoderDecoderTest.decodeClassWithExplicitThisFieldInitializerReportsUnsupportedBoundary` |
 | Resource fields initialized to `null` decode to resource-typed fields with `NullLiteral` initializers. | `TweedleEncoderDecoderTest.decodeClassWithResourceNullInitializedFieldCreatesNullLiteralInitializer` |
 | Non-null image resource field initializers fail fast with unsupported resource-binding context instead of being coerced or resolved. | `TweedleEncoderDecoderTest.decodeClassWithResourceIdentifierInitializedFieldReportsUnsupportedBoundary` |
 | Non-null audio resource field initializers fail fast with the same unsupported resource-binding boundary. | `TweedleEncoderDecoderTest.decodeClassWithAudioResourceIdentifierInitializedFieldReportsUnsupportedBoundary` |
@@ -829,7 +835,7 @@ or pull request.
 | Unsupported JSON manifest references are ignored without becoming binary project resources. | `IoUtilitiesTest.ignoresUnsupportedJsonResourceReferencesWithoutCrashing`; `IoUtilitiesTest.readsExportedPlayerArchiveModelAndGeneratedTypeReferencesWithoutBinaryResources` |
 | JSON player archive with `class Program extends MissingSuper {}` fails closed instead of returning a project shell with no decoded program type. | `IoUtilitiesTest.unsupportedJsonPlayerTweedleSuperclassFailsClosed` |
 | JSON player archive with supported Tweedle fields and manifest-backed image resources decodes the program and keeps resources readable. | `IoUtilitiesTest.jsonPlayerManifestTypeReadsFieldAndKeepsResourcesReadable` |
-| Generated JSON player archive with a manifest-declared program containing `WholeNumber count <- 1 + 2` decodes the program field initializer through the player reader. | `HistoricalArchiveRoundTripCharacterizationTest.jsonPlayerArchiveDecodesLiteralArithmeticFieldInitializer` |
+| **[PLANNED]** Generated JSON player archive with a manifest-declared program containing `WholeNumber count <- 1 + 2` decodes the program field initializer through the player reader. | `HistoricalArchiveRoundTripCharacterizationTest.jsonPlayerArchiveDecodesLiteralArithmeticFieldInitializer` |
 | Type archives with supported Tweedle decode types through `IoUtilities.readType(File)`. | `IoUtilitiesTest.readsSimpleJsonTypeArchiveTweedleClass` |
 | JSON type manifest mismatches and missing type references fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsManifestNameMismatchInsteadOfFallback`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTypeReferenceInsteadOfReturningNull` |
 | JSON type archives with non-`tweedle`, missing, or malformed type entries fail with archive context. | `IoUtilitiesTest.jsonTypeReaderReportsUnsupportedTypeReferenceFormat`; `IoUtilitiesTest.jsonTypeReaderReportsMissingTweedleTypeEntry`; `IoUtilitiesTest.jsonTypeReaderWrapsMalformedTweedleTypeEntry` |
