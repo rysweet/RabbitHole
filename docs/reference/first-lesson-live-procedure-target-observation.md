@@ -156,6 +156,7 @@ Required top-level fields:
 | `project` | object | First-lesson starter metadata and Select Project open status. |
 | `requiredTarget` | object | The procedure/code-editor target the next shard needs. |
 | `observedTarget` | object or null | Bounded target metadata when `status=observed`; `null` when blocked. |
+| `desktopEditAction` | object or null | Next-action seam evidence after target observation; `null` until the target is observed. |
 | `blocker` | string | `none` when observed; otherwise a stable blocker code. |
 | `blockerDetail` | string | Human-readable blocker detail. |
 | `downstreamBlockedStep` | string | Always `desktop-procedure-edit`. |
@@ -187,7 +188,20 @@ Required top-level fields:
 | `accessibleName` | string or null | Bounded accessibility name, when available. |
 | `accessibleRole` | string or null | Bounded accessibility role, when available. |
 | `automationPath` | string | Stable runner-facing path or selector for reacquiring the target. |
-| `readyForDesktopEditAction` | boolean | `true` only when the target can be reacquired without brittle coordinate or screenshot matching. |
+| `readyForDesktopEditAction` | boolean | `true` only when a public desktop edit-action invocation contract is available; `false` when observation succeeds but that contract is missing. |
+
+`desktopEditAction` fields when `status=observed` and
+`observedTarget.readyForDesktopEditAction=false`:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `status` | string | `blocked`. |
+| `readyForDesktopEditAction` | boolean | `false`. |
+| `targetSelector` | string | The procedure selector that would be edited. |
+| `blocker.kind` | string | `missing-desktop-edit-action-contract`. |
+| `blocker.message` | string | `missing public CodeEditor/CodeComposite edit invocation contract`. |
+| `requiredContract` | string | The minimum public desktop edit-action contract needed to unblock the shard. |
+| `doesNotClaim` | string array | Explicit non-claims for edit mutation, Save, rendering correctness, learner assessment, and full lesson completion. |
 
 Accepted blocker codes:
 
@@ -243,7 +257,24 @@ Observed decision artifact:
     "accessibleName": "eatmeFirstLesson",
     "accessibleRole": "panel",
     "automationPath": "at-spi:/Alice/DeclarationsEditor/eatmeFirstLesson",
-    "readyForDesktopEditAction": true
+    "readyForDesktopEditAction": false
+  },
+  "desktopEditAction": {
+    "status": "blocked",
+    "readyForDesktopEditAction": false,
+    "targetSelector": "scene.eatmeFirstLesson",
+    "blocker": {
+      "kind": "missing-desktop-edit-action-contract",
+      "message": "missing public CodeEditor/CodeComposite edit invocation contract"
+    },
+    "requiredContract": "public CodeEditor/CodeComposite edit invocation contract",
+    "doesNotClaim": [
+      "desktop procedure edit mutation",
+      "Save",
+      "rendering correctness",
+      "learner assessment",
+      "full first-lesson completion"
+    ]
   },
   "blocker": "none",
   "blockerDetail": "",
@@ -280,6 +311,7 @@ Blocked decision artifact:
     "minimumStableAutomationTarget": "reacquirable live desktop procedure tab or code-editor target"
   },
   "observedTarget": null,
+  "desktopEditAction": null,
   "blocker": "procedure-target-not-found",
   "blockerDetail": "The first-lesson project opened, but the live desktop did not expose a stable procedure tab or code-editor target for scene.eatmeFirstLesson.",
   "downstreamBlockedStep": "desktop-procedure-edit",
@@ -318,6 +350,9 @@ This shard may claim only:
 - The live desktop procedure/code-editor target for `scene.eatmeFirstLesson` was
   either observed through a stable automation target or blocked with a precise
   machine-readable reason.
+- After target observation, the desktop edit action is either explicitly ready or
+  blocked by the missing public CodeEditor/CodeComposite edit invocation
+  contract.
 
 This shard must not claim:
 

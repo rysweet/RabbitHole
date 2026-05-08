@@ -20,6 +20,8 @@ SCHEMA_VERSION = "eatme.first-lesson-live-procedure-target-observation/v1"
 WORKFLOW = "first-lesson-live-procedure-target-observation"
 SEAM = "live-first-lesson-project-open-to-procedure-target-observable"
 DOWNSTREAM_BLOCKED_STEP = "desktop-procedure-edit"
+DESKTOP_EDIT_ACTION_BLOCKER_KIND = "missing-desktop-edit-action-contract"
+DESKTOP_EDIT_ACTION_BLOCKER_MESSAGE = "missing public CodeEditor/CodeComposite edit invocation contract"
 OUT_OF_SCOPE = [
     "desktop procedure edit mutation",
     "Save",
@@ -60,6 +62,7 @@ def base_payload(
     opened_via_select_project: bool = False,
     post_open_window_observed: bool = False,
     observed_target: dict[str, Any] | None = None,
+    desktop_edit_action: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "schemaVersion": SCHEMA_VERSION,
@@ -80,6 +83,7 @@ def base_payload(
             "minimumStableAutomationTarget": "reacquirable live desktop procedure tab or code-editor target",
         },
         "observedTarget": observed_target,
+        "desktopEditAction": desktop_edit_action,
         "blocker": blocker,
         "blockerDetail": blocker_detail,
         "downstreamBlockedStep": DOWNSTREAM_BLOCKED_STEP,
@@ -264,7 +268,24 @@ def observed_payload(
         "accessibleName": candidate.get("accessibleName"),
         "accessibleRole": candidate.get("accessibleRole"),
         "automationPath": candidate["automationPath"],
-        "readyForDesktopEditAction": True,
+        "readyForDesktopEditAction": False,
+    }
+    desktop_edit_action = {
+        "status": "blocked",
+        "readyForDesktopEditAction": False,
+        "targetSelector": args.procedure_selector,
+        "blocker": {
+            "kind": DESKTOP_EDIT_ACTION_BLOCKER_KIND,
+            "message": DESKTOP_EDIT_ACTION_BLOCKER_MESSAGE,
+        },
+        "requiredContract": "public CodeEditor/CodeComposite edit invocation contract",
+        "doesNotClaim": [
+            "desktop procedure edit mutation",
+            "Save",
+            "rendering correctness",
+            "learner assessment",
+            "full first-lesson completion",
+        ],
     }
     return base_payload(
         scenario_id=args.scenario_id,
@@ -278,6 +299,7 @@ def observed_payload(
         opened_via_select_project=True,
         post_open_window_observed=True,
         observed_target=observed,
+        desktop_edit_action=desktop_edit_action,
     )
 
 

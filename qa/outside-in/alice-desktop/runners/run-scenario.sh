@@ -1512,6 +1512,7 @@ payload = {
         "minimumStableAutomationTarget": "reacquirable live desktop procedure tab or code-editor target",
     },
     "observedTarget": None,
+    "desktopEditAction": None,
     "blocker": os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER"],
     "blockerDetail": os.environ["FIRST_LESSON_PROCEDURE_TARGET_BLOCKER_DETAIL"],
     "downstreamBlockedStep": "desktop-procedure-edit",

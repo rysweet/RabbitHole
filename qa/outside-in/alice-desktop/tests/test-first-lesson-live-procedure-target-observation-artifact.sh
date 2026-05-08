@@ -13,6 +13,7 @@ SCENARIO_FILE="$BASE_DIR/scenarios/first-lesson-live-procedure-target-observatio
 ARTIFACT=first-lesson-live-procedure-target-observation.json
 SEAM=live-first-lesson-project-open-to-procedure-target-observable
 PROCEDURE_SELECTOR=scene.eatmeFirstLesson
+MISSING_DESKTOP_EDIT_ACTION_CONTRACT="missing public CodeEditor/CodeComposite edit invocation contract"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 
@@ -101,6 +102,7 @@ for required in (
     "post-project-open-observation.json",
     "tab-click-observation.json",
     expected_artifact,
+    "missing public CodeEditor/CodeComposite edit invocation contract",
 ):
     require(required.lower() in scenario_lower, f"scenario must tie the seam to {required}")
 
@@ -270,6 +272,7 @@ if isinstance(required_target, dict):
 
 if artifact.get("status") == "blocked":
     require(artifact.get("observedTarget") is None, "blocked artifact observedTarget must be null")
+    require(artifact.get("desktopEditAction") is None, "blocked artifact desktopEditAction must be null until the target is observed")
     require(artifact.get("blocker") in {
         "select-project-open-not-observed",
         "post-open-window-not-observed",
@@ -281,13 +284,31 @@ if artifact.get("status") == "blocked":
     require(isinstance(artifact.get("blockerDetail"), str) and artifact.get("blockerDetail"), "blocked artifact must include blockerDetail")
 else:
     observed = artifact.get("observedTarget")
+    desktop_edit_action = artifact.get("desktopEditAction")
     require(artifact.get("blocker") == "none", "observed artifact blocker must be none")
     require(isinstance(observed, dict), "observed artifact observedTarget must be an object")
     if isinstance(observed, dict):
         require(observed.get("procedureSelector") == expected_selector, "observedTarget.procedureSelector must be scene.eatmeFirstLesson")
         require(observed.get("targetKind") in {"procedure-tab", "code-editor"}, "observedTarget.targetKind must be procedure-tab or code-editor")
         require(isinstance(observed.get("automationPath"), str) and observed["automationPath"], "observedTarget.automationPath must be non-empty")
-        require(observed.get("readyForDesktopEditAction") is True, "observedTarget must be ready for the next desktop edit action")
+        ready = observed.get("readyForDesktopEditAction")
+        if ready is True:
+            require(desktop_edit_action is None, "edit-ready observed artifact must not include a no-go desktopEditAction blocker")
+        elif ready is False:
+            require(isinstance(desktop_edit_action, dict), "not-ready observed artifact must include desktopEditAction blocker evidence")
+            if isinstance(desktop_edit_action, dict):
+                require(desktop_edit_action.get("status") == "blocked", "desktopEditAction must be blocked when no public edit invocation contract exists")
+                require(desktop_edit_action.get("readyForDesktopEditAction") is False, "desktopEditAction readiness must be false")
+                blocker = desktop_edit_action.get("blocker")
+                require(isinstance(blocker, dict), "desktopEditAction.blocker must be an object")
+                if isinstance(blocker, dict):
+                    require(blocker.get("kind") == "missing-desktop-edit-action-contract", "desktopEditAction blocker must name missing-desktop-edit-action-contract")
+                    require(
+                        blocker.get("message") == "missing public CodeEditor/CodeComposite edit invocation contract",
+                        "desktopEditAction blocker must name the missing public CodeEditor/CodeComposite edit invocation contract",
+                    )
+        else:
+            require(False, "observedTarget.readyForDesktopEditAction must be true or false")
 
 out_of_scope = artifact.get("outOfScope")
 require(isinstance(out_of_scope, list), "artifact outOfScope must be a list")
@@ -313,5 +334,206 @@ PY
 else
   fail "first-lesson procedure target fallback artifacts could not be inspected"
 fi
+
+fake_pyatspi_dir="$tmp_root/fake-pyatspi"
+mkdir -p "$fake_pyatspi_dir"
+python3 - "$fake_pyatspi_dir/pyatspi.py" >"$tmp_root/write-fake-pyatspi.out" 2>"$tmp_root/write-fake-pyatspi.err" <<'PY'
+from pathlib import Path
+import sys
+
+Path(sys.argv[1]).write_text(
+    """
+STATE_SHOWING = "showing"
+STATE_VISIBLE = "visible"
+
+
+class _StateSet:
+    def getStates(self):
+        return ["showing", "visible", "enabled"]
+
+    def contains(self, state):
+        return state in {"showing", "visible"}
+
+
+class _Accessible:
+    def __init__(self, name, role, children=None, pid=None):
+        self.name = name
+        self._role = role
+        self._children = children or []
+        self._pid = pid
+        self.childCount = len(self._children)
+
+    def getRoleName(self):
+        return self._role
+
+    def getState(self):
+        return _StateSet()
+
+    def getChildAtIndex(self, index):
+        return self._children[index]
+
+    def get_process_id(self):
+        return self._pid
+
+
+_TARGET = _Accessible("scene.eatmeFirstLesson code editor", "panel")
+_APP = _Accessible("Alice 3", "application", [_TARGET], pid=4242)
+
+
+class _Desktop:
+    childCount = 1
+
+    def getChildAtIndex(self, index):
+        if index != 0:
+            raise IndexError(index)
+        return _APP
+
+
+class Registry:
+    @staticmethod
+    def getDesktop(index):
+        if index != 0:
+            raise IndexError(index)
+        return _Desktop()
+""".lstrip(),
+    encoding="utf-8",
+)
+PY
+status=$?
+assert_success "$status" "fake pyatspi module for observed target seam fixture is written"
+
+mock_input_dir="$tmp_root/mock-observed-input"
+mkdir -p "$mock_input_dir"
+python3 - \
+  "$mock_input_dir/x-window-inventory.json" \
+  "$mock_input_dir/tab-click-observation.json" \
+  "$mock_input_dir/post-project-open-observation.json" \
+  >"$tmp_root/write-mock-input.out" \
+  2>"$tmp_root/write-mock-input.err" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+inventory_path, tab_click_path, post_open_path = [Path(arg) for arg in sys.argv[1:4]]
+display_name = "Africa Full"
+repository_path = "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+
+inventory_path.write_text(
+    json.dumps(
+        {
+            "windows": [
+                {
+                    "title": "Alice 3",
+                    "processName": "java",
+                    "pid": 4242,
+                }
+            ]
+        },
+        indent=2,
+        sort_keys=True,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+tab_click_path.write_text(
+    json.dumps(
+        {
+            "targetStarter": {
+                "displayName": display_name,
+                "repositoryPath": repository_path,
+            },
+            "openedStarter": {
+                "displayName": display_name,
+                "repositoryPath": repository_path,
+            },
+            "evidenceStatus": "opened",
+            "targetStarterSelected": True,
+            "targetStarterOpenAttempted": True,
+            "projectOpenObserved": True,
+        },
+        indent=2,
+        sort_keys=True,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+post_open_path.write_text(
+    json.dumps({"postOpenWindowObserved": True}, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+PY
+status=$?
+assert_success "$status" "mock supporting evidence for observed target seam is written"
+
+mock_observed_artifact="$tmp_root/mock-observed-$ARTIFACT"
+PYTHONPATH="$fake_pyatspi_dir" python3 "$BASE_DIR/runners/first-lesson-procedure-target-probe.py" \
+  --inventory "$mock_input_dir/x-window-inventory.json" \
+  --tab-click-observation "$mock_input_dir/tab-click-observation.json" \
+  --post-open-window-observation "$mock_input_dir/post-project-open-observation.json" \
+  --output "$mock_observed_artifact" \
+  --scenario-id "$SCENARIO_ID" \
+  --automation-mode xvfb-real-alice \
+  --target-starter-display-name "Africa Full" \
+  --target-starter-repository-path "core/resources/src/application/resources/starter-projects/AfricaFull.a3p" \
+  --procedure-selector "$PROCEDURE_SELECTOR" \
+  >"$tmp_root/mock-observed-probe.out" \
+  2>"$tmp_root/mock-observed-probe.err"
+status=$?
+assert_success "$status" "mock observed target probe writes first-lesson action seam artifact"
+
+python3 - \
+  "$mock_observed_artifact" \
+  "$PROCEDURE_SELECTOR" \
+  "$MISSING_DESKTOP_EDIT_ACTION_CONTRACT" \
+  >"$tmp_root/mock-observed-contract.out" \
+  2>"$tmp_root/mock-observed-contract.err" <<'PY'
+import json
+import sys
+
+artifact_path, expected_selector, expected_missing_contract = sys.argv[1:4]
+artifact = json.load(open(artifact_path, encoding="utf-8"))
+errors = []
+
+
+def require(condition, message):
+    if not condition:
+        errors.append(message)
+
+
+require(artifact.get("status") == "observed", "mock probe must observe the live procedure/code-editor target")
+require(artifact.get("blocker") == "none", "target observation itself must not be blocked")
+require(artifact.get("downstreamBlockedStep") == "desktop-procedure-edit", "artifact must keep the downstream edit boundary")
+
+observed = artifact.get("observedTarget")
+require(isinstance(observed, dict), "observed artifact must include observedTarget")
+if isinstance(observed, dict):
+    require(observed.get("procedureSelector") == expected_selector, "observedTarget must bind scene.eatmeFirstLesson")
+    require(observed.get("targetKind") == "code-editor", "mock observed target must be a code-editor target")
+    require(observed.get("readyForDesktopEditAction") is False, "observed target must not claim desktop edit-action readiness without a public contract")
+
+desktop_edit_action = artifact.get("desktopEditAction")
+require(isinstance(desktop_edit_action, dict), "observed target with no public edit contract must include desktopEditAction")
+if isinstance(desktop_edit_action, dict):
+    require(desktop_edit_action.get("status") == "blocked", "desktopEditAction must be blocked")
+    require(desktop_edit_action.get("readyForDesktopEditAction") is False, "desktopEditAction must record readiness false")
+    blocker = desktop_edit_action.get("blocker")
+    require(isinstance(blocker, dict), "desktopEditAction.blocker must be an object")
+    if isinstance(blocker, dict):
+        require(blocker.get("kind") == "missing-desktop-edit-action-contract", "desktopEditAction blocker kind must be exact")
+        require(blocker.get("message") == expected_missing_contract, "desktopEditAction blocker message must name the missing public CodeEditor/CodeComposite edit invocation contract")
+    require(
+        desktop_edit_action.get("requiredContract") == "public CodeEditor/CodeComposite edit invocation contract",
+        "desktopEditAction must name the required public CodeEditor/CodeComposite contract",
+    )
+
+out_of_scope = {str(item).lower() for item in artifact.get("outOfScope", [])}
+for forbidden_claim in ("save", "rendering correctness", "learner assessment", "full first-lesson completion"):
+    require(forbidden_claim in out_of_scope, f"artifact must keep {forbidden_claim} out of scope")
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+status=$?
+assert_success "$status" "observed target artifact records exact CodeEditor/CodeComposite edit-action no-go blocker"
 
 finish

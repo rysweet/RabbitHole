@@ -25,7 +25,7 @@ expectedOutcomes:
   - status.txt records procedureTargetObservationStatus and procedureTargetObservationBlocker.
   - first-lesson-live-procedure-target-observation.json records seam=live-first-lesson-project-open-to-procedure-target-observable.
   - first-lesson-live-procedure-target-observation.json records requiredTarget.procedureSelector=scene.eatmeFirstLesson and requiredTarget.targetKind=procedure-tab-or-code-editor.
-  - If status=observed, observedTarget names a stable procedure tab or code-editor automationPath for the next desktop edit shard.
+  - If status=observed, observedTarget names a stable procedure tab or code-editor automationPath for the next desktop edit shard and desktopEditAction either records readiness or names the missing public CodeEditor/CodeComposite edit invocation contract.
   - If status=blocked, blockerDetail names the exact missing display, Select Project, post-open, AT-SPI, or procedure target condition.
   - The shard is observation-only and does not perform a desktop procedure edit, Save, rendering correctness check, learner assessment, grading, creative assessment, or full first-lesson completion.
 automation:
@@ -57,6 +57,7 @@ fallback:
     - If the post-open Alice main window is not observed, write blocker=post-open-window-not-observed and do not claim procedure target observation.
     - If AT-SPI or the ATK wrapper is unavailable, write blocker=at-spi-or-atk-unavailable with the exact prerequisite detail.
     - If no stable procedure tab or code-editor target for scene.eatmeFirstLesson is found, write blocker=procedure-target-not-found or procedure-target-not-stable.
+    - If the procedure/code-editor target is observed but no stable desktop edit action can be invoked, write desktopEditAction.blocker.message=missing public CodeEditor/CodeComposite edit invocation contract.
     - Do not mutate the procedure, click a desktop edit control, Save, Run, assert rendering correctness, perform learner assessment, grading, creative assessment, or claim full first-lesson completion.
 supportingEvidence:
   - alice-desktop-select-project-tab-click-exec
