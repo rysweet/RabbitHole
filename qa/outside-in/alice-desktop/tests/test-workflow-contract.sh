@@ -36,6 +36,7 @@ required_workflows = [
     "scene-creation",
     "run-debug",
     "save-load",
+    "save-menu-dialog-write-proof",
     "open-load-save",
     "export",
     "exported-project-smoke",
@@ -62,6 +63,7 @@ gated_scenarios = [
     "alice-desktop-failure-path-smoke",
     "alice-desktop-future-ui-smoke",
     "alice-desktop-menu-action-smoke",
+    "alice-desktop-save-menu-dialog-write-proof",
     "alice-desktop-wizard-palette-completion-smoke",
 ]
 errors = []

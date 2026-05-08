@@ -41,6 +41,7 @@
         "project-io-smoke",
         "run-debug",
         "save-load",
+        "save-menu-dialog-write-proof",
         "scene-creation",
         "select-project-interaction-smoke",
         "select-project-widget-introspection-smoke",
@@ -251,6 +252,43 @@
               "items": false,
               "minItems": 9,
               "maxItems": 9
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ide"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
             },
             {
               "prefixItems": [
