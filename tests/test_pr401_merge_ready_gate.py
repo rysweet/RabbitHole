@@ -14,8 +14,8 @@ from unittest.mock import patch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "pr401-merge-ready-gate.py"
 
-PR_HEAD = "a5f0c12f4aa1d0f49e277110d0d4bbafab01eee8"
-STALE_HEAD = "479fab8b963c18839c7da4c26bf366064d325d54"
+PR_HEAD = "c35f8c95ab72a3f5585d1222de2bb3ad49d1d18a"
+STALE_HEAD = "a5f0c12f4aa1d0f49e277110d0d4bbafab01eee8"
 BRANCH = "wave6-ui-action-menu-contract-1778302300"
 JAVA_CONTRACT = "org.alice.ide.croquet.models.AliceMenuBarContractTest"
 REQUIRED_CHECKS = [
@@ -33,6 +33,15 @@ REQUIRED_QA_COMMANDS = [
     "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-write-proof-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh",
 ]
+NO_OP_SOURCE_BLOCKER = "NOT_MERGE_READY: PR body lacks no-op source finalization evidence"
+NO_OP_SOURCE_FINALIZATION = """\
+No-op source finalization:
+Current PR head: {head}
+Checks: build, coverage, package-netbeans, test, and GitGuardian Security Checks are green for the current PR head; workflow-publish, pre-commit, and finalization failure areas are not failing on the current head.
+Scope: focused Window menu model registration recovery only; diff remains limited to menu registration contract, bounded QA wiring, evidence docs, PR-specific gates, and directly related test metadata.
+Review/finalization evidence: current-head PR metadata, focused diff review, docs impact review, and three default-workflow SEEK -> VALIDATE -> FIX cycles are refreshed; final cycle clean.
+Repository source changes: none required.
+"""
 ALLOWED_DIFF = [
     "core/ide/src/test/java/org/alice/ide/croquet/models/AliceMenuBarContractTest.java",
     "qa/outside-in/alice-desktop/scenarios/menu-action-smoke.yaml",
@@ -91,6 +100,10 @@ Accepted claim: Window menu model registration, stable identity, and menu-bar me
 Non-claims: no full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, full Save completion, or full Tweedle/player decode claim
 NOT_MERGE_READY: none
 """
+
+
+def valid_pr_body_with_no_op(head: str = PR_HEAD) -> str:
+    return valid_pr_body(head) + NO_OP_SOURCE_FINALIZATION.format(head=head)
 
 
 def valid_context() -> dict:
@@ -162,7 +175,7 @@ def valid_context() -> dict:
             "no_committed_exact_head_sha": True,
         },
         "diff_files": ALLOWED_DIFF,
-        "pr_body": valid_pr_body(),
+        "pr_body": valid_pr_body_with_no_op(),
         "manual_merge_performed": False,
     }
 
@@ -255,6 +268,53 @@ class Pr401MergeReadyGateTest(unittest.TestCase):
         self.assertIn("NOT_MERGE_READY: PR body lacks current-head evidence", blockers)
         self.assertIn("NOT_MERGE_READY: PR body contains stale head evidence", blockers)
         self.assertIn("NOT_MERGE_READY: PR body overclaims UI behavior", blockers)
+
+    def test_pr_body_must_record_literal_no_op_source_finalization_when_no_fix_is_needed(self) -> None:
+        gate = load_gate()
+
+        blockers = gate.validate_pr_body(valid_pr_body(), expected_head=PR_HEAD)
+
+        self.assertIn(NO_OP_SOURCE_BLOCKER, blockers)
+
+    def test_complete_no_op_source_finalization_cites_current_head_checks_scope_and_review(self) -> None:
+        gate = load_gate()
+        body = valid_pr_body() + NO_OP_SOURCE_FINALIZATION.format(head=PR_HEAD)
+
+        blockers = gate.validate_pr_body(body, expected_head=PR_HEAD)
+
+        self.assertNotIn(NO_OP_SOURCE_BLOCKER, blockers)
+        self.assertNotIn("NOT_MERGE_READY: PR body lacks current-head evidence", blockers)
+        for required in [
+            f"Current PR head: {PR_HEAD}",
+            "workflow-publish, pre-commit, and finalization failure areas are not failing on the current head",
+            "focused Window menu model registration recovery only",
+            "three default-workflow SEEK -> VALIDATE -> FIX cycles are refreshed; final cycle clean",
+            "Repository source changes: none required.",
+        ]:
+            with self.subTest(required=required):
+                self.assertIn(required, body)
+
+    def test_partial_no_op_source_finalization_still_blocks_readiness(self) -> None:
+        gate = load_gate()
+        partial_no_op = NO_OP_SOURCE_FINALIZATION.format(head=PR_HEAD).replace(
+            "workflow-publish, pre-commit, and finalization failure areas are not failing on the current head",
+            "workflow-publish and pre-commit were reviewed previously",
+        )
+        body = valid_pr_body() + partial_no_op
+
+        blockers = gate.validate_pr_body(body, expected_head=PR_HEAD)
+
+        self.assertIn(NO_OP_SOURCE_BLOCKER, blockers)
+
+    def test_merge_ready_requires_no_op_source_finalization_for_owner_free_recovery(self) -> None:
+        gate = load_gate()
+        context = valid_context()
+        context["pr_body"] = valid_pr_body()
+
+        result = gate.evaluate_merge_readiness(context)
+
+        self.assertFalse(result["ready"])
+        self.assertIn(NO_OP_SOURCE_BLOCKER, result["blockers"])
 
     def test_draft_unclean_merge_state_or_dirty_worktree_blocks_readiness(self) -> None:
         gate = load_gate()

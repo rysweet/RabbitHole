@@ -97,6 +97,7 @@ BLOCKER_BODY_MISSING_HEAD = "NOT_MERGE_READY: PR body lacks current-head evidenc
 BLOCKER_BODY_STALE_HEAD = "NOT_MERGE_READY: PR body contains stale head evidence"
 BLOCKER_BODY_OVERCLAIM = "NOT_MERGE_READY: PR body overclaims UI behavior"
 BLOCKER_BODY_UNRESOLVED = "NOT_MERGE_READY: PR body records unresolved blockers"
+BLOCKER_BODY_NO_OP_SOURCE = "NOT_MERGE_READY: PR body lacks no-op source finalization evidence"
 BLOCKER_CONTEXT_LOAD = "NOT_MERGE_READY: unable to collect merge-ready context"
 
 HEX_SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
@@ -171,6 +172,9 @@ def validate_pr_body(body: str, expected_head: str) -> list[str]:
 
     if _contains_overclaim(body):
         blockers.append(BLOCKER_BODY_OVERCLAIM)
+
+    if not _has_no_op_source_finalization(body, expected_head):
+        blockers.append(BLOCKER_BODY_NO_OP_SOURCE)
 
     missing_fragments = [fragment for fragment in REQUIRED_PR_BODY_FRAGMENTS if fragment not in body]
     if missing_fragments:
@@ -341,6 +345,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _contains_overclaim(body: str) -> bool:
     claim_text = "\n".join(line for line in body.splitlines() if not NON_CLAIM_LINE_RE.search(line))
     return OVERCLAIM_RE.search(claim_text) is not None
+
+
+def _has_no_op_source_finalization(body: str, expected_head: str) -> bool:
+    required_fragments = (
+        "No-op source finalization:",
+        f"Current PR head: {expected_head}",
+        (
+            "workflow-publish, pre-commit, and finalization failure areas are not failing "
+            "on the current head"
+        ),
+        "focused Window menu model registration recovery only",
+        (
+            "three default-workflow SEEK -> VALIDATE -> FIX cycles are refreshed; "
+            "final cycle clean"
+        ),
+        "Repository source changes: none required.",
+    )
+    return bool(expected_head) and all(fragment in body for fragment in required_fragments)
 
 
 def _checks_green_for_head(checks: Any, head: str) -> bool:
