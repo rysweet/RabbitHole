@@ -1,10 +1,10 @@
 Default-workflow recovery evidence for PR #419
-Recorded at: 2026-05-09T11:13:51Z
+Recorded at: 2026-05-09T11:38:29Z
 PR: https://github.com/rysweet/RabbitHole/pull/419
 Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
 Base branch: develop
 Evidence stage: final PR419 exact-head readiness handoff
-Exact checked HEAD at final validation: 33cafc5604b9acbda495dd9296b664ff24447f2e
+Exact checked HEAD at final validation: 42250294234559bf07a0b77c8e80f71f849ea555
 origin/develop at recovery: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 merge-base(HEAD, origin/develop): 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 
@@ -19,7 +19,7 @@ Merge status:
 - The branch contains current origin/develop at the checked recovery
   point; no rebase was performed and no shared PR history was rewritten.
 - PR #419 points at the validated exact HEAD
-  33cafc5604b9acbda495dd9296b664ff24447f2e on the existing branch.
+  42250294234559bf07a0b77c8e80f71f849ea555 on the existing branch.
 
 Worktree end state:
 - No unmerged path remains; the previous AA index state for
@@ -55,6 +55,8 @@ Intentional changes:
   introduces no API client implementation, service adapter, or runtime external
   service call. The recorded `gh pr view` command is review metadata only and is
   not a repository runtime integration; no retry path was added.
+- Step 20 cleanup tightens readiness and sampler contract shell checks by
+  removing success-shaped fallbacks while preserving the bounded evidence lane.
 
 Scope inspected:
 - Full origin/develop...HEAD diff reviewed for the existing PR #419 branch.
@@ -74,12 +76,11 @@ Scope inspected:
   qa/outside-in/alice-desktop/schema/scenario.schema.json
 
 Focused validation completed:
-- git fetch origin --quiet
 - git rev-parse HEAD
-- git rev-parse origin/develop
-- git merge-base HEAD origin/develop
-- git merge --no-edit origin/develop
-- gh pr view 419 --json number,headRefName,headRefOid,baseRefName,url,state
+- git rev-parse '@{u}'
+- git diff --name-only --diff-filter=U
+- rg '(<{7}|={7}|>{7})' docs qa pyproject.toml
+- git diff --check
 - python3 -m py_compile qa/outside-in/alice-desktop/runners/post-open-runtime-display-probe.py qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py
 - NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
