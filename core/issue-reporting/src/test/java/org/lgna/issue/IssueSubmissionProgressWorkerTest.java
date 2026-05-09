@@ -11,7 +11,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThrows;
 
 public class IssueSubmissionProgressWorkerTest {
   private static final List<String> EXPECTED_PROGRESS_MESSAGES = List.of("START_MESSAGE", "submission:true", "END_MESSAGE");
@@ -63,12 +63,7 @@ public class IssueSubmissionProgressWorkerTest {
     RuntimeException submissionException = new IllegalStateException("submission failed");
     RecordingIssueSubmissionProgressWorker worker = new RecordingIssueSubmissionProgressWorker(thread, throwable, true, false, submissionException);
 
-    try {
-      worker.do_onBackgroundThread();
-      fail("Expected submission exception");
-    } catch (RuntimeException e) {
-      assertSame(submissionException, e);
-    }
+    assertSame(submissionException, assertThrows(RuntimeException.class, worker::do_onBackgroundThread));
 
     assertEquals(List.of("START_MESSAGE", "submission:true"), worker.progressMessages);
     Issue capturedIssue = worker.capturedIssueBuilder.build();
