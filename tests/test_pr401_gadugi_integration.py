@@ -12,6 +12,7 @@ implementation gaps that need fixing.
 """
 
 import importlib.util
+import os
 import sys
 import unittest
 from functools import lru_cache
@@ -102,7 +103,8 @@ NOT_MERGE_READY: none
 def valid_context_with_gadugi_diff() -> dict:
     """Build a valid context that includes gadugi files in the diff."""
     gate = load_gate()
-    all_pr_diff_files = list(gate.ALLOWED_DIFF_FILES) + GADUGI_FILES_IN_PR
+    # GADUGI_FILES_IN_PR ⊂ ALLOWED_DIFF_FILES (verified by GadugiFilesInAllowedDiffTest)
+    all_pr_diff_files = list(gate.ALLOWED_DIFF_FILES)
     return {
         "pr_number": 401,
         "local_head": PR_HEAD,
@@ -491,7 +493,6 @@ class ContractTestFileTest(unittest.TestCase):
 
     def test_contract_test_exists_and_is_executable(self) -> None:
         self.assertTrue(CONTRACT_TEST.exists())
-        import os
         self.assertTrue(os.access(CONTRACT_TEST, os.X_OK))
 
     def test_contract_test_references_gadugi_yaml(self) -> None:
