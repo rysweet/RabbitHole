@@ -8,3 +8,8 @@ Continuation attempt at 2026-05-07T14:03:43Z
 Requested workflow: default-workflow
 Result: workflow skill invocation skipped because active recipe-managed session instructions prohibit invoking workflow skills.
 Fallback: manual default-workflow steps followed for this branch.
+
+Recovery/finalization at 2026-05-09T03:55:00Z
+Requested workflow: default-workflow PR #389 recovery
+Result: prior manual-fallback marker cleared after exact-head review, base-to-head diff inspection, focused local validation, gated exported Ant build smoke proof, clean mergeability check, and passing PR checks.
+Evidence boundary: exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest Ant build/JAR/probe behavior; it is not full GUI export, deployed installer, visible rendering, or Sims validation.
