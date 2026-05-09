@@ -112,7 +112,7 @@ The Select Project probe writes `tab-click-observation.json`. Existing tab inven
 | `openAttempted` | boolean | `true` only when OK/Open was attempted after target-specific selection evidence. |
 | `projectOpenObserved` | boolean | `true` only when the Select Project frame is no longer present after the guarded open attempt. |
 | `projectOpenDetail` | string or null | Concise open-progress detail. It must not make rendering, lesson, or grading claims. |
-| `observedCandidates` | object list | Bounded safe summaries of candidate starter nodes inspected in the active Starters context. |
+| `targetStarterObserved.activeListCandidates` | object list | Bounded safe summaries of active Starters list candidates when the target starter is found. |
 | `blocker` | string or null | Stable machine-readable blocker code. Preserve this field for compatibility with current artifacts and tests. |
 | `blockerDetail` | string or object or null | Existing human-readable blocker detail. Preserve this field for compatibility with current artifacts and tests. |
 | `nextBlocker` | object or null | Structured target-specific blocker details for non-opened outcomes. |
@@ -128,7 +128,6 @@ The Select Project probe writes `tab-click-observation.json`. Existing tab inven
 | `activatedBeforeTargetSearch` | `true` for accepted evidence; false or missing blocks success. |
 | `activationDetail` | Concise AT-SPI activation result. |
 | `targetSearchScope` | `active-starters-tab` for accepted evidence. |
-| `availableTabNames` | Bounded list of Select Project tab names observed by the probe. |
 
 If this object is missing, ambiguous, or not Starters-scoped, `evidenceStatus` must not be `opened`.
 
@@ -148,7 +147,7 @@ When the target is found, `targetStarterObserved` records only safe AT-SPI node 
 | `indexInParent` | integer or null | Target index in its immediate parent when available. |
 | `parentSelectionAvailable` | boolean | Whether a containing accessible object exposes a usable selection interface. |
 
-If the target is not found, `targetStarterObserved` is null and `observedCandidates`, `blocker`, `blockerDetail`, and `nextBlocker` explain the active Starters context and discovered candidates.
+If the target is not found, `targetStarterObserved` is null and `blocker`, `blockerDetail`, and `nextBlocker.observedAtspiState` explain the active Starters context that stopped progress.
 
 ## Required action order
 

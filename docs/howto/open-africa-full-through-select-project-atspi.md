@@ -92,7 +92,7 @@ The target `tab-click-probe.py` behavior follows the existing Select Project QA/
 2. Identify and activate the `Starters` tab.
 3. Record `startersTabSafety` showing that the Starters tab was activated before target search and that the active search scope is `active-starters-tab`.
 4. Search only that active context for `Africa Full`.
-5. Record safe target observation data: role, state names, available actions, tree path, parent selection-interface availability, and bounded candidate names.
+5. Record safe target observation data: role, state names, available actions, tree path, parent selection-interface availability, and bounded active-list context.
 6. Set `targetSelectionObserved=true` only when target-specific evidence shows `Africa Full` was selected.
 7. Set `openAttempted=true` only after target-specific selection evidence exists.
 8. Set `projectOpenObserved=true` only when the Select Project frame is no longer present after the guarded open attempt.
