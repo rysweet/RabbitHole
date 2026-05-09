@@ -183,6 +183,8 @@ for scenario_id in manual_command_scenarios:
         errors.append(f"{scenario_id} must require command, artifact, project, or failure-path evidence")
 
 procedure_doc_normalized = re.sub(r"\s+", " ", procedure_edit_seam_text)
+if re.search(r"\balice-desktop-procedure-edit-seam-smoke\b(?:\s+\S+){0,12}\s+--timeout-seconds\b", procedure_doc_normalized):
+    errors.append("procedure edit seam docs must not document the manual scenario with timeout fields")
 if "alice-desktop-procedure-edit-seam-smoke --evidence-dir" in procedure_doc_normalized:
     errors.append("procedure edit seam docs must not document the manual scenario as a timeout-based runner command")
 for forbidden in (
