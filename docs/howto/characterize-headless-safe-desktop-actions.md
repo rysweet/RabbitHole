@@ -44,7 +44,7 @@ Avoid tests that assert private layout details, localized strings unrelated to t
 
 ### Menu/action registration
 
-Use `AliceMenuBarContractTest` when the behavior is about the top-level Alice desktop menu contract. It verifies the stable user-facing menu order and controller lookup registration without launching Swing or JavaFX.
+Use `AliceMenuBarContractTest` when the behavior is about Window menu availability through the Alice desktop menu-bar model. It verifies `WindowMenuModel` registration and menu-bar membership lookup without launching Swing or JavaFX.
 
 Run it directly:
 
@@ -121,7 +121,7 @@ Do not catch broad Swing or JavaFX exceptions and convert them into success. Do 
 
 ## Update outside-in QA when needed
 
-Use the existing menu/action smoke scenario when the change is covered by menu registration or action lookup:
+Use the existing menu/action smoke scenario when the change is covered by Window menu model registration:
 
 ```bash
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \

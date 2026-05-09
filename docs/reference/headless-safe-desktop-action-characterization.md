@@ -24,7 +24,7 @@ It covers:
 | Area | Contract |
 | --- | --- |
 | JavaFX/Swing startup | Alice detects a truly headless environment before starting Swing or JavaFX desktop UI work and fails with a clear diagnostic instead of an obscure toolkit stack trace. |
-| Menu/action registration | The Alice desktop menu bar keeps the user-facing menu order and controller lookup registration needed by desktop actions. |
+| Menu/action registration | The Alice desktop menu bar registers the Window menu model and exposes it through menu-bar membership lookup. |
 | Save and export flow | Save, Save As, and Export keep their prompt, cancel, wait-cursor, retry, and `UserActivity` finish/cancel behavior. |
 | Outside-in evidence | Desktop action smoke evidence is collected through the checked-in Alice desktop QA runner, not through ad hoc shell commands. |
 
@@ -38,7 +38,7 @@ This lane builds on the existing Alice desktop outside-in QA lane and the projec
 | `alice-ide/src/test/java/org/alice/stageide/EntryPointHeadlessGuardTest.java` | Focused characterization that the desktop startup boundary rejects headless launch and allows graphical launch. |
 | `core/ide/src/main/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlow.java` | Package-private seam for Save, Save As, and Export flow behavior. |
 | `core/ide/src/main/java/org/alice/ide/croquet/models/projecturi/AbstractSaveOperation.java` | Production adapter from Croquet `UserActivity`, active `StageIDE`, document frame dialogs, wait cursor hooks, and save/export callbacks into `SaveOperationFlow`. |
-| `core/ide/src/test/java/org/alice/ide/croquet/models/AliceMenuBarContractTest.java` | Headless-safe menu registration characterization for user-facing desktop menu order and controller lookup. |
+| `core/ide/src/test/java/org/alice/ide/croquet/models/AliceMenuBarContractTest.java` | Headless-safe Window menu model registration characterization. |
 | `core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/SaveOperationFlowTest.java` | Headless-safe action journey characterization for direct save, prompt cancel, backup copy naming, retry-after-`IOException`, and cancel-after-failure behavior. |
 | `qa/outside-in/alice-desktop/scenarios/menu-action-smoke.yaml` | Gated outside-in smoke scenario for the menu/action contract test. |
 | `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` | Scenario catalog validator. |
@@ -74,16 +74,7 @@ The guard is intentionally narrow. It does not convert Alice into a headless app
 
 ### Menu/action registration
 
-`AliceMenuBarContractTest` characterizes launch-adjacent menu structure without requiring a display. The desktop menu bar registers these user-facing menus in order:
-
-1. File
-2. Edit
-3. Project
-4. Run
-5. Window
-6. Help
-
-Each registered child menu is also available through the menu bar's controller lookup path. This is a compatibility contract for desktop action discovery; it is not a full assertion of every menu item label or command implementation.
+`AliceMenuBarContractTest` characterizes Window menu registration without requiring a display. The test constructs the desktop menu-bar model, locates the registered `WindowMenuModel`, and verifies that it is reachable through menu-bar membership lookup. It does not assert full menu order, invoke menu actions, validate visible UI rendering, or exercise Save/File-menu behavior.
 
 ### Save and export action journey
 
@@ -257,8 +248,8 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 1. Graphical Alice startup behavior stays unchanged.
 2. Headless desktop startup fails clearly with `IllegalStateException: Alice desktop launch requires a graphical environment.`; it never reports GUI launch success without a display.
 3. Xvfb remains the supported way to collect automated launch evidence in CI.
-4. Menu registration order remains File, Edit, Project, Run, Window, Help.
-5. Menu controller lookup remains available for every registered top-level menu.
+4. The Window menu model remains registered in the desktop menu-bar model.
+5. The registered Window menu model remains reachable through menu-bar membership lookup.
 6. Save to a writable current file does not prompt.
 7. Save As and Export prompt for destinations.
 8. Prompt cancellation cancels the `UserActivity` and does not save or export.

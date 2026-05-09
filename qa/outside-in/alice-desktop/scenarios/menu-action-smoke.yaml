@@ -10,11 +10,11 @@ preconditions:
 userActions:
   - Enable gated smokes in a workspace prepared for core IDE module tests.
   - Run the focused menu/action contract command smoke.
-  - Review the command output for Alice desktop menu registration and controller lookup coverage.
+  - Review the command output for Window menu model registration coverage.
 expectedOutcomes:
   - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
   - When the gate is enabled, the focused Alice menu bar contract test exits successfully.
-  - Command evidence covers launch-adjacent desktop menu registration without making brittle display or manual JavaFX claims.
+  - Command evidence covers Window menu model registration without making brittle display or manual JavaFX claims.
 automation:
   cwd: .
   argv:
@@ -34,12 +34,12 @@ evidence:
     - status.txt recording the gated command outcome.
     - command.log from the focused Alice menu/action smoke command.
     - Test output or surefire report naming AliceMenuBarContractTest.
-    - Notes connecting any later manual desktop pass to the same menu/action contract.
+    - Notes connecting any later manual desktop pass to the same Window menu registration contract.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If focused core IDE tests are unavailable, attach the nearest menu/action plumbing evidence and record the missing assertion.
-    - Manual GUI evidence should be added only when a human actually exercises the desktop menu/action path.
+    - If focused core IDE tests are unavailable, attach the nearest Window menu registration evidence and record the missing assertion.
+    - Manual GUI evidence should be added only when a human actually exercises the desktop menu path.
 supportingEvidence:
   - alice-desktop-launch
 tags:
