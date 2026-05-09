@@ -8,6 +8,7 @@ blocker contract without changing the custom Alice scenario schema.
 Implementation files:
 
 - `qa/outside-in/alice-desktop/gadugi/run-execution-gap-evidence.yaml`
+- `qa/outside-in/alice-desktop/tests/test-gadugi-run-execution-gap-contract.sh`
 - `qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh`
 
 The scenario validates execution-gap evidence wiring by delegating to the
@@ -58,7 +59,8 @@ For the custom Alice outside-in scenario schema, see
 | --- | --- |
 | `qa/outside-in/alice-desktop/gadugi/` | Gadugi-compatible QA scenario directory. This directory is separate from the custom Alice scenario catalog. |
 | `qa/outside-in/alice-desktop/gadugi/run-execution-gap-evidence.yaml` | Gadugi CLI scenario that verifies Run execution gap evidence wiring through the Alice outside-in runner. |
-| `qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh` | Shell contract test that validates the `alice-desktop-run-debug` scenario YAML, required evidence artifacts, gap-report wording, manual checklist wording, and negative cases. |
+| `qa/outside-in/alice-desktop/tests/test-gadugi-run-execution-gap-contract.sh` | Dependency-free shell contract test that checks the Gadugi YAML path, identity, metadata, delegated commands, conservative scope wording, and non-claim boundaries using shell and the Python standard library only. |
+| `qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh` | Shell contract test that validates the underlying `alice-desktop-run-debug` scenario YAML, required evidence artifacts, gap-report wording, manual checklist wording, and negative cases for missing VM-listener artifacts and payload drift. |
 | `qa/outside-in/alice-desktop/scenarios/run-debug.yaml` | Custom-schema Alice scenario consumed by the repo-owned outside-in runner. This file remains on the Alice custom schema and is not a Gadugi scenario. |
 
 The `gadugi/` directory exists because `gadugi-test validate` uses a different
@@ -146,8 +148,9 @@ The scenario YAML uses the CLI schema accepted by `gadugi-test validate`.
 | Delegated catalog validation | The first step runs `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`. |
 | Delegated evidence preparation | The second step runs `qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-run-debug --prepare-only --evidence-dir qa/outside-in/alice-desktop/evidence/gadugi-run-execution-gap`. |
 | Delegated shell tests | The third step runs `qa/outside-in/alice-desktop/tests/run-tests.sh`, which includes `test-run-execution-gap-contract.sh`. |
-| Verification | The contract tests confirm scenario identity, workflow value, automation mode, required evidence artifacts, gap-report artifact reference, prohibited claim wording, manual checklist rendering, and negative cases for missing VM-listener artifacts and payload drift. |
-| Test dependencies | The shell contract test uses shell and Python standard library checks only; it must not require PyYAML or other non-repo dependencies. |
+| Gadugi YAML verification | `test-gadugi-run-execution-gap-contract.sh` confirms the Gadugi YAML path, scenario name, CLI agent metadata, tags, literal delegated commands, conservative description text, non-claim boundaries, and absence of stale config references. |
+| Alice scenario verification | `test-run-execution-gap-contract.sh` confirms the underlying `alice-desktop-run-debug` scenario identity, workflow value, automation mode, required evidence artifacts, gap-report artifact reference, prohibited claim wording, manual checklist rendering, and negative cases for missing VM-listener artifacts and payload drift. |
+| Test dependencies | Both shell contract tests use shell and Python standard library checks only; they must not require PyYAML or other non-repo dependencies. |
 | Evidence location | Generated outside-in runner evidence is written under `qa/outside-in/alice-desktop/evidence/gadugi-run-execution-gap`. Evidence output is generated runtime data and remains uncommitted. |
 
 The scenario description uses conservative evidence-contract wording such as
@@ -175,6 +178,9 @@ NODE_OPTIONS=--max-old-space-size=32768 \
 
 NODE_OPTIONS=--max-old-space-size=32768 \
   qa/outside-in/alice-desktop/tests/run-tests.sh
+
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/tests/test-gadugi-run-execution-gap-contract.sh
 
 NODE_OPTIONS=--max-old-space-size=32768 \
   qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh
