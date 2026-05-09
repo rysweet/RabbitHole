@@ -1,6 +1,6 @@
 Default-workflow readiness evidence for PR #423
-Recorded at: 2026-05-09T10:26:04Z
-Validated source tree HEAD: 7aca4f15d41848fbc1d07a04964361ff2bc107d3
+Recorded at: 2026-05-09T10:46:11Z
+Validated source tree HEAD: 556d11cf115213f44b7a82c9b3d24ce74aafa513
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
@@ -12,8 +12,10 @@ Scope:
 - The current diff against origin/develop contains source-generator
   characterization changes, bounded launcher/source-generation documentation,
   and generated-project code paths already in the PR branch.
-- Validation included the current working tree additions to source-generator
-  documentation and this evidence file.
+- Validation was rerun after excluding the out-of-scope
+  ProjectCodeGenerator.java performance optimization from this review round.
+- This evidence refresh changes only this log; the source tree validated here
+  is the exact committed source tree at the recorded HEAD.
 - This log is retained as review evidence for PR #423. The prior PR #388
   fallback evidence was stale and has been replaced.
 - .copilot-evidence/default-workflow-attempt.exit remains a zero-exit marker.
@@ -27,12 +29,16 @@ Validated commands for the source tree recorded here:
 - git submodule update --init tweedle-lang
 - NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SourceCodeGeneratorTest test -q
 - NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest test -q
-- git --no-pager diff --check -- docs/index.md docs/reference/generated-story-api-listener-source-characterization.md docs/howto/characterize-source-code-generator.md docs/tutorials/trace-source-code-generator-characterization.md
+- git --no-pager diff --check -- docs/index.md docs/reference/generated-story-api-listener-source-characterization.md docs/howto/characterize-source-code-generator.md docs/tutorials/trace-source-code-generator-characterization.md .copilot-evidence/default-workflow-attempt.log netbeans/src/main/java/org/alice/netbeans/project/ProjectCodeGenerator.java
 
 Result:
 - Tweedle grammar submodule initialized successfully.
 - Focused SourceCodeGeneratorTest validation passed.
 - Focused ProjectCodeGeneratorTest validation passed.
+- Diff whitespace validation passed for the source-generator documentation,
+  evidence log, and ProjectCodeGenerator.java review-feedback path.
+- No uncommitted ProjectCodeGenerator.java production optimization is included
+  in this evidence refresh.
 - SourceCodeGeneratorTest now characterizes expression-statement assignment,
   field access, static and instance method invocation, iterable for-each source,
   and the current DoTogether runnable fallback in addition to the existing
