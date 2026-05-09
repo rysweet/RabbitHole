@@ -128,6 +128,26 @@ class DirtyRecoveryPlan:
     blocker: str
 
 
+FOCUSED_SELECT_PROJECT_VALIDATION_COMMANDS = (
+    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+    "qa/outside-in/alice-desktop/tests/test-select-project-proof.sh",
+    "qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh",
+    "qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh",
+    "python3 -m unittest "
+    "tests/test_pr437_select_project_recovery_contract.py "
+    "tests/test_pr437_finalization_workflow.py "
+    "tests/test_pr437_noop_recovery_report_contract.py "
+    "tests/test_pr437_dirty_recovery_workflow.py",
+)
+
+FOCUSED_SELECT_PROJECT_EVIDENCE_CLAIMS = (
+    "Select Project visibility",
+    "Starters tab activation",
+    "Africa Full target selection evidence",
+    "Africa Full open attempt evidence",
+)
+
+
 @dataclass(frozen=True)
 class ExternalRetryPolicy:
     attempts: int = 3
@@ -286,12 +306,12 @@ class MergeReadinessEvaluator:
         if isinstance(evidence, GitHubEvidence):
             merge_state = evidence.merge_state_status
             review_decision = evidence.review_decision
-            checks = list(evidence.checks)
+            checks = evidence.checks
         else:
             merge_state = str(evidence.get("mergeStateStatus") or "")
             review_decision = str(evidence.get("reviewDecision") or "")
-            checks = [_parse_check(item) for item in evidence.get("statusCheckRollup") or []]
-        required_checks = [check for check in checks if check.required]
+            checks = tuple(_parse_check(item) for item in evidence.get("statusCheckRollup") or [])
+        required_checks = tuple(check for check in checks if check.required)
         review_state = review_decision or "owner-free/unset"
         approved = review_decision.upper() == "APPROVED"
 
@@ -321,17 +341,16 @@ class MergeReadinessEvaluator:
                 required_check_conclusion=_summarize_required_checks(required_checks),
             )
 
-        failed_checks = [
-            check
+        failed_check_names = ", ".join(
+            check.name
             for check in required_checks
             if check.status != "COMPLETED" or check.conclusion != "SUCCESS"
-        ]
-        if failed_checks:
-            names = ", ".join(check.name for check in failed_checks)
+        )
+        if failed_check_names:
             return MergeReadiness(
                 merge_ready=False,
                 reason="required-checks-blocked",
-                blocker=f"required checks are not all SUCCESS: {names}",
+                blocker=f"required checks are not all SUCCESS: {failed_check_names}",
                 review_state=review_state,
                 approved=approved,
                 requires_disposable_merge_check=False,
@@ -410,7 +429,11 @@ class DirtyRecoveryPlanner:
         self.pr_number = pr_number
         self.branch = branch
         self.base_ref = base_ref
-        self.node_options = node_options
+        self.reconcile_ref = f"origin/{base_ref}"
+        self.validation_commands = tuple(
+            f"NODE_OPTIONS={node_options} {command}"
+            for command in FOCUSED_SELECT_PROJECT_VALIDATION_COMMANDS
+        )
 
     def plan(
         self,
@@ -435,46 +458,23 @@ class DirtyRecoveryPlanner:
             blocker = readiness.blocker
 
         action = "NOT_MERGE_READY" if blocker else "EDIT_AND_PUSH"
-        reconcile_ref = f"origin/{self.base_ref}"
-        validation_commands = tuple(
-            self._with_node_options(command)
-            for command in (
-                "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
-                "qa/outside-in/alice-desktop/tests/test-select-project-proof.sh",
-                "qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh",
-                "qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh",
-                "python3 -m unittest "
-                "tests/test_pr437_select_project_recovery_contract.py "
-                "tests/test_pr437_finalization_workflow.py "
-                "tests/test_pr437_noop_recovery_report_contract.py "
-                "tests/test_pr437_dirty_recovery_workflow.py",
-            )
-        )
         return DirtyRecoveryPlan(
             action=action,
             repo=self.repo,
             pr_number=self.pr_number,
             branch=self.branch,
             base_ref=self.base_ref,
-            reconcile_ref=reconcile_ref,
+            reconcile_ref=self.reconcile_ref,
             noop_allowed=False,
             reconcile_commands=(
                 f"git fetch origin {self.base_ref}",
-                f"git merge --no-edit {reconcile_ref}",
+                f"git merge --no-edit {self.reconcile_ref}",
             ),
-            validation_commands=validation_commands,
-            focused_evidence_claims=[
-                "Select Project visibility",
-                "Starters tab activation",
-                "Africa Full target selection evidence",
-                "Africa Full open attempt evidence",
-            ],
+            validation_commands=self.validation_commands,
+            focused_evidence_claims=list(FOCUSED_SELECT_PROJECT_EVIDENCE_CLAIMS),
             changed_files=list(changed_files),
             blocker=blocker,
         )
-
-    def _with_node_options(self, command: str) -> str:
-        return f"NODE_OPTIONS={self.node_options} {command}"
 
 
 class ChangeGate:

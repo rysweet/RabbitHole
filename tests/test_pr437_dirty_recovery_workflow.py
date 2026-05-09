@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 import unittest
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ FOCUSED_SELECT_PROJECT_VALIDATION = [
 ]
 
 
+@cache
 def load_finalizer() -> Any:
     if not FINALIZER_PATH.exists():
         raise AssertionError(f"Expected PR #437 finalization workflow at {FINALIZER_PATH}")
