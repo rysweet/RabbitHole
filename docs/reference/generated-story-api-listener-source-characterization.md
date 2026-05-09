@@ -144,12 +144,11 @@ runtime feature test. It succeeds when:
 5. The observed callback count and payload type assertions match the expected
    single scene activation dispatch.
 
-Split tests that separately prove `EventManager.sceneActivated()` callback
-delivery and direct `SceneActivationHandler.handleEventFire(...)` payload
-delivery are transitional evidence only. They should be consolidated or extended
-before this feature is considered complete, because direct handler payload
-delivery does not prove generated listener participation in the runtime dispatch
-seam.
+The executable test intentionally keeps callback count and payload assertions in
+the same `EventManager.sceneActivated()` dispatch path. Direct
+`SceneActivationHandler.handleEventFire(...)` payload checks are not accepted as a
+substitute because they do not prove generated listener participation in the
+runtime dispatch seam.
 
 The tests create only temporary files. The generated project archive, source
 directory, and compiled classes directory are managed by JUnit's temporary
