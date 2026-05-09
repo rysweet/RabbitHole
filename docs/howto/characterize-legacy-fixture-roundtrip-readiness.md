@@ -292,6 +292,11 @@ checks and final-head focused evidence.
 
 ## 11. Finalize PR #433 with the no-timeout current-head profile
 
+> **Post-merge note:** This section is specific to PR #433 in `rysweet/RabbitHole`.
+> After PR #433 merges, this section becomes historical context and may be archived
+> or removed in a follow-up cleanup. The reusable merge-readiness workflow is in
+> Section 10.
+
 PR #433 uses the same bounded lane with current-head evidence. This is a
 PR-specific finalization profile for PR `433` in `rysweet/RabbitHole`; do not
 reuse it as a generic approval or merge workflow.

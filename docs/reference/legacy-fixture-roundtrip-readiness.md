@@ -19,6 +19,7 @@ shapes fail at the archive I/O boundary with explicit checked failures.
 - [Configuration](#configuration)
 - [Validation](#validation)
 - [Desktop QA smoke](#desktop-qa-smoke)
+  - [Gadugi archive fixture evidence scenario](#gadugi-archive-fixture-evidence-scenario)
 - [PR evidence wording](#pr-evidence-wording)
 - [Merge-ready evidence contract](#merge-ready-evidence-contract)
 - [PR #433 no-timeout finalization profile](#pr-433-no-timeout-finalization-profile)
@@ -321,6 +322,39 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-archive-fi
 Without `ALICE_QA_RUN_GATED_SMOKES=1`, the runner writes gated-not-run evidence
 instead of treating the smoke as completed evidence.
 
+### Gadugi archive fixture evidence scenario
+
+The Gadugi-compatible scenario for this lane lives at:
+
+```text
+qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml
+```
+
+It delegates to the same outside-in runner and contract test suite without
+introducing independent assertions. The scenario is conservative: `assertions: []`.
+
+Validate and run with:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s archive-fixture-evidence \
+  --timeout 600000
+```
+
+The contract test for this scenario is:
+
+```text
+qa/outside-in/alice-desktop/tests/test-gadugi-archive-fixture-contract.sh
+```
+
+The Gadugi scenario does not prove full historical archive migration, full
+Tweedle decode, full player decode, arbitrary user archive support, UI
+automation, visible rendering, or desktop save/open behavior.
+
 ## PR evidence wording
 
 PR notes for this lane should name the exact PR head SHA used for final
@@ -398,6 +432,10 @@ can be affected by the merge, and refresh the PR body before claiming strict
 merge-ready status.
 
 ## PR #433 no-timeout finalization profile
+
+> **Post-merge note:** This section is specific to PR #433 in `rysweet/RabbitHole`.
+> After PR #433 merges, this section becomes historical context and may be archived
+> or removed in a follow-up cleanup.
 
 PR #433 uses the legacy fixture round-trip lane as a PR-specific no-timeout
 finalization profile. Treat this section as a fixed PR #433 evidence profile,

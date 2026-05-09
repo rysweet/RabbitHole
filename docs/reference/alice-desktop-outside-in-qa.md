@@ -151,6 +151,8 @@ Run commands from the repository root.
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
+| `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml` | Validate the Gadugi archive fixture evidence scenario. | Confirms the scenario uses the Gadugi CLI schema. |
+| `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s archive-fixture-evidence --timeout 600000` | Run the Gadugi archive fixture evidence scenario. | Delegates to the outside-in archive-fixture smoke runner and contract test suite. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa list` | Install the QA wrapper from a branch and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa run <scenario-id-or-path>` | Install the QA wrapper from a branch and create evidence in the current checkout. | Delegates to `run-scenario.sh run`. |
 
@@ -307,6 +309,28 @@ completion. The default Gadugi path uses the underlying runner's `--prepare-only
 mode;
 `ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
 invoked without `--prepare-only`.
+
+### Run the Gadugi archive fixture evidence scenario
+
+The archive fixture evidence Gadugi scenario validates PR #433 legacy fixture
+round-trip characterization through the outside-in runner and contract tests.
+Like all Gadugi scenarios, it lives under `qa/outside-in/alice-desktop/gadugi/`.
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s archive-fixture-evidence \
+  --timeout 600000
+```
+
+The scenario delegates to `validate-scenarios.sh`, `run-scenario.sh run
+alice-desktop-archive-fixture-smoke --prepare-only`, and `run-tests.sh`. It uses
+conservative delegation with `assertions: []`. It does not prove full historical
+archive migration, full Tweedle decode, full player decode, arbitrary user
+archive support, UI automation, visible rendering, or desktop save/open behavior.
 
 ### Exit behavior
 

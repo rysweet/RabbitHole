@@ -288,6 +288,9 @@ SEEK/VALIDATE/FIX are complete for the bounded lane. CI checks <names> are still
 pending, so this note does not claim strict merge-ready or all checks passed.
 ```
 
+The following PR #433-specific block becomes historical context after that PR
+merges and may be archived in a follow-up cleanup.
+
 For PR #433 only, trace the current-head profile instead of replacing the
 placeholders with an earlier branch head or reusing this as a generic merge
 workflow. Capture the expected head from local `HEAD` and GitHub `headRefOid` at
