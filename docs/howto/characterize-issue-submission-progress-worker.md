@@ -8,7 +8,9 @@ Use this guide to add or review focused `IssueSubmissionProgressWorker` characte
 - [Choose the behavior](#choose-the-behavior)
 - [Use the existing seam](#use-the-existing-seam)
 - [Keep the boundary narrow](#keep-the-boundary-narrow)
+- [Assess scenario applicability](#assess-scenario-applicability)
 - [Run validation](#run-validation)
+- [Prepare handoff evidence](#prepare-handoff-evidence)
 - [Review the result](#review-the-result)
 
 ## Prerequisites
@@ -105,6 +107,20 @@ Use this lane for issue-reporting background-submission characterization only:
 
 If a change needs rendered desktop proof, use the Alice desktop outside-in QA lane instead of broadening this worker test.
 
+## Assess scenario applicability
+
+Treat Alice desktop outside-in QA as non-applicable for this worker seam unless an existing scenario directly exercises bug-report submission through `IssueSubmissionProgressWorker`.
+
+Use this decision table when writing review notes or PR evidence:
+
+| Scenario evidence question | Accepted answer |
+| --- | --- |
+| Does the scenario invoke the bug-report submit path and worker? | Cite the scenario name, runner command, evidence directory, and result. |
+| Does the scenario only launch Alice, Save a project, inspect rendering, exercise lessons, or smoke a wrapper command? | Mark scenario evidence as not applicable to this worker seam. |
+| Is there no direct worker scenario? | Record `Scenario evidence: not applicable; covered by focused core/issue-reporting Maven characterization instead.` |
+
+Do not claim full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, real issue-service submission, or project attachment contents from this lane.
+
 ## Run validation
 
 Run the focused worker characterization:
@@ -127,6 +143,24 @@ mvn -pl core/issue-reporting -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 ```
+
+## Prepare handoff evidence
+
+Before marking a worker-seam PR ready, collect current-head evidence instead of carrying forward stale output:
+
+| Gate | What to record |
+| --- | --- |
+| Branch head | The branch name and exact `HEAD` SHA that validation used. |
+| Diff scope | `git --no-pager diff --name-status origin/develop...HEAD`; explain any file outside the worker, focused test, directly related docs, and explicitly justified validation-wrapper metadata. |
+| Focused validation | The exact focused Maven command and result for `IssueSubmissionProgressWorkerTest`. |
+| Module validation | The exact full `core/issue-reporting` Maven command and result when production issue-reporting code changed. |
+| Docs impact | The reference, how-to, tutorial, or index entries updated, or an explicit no-op justification if docs already matched the behavior. |
+| Scenario applicability | A direct worker scenario result, or the explicit non-applicable statement from this guide. |
+| Quality audit | At least three SEEK / VALIDATE / FIX cycles, with a clean final cycle. |
+| GitHub Actions | Completed green PR checks from the current PR head. |
+| Claim boundary | A statement that the evidence is limited to the issue-reporting worker seam and does not prove rendered UI, grading, lesson completion, project archive attachment contents, or real issue-service submission. |
+
+If any gate is missing, write an explicit `NOT_MERGE_READY` blocker with the missing evidence instead of treating green CI as sufficient.
 
 ## Review the result
 

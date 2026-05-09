@@ -5,6 +5,7 @@ This tutorial walks through the focused issue-reporting worker seam that protect
 ## Contents
 
 - [Start with the worker boundary](#start-with-the-worker-boundary)
+- [Trace the production entry point](#trace-the-production-entry-point)
 - [Trace a successful delegate](#trace-a-successful-delegate)
 - [Trace attachment intent](#trace-attachment-intent)
 - [Trace a failing delegate](#trace-a-failing-delegate)
@@ -29,6 +30,25 @@ return submission result
 ```
 
 The Swing progress dialog is handled separately on the event-dispatch thread. This tutorial stays on the background side of the seam.
+
+## Trace the production entry point
+
+Open the production caller:
+
+```text
+alice-ide/src/main/java/org/alice/ide/issue/AliceIssueConfiguration.java
+```
+
+The submit path is intentionally small:
+
+```text
+ask whether to attach the current project
+if the user does not cancel, mark submit attempted
+construct IssueSubmissionProgressWorker(jSubmitPane, option == YES)
+execute the worker
+```
+
+That flow proves where the attachment intent enters the worker. It does not prove project archive attachment contents, network submission, or rendered dialog correctness.
 
 ## Trace a successful delegate
 

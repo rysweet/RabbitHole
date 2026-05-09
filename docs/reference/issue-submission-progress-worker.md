@@ -5,6 +5,7 @@ This reference describes the `core/issue-reporting` background submission worker
 ## Contents
 
 - [Scope](#scope)
+- [Usage flow](#usage-flow)
 - [Artifact inventory](#artifact-inventory)
 - [Background submission contract](#background-submission-contract)
 - [API reference](#api-reference)
@@ -28,10 +29,23 @@ It covers:
 | Failure behavior | Exceptions thrown by submission work propagate; completion progress is not published after a failed submission delegate. |
 | Progress pane creation | The Swing progress pane is created lazily on first `getProgressPane()` use, normally from `START_MESSAGE` handling. |
 
+## Usage flow
+
+Production issue submission reaches the worker through the existing submit-pane configuration path:
+
+1. `JSubmitPane` invokes `ApplicationIssueConfiguration.submit(JSubmitPane)` from its submit button action.
+2. `AliceIssueConfiguration.submit(JSubmitPane)` asks whether the current project should be attached to the bug report.
+3. When the user chooses Yes or No, `JSubmitPane.setSubmitAttempted(true)` records the attempt.
+4. `AliceIssueConfiguration` constructs `IssueSubmissionProgressWorker` with the submit pane and the selected attachment intent.
+5. `execute()` starts the Swing worker, which runs `do_onBackgroundThread()` and publishes progress for the event-dispatch progress pane.
+
+The focused characterization tests do not drive that rendered flow. They exercise the worker-owned background method directly with a test subclass so they can prove ordering, builder creation, attachment intent, return values, and exception propagation without opening Swing UI or contacting an issue service.
+
 ## Artifact inventory
 
 | Artifact | Purpose |
 | --- | --- |
+| `alice-ide/src/main/java/org/alice/ide/issue/AliceIssueConfiguration.java` | Production submit path that turns the user's project-attachment choice into the worker constructor argument and starts the worker. |
 | `core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java` | Production worker that creates issue builders, runs background submission work, publishes progress messages, opens/closes the progress dialog, and handles final user feedback. |
 | `core/issue-reporting/src/test/java/org/lgna/issue/IssueSubmissionProgressWorkerTest.java` | Focused characterization for background submission ordering, issue-builder content, attachment intent, success result propagation, and exception behavior. |
 
@@ -158,9 +172,12 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 
 | Evidence | Accepted current-head proof |
 | --- | --- |
-| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, and directly related docs. |
+| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, directly related docs, and any explicitly justified metadata needed for the validation wrapper. |
 | Readiness | The focused `IssueSubmissionProgressWorkerTest` command above passes with `NODE_OPTIONS=--max-old-space-size=32768`. Run the full `core/issue-reporting` module command when handing off the PR or when any issue-reporting production code changes. |
+| Scenario applicability | Alice desktop outside-in scenarios are non-applicable unless an existing scenario directly exercises this bug-report worker seam. Do not substitute unrelated launch, Save, lesson, render, or wrapper-smoke scenarios as proof for this worker. |
 | Review | Source review confirms `createIssueBuilder()` still delegates to `JSubmitPane.createIssueBuilder()`, the progress pane remains lazy through `getProgressPane()`, and `do_onBackgroundThread()` still publishes start, delegates submission work, then publishes completion only after a normal delegate return. |
+| Quality audit | Record at least three SEEK / VALIDATE / FIX cycles against the current head. A clean final cycle has no remaining worker, docs, scenario-applicability, diff-scope, or evidence issue requiring a fix. |
+| PR description | The PR body names the exact head validated, focused and module validation commands, docs impact, scenario applicability, diff scope, quality-audit cycles, GitHub Actions status, and bounded non-claims. |
 | Finalization | `git --no-pager status --short --branch`, `gh pr view 428`, and `gh pr checks 428 --watch=false` describe the open PR state and checks without manually merging the PR. |
 | Claim boundary | Handoff notes cite only the worker seam, background ordering, attachment intent, exception propagation, source review, and Maven/PR-check evidence. They do not claim rendered UI automation, real issue-service submission, grading, or full end-to-end coverage. |
 
