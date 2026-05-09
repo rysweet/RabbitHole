@@ -59,7 +59,7 @@ For the custom Alice outside-in scenario schema, see
 | --- | --- |
 | `qa/outside-in/alice-desktop/gadugi/` | Gadugi-compatible QA scenario directory. This directory is separate from the custom Alice scenario catalog. |
 | `qa/outside-in/alice-desktop/gadugi/run-window-contract-evidence.yaml` | Gadugi CLI scenario that verifies Run-window creation/wiring evidence through the Alice outside-in runner. |
-| `qa/outside-in/alice-desktop/tests/test-gadugi-run-window-contract.sh` | Dependency-free shell contract test that checks the scenario path, identity, metadata, delegated commands, conservative scope wording, non-claim boundaries, and absence of stale config references using shell and the Python standard library only. |
+| `qa/outside-in/alice-desktop/tests/test-gadugi-run-window-contract.sh` | Shell contract test that checks the scenario path, identity, metadata, delegated commands, conservative scope wording, non-claim boundaries, and absence of stale config references using shell and Python with PyYAML. |
 | `qa/outside-in/alice-desktop/scenarios/run-window-contract.yaml` | Custom-schema Alice scenario consumed by the repo-owned outside-in runner. This file remains on the Alice custom schema and is not a Gadugi scenario. |
 
 The `gadugi/` directory exists because `gadugi-test validate` uses a different
@@ -121,7 +121,7 @@ The Gadugi scenario is intentionally small and repo-local.
 | Interface | `cli` | The scenario is a command-line evidence check, not a browser, desktop, or rendering test. |
 | Scenario name | `run-window-contract-evidence` | Stable name used with `gadugi-test run -s run-window-contract-evidence`. |
 | Timeout | `180000` in the scenario, `300000` for the PR readiness wrapper run | The YAML keeps individual command timeouts short; the wrapper run leaves enough time for the delegated QA scripts. |
-| Tags | `cli`, `gadugi`, `pr-434`, `run-window-contract`, `run-window-evidence-contract` | Tags make the scenario discoverable as a PR #434 Run-window creation/wiring evidence contract check. |
+| Tags | `cli`, `gadugi`, `pr-434`, `run-window-contract`, `run-window-evidence` | Tags make the scenario discoverable as a PR #434 Run-window creation/wiring evidence contract check. |
 
 The surrounding QA environment may set:
 
@@ -147,7 +147,7 @@ The scenario YAML uses the CLI schema accepted by `gadugi-test validate`.
 | Delegated evidence preparation | The second step runs `qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-run-window-contract --prepare-only --evidence-dir qa/outside-in/alice-desktop/evidence/gadugi-run-window-contract`. |
 | Delegated shell tests | The third step runs `qa/outside-in/alice-desktop/tests/run-tests.sh`. |
 | Verification | The contract test confirms path, name, CLI agent metadata, tags, literal delegated commands, conservative description text, non-claim boundaries, and absence of nonexistent config references. |
-| Test dependencies | The shell contract test uses shell and Python standard library checks only; it must not require PyYAML or other non-repo dependencies. |
+| Test dependencies | The shell contract test uses shell and Python with PyYAML for YAML parsing, matching the `test-gadugi-compatibility-contract.sh` precedent. |
 | Evidence location | Generated outside-in runner evidence is written under `qa/outside-in/alice-desktop/evidence/gadugi-run-window-contract`. Evidence output is generated runtime data and remains uncommitted. |
 
 The scenario text uses conservative evidence-contract wording such as
