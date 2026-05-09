@@ -170,6 +170,45 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         self.assertIn("outside project archive reopen/edit recovery scope", combined_output)
         self.assertIn("readme-unrelated-review-note.txt", combined_output)
 
+    def test_guard_rejects_committed_diff_with_unrelated_paths(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            unrelated_file = linked_worktree / "unrelated-committed-review-note.py"
+            unrelated_file.write_text("not part of the project archive reopen/edit seam\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(linked_worktree), "add", "unrelated-committed-review-note.py"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(linked_worktree),
+                    "-c",
+                    "user.name=Project Archive Guard Test",
+                    "-c",
+                    "user.email=project-archive-guard@example.invalid",
+                    "commit",
+                    "--no-verify",
+                    "-m",
+                    "Add unrelated committed guard test file",
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            result = self.run_guard(linked_worktree)
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("committed diff", combined_output)
+        self.assertIn("outside project archive reopen/edit recovery scope", combined_output)
+        self.assertIn("unrelated-committed-review-note.py", combined_output)
+
     def test_guard_accepts_clean_worktree_with_exact_head_noop_evidence(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -190,7 +229,10 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
             stale_head = "0" * 40 if head != "0" * 40 else "1" * 40
-            evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(stale_head))
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head).replace(head, stale_head),
+            )
 
             result = self.run_guard(
                 linked_worktree,
@@ -205,11 +247,126 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         self.assertIn("stale", combined_output)
         self.assertIn("expected head", combined_output)
 
+    def test_guard_rejects_clean_worktree_noop_evidence_for_stale_base_head(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            base_head = self.base_head()
+            stale_base_head = "0" * 40 if base_head != "0" * 40 else "1" * 40
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head).replace(
+                    f"origin/{BASE_BRANCH} HEAD: {base_head}",
+                    f"origin/{BASE_BRANCH} HEAD: {stale_base_head}",
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("stale", combined_output)
+        self.assertIn(f"origin/{BASE_BRANCH}", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_without_base_head(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_text = "\n".join(
+                line for line in self.exact_head_noop_evidence(head).splitlines()
+                if not line.startswith(f"origin/{BASE_BRANCH} HEAD:")
+            )
+            evidence_file = self.write_evidence(linked_worktree, evidence_text)
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn(f"origin/{BASE_BRANCH}", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_for_stale_merge_base(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            merge_base = self.merge_base(head)
+            stale_merge_base = "0" * 40 if merge_base != "0" * 40 else "1" * 40
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head).replace(
+                    f"Merge-base: {merge_base}",
+                    f"Merge-base: {stale_merge_base}",
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("stale", combined_output)
+        self.assertIn("merge-base", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_without_merge_base(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_text = "\n".join(
+                line for line in self.exact_head_noop_evidence(head).splitlines()
+                if not line.startswith("Merge-base:")
+            )
+            evidence_file = self.write_evidence(linked_worktree, evidence_text)
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("merge-base", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_without_committed_diff_scope(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_text = "\n".join(
+                line for line in self.exact_head_noop_evidence(head).splitlines()
+                if not line.startswith("Committed diff scope:")
+            )
+            evidence_file = self.write_evidence(linked_worktree, evidence_text)
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("committed diff scope", combined_output)
+
     def test_guard_rejects_expected_head_that_is_not_worktree_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
             stale_head = "0" * 40 if head != "0" * 40 else "1" * 40
-            evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(stale_head))
+            evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(head))
 
             result = self.run_guard(
                 linked_worktree,
@@ -931,8 +1088,10 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def clean_linked_worktree(self) -> None:
         if self._linked_worktree is None:
             self.fail("linked guard worktree was not initialized")
+        if self._linked_worktree_head is None:
+            self.fail("linked guard worktree HEAD was not initialized")
         subprocess.run(
-            ["git", "-C", str(self._linked_worktree), "reset", "--hard"],
+            ["git", "-C", str(self._linked_worktree), "reset", "--hard", self._linked_worktree_head],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -950,6 +1109,12 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         evidence_file = linked_worktree.parent / "readiness-evidence.md"
         evidence_file.write_text(evidence_text, encoding="utf-8")
         return evidence_file
+
+    def base_head(self) -> str:
+        return self.git_output(REPO_ROOT, "rev-parse", f"origin/{BASE_BRANCH}^{{commit}}")
+
+    def merge_base(self, head: str) -> str:
+        return self.git_output(REPO_ROOT, "merge-base", f"origin/{BASE_BRANCH}", head)
 
     def exact_head_noop_evidence(
         self,
@@ -969,6 +1134,8 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         quality_audit_evidence: Optional[str] = None,
         pr_description_evidence: Optional[str] = None,
     ) -> str:
+        base_head = self.base_head()
+        merge_base = self.merge_base(head)
         lines = [
             "PR: 402",
             f"Branch: {PR_BRANCH}",
@@ -976,9 +1143,10 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             f"PR head: {head}",
             f"Local HEAD: {head}",
             f"Remote branch HEAD: {head}",
-            f"origin/{BASE_BRANCH} HEAD: {head}",
-            f"Merge-base: {head}",
-            f"Merge-base status: merge-base equals origin/{BASE_BRANCH}",
+            f"origin/{BASE_BRANCH} HEAD: {base_head}",
+            f"Merge-base: {merge_base}",
+            f"Merge-base status: merge-base computed from origin/{BASE_BRANCH} and PR head",
+            f"Committed diff scope: all origin/{BASE_BRANCH}...{head} paths are project archive reopen/edit recovery scoped",
             "Worktree status: clean",
             "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
             f"Validation command: {VALIDATION_COMMAND}",
@@ -1011,15 +1179,16 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         lines.append("Stale evidence note: older evidence must not be reused for a different HEAD")
         if include_noop_justification:
             validated_head = head if include_noop_head else "the validated PR head"
-            state_head = head if include_noop_head else "the recorded base and merge-base"
+            base_state = base_head if include_noop_head else "the recorded base"
+            merge_base_state = merge_base if include_noop_head else "the recorded merge-base"
             validation_result = f"passed at {head}," if include_noop_head else "passed,"
             lines.extend(
                 [
                     "No-op justification:",
                     f"  PR 402 branch {PR_BRANCH} already points at",
                     f"  {validated_head}, local HEAD matches both the PR head and remote",
-                    f"  branch head, origin/{BASE_BRANCH} is {state_head}, merge-base is {state_head},",
-                    f"  merge-base equals origin/{BASE_BRANCH}, the origin/{BASE_BRANCH}...HEAD diff is limited to",
+                    f"  branch head, origin/{BASE_BRANCH} is {base_state}, merge-base is {merge_base_state},",
+                    f"  and the origin/{BASE_BRANCH}...{validated_head} diff is limited to",
                     "  project archive reopen/edit characterization/readiness surfaces,",
                     "  focused archive reopen/edit validation",
                     f"  {validation_result} and no scoped PR check blocker requires a code or docs",

@@ -169,6 +169,9 @@ When no files change, replace `Files modified:` with this shape:
 PR head: <current PR head>
 Local HEAD: <current PR head>
 Remote branch HEAD: <current PR head>
+origin/develop HEAD: <current origin/develop head>
+Merge-base: <current merge-base>
+Committed diff scope: all origin/develop...<current PR head> paths are project archive reopen/edit recovery scoped
 Checks:
   GitGuardian Security Checks successful at current PR head
   Alice Checkstyle CI/build (pull_request) successful at current PR head
@@ -252,6 +255,7 @@ Remote branch HEAD: <current PR head>
 origin/develop HEAD: <current origin/develop head>
 Merge-base: <current merge-base>
 Merge-base status: merge-base equals origin/develop
+Committed diff scope: all origin/develop...<current PR head> paths are project archive reopen/edit recovery scoped
 Worktree status: clean
 Checks:
   GitGuardian Security Checks successful at current PR head

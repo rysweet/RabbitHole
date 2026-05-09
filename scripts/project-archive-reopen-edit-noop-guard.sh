@@ -255,6 +255,14 @@ is_recovery_scope_path() {
   esac
 }
 
+append_unscoped_change() {
+  local path="$1"
+  local display="$2"
+  if ! is_recovery_scope_path "$path"; then
+    unscoped_changes+=("$display")
+  fi
+}
+
 candidate_path="."
 allow_noop_evidence_file=""
 expected_head=""
@@ -324,6 +332,36 @@ if [[ -n "$expected_head" ]]; then
   fi
 fi
 
+base_ref="origin/develop"
+if ! base_head="$(git -C "$repo_root" rev-parse --verify "$base_ref^{commit}" 2>/dev/null)"; then
+  fail 1 "base ref $base_ref is required to verify committed project archive reopen/edit diff scope"
+fi
+if ! merge_base="$(git -C "$repo_root" merge-base "$base_ref" HEAD 2>/dev/null)"; then
+  fail 1 "could not determine merge-base for $base_ref and HEAD"
+fi
+
+committed_diff_status="$(git -C "$repo_root" diff --name-status "$base_ref...HEAD")"
+if [[ -n "$committed_diff_status" ]]; then
+  unscoped_changes=()
+  while IFS=$'\t' read -r diff_status first_path second_path _; do
+    [[ -z "$diff_status" ]] && continue
+    case "$diff_status" in
+      R*|C*)
+        append_unscoped_change "$first_path" "$diff_status $first_path"
+        append_unscoped_change "$second_path" "$diff_status $second_path"
+        ;;
+      *)
+        append_unscoped_change "$first_path" "$diff_status $first_path"
+        ;;
+    esac
+  done <<< "$committed_diff_status"
+
+  if [[ "${#unscoped_changes[@]}" -gt 0 ]]; then
+    fail 1 "committed diff includes paths outside project archive reopen/edit recovery scope" \
+      "relative to $base_ref...HEAD: ${unscoped_changes[*]}"
+  fi
+fi
+
 worktree_status="$(git -C "$repo_root" status --short)"
 if [[ -n "$worktree_status" ]]; then
   unscoped_changes=()
@@ -333,11 +371,10 @@ if [[ -n "$worktree_status" ]]; then
     if [[ "$status_path" == *" -> "* ]]; then
       old_path="${status_path%% -> *}"
       new_path="${status_path##* -> }"
-      if ! is_recovery_scope_path "$old_path" || ! is_recovery_scope_path "$new_path"; then
-        unscoped_changes+=("$status_line")
-      fi
-    elif ! is_recovery_scope_path "$status_path"; then
-      unscoped_changes+=("$status_line")
+      append_unscoped_change "$old_path" "$status_line"
+      append_unscoped_change "$new_path" "$status_line"
+    else
+      append_unscoped_change "$status_path" "$status_line"
     fi
   done <<< "$worktree_status"
 
@@ -386,6 +423,15 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
       "$current_head_field: $expected_head" \
       "stale no-op evidence for expected head $expected_head"
   done
+  require_evidence_contains \
+    "$base_ref HEAD: $base_head" \
+    "stale no-op evidence for $base_ref head $base_head"
+  require_evidence_contains \
+    "Merge-base: $merge_base" \
+    "stale no-op evidence for merge-base $merge_base"
+  require_evidence_contains \
+    "Committed diff scope: all $base_ref...$expected_head paths are project archive reopen/edit recovery scoped" \
+    "no-op evidence must include committed diff scope evidence for $base_ref...$expected_head"
 
   if ! noop_justification_references_expected_head; then
     fail 1 "no-op justification must reference expected head $expected_head"

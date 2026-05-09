@@ -313,7 +313,7 @@ Interpret it this way:
 | Result | Evidence requirement |
 | --- | --- |
 | Exit `0` | The worktree has only project archive reopen/edit recovery-scope changes; list the relative paths under `Files modified` after reviewing them. |
-| Exit `1` | The worktree is clean, or it contains unrelated dirty paths; include **No-op justification** for a clean worktree, or separate the unrelated paths before recording readiness. |
+| Exit `1` | The worktree is clean, the committed diff has out-of-scope paths, or the worktree contains unrelated dirty paths; include **No-op justification** for a clean worktree, or separate unrelated paths before recording readiness. |
 | Exit `2` or `64` | Fix the command path or arguments before recording readiness evidence. |
 
 Use `--print-root` to confirm the guard is evaluating the intended linked
@@ -327,8 +327,9 @@ To make a clean-worktree no-op explicit and machine-checkable, save the final
 evidence text and pass the exact current head. The evidence must use
 `No-op justification` instead of `Files modified`, and the justification must
 reference that same head. It must also include no-timeout QA/scenario evidence,
-docs impact review, PR description evidence tied to the expected head, current
-successful checks, scope exclusions, and the three quality-audit cycles:
+docs impact review, PR description evidence tied to the expected head, exact
+base and merge-base evidence, committed diff scope evidence, current successful
+checks, scope exclusions, and the three quality-audit cycles:
 
 ```bash
 scripts/project-archive-reopen-edit-noop-guard.sh . \
@@ -381,6 +382,7 @@ Remote branch HEAD: <exact git rev-parse origin/wave6-project-reopen-edit-chain-
 origin/develop HEAD: <exact git rev-parse origin/develop value>
 Merge-base: <exact git merge-base HEAD origin/develop value>
 Merge-base status: <merge-base equals origin/develop | merged origin/develop, with exact base/merge-base SHAs above>
+Committed diff scope: all origin/develop...<HEAD> paths are project archive reopen/edit recovery scoped
 Worktree status: <clean | exact git status --short entries reviewed as recovery scope>
 Diff summary:
   Implementation: <paths or none>

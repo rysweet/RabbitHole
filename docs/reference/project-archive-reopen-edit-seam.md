@@ -283,14 +283,14 @@ scripts/project-archive-reopen-edit-noop-guard.sh [candidate-path] --allow-noop-
 | --- | --- |
 | `candidate-path` | Optional path inside the target git worktree. Defaults to the current directory. |
 | `--print-root` | Prints the resolved linked worktree root and exits without checking for changes. |
-| `--allow-noop-evidence evidence-file` | Allows a clean worktree only when the evidence file exists, includes exact-head no-op evidence for every merge-ready gate, and does not also claim `Files modified` or `NOT_MERGE_READY`. |
+| `--allow-noop-evidence evidence-file` | Allows a clean worktree only when the evidence file exists, includes exact-head no-op evidence for every merge-ready gate, includes exact base, merge-base, and committed diff scope evidence, and does not also claim `Files modified` or `NOT_MERGE_READY`. |
 | `--expected-head sha` | The 40-character PR/local head SHA that must match the resolved worktree `HEAD`, appear as both `PR head` and `Local HEAD`, and be referenced in the no-op justification. Required with `--allow-noop-evidence`. |
 | `-h`, `--help` | Prints usage. |
 
 | Exit code | Meaning |
 | --- | --- |
 | `0` | `--print-root` succeeded, the resolved worktree has only scoped project archive reopen/edit recovery changes, or a clean worktree has valid exact-head no-op evidence. |
-| `1` | The resolved worktree is clean with no valid no-op evidence, or it contains uncommitted paths outside the project archive reopen/edit recovery scope. |
+| `1` | The resolved worktree is clean with no valid no-op evidence, or it contains committed or uncommitted paths outside the project archive reopen/edit recovery scope. |
 | `2` | The candidate path is missing or is not inside a git worktree. |
 | `64` | The command line is invalid. |
 
@@ -323,6 +323,7 @@ Record:
 | origin/develop HEAD | Exact SHA from `git rev-parse origin/develop`. |
 | Merge-base | Exact SHA from `git merge-base HEAD origin/develop`. |
 | Merge-base status | `merge-base equals origin/develop` when the merge-base SHA equals the `origin/develop` HEAD SHA, or `merged origin/develop` when develop drift required a minimal merge. |
+| Committed diff scope | Exact `origin/develop...HEAD` paths reviewed as project archive reopen/edit recovery scope. |
 | Worktree status | `clean`, or exact `git status --short` entries reviewed as recovery-scope changes before they are listed under `Files modified`. |
 | Diff summary | Grouped summary of `origin/develop...HEAD` by implementation, characterization test, headless IDE bridge, QA metadata, documentation, and guard scope. |
 | Validation command | The focused `IoUtilitiesTest` command above, with `NODE_OPTIONS=--max-old-space-size=32768`; do not substitute desktop Save, lesson, rendering, or grading validation for this seam. |

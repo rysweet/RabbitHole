@@ -1265,6 +1265,63 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void resourceEntryNameValidationRejectsUnsafeArchivePaths() {
+    assertTrue(ResourceExportNames.isResourceEntryName("resources/image.png"));
+    assertTrue(ResourceExportNames.isResourceEntryName("resources2/image.png"));
+
+    for (String entryName : new String[] {
+        null,
+        "",
+        "resources",
+        "resources2",
+        "resources/../evil.png",
+        "resources/./evil.png",
+        "resources//evil.png",
+        "resources2/../evil.png",
+        "resource/evil.png",
+        "resourcesx/evil.png",
+        "resources-2/evil.png",
+        "resources2evil/evil.png",
+        "/resources/evil.png",
+        "\\resources\\evil.png",
+        "C:/resources/evil.png",
+        "resources/C:/evil.png",
+        "resources\\evil.png",
+        "resources/",
+        "resources2/",
+    }) {
+      assertFalse("expected unsafe resource entry to be rejected: " + entryName,
+          ResourceExportNames.isResourceEntryName(entryName));
+    }
+  }
+
+  @Test
+  public void sourceEntryNameValidationRejectsUnsafeArchivePaths() {
+    assertTrue(ResourceExportNames.isSourceEntryName("src/Program.twe"));
+
+    for (String entryName : new String[] {
+        null,
+        "",
+        "src",
+        "src/../Program.twe",
+        "src/./Program.twe",
+        "src//Program.twe",
+        "src2/Program.twe",
+        "source/Program.twe",
+        "src../Program.twe",
+        "/src/Program.twe",
+        "\\src\\Program.twe",
+        "C:/src/Program.twe",
+        "src/C:/Program.twe",
+        "src\\Program.twe",
+        "src/",
+    }) {
+      assertFalse("expected unsafe source entry to be rejected: " + entryName,
+          ResourceExportNames.isSourceEntryName(entryName));
+    }
+  }
+
+  @Test
   public void jsonPlayerImageReadsWithSameUuidDoNotMutateEarlierRead() throws Exception {
     UUID sharedId = UUID.randomUUID();
     byte[] firstData = new byte[] {1, 2, 3};

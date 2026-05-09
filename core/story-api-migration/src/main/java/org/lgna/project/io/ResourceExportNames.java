@@ -46,7 +46,10 @@ final class ResourceExportNames {
   }
 
   static boolean isResourceEntryName(String entryName) {
-    int slash = (entryName == null) ? -1 : entryName.indexOf('/');
+    if (!isSafeRelativeEntryName(entryName)) {
+      return false;
+    }
+    int slash = entryName.indexOf('/');
     if (slash <= 0) {
       return false;
     }
@@ -66,7 +69,30 @@ final class ResourceExportNames {
   }
 
   static boolean isSourceEntryName(String entryName) {
-    return (entryName != null) && entryName.startsWith("src/");
+    return isSafeRelativeEntryName(entryName) && entryName.startsWith("src/");
+  }
+
+  private static boolean isSafeRelativeEntryName(String entryName) {
+    if ((entryName == null) || entryName.isEmpty() || isAbsolutePath(entryName) || (entryName.indexOf('\\') >= 0)) {
+      return false;
+    }
+
+    int segmentStart = 0;
+    while (segmentStart <= entryName.length()) {
+      int segmentEnd = entryName.indexOf('/', segmentStart);
+      if (segmentEnd < 0) {
+        segmentEnd = entryName.length();
+      }
+      String segment = entryName.substring(segmentStart, segmentEnd);
+      if (segment.isEmpty() || segment.equals(".") || segment.equals("..") || hasWindowsDrivePrefix(segment)) {
+        return false;
+      }
+      if (segmentEnd == entryName.length()) {
+        return true;
+      }
+      segmentStart = segmentEnd + 1;
+    }
+    return false;
   }
 
   private static String sanitizeFileName(String fileName) {
