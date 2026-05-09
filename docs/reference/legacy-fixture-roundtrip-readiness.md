@@ -410,7 +410,7 @@ and read-only GitHub PR state.
 | --- | --- |
 | Pull request | `433` |
 | Repository | `rysweet/RabbitHole` |
-| Expected final head | `06888c85f7e9175b872a9e23709046d44be5bf16` |
+| Expected final head | Capture the current matching local `HEAD` and GitHub `headRefOid` at finalization time. |
 | Focused lane | Generated legacy fixture round-trip readiness in `core/story-api-migration` |
 | Maven test | `org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest` |
 | PR contract test | `tests.test_pr433_merge_ready_contract` |
@@ -427,17 +427,19 @@ gh pr view 433 --repo rysweet/RabbitHole \
   --json headRefOid,state,isDraft,baseRefName,mergeStateStatus,reviewDecision,statusCheckRollup
 ```
 
-The accepted current-head result is:
+The accepted current-head result is the value captured from local `HEAD` and
+GitHub `headRefOid` during the finalization run. Do not carry forward a SHA from
+an earlier PR evidence run:
 
 ```text
-06888c85f7e9175b872a9e23709046d44be5bf16
+<current-pr-head-sha>
 ```
 
 Before writing merge-ready wording, the GitHub PR state must show:
 
 | Field | Required interpretation |
 | --- | --- |
-| `headRefOid` | Equals `06888c85f7e9175b872a9e23709046d44be5bf16` and local `HEAD`. |
+| `headRefOid` | Equals the captured `<current-pr-head-sha>` and local `HEAD`. |
 | `state` | `OPEN`. |
 | `isDraft` | `false`. |
 | `mergeStateStatus` | `CLEAN`. |
@@ -472,7 +474,7 @@ does not edit repository files. Do not use it for documentation-retcon commits
 or any task that changes docs or implementation files.
 
 ```text
-No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head 06888c85f7e9175b872a9e23709046d44be5bf16 matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
+No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head <current-pr-head-sha> matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
 ```
 
 ## Examples

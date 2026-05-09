@@ -292,14 +292,16 @@ checks and final-head focused evidence.
 
 ## 11. Finalize PR #433 with the no-timeout current-head profile
 
-PR #433 uses the same bounded lane with fixed current-head evidence. This is a
+PR #433 uses the same bounded lane with current-head evidence. This is a
 PR-specific finalization profile for PR `433` in `rysweet/RabbitHole`; do not
 reuse it as a generic approval or merge workflow.
 
-The accepted head is:
+The accepted head is the current PR head observed at finalization time, not a
+SHA copied forward from an earlier evidence run. Capture it with the read-only
+commands below and use that same value consistently in any PR note:
 
 ```text
-06888c85f7e9175b872a9e23709046d44be5bf16
+<current-pr-head-sha>
 ```
 
 Confirm local and GitHub state with read-only commands:
@@ -310,12 +312,11 @@ gh pr view 433 --repo rysweet/RabbitHole \
   --json headRefOid,state,isDraft,baseRefName,mergeStateStatus,reviewDecision,statusCheckRollup
 ```
 
-Proceed only when local `HEAD` and GitHub `headRefOid` both equal
-`06888c85f7e9175b872a9e23709046d44be5bf16`, the PR is open and non-draft,
-`mergeStateStatus` is `CLEAN`, and the required/relevant PR checks in
-`statusCheckRollup` are successful for the same head. If `reviewDecision` is
-empty, say the PR was reviewed/finalized with current evidence; do not say it is
-formally approved.
+Proceed only when local `HEAD` and GitHub `headRefOid` both equal the captured
+`<current-pr-head-sha>`, the PR is open and non-draft, `mergeStateStatus` is
+`CLEAN`, and the required/relevant PR checks in `statusCheckRollup` are
+successful for the same head. If `reviewDecision` is empty, say the PR was
+reviewed/finalized with current evidence; do not say it is formally approved.
 
 Refresh the focused lane without an external timeout wrapper:
 
@@ -344,7 +345,7 @@ that run edits no repository files. Do not use it for documentation-retcon work
 or any other task that changes files:
 
 ```text
-No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head 06888c85f7e9175b872a9e23709046d44be5bf16 matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
+No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head <current-pr-head-sha> matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
 ```
 
 ## Review checklist

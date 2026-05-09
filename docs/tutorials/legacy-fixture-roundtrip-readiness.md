@@ -288,12 +288,13 @@ SEEK/VALIDATE/FIX are complete for the bounded lane. CI checks <names> are still
 pending, so this note does not claim strict merge-ready or all checks passed.
 ```
 
-For PR #433 only, trace the fixed current-head profile instead of replacing the
-placeholders with a different branch head or reusing this as a generic merge
-workflow. The expected head is:
+For PR #433 only, trace the current-head profile instead of replacing the
+placeholders with an earlier branch head or reusing this as a generic merge
+workflow. Capture the expected head from local `HEAD` and GitHub `headRefOid` at
+finalization time:
 
 ```text
-06888c85f7e9175b872a9e23709046d44be5bf16
+<current-pr-head-sha>
 ```
 
 The finished evidence sequence is:
@@ -315,7 +316,7 @@ python3 -m unittest tests.test_pr433_merge_ready_contract
 The resulting PR note stays narrow:
 
 ```text
-PR #433 is current at 06888c85f7e9175b872a9e23709046d44be5bf16. The focused
+PR #433 is current at <current-pr-head-sha>. The focused
 legacy fixture round-trip Maven lane and PR #433 merge-ready contract passed for
 that head, required/relevant PR checks in statusCheckRollup are successful for
 the same head, and GitHub mergeability is CLEAN. This does not claim formal
@@ -328,5 +329,5 @@ Use the required no-op wording only for a finalization/evidence run that changes
 no repository files, not for documentation-retcon changes:
 
 ```text
-No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head 06888c85f7e9175b872a9e23709046d44be5bf16 matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
+No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head <current-pr-head-sha> matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
 ```

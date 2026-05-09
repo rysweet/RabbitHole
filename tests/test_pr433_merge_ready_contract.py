@@ -21,6 +21,7 @@ REFERENCE_DOC = REPO_ROOT / "docs" / "reference" / "legacy-fixture-roundtrip-rea
 HOWTO_DOC = REPO_ROOT / "docs" / "howto" / "characterize-legacy-fixture-roundtrip-readiness.md"
 TUTORIAL_DOC = REPO_ROOT / "docs" / "tutorials" / "legacy-fixture-roundtrip-readiness.md"
 DOCS_INDEX = REPO_ROOT / "docs" / "index.md"
+CURRENT_HEAD_PLACEHOLDER = "<current-pr-head-sha>"
 ARCHIVE_SCENARIO = (
     REPO_ROOT / "qa" / "outside-in" / "alice-desktop" / "scenarios" / "archive-fixture-smoke.yaml"
 )
@@ -78,6 +79,13 @@ NON_CLAIMS = (
 QA_WIRING_FILES = (ARCHIVE_SCENARIO, VALIDATOR, RUNNER, SCHEMA, SCHEMA_CONTRACT)
 QA_WORKFLOW_FILES = (ARCHIVE_SCENARIO, VALIDATOR, SCHEMA)
 _current_branch = None
+
+
+def section_between(text: str, start: str, end: str | None = None) -> str:
+    start_index = text.index(start)
+    if end is None:
+        return text[start_index:]
+    return text[start_index : text.index(end, start_index)]
 
 
 def git_output(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -176,6 +184,33 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
                 self.assertIn("timeoutSeconds", text)
                 self.assertNotIn("merge or rebase", normalized.lower())
                 self.assertNotIn("merging or rebasing", normalized.lower())
+
+    def test_pr433_finalization_docs_do_not_pin_a_stale_head_sha(self) -> None:
+        pr433_sections = {
+            REFERENCE_DOC: section_between(
+                REFERENCE_DOC.read_text(encoding="utf-8"),
+                "## PR #433 no-timeout finalization profile",
+                "## Examples",
+            ),
+            HOWTO_DOC: section_between(
+                HOWTO_DOC.read_text(encoding="utf-8"),
+                "## 11. Finalize PR #433 with the no-timeout current-head profile",
+                "## Review checklist",
+            ),
+            TUTORIAL_DOC: section_between(
+                TUTORIAL_DOC.read_text(encoding="utf-8"),
+                "For PR #433 only, trace the current-head profile",
+            ),
+        }
+
+        for path, section in pr433_sections.items():
+            with self.subTest(path=path.relative_to(REPO_ROOT)):
+                self.assertIn(CURRENT_HEAD_PLACEHOLDER, section)
+                self.assertIn("headRefOid", section)
+                self.assertIsNone(
+                    re.search(r"\b[0-9a-f]{40}\b", section),
+                    "PR #433 finalization docs must capture the current head at runtime instead of pinning a stale SHA.",
+                )
 
     def test_docs_index_points_reviewers_to_merge_ready_pr_evidence(self) -> None:
         text = DOCS_INDEX.read_text(encoding="utf-8")
