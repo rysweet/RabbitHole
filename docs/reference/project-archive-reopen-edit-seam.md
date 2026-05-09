@@ -147,10 +147,10 @@ rendering, native file choosers, or user event timing.
 
 ## Root-detection contract for guard scripts
 
-This document does not name an implemented no-op or TDD guard script. If this
-seam uses one, that guard must evaluate the actual git-linked worktree root
-before it decides whether a change is empty. It must not compare a copied
-session directory, detached artifact directory, or non-git path.
+The repo-owned no-op guard entrypoint is
+`scripts/project-archive-reopen-edit-noop-guard.sh`. It must evaluate the actual
+git-linked worktree root before it decides whether a change is empty. It must not
+compare a copied session directory, detached artifact directory, or non-git path.
 
 The guard resolves the repository root with git:
 

@@ -60,20 +60,18 @@ Do not use this workflow for broad project archive reader/writer cleanup.
 
 ## Check guard root detection
 
-If a branch uses a no-op or TDD guard script, verify that the guard evaluates the
-actual git worktree root:
+Verify that the repo-owned no-op guard evaluates the actual git worktree root:
 
 ```bash
 candidate_path="$PWD"
 repo_root="$(git -C "$candidate_path" rev-parse --show-toplevel)"
+scripts/project-archive-reopen-edit-noop-guard.sh "$candidate_path" --print-root
 git -C "$repo_root" status --short
 ```
 
 The guard result is valid only when `repo_root` is the linked worktree under
 review. If `git rev-parse --show-toplevel` fails, the guard must fail clearly;
-it must not silently inspect a copied session directory or a non-git path. This
-is a contract for any guard used by the seam, not a claim that this guide names a
-specific script.
+it must not silently inspect a copied session directory or a non-git path.
 
 ## Run focused validation
 
