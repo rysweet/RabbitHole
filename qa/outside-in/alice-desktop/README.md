@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -96,7 +96,7 @@ Use one of the supported workflows:
 ```text
 archive-fixture-smoke
 export
-exported-project-ant-build-smoke
+exported-project-smoke
 failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
@@ -145,7 +145,7 @@ assess learner work, or claim full first-lesson completion.
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
 
-To execute the bounded no-Sims exported Ant/NetBeans project build proof:
+To execute the current exported-project smoke:
 
 ```bash
 git submodule update --init tweedle-lang
@@ -155,10 +155,25 @@ ALICE_QA_RUN_GATED_SMOKES=1 \
 NODE_OPTIONS=--max-old-space-size=32768 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   alice-desktop-exported-project-smoke \
-  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-ant-build
+  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-smoke
 ```
 
-The scenario maps to the fixed focused Maven proof:
+The checked-in scenario maps to the current focused Maven smoke:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
+  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
+  test
+```
+
+Passing current evidence is limited to generated-project compile and launcher
+handoff behavior. It is not exported Ant target evidence.
+
+The bounded no-Sims exported Ant/NetBeans project build proof is the feature to
+build next. After scenario YAML, schema workflow, runner argv allowlist, and
+contract tests are updated, the lane should run:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
@@ -169,12 +184,13 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-Passing evidence is limited to exported Ant project build behavior: generated
-classes, exported jar and manifest contents, resource packaging, Ant `jar`,
-`run`, `run-test-with-main`, `clean`, and probe markers. It is not installer
-validation, full GUI export journey coverage, visible rendering evidence, or Sims
-coverage. If it cannot complete, preserve `status.txt` and `command.log` with
-the exact command, failure point, and missing condition.
+Target passing evidence is limited to exported Ant project build behavior:
+generated classes, exported jar and manifest contents, resource packaging, Ant
+`jar`, `run`, `run-test-with-main`, `clean`, and probe markers. It is not
+installer validation, full GUI export journey coverage, visible rendering
+evidence, or Sims coverage. If target execution cannot complete, preserve
+`status.txt` and `command.log` with the exact command, failure point, and missing
+condition.
 
 To collect the narrow post-open runtime/display accessibility evidence:
 
@@ -380,7 +396,7 @@ Use one of the supported workflows:
 ```text
 archive-fixture-smoke
 export
-exported-project-ant-build-smoke
+exported-project-smoke
 failure-path-smoke
 file-loader-smoke
 future-ui-smoke
