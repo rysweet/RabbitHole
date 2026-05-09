@@ -83,6 +83,11 @@ Review the test as the executable contract for:
 | Path safety | Parent traversal, nested artifact paths, absolute artifact paths, missing directories, symlink evidence directories, and pre-existing artifact symlinks fail closed. |
 | Non-claims | The artifact names unsupported active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, and full UI automation boundaries; the creation/wiring scope excludes creative assessment and lesson completion. |
 
+The evidence recorder is intentionally passive until
+`org.alice.eatme.runWindowEvidenceDir` is configured. Once configured, failures
+are fail-closed: invalid paths and failed writes surface as test failures rather
+than being logged as usable evidence.
+
 The shell contract separately asserts that
 `RunComposite#handlePreShowWindow` still calls
 `EatmeRunWindowEvidence.recordRunWindowCreated(frame, programType)`. The Java

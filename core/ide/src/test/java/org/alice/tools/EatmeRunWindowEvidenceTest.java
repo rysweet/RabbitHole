@@ -157,6 +157,22 @@ public class EatmeRunWindowEvidenceTest {
   }
 
   @Test
+  public void recordRunWindowCreatedIsNoopWhenEvidenceDirectoryIsUnconfigured() {
+    String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    try {
+      System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+
+      EatmeRunWindowEvidence.recordRunWindowCreated(null, null);
+    } finally {
+      if (previous == null) {
+        System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+      } else {
+        System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, previous);
+      }
+    }
+  }
+
+  @Test
   public void recordRunWindowCreatedSurfacesInvalidConfiguredPath() {
     String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
     try {

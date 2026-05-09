@@ -174,6 +174,11 @@ and artifact behavior.
 | `RUN_WINDOW_CREATED_ARTIFACT` | Fixed artifact name: `run-window-created.json`. |
 | `recordRunWindowCreated(Frame frame, NamedUserType programType)` | Reads the JVM property, records the artifact when configured, and surfaces evidence write failures as `IllegalStateException`. |
 
+The fail-closed behavior applies only after the evidence directory property is
+set. Leaving the property unset keeps the production hook as a passive no-op for
+normal product runs; setting it means review evidence is required, so invalid
+paths and failed writes are surfaced instead of logged as success-shaped runs.
+
 The test seam also characterizes package-local artifact writing, JSON escaping,
 and path validation. Those helpers support the contract; they are not a separate
 external integration surface.

@@ -61,6 +61,8 @@ assert_cached_contains REVIEW_HOWTO_CONTENT 'creative[[:space:]]+assessment' "re
 assert_cached_contains REVIEW_HOWTO_CONTENT 'lesson-completion evidence' "review how-to excludes lesson-completion claims"
 assert_cached_contains REVIEW_HOWTO_CONTENT 'scope excludes creative assessment and lesson completion' "review how-to keeps creative and lesson exclusions scoped"
 assert_cached_contains REVIEW_HOWTO_CONTENT 'Do not add timeout wrappers' "review how-to preserves the no-timeout-wrapper command contract"
+assert_cached_contains REVIEW_HOWTO_CONTENT 'intentionally passive until' "review how-to documents passive default evidence behavior"
+assert_cached_contains REVIEW_HOWTO_CONTENT 'fail-closed' "review how-to documents configured evidence write failures"
 
 assert_cached_contains QA_HOWTO_CONTENT 'Creative assessment and lesson completion are excluded by the Run-window' "QA how-to explains creative and lesson exclusions by scope"
 assert_cached_contains QA_HOWTO_CONTENT 'not by dedicated `creative_assessment_claimed` or' "QA how-to avoids inventing a creative-assessment artifact boolean"
@@ -80,6 +82,8 @@ assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'does not define separate cr
 assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'lesson-completion booleans' "Run-window reference documents absent lesson-completion boolean"
 assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'must not use the' "Run-window reference blocks using the artifact beyond scope"
 assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'creative-assessment or lesson-completion evidence' "Run-window reference excludes creative and lesson evidence claims"
+assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'passive no-op for' "Run-window reference documents unconfigured evidence behavior"
+assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'success-shaped runs' "Run-window reference documents fail-closed configured evidence behavior"
 
 python3 - "$QA_README" <<'PY'
 import sys
