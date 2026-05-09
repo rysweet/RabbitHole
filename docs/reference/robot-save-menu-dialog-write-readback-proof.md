@@ -60,7 +60,7 @@ The shard delegates final evidence semantics to `SaveOperationCompletionEvidence
 | `proven` | The JUnit test passes only after the canonical artifact is written with all required fields true and internally consistent. |
 | `blocked` | The JUnit test writes the canonical artifact with exactly one known blocker and then fails so the scenario cannot pass on partial evidence. |
 
-Blocked output is the executable blocker for the missing step. It is not proof of Save completion.
+Blocked output is the executable blocker for the missing step. It is not proof of Save completion, and it must not be summarized as Robot Save readiness.
 
 Use the JSON artifact as the source of truth. Do not treat Maven success by itself as proof. A blocked artifact is blocker evidence for its `blocker.kind` only; `headless_awt` blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` with `blocker.kind` set to `headless_awt`, use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation, full Save completion, or full desktop Save completion.
 
