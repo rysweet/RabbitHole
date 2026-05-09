@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,11 @@ WRAPPER_PATH = REPO_ROOT / "alice_qa_amplihack.py"
 def write_file(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def write_executable(path: Path, content: str) -> None:
+    write_file(path, content)
+    path.chmod(0o755)
 
 
 def write_wrapper_repo(root: Path) -> None:
@@ -46,6 +52,7 @@ class AmplihackWrapperTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
+        self.assertIn("amplihack tweedle-decode verify", result.stdout)
 
     def test_scorecard_command_delegates_to_generator_from_repo_root(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -72,6 +79,53 @@ class AmplihackWrapperTest(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(str(root), payload["cwd"])
         self.assertEqual(["--output", "scorecard.md"], payload["argv"])
+
+    def test_tweedle_decode_verify_delegates_to_focused_maven_test(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            bin_dir = root / "bin"
+            log_path = root / "commands.log"
+            write_executable(
+                bin_dir / "git",
+                textwrap.dedent(
+                    f"""\
+                    #!/usr/bin/env bash
+                    echo git "$@" >> {log_path}
+                    """
+                ),
+            )
+            write_executable(
+                bin_dir / "mvn",
+                textwrap.dedent(
+                    f"""\
+                    #!/usr/bin/env bash
+                    echo mvn "$@" >> {log_path}
+                    """
+                ),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "tweedle-decode",
+                    "verify",
+                    "while-method-call",
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+
+            log = log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("PASS: while-method-call", result.stdout)
+        self.assertIn("git submodule update --init tweedle-lang", log)
+        self.assertIn("-Dtest=TweedleEncoderDecoderTest#decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation", log)
 
 
 if __name__ == "__main__":

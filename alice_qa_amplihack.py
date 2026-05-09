@@ -13,9 +13,27 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
+  amplihack tweedle-decode verify <while-method-call|while-method-call-boundaries>
 
 Run from the Alice repository root or one of its child directories.
 """
+
+
+TWEEDLE_DECODE_SCENARIOS = {
+    "while-method-call": (
+        "Tweedle while-loop body decodes a zero-argument this.method() call",
+        "TweedleEncoderDecoderTest#decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation",
+    ),
+    "while-method-call-boundaries": (
+        "Tweedle while-loop body keeps unsupported neighboring method calls rejected",
+        (
+            "TweedleEncoderDecoderTest#"
+            "decodeClassWithWhileLoopMixedAssignmentAndMethodCallBodyCreatesOrderedStatements"
+            "+decodeClassWithWhileLoopArgumentBearingThisMethodCallReportsUnsupportedBoundary"
+            "+decodeClassWithWhileLoopNonThisMethodCallReportsUnsupportedBoundary"
+        ),
+    ),
+}
 
 
 def find_repo_root(start: Path) -> Path | None:
@@ -28,6 +46,47 @@ def find_repo_root(start: Path) -> Path | None:
 
 def run_from_repo(root: Path, command: list[str]) -> int:
     return subprocess.run(command, cwd=root, check=False).returncode
+
+
+def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
+    selected = TWEEDLE_DECODE_SCENARIOS.get(scenario)
+    if selected is None:
+        valid = ", ".join(sorted(TWEEDLE_DECODE_SCENARIOS))
+        print(f"unknown tweedle-decode scenario: {scenario}", file=sys.stderr)
+        print(f"valid scenarios: {valid}", file=sys.stderr)
+        return 2
+
+    description, test_selector = selected
+    print(f"Running Tweedle decode scenario: {description}")
+    submodule_result = subprocess.run(
+        ["git", "submodule", "update", "--init", "tweedle-lang"],
+        cwd=root,
+        check=False,
+    )
+    if submodule_result.returncode != 0:
+        print("FAIL: unable to initialize tweedle-lang submodule", file=sys.stderr)
+        return submodule_result.returncode
+
+    test_result = subprocess.run(
+        [
+            "mvn",
+            "-pl",
+            "core/ast",
+            "-am",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            f"-Dtest={test_selector}",
+            "test",
+            "-q",
+        ],
+        cwd=root,
+        check=False,
+    )
+    if test_result.returncode == 0:
+        print(f"PASS: {scenario}")
+    else:
+        print(f"FAIL: {scenario}", file=sys.stderr)
+    return test_result.returncode
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -53,6 +112,12 @@ def main(argv: list[str] | None = None) -> int:
                 *args[1:],
             ],
         )
+
+    if args[0] == "tweedle-decode":
+        if len(args) != 3 or args[1] != "verify":
+            print("tweedle-decode usage: amplihack tweedle-decode verify <scenario>", file=sys.stderr)
+            return 2
+        return run_tweedle_decode_verification(root, args[2])
 
     if args[0] != "alice-qa":
         print(f"unknown command: {args[0]}", file=sys.stderr)
