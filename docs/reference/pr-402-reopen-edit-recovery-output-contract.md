@@ -27,12 +27,14 @@ changes by requiring one of two explicit outcomes:
 | Outcome | Required output |
 | --- | --- |
 | Repository changes are needed | `Files modified:` followed by the relative paths changed for project archive reopen/edit readiness. |
-| No repository changes are needed | `No-op justification:` tied to the exact PR head, current check state, focused validation, diff scope, merge-base state, and clean worktree evidence. |
+| No repository changes are needed and every merge-ready gate is satisfied | `NO_OP_GUARD` with `No-op justification:` tied to the exact PR head, current check state, focused validation, runnable QA/scenario evidence, docs impact review, quality-audit cycles, diff scope, merge-base state, PR description evidence, and clean worktree evidence. |
+| Any merge-ready gate is missing, stale, pending, or unavailable | `NOT_MERGE_READY` with explicit blockers. |
 
 A clean worktree is not enough. A zero-change recovery is valid only when the
-implementation output contains the explicit `No-op justification:` section and
+implementation output contains the explicit `No-op justification:` section,
 references the same 40-character head used for PR, local, and remote branch
-evidence.
+evidence, and includes current evidence for every merge-ready gate. If any gate
+is missing, emit `NOT_MERGE_READY` instead of readiness.
 
 For this recovery, capture the required evidence anchor from the current refs:
 
@@ -108,6 +110,10 @@ Alice NetBeans Package CI/package-netbeans (pull_request)
 Alice Test CI/test (pull_request)
 ```
 
+If GitHub or `gh` evidence is unavailable because of authentication, rate limits,
+network errors, unavailable fields, pending checks, or stale PR metadata, report
+`NOT_MERGE_READY`. Do not convert a service failure into `NO_OP_GUARD`.
+
 Run the focused archive reopen/edit characterization:
 
 ```bash
@@ -118,6 +124,16 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
   -Dtest=IoUtilitiesTest \
   test
 ```
+
+Record no-timeout QA/scenario evidence:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+Run additional scenario smoke evidence only when the exact diff touches QA
+metadata, runner, schema, or desktop scenario paths.
 
 Use the no-op guard at the final evidence step:
 
@@ -159,6 +175,29 @@ Checks:
   Alice Coverage Reports/coverage (pull_request) successful at current PR head
   Alice NetBeans Package CI/package-netbeans (pull_request) successful at current PR head
   Alice Test CI/test (pull_request) successful at current PR head
+Runnable QA/scenario evidence:
+  NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+  exit 0 at <current PR head>; no timeout wrappers
+Docs impact:
+  affected docs reviewed or updated at <current PR head>
+Quality-audit cycle 1:
+  SEEK: exact-head and branch mismatch risk
+  VALIDATE: PR head, local HEAD, and remote branch head match
+  FIX: no-op; exact-head evidence is current
+  Result: clean
+Quality-audit cycle 2:
+  SEEK: validation, QA/scenario, and docs evidence gaps
+  VALIDATE: focused validation, scenario catalog validator, and docs review passed
+  FIX: no-op; required evidence is present
+  Result: clean
+Quality-audit cycle 3:
+  SEEK: final gate scan for stale head evidence, missing QA/docs, and overclaims
+  VALIDATE: current-head checks, PR body review, diff scope review, and guard evidence
+  FIX: no-op; all gates have current-head evidence
+  Result: clean
+PR description evidence:
+  PR 402 body cites current head <current PR head>, bounded validation, scope
+  exclusions, and no overclaim wording
 No-op justification:
   PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
   <current PR head>, local HEAD matches both the PR head
@@ -181,6 +220,8 @@ Scope exclusions:
   desktop save-menu completion
   visible rendering correctness
   grading
+  creative assessment
+  full Tweedle/player decode
   full save completion
   full first-lesson completion
   player runtime behavior
@@ -192,12 +233,13 @@ Stale evidence note:
 ```
 
 Do not include both `Files modified:` and `No-op justification:` in the same
-final implementation output.
+final implementation output. Do not include both `NO_OP_GUARD` and
+`NOT_MERGE_READY` in the same output.
 
 ## Exact-head no-op template
 
-This template is valid only after replacing every placeholder with the exact PR
-head, branch head, merge-base, and check state collected for the current run. It
+This template is valid only after replacing every angle-bracket value with the
+exact PR head, branch head, merge-base, and check state collected for the current run. It
 becomes stale if any SHA changes or any PR check stops being successful.
 
 ```text
@@ -222,6 +264,29 @@ Validation:
   -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
   -Dtest=IoUtilitiesTest test
 Result: passed with exit code 0
+Runnable QA/scenario evidence:
+  NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+  exit 0 at <current PR head>; no timeout wrappers
+Docs impact:
+  affected docs reviewed or updated at <current PR head>
+Quality-audit cycle 1:
+  SEEK: exact-head and branch mismatch risk
+  VALIDATE: PR head, local HEAD, and remote branch head match
+  FIX: no-op; exact-head evidence is current
+  Result: clean
+Quality-audit cycle 2:
+  SEEK: validation, QA/scenario, and docs evidence gaps
+  VALIDATE: focused validation, scenario catalog validator, and docs review passed
+  FIX: no-op; required evidence is present
+  Result: clean
+Quality-audit cycle 3:
+  SEEK: final gate scan for stale head evidence, missing QA/docs, and overclaims
+  VALIDATE: current-head checks, PR body review, diff scope review, and guard evidence
+  FIX: no-op; all gates have current-head evidence
+  Result: clean
+PR description evidence:
+  PR 402 body cites current head <current PR head>, bounded validation, scope
+  exclusions, and no overclaim wording
 No-op justification:
   PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
   <current PR head>, local HEAD matches both the PR head
@@ -244,6 +309,8 @@ Scope exclusions:
   desktop save-menu completion
   visible rendering correctness
   grading
+  creative assessment
+  full Tweedle/player decode
   full save completion
   full first-lesson completion
   player runtime behavior
@@ -266,6 +333,9 @@ report it under `Files modified:`.
 | Merge-base differs from `origin/develop` | Merge `origin/develop` minimally unless the branch already contains that base. |
 | Worktree is dirty before recovery | Preserve unrelated work; list only reviewed recovery-scope paths changed by this step. |
 | Focused validation fails | Fix the archive reopen/edit seam or its characterization test. |
+| Runnable QA/scenario evidence is missing or timeout-wrapped | Run the no-timeout scenario catalog validator, or report `NOT_MERGE_READY` with that blocker. |
+| Docs impact, quality-audit cycles, or PR description evidence is missing or stale | Review or update the evidence at the current head, or report `NOT_MERGE_READY`. |
+| GitHub or `gh` evidence is unavailable | Report `NOT_MERGE_READY` with the service/auth/rate-limit/network blocker. |
 | PR check is failing | Fix only scoped blockers tied to project archive reopen/edit readiness. |
 | Check is pending | Report it as pending; do not convert it into a readiness claim. |
 
@@ -273,7 +343,7 @@ report it under `Files modified:`.
 
 This recovery output contract does not claim full desktop lesson automation,
 full UI automation, desktop save-menu completion, visible rendering correctness,
-grading, full save completion, full first-lesson completion, or player runtime
-behavior. It also does not claim native or Swing file chooser automation. It
-only describes exact-head workflow recovery evidence for the repository-owned
-project archive reopen/edit seam.
+grading, creative assessment, full Tweedle/player decode, full save completion,
+full first-lesson completion, or player runtime behavior. It also does not claim
+native or Swing file chooser automation. It only describes exact-head workflow
+recovery evidence for the repository-owned project archive reopen/edit seam.

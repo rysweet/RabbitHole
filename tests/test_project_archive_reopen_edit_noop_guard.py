@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Optional
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -21,11 +21,18 @@ SCOPE_EXCLUSIONS = (
     "Scope exclusions: no full desktop lesson automation, full UI automation, "
     "desktop Save-menu completion, visible rendering correctness, grading, "
     "grading correctness, full Save completion, full first-lesson completion, "
-    "player runtime behavior, or broad migration correctness claims"
+    "creative assessment, full Tweedle/player decode, player runtime behavior, "
+    "or broad migration correctness claims"
 )
 INCOMPLETE_SCOPE_EXCLUSIONS = (
     "Scope exclusions: no full desktop lesson automation, visible rendering "
     "correctness, grading, or full Save completion claims"
+)
+SCOPE_EXCLUSIONS_WITHOUT_CREATIVE_OR_TWEEDLE = (
+    "Scope exclusions: no full desktop lesson automation, full UI automation, "
+    "desktop Save-menu completion, visible rendering correctness, grading, "
+    "grading correctness, full Save completion, full first-lesson completion, "
+    "player runtime behavior, or broad migration correctness claims"
 )
 REQUIRED_PR_CHECKS = (
     "GitGuardian Security Checks",
@@ -236,6 +243,30 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         combined_output = (result.stdout + result.stderr).lower()
         self.assertIn("no-op justification", combined_output)
 
+    def test_guard_rejects_noop_evidence_with_unexpected_pr_metadata(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head).replace(
+                    f"Branch: {PR_BRANCH}",
+                    "Branch: stale-or-unexpected-branch",
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("branch", combined_output)
+        self.assertIn("metadata", combined_output)
+
     def test_guard_rejects_clean_worktree_evidence_with_files_modified_claim(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -298,6 +329,31 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         self.assertIn("save-menu", combined_output)
         self.assertIn("player runtime", combined_output)
 
+    def test_guard_rejects_noop_evidence_missing_creative_and_tweedle_scope_exclusions(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    scope_exclusions=SCOPE_EXCLUSIONS_WITHOUT_CREATIVE_OR_TWEEDLE,
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("scope exclusions", combined_output)
+        self.assertIn("creative", combined_output)
+        self.assertIn("tweedle", combined_output)
+
     def test_guard_rejects_clean_worktree_noop_evidence_with_out_of_scope_claims(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -339,6 +395,33 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
                         "Desktop Save-menu completion: validated",
                         "Player runtime behavior: ready",
                         "Full first-lesson completion: complete",
+                    ]
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("out-of-scope", combined_output)
+
+    def test_guard_rejects_noop_evidence_with_creative_or_tweedle_decode_claims(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head)
+                + "\n"
+                + "\n".join(
+                    [
+                        "Creative assessment: proven",
+                        "Full Tweedle/player decode: validated",
                     ]
                 ),
             )
@@ -418,6 +501,372 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         self.assertIn("successful", combined_output)
         self.assertIn("current pr head", combined_output)
 
+    def test_guard_rejects_clean_worktree_noop_evidence_without_runnable_qa_scenario_evidence(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_runnable_qa_scenario_evidence=False),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("qa/scenario", combined_output)
+
+    def test_guard_rejects_noop_evidence_with_timeout_wrapped_qa_scenario_evidence(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    runnable_qa_scenario_evidence=(
+                        "Runnable QA/scenario evidence: timeout 120 "
+                        "qa/outside-in/alice-desktop/runners/validate-scenarios.sh "
+                        f"exit 0 PASS at {head}"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("timeout", combined_output)
+        self.assertIn("qa/scenario", combined_output)
+
+    def test_guard_rejects_timeout_wrapped_multiline_qa_scenario_evidence(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    runnable_qa_scenario_evidence=(
+                        "Runnable QA/scenario evidence:\n"
+                        "  timeout 120 qa/outside-in/alice-desktop/runners/validate-scenarios.sh\n"
+                        f"  exit 0 PASS at {head}"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("timeout", combined_output)
+        self.assertIn("qa/scenario", combined_output)
+
+    def test_guard_rejects_absolute_path_timeout_wrapped_qa_scenario_evidence(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    runnable_qa_scenario_evidence=(
+                        "Runnable QA/scenario evidence:\n"
+                        "  /usr/bin/timeout 120 "
+                        "qa/outside-in/alice-desktop/runners/validate-scenarios.sh\n"
+                        f"  exit 0 PASS at {head}"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("timeout", combined_output)
+        self.assertIn("qa/scenario", combined_output)
+
+    def test_guard_rejects_timeout_wrapped_qa_scenario_evidence_with_options_or_markdown(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            timeout_evidence_examples = (
+                (
+                    "Runnable QA/scenario evidence: `timeout --foreground 120 "
+                    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh` "
+                    f"exit 0 PASS at {head}"
+                ),
+                (
+                    "Runnable QA/scenario evidence:\n"
+                    "  gtimeout -s TERM 120 "
+                    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh\n"
+                    f"  exit 0 PASS at {head}"
+                ),
+            )
+            for timeout_evidence in timeout_evidence_examples:
+                with self.subTest(timeout_evidence=timeout_evidence):
+                    evidence_file = self.write_evidence(
+                        linked_worktree,
+                        self.exact_head_noop_evidence(
+                            head,
+                            runnable_qa_scenario_evidence=timeout_evidence,
+                        ),
+                    )
+
+                    result = self.run_guard(
+                        linked_worktree,
+                        "--allow-noop-evidence",
+                        str(evidence_file),
+                        "--expected-head",
+                        head,
+                    )
+
+                self.assertNotEqual(0, result.returncode)
+                combined_output = (result.stdout + result.stderr).lower()
+                self.assertIn("timeout", combined_output)
+                self.assertIn("qa/scenario", combined_output)
+
+    def test_guard_accepts_multiline_noop_evidence_sections(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    runnable_qa_scenario_evidence=(
+                        "Runnable QA/scenario evidence:\n"
+                        "  NODE_OPTIONS=--max-old-space-size=32768 "
+                        "qa/outside-in/alice-desktop/runners/validate-scenarios.sh\n"
+                        f"  exit 0 PASS at {head}; no timeout wrappers"
+                    ),
+                    pr_description_evidence=(
+                        "PR description evidence:\n"
+                        f"  PR 402 body cites current head {head}, bounded validation,\n"
+                        "  scope exclusions, and no overclaim wording"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertEqual("", result.stderr)
+        self.assertEqual(0, result.returncode)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_without_docs_impact_review(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_docs_impact=False),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("docs impact", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_without_quality_audit_cycles(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_quality_audit_cycles=False),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("quality-audit", combined_output)
+        self.assertIn("cycle", combined_output)
+
+    def test_guard_rejects_noop_evidence_when_final_quality_audit_cycle_is_not_clean(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    quality_audit_evidence=self.blocked_final_quality_audit_evidence(head),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("quality-audit", combined_output)
+        self.assertIn("final", combined_output)
+        self.assertIn("clean", combined_output)
+
+    def test_guard_rejects_noop_evidence_when_final_quality_audit_result_is_ambiguous(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    quality_audit_evidence=(
+                        self.clean_quality_audit_evidence(head)
+                        + "\n  Result: blocker: later conflicting final result"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("quality-audit", combined_output)
+        self.assertIn("final", combined_output)
+        self.assertIn("clean", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_without_pr_description_evidence(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_pr_description_evidence=False),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("pr description", combined_output)
+
+    def test_guard_rejects_noop_evidence_with_pr_description_not_tied_to_expected_head(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    pr_description_evidence=(
+                        "PR description evidence: PR 402 body was reviewed for bounded "
+                        "validation, scope exclusions, and no overclaim wording"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("pr description", combined_output)
+        self.assertIn("expected head", combined_output)
+
+    def test_guard_rejects_noop_evidence_with_external_github_service_failure(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(
+                    head,
+                    pr_description_evidence=(
+                        f"PR description evidence: GitHub API unavailable for PR 402 at {head}; "
+                        "gh auth failed"
+                    ),
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("external github service", combined_output)
+        self.assertIn("unavailable", combined_output)
+
+    def test_guard_rejects_noop_evidence_that_mixes_noop_guard_and_not_merge_ready(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head)
+                + "\nNOT_MERGE_READY\nBlockers: stale PR description evidence\n",
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("not_merge_ready", combined_output)
+        self.assertIn("no_op_guard", combined_output)
+
     def test_guard_rejects_noop_justification_without_expected_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -462,10 +911,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         if self._linked_worktree is None:
             self.fail("linked guard worktree was not initialized")
         self.clean_linked_worktree()
-        try:
-            yield self._linked_worktree
-        finally:
-            self.clean_linked_worktree()
+        yield self._linked_worktree
 
     def linked_worktree_head(self) -> str:
         if self._linked_worktree_head is None:
@@ -513,8 +959,15 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         include_scope_exclusions: bool = True,
         include_noop_head: bool = True,
         include_current_pr_checks: bool = True,
+        include_runnable_qa_scenario_evidence: bool = True,
+        include_docs_impact: bool = True,
+        include_quality_audit_cycles: bool = True,
+        include_pr_description_evidence: bool = True,
         scope_exclusions: str = SCOPE_EXCLUSIONS,
         pr_check_evidence: str = CURRENT_PR_CHECK_EVIDENCE,
+        runnable_qa_scenario_evidence: Optional[str] = None,
+        quality_audit_evidence: Optional[str] = None,
+        pr_description_evidence: Optional[str] = None,
     ) -> str:
         lines = [
             "PR: 402",
@@ -532,6 +985,25 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             f"Validation result: exit 0 PASS at {head}",
             "Positive claim scope: repository-owned archive reopen/edit behavior only",
         ]
+        if include_runnable_qa_scenario_evidence:
+            lines.append(runnable_qa_scenario_evidence or self.runnable_qa_scenario_evidence(head))
+        if include_docs_impact:
+            lines.append(
+                "Docs impact: reviewed docs/reference/pr-402-reopen-edit-recovery-output-contract.md, "
+                "docs/reference/project-archive-reopen-edit-seam.md, "
+                "docs/howto/validate-project-archive-reopen-edit-seam.md, and docs/index.md "
+                f"at {head}"
+            )
+        if include_quality_audit_cycles:
+            lines.extend((quality_audit_evidence or self.clean_quality_audit_evidence(head)).splitlines())
+        if include_pr_description_evidence:
+            lines.append(
+                pr_description_evidence
+                or (
+                    f"PR description evidence: PR 402 body cites current head {head}, "
+                    "bounded validation, scope exclusions, and no overclaim wording"
+                )
+            )
         if include_current_pr_checks:
             lines.append(pr_check_evidence)
         if include_scope_exclusions:
@@ -555,6 +1027,58 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
                 ]
             )
         return "\n".join(lines)
+
+    @staticmethod
+    def runnable_qa_scenario_evidence(head: str) -> str:
+        return (
+            "Runnable QA/scenario evidence: NODE_OPTIONS=--max-old-space-size=32768 "
+            "qa/outside-in/alice-desktop/runners/validate-scenarios.sh "
+            f"exit 0 PASS at {head}; no diff-scoped scenario smoke required"
+        )
+
+    @staticmethod
+    def clean_quality_audit_evidence(head: str) -> str:
+        return "\n".join(
+            [
+                "Quality-audit cycle 1:",
+                "  SEEK: exact-head and branch mismatch risk",
+                f"  VALIDATE: PR head, local HEAD, and remote branch head equal {head}",
+                "  FIX: no-op; exact-head evidence is current",
+                "  Result: clean",
+                "Quality-audit cycle 2:",
+                "  SEEK: validation, QA/scenario, and docs evidence gaps",
+                "  VALIDATE: focused Maven command, scenario catalog validator, and docs impact review",
+                "  FIX: no-op; required evidence is present",
+                "  Result: clean",
+                "Quality-audit cycle 3:",
+                "  SEEK: final merge-ready gate scan for stale head evidence, missing QA/docs, and overclaims",
+                "  VALIDATE: current-head checks, PR body review, diff scope review, and guard evidence",
+                "  FIX: no-op; all gates have current-head evidence",
+                "  Result: clean",
+            ]
+        )
+
+    @staticmethod
+    def blocked_final_quality_audit_evidence(head: str) -> str:
+        return "\n".join(
+            [
+                "Quality-audit cycle 1:",
+                "  SEEK: exact-head and branch mismatch risk",
+                f"  VALIDATE: PR head, local HEAD, and remote branch head equal {head}",
+                "  FIX: no-op; exact-head evidence is current",
+                "  Result: clean",
+                "Quality-audit cycle 2:",
+                "  SEEK: validation, QA/scenario, and docs evidence gaps",
+                "  VALIDATE: focused Maven command, scenario catalog validator, and docs impact review",
+                "  FIX: no-op; required evidence is present",
+                "  Result: clean",
+                "Quality-audit cycle 3:",
+                "  SEEK: final merge-ready gate scan for stale head evidence, missing QA/docs, and overclaims",
+                "  VALIDATE: PR body review found stale-head evidence",
+                "  FIX: no-op unavailable until PR description is refreshed",
+                "  Result: blocker: stale PR description evidence",
+            ]
+        )
 
     def run_guard(self, candidate_path: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
         if not GUARD_SCRIPT.is_file():

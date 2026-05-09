@@ -262,8 +262,9 @@ fresh focused validation evidence.
 | Git/PR state verifier | Confirms PR `402`, branch `wave6-project-reopen-edit-chain-1778302300`, base `develop`, local `HEAD`, PR head SHA, remote branch head SHA, `origin/develop` head SHA, exact merge-base SHA, merge-base state, and local worktree status before reporting readiness. Repeats the local, remote branch, and PR head checks after any merge, push, or committed recovery change. |
 | Diff scope inspector | Reviews `origin/develop...HEAD` and groups changed files as implementation, characterization test, headless IDE bridge, QA metadata, documentation, or guard scope. Unrelated desktop, rendering, grading, Save-completion, or first-lesson changes are not part of this evidence. |
 | Validation runner | Runs focused `core/story-api-migration` archive reopen/edit validation with `NODE_OPTIONS=--max-old-space-size=32768` after any required sync. Runs `ProjectOpenSaveExportJourneyTest` too when the diff includes the headless `core/ide` bridge. |
-| No-op guard | Detects whether the worktree has uncommitted changes scoped to project archive reopen/edit recovery. A clean worktree is valid only when the final output includes an exact-head no-op justification; unrelated dirty paths are rejected instead of counted as recovery evidence. |
-| Evidence reporter | Records PR, branch, base, PR head, local HEAD, remote branch head, origin/develop head, merge-base SHA/status, worktree status, diff summary, validation result, check state, and either files modified or a no-op justification. |
+| No-op guard | Detects whether the worktree has uncommitted changes scoped to project archive reopen/edit recovery. A clean worktree is valid only when the final output includes exact-head no-op evidence for every merge-ready gate; unrelated dirty paths are rejected instead of counted as recovery evidence. |
+| GitHub evidence adapter | Uses the existing `gh` CLI only for read-only PR head, PR description, and check-state evidence. Missing authentication, rate limits, unavailable GitHub responses, stale metadata, or pending checks are `NOT_MERGE_READY` blockers rather than success-shaped no-op evidence. |
+| Evidence reporter | Records PR, branch, base, PR head, local HEAD, remote branch head, origin/develop head, merge-base SHA/status, worktree status, diff summary, validation result, runnable QA/scenario evidence, docs impact, quality-audit cycles, PR description evidence, check state, and either files modified, `NO_OP_GUARD`, or `NOT_MERGE_READY` blockers. |
 | CI/check reconciler | Inspects PR checks and resolves only blockers directly tied to project archive reopen/edit readiness. Pending unrelated checks are reported as pending, not converted into broad readiness claims. |
 
 ## No-op guard command API
@@ -282,7 +283,7 @@ scripts/project-archive-reopen-edit-noop-guard.sh [candidate-path] --allow-noop-
 | --- | --- |
 | `candidate-path` | Optional path inside the target git worktree. Defaults to the current directory. |
 | `--print-root` | Prints the resolved linked worktree root and exits without checking for changes. |
-| `--allow-noop-evidence evidence-file` | Allows a clean worktree only when the evidence file exists, includes an exact-head **No-op justification**, and does not also claim `Files modified`. |
+| `--allow-noop-evidence evidence-file` | Allows a clean worktree only when the evidence file exists, includes exact-head no-op evidence for every merge-ready gate, and does not also claim `Files modified` or `NOT_MERGE_READY`. |
 | `--expected-head sha` | The 40-character PR/local head SHA that must match the resolved worktree `HEAD`, appear as both `PR head` and `Local HEAD`, and be referenced in the no-op justification. Required with `--allow-noop-evidence`. |
 | `-h`, `--help` | Prints usage. |
 
@@ -293,10 +294,14 @@ scripts/project-archive-reopen-edit-noop-guard.sh [candidate-path] --allow-noop-
 | `2` | The candidate path is missing or is not inside a git worktree. |
 | `64` | The command line is invalid. |
 
-The guard is not a replacement for readiness evidence. It only prevents a
-success-shaped workflow output that omits both file changes and no-op rationale.
-When validation and checks are clean at the exact current head and no files need
-to change, the correct output is a **No-op justification** tied to that SHA.
+The guard is not a replacement for readiness evidence. It prevents a
+success-shaped workflow output that omits file changes, no-op rationale, or
+required merge-ready evidence. When validation, no-timeout QA/scenario evidence,
+docs impact review, quality-audit cycles, PR description evidence, and checks
+are clean at the exact current head and no files need to change, the correct
+output is `NO_OP_GUARD` with a **No-op justification** tied to that SHA. When
+any gate is missing or stale, the correct output is `NOT_MERGE_READY` with the
+explicit blockers.
 
 ## PR 402 readiness evidence
 
@@ -324,9 +329,13 @@ Record:
 | Validation result | Exit status and concise pass/fail outcome. |
 | Headless bridge validation | Include the `ProjectOpenSaveExportJourneyTest` command and result when `ProjectOpenSaveExportJourneyTest.java`, `FileProjectLoader`, or `ProjectFileUtilities` handoff behavior changed. Otherwise record why it is not required for the exact diff. |
 | Compatibility validation | Include the `HistoricalArchiveRoundTripCharacterizationTest` command and result when `.a3c`, `.a3w`, JSON/XML routing, parser, writer, Tweedle decode, or archive-resource behavior changed. Otherwise record why it is not required for the exact diff. |
+| Runnable QA/scenario evidence | Current-head no-timeout scenario catalog validator result, plus diff-scoped scenario smoke evidence when QA metadata changed. |
+| Docs impact | Affected docs reviewed or updated at the current head. |
+| Quality-audit cycles | At least three SEEK/VALIDATE/FIX/Result cycles, with a clean final cycle. |
+| PR description evidence | Current-head PR body review or update result, including stale-head and overclaim checks. |
 | Checks | PR check names and states, with blockers limited to archive reopen/edit readiness. |
 | Files modified | Relative paths changed by the recovery step. |
-| No-op justification | Required instead of `Files modified` when the exact current head already has the required diff, validation, and check evidence. |
+| No-op justification | Required instead of `Files modified` when the exact current head already has the required diff, validation, QA/scenario, docs, quality-audit, PR description, and check evidence. |
 
 Do not integrate `develop` when `git merge-base HEAD origin/develop` already
 equals `origin/develop`. If develop has drifted, merge `origin/develop`
@@ -363,6 +372,8 @@ This seam does not claim:
 - full UI automation;
 - visible rendering correctness;
 - grading or learner assessment correctness;
+- creative assessment;
+- full Tweedle/player decode;
 - full first-lesson completion;
 - player runtime behavior beyond archive manifest/source readback;
 - broad project migration correctness outside the characterized IO boundary.

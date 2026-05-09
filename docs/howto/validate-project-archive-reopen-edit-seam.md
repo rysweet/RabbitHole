@@ -19,6 +19,8 @@ For a guided walkthrough, see
 - [Run headless bridge validation when needed](#run-headless-bridge-validation-when-needed)
 - [Run compatibility validation when needed](#run-compatibility-validation-when-needed)
 - [Inspect PR checks](#inspect-pr-checks)
+- [Run no-timeout QA/scenario evidence](#run-no-timeout-qascenario-evidence)
+- [Review docs, PR description, and quality audit evidence](#review-docs-pr-description-and-quality-audit-evidence)
 - [Use the no-op guard](#use-the-no-op-guard)
 - [Review failures](#review-failures)
 - [Record readiness evidence](#record-readiness-evidence)
@@ -269,6 +271,35 @@ reopen/edit readiness. Report pending checks as pending. Do not turn unrelated
 desktop, rendering, grading, Save-completion, or first-lesson check state into a
 claim about this seam.
 
+If `gh` cannot read the PR head, PR description, or check state because of
+authentication, rate limits, network failure, unavailable fields, or pending
+checks, record `NOT_MERGE_READY` with that blocker. Do not treat unavailable
+GitHub evidence as readiness.
+
+## Run no-timeout QA/scenario evidence
+
+Record runnable QA/scenario evidence without timeout wrappers:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+Run additional scenario smoke commands only when the exact diff touches QA
+metadata, runner, schema, or desktop scenario paths. If the needed QA evidence
+cannot run without `timeout` or `gtimeout`, record `NOT_MERGE_READY` with that
+blocker.
+
+## Review docs, PR description, and quality audit evidence
+
+Review the affected docs and PR body at the current head. PR description
+evidence must name the same head as `gh pr view 402 --json headRefOid --jq
+.headRefOid`; stale PR body evidence is `NOT_MERGE_READY`.
+
+Before `NO_OP_GUARD`, record at least three quality-audit cycles. Each cycle
+must include `SEEK:`, `VALIDATE:`, `FIX:` or explicit no-op, and `Result:`. The
+final cycle must be clean.
+
 ## Use the no-op guard
 
 Run the guard when the recovery workflow reaches the final evidence step:
@@ -295,7 +326,9 @@ scripts/project-archive-reopen-edit-noop-guard.sh core/story-api-migration --pri
 To make a clean-worktree no-op explicit and machine-checkable, save the final
 evidence text and pass the exact current head. The evidence must use
 `No-op justification` instead of `Files modified`, and the justification must
-reference that same head:
+reference that same head. It must also include no-timeout QA/scenario evidence,
+docs impact review, PR description evidence tied to the expected head, current
+successful checks, scope exclusions, and the three quality-audit cycles:
 
 ```bash
 scripts/project-archive-reopen-edit-noop-guard.sh . \
@@ -362,6 +395,12 @@ Result: <passed with exit code 0 | failed with exit code N and blocker summary>
 Headless bridge validation: <not run; no core/ide bridge surface changed | command and result>
 Compatibility validation: <not run; no parser/writer/routing compatibility surface changed | command and result>
 Checks: <PR check names and states, with scoped blockers only>
+Runnable QA/scenario evidence: <current-head no-timeout scenario validator result>
+Docs impact: <affected docs reviewed or updated at current head>
+Quality-audit cycle 1: <SEEK / VALIDATE / FIX / Result>
+Quality-audit cycle 2: <SEEK / VALIDATE / FIX / Result>
+Quality-audit cycle 3: <SEEK / VALIDATE / FIX / Result: clean>
+PR description evidence: <current-head review or update result>
 Files modified: <relative paths changed by this recovery step>
 ```
 
@@ -394,4 +433,5 @@ exports coherent .a3w archive metadata/source entries.
 ```
 
 Do not claim desktop Save completion, full UI automation, visible rendering
-correctness, grading, or full first-lesson completion from this validation.
+correctness, grading, creative assessment, full Tweedle/player decode, player
+runtime behavior, or full first-lesson completion from this validation.
