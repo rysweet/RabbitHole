@@ -15,20 +15,21 @@ public class AliceMenuBarContractTest {
   public void desktopMenuBarRegistersWindowMenuModel() {
     AliceMenuBar menuBar = new AliceMenuBar(null);
 
-    List<WindowMenuModel> windowMenuModels = registeredMenusOfType(menuBar, WindowMenuModel.class);
+    WindowMenuModel windowMenuModel = onlyRegisteredMenuOfType(menuBar, WindowMenuModel.class);
 
-    assertEquals("desktop menu bar should register exactly one WindowMenuModel", 1, windowMenuModels.size());
     assertTrue("WindowMenuModel should be reachable through menu bar membership lookup",
-        menuBar.contains(windowMenuModels.get(0)));
+        menuBar.contains(windowMenuModel));
   }
 
-  private static <T extends StandardMenuItemPrepModel> List<T> registeredMenusOfType(AliceMenuBar menuBar, Class<T> menuType) {
+  private static <T extends StandardMenuItemPrepModel> T onlyRegisteredMenuOfType(AliceMenuBar menuBar, Class<T> menuType) {
     List<T> registeredMenus = new ArrayList<>();
     for (StandardMenuItemPrepModel child : menuBar.getChildren()) {
       if (menuType.isInstance(child)) {
         registeredMenus.add(menuType.cast(child));
       }
     }
-    return registeredMenus;
+    assertEquals("desktop menu bar should register exactly one " + menuType.getSimpleName(),
+        1, registeredMenus.size());
+    return registeredMenus.get(0);
   }
 }
