@@ -150,7 +150,7 @@ contract`.
 Do not convert either result into a desktop edit, Save, rendering, learner
 assessment, grading, creative assessment, or full first-lesson completion claim.
 
-## Step 6: Review post-open runtime/display accessibility evidence
+## Step 6: Review post-open runtime/display and pixel-sampling evidence
 
 Run the bounded post-open scenario:
 
@@ -173,6 +173,8 @@ tab-click-observation.json
 post-project-open-observation.json
 x-window-inventory.json
 controlled-display-pixel-observation.json
+visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-observation.json
 launch.log
 xvfb.log
 screenshot.png or screenshot.xwd
@@ -187,7 +189,28 @@ python3 -m json.tool \
 sed -n '1,120p' <run-directory>/status.txt
 ```
 
-Accept this tutorial step only when `status.txt` records `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`, and when `post-open-runtime-display-accessibility-evidence.json` records `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount` greater than zero, and `blocker=none`. `runtime-display-accessibility-status.txt` is probe-local; use final `status.txt` for the overall pass/block decision. Use `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` to understand the supporting project-open and controlled-display setup. If the artifact or final status records a blocker, keep it as the machine-readable gap report. Do not convert a blocker into a manual rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder claim. The full review contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
+Accept this tutorial step as runtime/display, controlled-display, and bounded
+sampling evidence only when `status.txt` records
+`outcome=passed`,
+`runtimeDisplayAccessibilityStatus=observed`,
+`controlledDisplayPixelStatus=observed`, and
+`visibleRenderingPixelSamplingStatus=observed`; when
+`post-open-runtime-display-accessibility-evidence.json` records `status=observed`,
+`postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount`
+greater than zero, and `blocker=none`; and when
+`visible-rendering-pixel-observation.json` to record checked raw RGBA samples
+inside the validated Run-window/world-canvas target with
+`visibleRenderingCorrectnessEstablished=false`.
+`runtime-display-accessibility-status.txt`
+is probe-local; use final `status.txt` for the overall pass/block decision. Use
+`tab-click-observation.json`, `post-project-open-observation.json`,
+`controlled-display-pixel-observation.json`, and the pixel observation or blocker
+artifact to understand the supporting project-open, controlled-display, target,
+and sampling setup. If the artifact or final status records a blocker, keep it as
+the machine-readable gap report. Do not convert a blocker or raw pixel sample into
+a manual visible rendering correctness, world execution, grading, lesson
+completion, Save, Select Project, installer, or decoder claim. The full review
+contract is documented in [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 ## Step 7: Generate a save/load checklist
 

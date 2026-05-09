@@ -1,0 +1,8 @@
+{
+  "generatedAtUtc": "2099-01-01T00:00:00Z",
+  "runId": "contract-run-1",
+  "scenario": "alice-desktop-save-menu-dialog-write-proof",
+  "schemaVersion": "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1",
+  "status": "proven",
+  "workflow": "save-menu-dialog-write-proof"
+}

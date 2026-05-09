@@ -277,9 +277,9 @@ Display-backed proof tests remain intentionally separate and are documented in t
 
 ## Save menu dialog write proof
 
-The canonical bounded desktop proof is `StageIdeSaveMenuDoClickToWriteProofTest`. Its target contract proves one path only: production Save menu item `doClick()`, live Swing `JFileChooser` approval, and a non-empty `.a3p` write under the JUnit temp directory.
+The historical bounded desktop proof is `StageIdeSaveMenuDoClickToWriteProofTest`. Its target contract proves one path only: production Save menu item `doClick()`, live Swing `JFileChooser` approval, and a non-empty `.a3p` write under the JUnit temp directory.
 
-This proof target is stronger than direct operation tests and flow-seam tests because it starts from the Save menu item and reaches the real dialog/write boundary. It is still intentionally narrow and does not claim full Save coverage.
+This proof target is stronger than direct operation tests and flow-seam tests because it starts from the Save menu item and reaches the real dialog/write boundary. It is still a supporting baseline. It does not satisfy the rendered Save proof scenario by itself because it bypasses Robot activation of the rendered File menu.
 
 | Proof boundary | Required observation |
 | --- | --- |
@@ -288,13 +288,13 @@ This proof target is stronger than direct operation tests and flow-seam tests be
 | Write result | The target `.a3p` exists and has non-zero size after `ProjectApplication.saveProjectTo(File)` returns. |
 | Evidence | The `stageide-save-menu-doclick-write-proof.json` artifact reports the dialog type as `Swing JFileChooser`, uses `status: proven`, `status: not_proven`, or `status: unsupported`, records `trigger.menu_item_doclick: true` only after the menu seam is reached, and sets `wroteFile` to `true` only after the file assertions pass. |
 
-See [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) for the evidence schema, unsupported display artifact contract, non-claims, and focused validation command.
+See [Save Menu Dialog Write/Readback Proof](./save-menu-dialog-write-proof.md) for the rendered scenario contract and [Save Proof Evidence](./save-proof-evidence.md) for the canonical artifact schema.
 
 ## Robot Save menu dialog write/readback proof
 
-The canonical joined Robot proof is `RobotSaveMenuDialogWriteReadbackProofTest`. Its target contract proves one bounded path only: AWT Robot opens the rendered File menu, AWT Robot clicks the production Save menu item by `SaveProjectOperation` action identity, exactly one live Swing `JFileChooser` is controlled, a proof-root `.a3p` file is written, the file reads back through `IoUtilities.readProject(File)`, and the readback project contains `robotSaveMenuRoundTripMarker`.
+The target canonical rendered Save proof is `RobotSaveMenuDialogWriteReadbackProofTest`. Its contract proves one path only: AWT Robot opens the rendered File menu, AWT Robot clicks the production Save menu item by `SaveProjectOperation` action identity, exactly one live Swing `JFileChooser` is controlled, a proof-root `.a3p` file is written, the file reads back through `IoUtilities.readProject(File)`, and the readback project contains `robotSaveMenuRoundTripMarker`.
 
-This proof is stronger than `JMenuBarRobotClickSaveProofTest` because it continues past menu dispatch into dialog control, file write, readback, and marker verification. It is stronger than `StageIdeSaveMenuDoClickToWriteProofTest` for menu attribution because it uses Robot mouse events instead of `doClick()`. It still does not claim full desktop Save completion or all Save variants.
+This proof is stronger than `JMenuBarRobotClickSaveProofTest` because it continues past menu dispatch into dialog control, file write, readback, and marker verification. It is stronger than `StageIdeSaveMenuDoClickToWriteProofTest` for menu attribution because it uses Robot mouse events instead of `doClick()`. It still does not claim Save behavior outside this single rendered path or all Save variants.
 
 | Proof boundary | Required observation |
 | --- | --- |
@@ -302,9 +302,9 @@ This proof is stronger than `JMenuBarRobotClickSaveProofTest` because it continu
 | Save item attribution | The clicked item is matched by `SaveProjectOperation` Swing action identity, not by label alone. |
 | Dialog control | Exactly one expected Swing `JFileChooser` is observed, receives a normalized proof-root `.a3p` target, and completes approval. |
 | Write/readback | The target `.a3p` exists, is non-empty, reads back with `IoUtilities.readProject(File)`, and contains `robotSaveMenuRoundTripMarker`. |
-| Evidence | `robot-save-menu-dialog-write-readback-proof.json` must report `status: proven` only after the complete chain succeeds, or `status: blocked` with a fixed `blocker.kind` when the environment or UI state prevents safe proof. |
+| Evidence | `robot-save-menu-dialog-write-readback-proof.json` must match `eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1`, report `status: proven` only after the complete chain succeeds, and fail scenario validation for missing, stale, blocked, partial, or internally inconsistent evidence. A `status: blocked` artifact is the executable blocker for the missing step, not passing proof evidence. Bounded Java waits replace shell timeout for menu, dialog, write, readback, and marker blockers. |
 
-See [Robot Save Menu Dialog Write/Readback Proof](./robot-save-menu-dialog-write-readback-proof.md) for the artifact schema, blocker contract, non-claims, and validation command.
+See [Save Proof Evidence](./save-proof-evidence.md) for the artifact schema, blocker contract, and fail-closed validation rules.
 
 ## Configuration
 

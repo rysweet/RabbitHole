@@ -517,12 +517,19 @@ def validate(path, scenario):
         )
         if unknown_automation:
             errors.append(f"automation has unknown field(s): {', '.join(unknown_automation)}")
-        for field in ("cwd", "argv", "timeoutSeconds", "readyWaitSeconds"):
+        for field in ("cwd", "argv", "readyWaitSeconds"):
             if field not in automation:
                 errors.append(f"automation must include {field} when present")
+        if workflow == "save-menu-dialog-write-proof":
+            if "timeoutSeconds" in automation:
+                errors.append("save-menu-dialog-write-proof must not include automation.timeoutSeconds")
+        elif "timeoutSeconds" not in automation:
+            errors.append("automation must include timeoutSeconds when present")
         validate_automation_cwd(errors, automation.get("cwd"))
         require_string_list(errors, path, "automation.argv", automation.get("argv"))
-        if not isinstance(automation.get("timeoutSeconds"), int) or automation.get("timeoutSeconds", 0) < 1:
+        if "timeoutSeconds" in automation and (
+            not isinstance(automation.get("timeoutSeconds"), int) or automation.get("timeoutSeconds", 0) < 1
+        ):
             errors.append("automation.timeoutSeconds must be a positive integer")
         if not isinstance(automation.get("readyWaitSeconds"), int) or automation.get("readyWaitSeconds", 0) < 1:
             errors.append("automation.readyWaitSeconds must be a positive integer")
