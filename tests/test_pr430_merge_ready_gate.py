@@ -209,6 +209,26 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
             r"unsupported claim|unbounded claim|full UI automation|visible rendering",
         )
 
+    def test_malformed_diff_paths_cannot_bypass_focused_scope_gate(self) -> None:
+        malformed_paths = [
+            "tests/../core/ide/src/main/java/org/alice/ide/Unrelated.java",
+            "tests//test_evil.py",
+            "tests/./test_evil.py",
+            "/tests/test_evil.py",
+            "tests\\test_evil.py",
+            "scripts/pr430_merge_ready_gate.py/extra",
+        ]
+
+        for path in malformed_paths:
+            evidence = passing_evidence()
+            evidence["diff"]["changed_files"] = [path]
+            with self.subTest(path=path):
+                self.assert_not_merge_ready_contains(
+                    self.evaluate(evidence),
+                    r"focused diff|diff scope",
+                    r"malformed|out-of-scope",
+                )
+
     def test_pending_or_failed_github_action_for_current_head_blocks_ready(self) -> None:
         for status, conclusion in (("in_progress", None), ("completed", "failure")):
             evidence = passing_evidence()

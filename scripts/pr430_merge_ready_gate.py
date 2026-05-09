@@ -191,12 +191,28 @@ def _check_diff_scope(evidence: dict[str, Any], blockers: list[str]) -> None:
     out_of_scope = [
         path
         for path in changed_files
-        if not any(path == allowed or path.startswith(allowed) for allowed in SUPPORTED_DIFF_PATHS)
+        if not _is_supported_diff_path(path)
     ]
     if out_of_scope:
         blockers.append(
-            "Focused diff scope failed; out-of-scope files: " + ", ".join(out_of_scope)
+            "Focused diff scope failed; malformed or out-of-scope files: "
+            + ", ".join(out_of_scope)
         )
+
+
+def _is_supported_diff_path(path: str) -> bool:
+    if not _is_safe_repo_relative_path(path):
+        return False
+    return any(
+        path.startswith(allowed) if allowed.endswith("/") else path == allowed
+        for allowed in SUPPORTED_DIFF_PATHS
+    )
+
+
+def _is_safe_repo_relative_path(path: str) -> bool:
+    if not path or path.startswith("/") or "\\" in path or "\x00" in path:
+        return False
+    return all(part not in {"", ".", ".."} for part in path.split("/"))
 
 
 def _check_runnable_qa(evidence: dict[str, Any], blockers: list[str]) -> None:
