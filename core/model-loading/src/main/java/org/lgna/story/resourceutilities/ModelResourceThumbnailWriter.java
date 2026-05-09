@@ -66,8 +66,8 @@ final class ModelResourceThumbnailWriter {
       Map<ModelSubResourceExporter, Image> thumbnails,
       List<ModelSubResourceExporter> subResources) throws IOException {
     int expectedThumbnailCount = ((existingThumbnails != null) ? existingThumbnails.size() : 0) + thumbnails.size() + 1;
-    List<File> thumbnailFiles = new ArrayList<File>(expectedThumbnailCount);
-    Set<String> thumbnailsCreated = new HashSet<String>(expectedThumbnailCount);
+    List<File> thumbnailFiles = new ArrayList<>(expectedThumbnailCount);
+    Set<String> thumbnailsCreated = HashSet.newHashSet(expectedThumbnailCount);
     String thumbnailDirectory = getThumbnailDirectory(root, packageString, className);
     if ((existingThumbnails != null) && !existingThumbnails.isEmpty()) {
       for (Entry<String, File> entry : existingThumbnails.entrySet()) {
