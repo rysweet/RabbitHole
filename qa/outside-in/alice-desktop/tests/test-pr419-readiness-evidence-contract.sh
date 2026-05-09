@@ -20,6 +20,11 @@ current_branch=$(git -C "$REPO_ROOT" branch --show-current)
 head_sha=$(git -C "$REPO_ROOT" rev-parse HEAD)
 develop_sha=$(git -C "$REPO_ROOT" rev-parse origin/develop)
 merge_base=$(git -C "$REPO_ROOT" merge-base HEAD origin/develop)
+upstream_ref=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+upstream_sha=
+if [ -n "$upstream_ref" ]; then
+  upstream_sha=$(git -C "$REPO_ROOT" rev-parse "$upstream_ref" 2>/dev/null || true)
+fi
 
 python3 - \
   "$EVIDENCE_LOG" \
@@ -28,6 +33,8 @@ python3 - \
   "$head_sha" \
   "$develop_sha" \
   "$merge_base" \
+  "$upstream_ref" \
+  "$upstream_sha" \
   >"$tmp_root/pr419-readiness-contract.out" \
   2>"$tmp_root/pr419-readiness-contract.err" <<'PY'
 import re
@@ -41,7 +48,9 @@ from pathlib import Path
     head_sha,
     develop_sha,
     merge_base,
-) = sys.argv[1:7]
+    upstream_ref,
+    upstream_sha,
+) = sys.argv[1:9]
 evidence = Path(evidence_path).read_text(encoding="utf-8")
 doc = Path(doc_path).read_text(encoding="utf-8")
 combined = f"{evidence}\n\n{doc}"
@@ -59,6 +68,13 @@ def require_literal(text, token, label):
 
 def require_pattern(text, pattern, label):
     require(re.search(pattern, text, flags=re.MULTILINE), f"{label} must match /{pattern}/")
+
+
+def exact_checked_head(text):
+    match = re.search(r"^Exact checked HEAD at final validation: ([0-9a-f]{40})$", text, flags=re.MULTILINE)
+    if match is None:
+        return None
+    return match.group(1)
 
 
 require_literal(evidence, "Default-workflow recovery evidence for PR #419", "evidence log")
@@ -82,13 +98,38 @@ require_literal(evidence, "Observed validation outcomes:", "evidence log")
 require_literal(evidence, "Readiness claim:", "evidence log")
 require_literal(evidence, "Explicit non-claims:", "evidence log")
 
-require_pattern(
-    evidence,
-    r"^Exact checked HEAD at final validation: [0-9a-f]{40}$",
-    "evidence log",
-)
+exact_head = exact_checked_head(evidence)
+require(exact_head is not None, "evidence log must include an exact checked HEAD SHA")
+require(upstream_ref, "PR419 readiness contract must run on a branch with an upstream PR ref")
+require(upstream_sha, f"PR419 readiness contract must resolve upstream ref {upstream_ref!r}")
+if exact_head is not None and upstream_sha:
+    require(
+        exact_head == upstream_sha,
+        f"evidence exact checked HEAD {exact_head} must match upstream PR head {upstream_sha}",
+    )
+    require_literal(
+        evidence,
+        f"  {upstream_sha} on the existing branch.",
+        "evidence log PR-head metadata",
+    )
 require_literal(evidence, f"origin/develop at recovery: {develop_sha}", "evidence log")
 require_literal(evidence, f"merge-base(HEAD, origin/develop): {merge_base}", "evidence log")
+if upstream_sha and head_sha != upstream_sha:
+    require_literal(
+        evidence,
+        "Local recovery changes in this worktree are not part of that pushed PR head yet",
+        "evidence log local-vs-pushed PR caveat",
+    )
+    require_literal(
+        evidence,
+        "until they are committed and pushed through the normal PR branch flow",
+        "evidence log local follow-up commit caveat",
+    )
+    require_literal(
+        evidence,
+        "refresh this log's exact HEAD and PR-head metadata to the post-commit SHA",
+        "evidence log post-commit refresh instruction",
+    )
 
 for command in (
     "NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh",

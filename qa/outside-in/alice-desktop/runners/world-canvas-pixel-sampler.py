@@ -101,13 +101,18 @@ def parse_rgba(text: str) -> list[int] | None:
     if not match:
         return None
     channels: list[int] = []
-    for raw_channel in match.group(1).split(","):
+    raw_channels = match.group(1).split(",")
+    for index, raw_channel in enumerate(raw_channels):
         raw_channel = raw_channel.strip()
         try:
             if raw_channel.endswith("%"):
                 channels.append(round(float(raw_channel[:-1]) * 255 / 100))
             else:
-                channels.append(normalize_channel(round(float(raw_channel))))
+                channel_value = float(raw_channel)
+                if index == 3 and 0 <= channel_value <= 1:
+                    channels.append(round(channel_value * 255))
+                else:
+                    channels.append(normalize_channel(round(channel_value)))
         except ValueError:
             return None
     if len(channels) == 3:
@@ -135,11 +140,12 @@ def capture_root_image() -> bytes:
     return xwd.stdout
 
 
-def extract_pixel(root_image: bytes, point: dict[str, int | str]) -> list[int]:
-    x = int(point["x"])
-    y = int(point["y"])
+def extract_pixels(root_image: bytes, points: list[dict[str, int | str]]) -> list[list[int]]:
+    pixel_format = "".join(
+        f"%[pixel:p{{{int(point['x'])},{int(point['y'])}}}]\n" for point in points
+    )
     convert = subprocess.run(
-        ["convert", "xwd:-", "-crop", f"1x1+{x}+{y}", "txt:-"],
+        ["convert", "xwd:-", "-format", pixel_format, "info:"],
         input=root_image,
         check=False,
         stdout=subprocess.PIPE,
@@ -151,10 +157,22 @@ def extract_pixel(root_image: bytes, point: dict[str, int | str]) -> list[int]:
             .decode("utf-8", errors="replace")
             .strip()
         )
-    rgba = parse_rgba(convert.stdout.decode("utf-8", errors="replace"))
-    if rgba is None:
-        raise RuntimeError("convert output did not contain a parseable RGBA pixel")
-    return rgba
+    lines = [
+        line.strip()
+        for line in convert.stdout.decode("utf-8", errors="replace").splitlines()
+        if line.strip()
+    ]
+    if len(lines) != len(points):
+        raise RuntimeError(
+            f"convert output contained {len(lines)} pixel line(s) for {len(points)} requested sample point(s)"
+        )
+    rgba_values: list[list[int]] = []
+    for line in lines:
+        rgba = parse_rgba(line)
+        if rgba is None:
+            raise RuntimeError("convert output did not contain parseable RGBA pixels")
+        rgba_values.append(rgba)
+    return rgba_values
 
 
 def read_target(
@@ -185,13 +203,15 @@ def collect_samples(extents: dict[str, int]) -> list[dict[str, Any]]:
         )
 
     root_image = capture_root_image()
+    points = sample_points(extents)
+    rgba_values = extract_pixels(root_image, points)
     samples: list[dict[str, Any]] = []
-    for point in sample_points(extents):
+    for point, rgba in zip(points, rgba_values):
         samples.append(
             {
                 "name": str(point["name"]),
                 "point": {"x": int(point["x"]), "y": int(point["y"])},
-                "rgba": extract_pixel(root_image, point),
+                "rgba": rgba,
                 "checked": True,
             }
         )

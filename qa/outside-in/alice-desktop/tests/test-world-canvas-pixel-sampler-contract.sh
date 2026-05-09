@@ -358,8 +358,9 @@ cat >"$standalone_dir/fake-bin/convert" <<'SH'
 set -u
 printf 'convert %s\n' "$*" >>"$SAMPLER_CONVERT_LOG"
 cat >/dev/null
-printf '# ImageMagick pixel enumeration: 1,1,255,srgba\n'
-printf '0,0: (16,32,48,255) #102030FF srgba(16,32,48,1)\n'
+printf 'srgba(16,32,48,1)\n'
+printf 'srgb(64,96,128)\n'
+printf '(0,0,0,255)\n'
 SH
 chmod +x "$standalone_dir/fake-bin/xwd" "$standalone_dir/fake-bin/convert"
 standalone_out="$standalone_dir/pixel-observation.json"
@@ -390,10 +391,10 @@ if [ "$xwd_count" -eq 1 ]; then
 else
   fail "standalone sampler should capture once per target (got $xwd_count captures)"
 fi
-if [ "$convert_count" -eq 3 ]; then
-  pass "standalone sampler extracts one pixel per checked sample point"
+if [ "$convert_count" -eq 1 ]; then
+  pass "standalone sampler extracts all checked sample points with one convert invocation"
 else
-  fail "standalone sampler should extract three checked pixels (got $convert_count extracts)"
+  fail "standalone sampler should extract checked pixels with one convert invocation (got $convert_count extracts)"
 fi
 
 success_dir="$tmp_root/success"

@@ -24,13 +24,10 @@ Merge status:
 Worktree end state:
 - No unmerged path remains; the previous AA index state for
   docs/reference/visible-rendering-evidence-nonclaim-contract.md is resolved.
-- The existing PR branch is pushed at the validated exact HEAD above. The
-  retcon documentation and evidence-specification updates in this worktree are
-  staged recovery changes and must stay bounded to the checks recorded here
-  until they are committed through the normal PR branch flow.
-- After those staged docs/evidence changes are committed, refresh this log's
-  exact HEAD and PR-head metadata to the post-commit SHA before describing the
-  committed branch as final exact-head readiness.
+- The existing PR branch is pushed at the validated exact HEAD above.
+- Local recovery changes in this worktree are not part of that pushed PR head yet;
+  they must stay bounded to the checks recorded here until they are committed and pushed through the normal PR branch flow.
+- After those local recovery changes are committed and pushed, refresh this log's exact HEAD and PR-head metadata to the post-commit SHA before describing the committed branch as final exact-head readiness.
 
 Intentional changes:
 - Runtime/display accessibility probe artifacts now state the target-discovery
@@ -43,9 +40,10 @@ Intentional changes:
 - Step 9 simplification keeps probe/sampler responsibilities split without
   broadening claims, removes fake-sampler wording, and converts malformed sampler
   RGBA output into structured blocker evidence instead of an unhandled failure.
-- Step 9b performance optimization reuses one root-window capture for all checked
-  world-canvas sample points and adds a focused contract that enforces one `xwd`
-  capture per target while preserving one pixel extraction per checked point.
+- Step 9 finalization refactor replaces broad inline Python assertion blocks with
+  direct shell assertions while preserving the bounded evidence checks.
+- Step 9b performance optimization reuses one root-window capture and one
+  ImageMagick `convert` invocation for all checked world-canvas sample points.
 - Step 10 review pass narrows silver-thread doc wording from "full Alice desktop
   QA contract suite" to "Alice desktop QA contract suite" to avoid implying
   validation beyond the focused target-discovery lane.
@@ -111,8 +109,8 @@ Observed validation outcomes:
   RGBA sample artifacts and explicit sampler blockers without promoting samples
   into rendering-correctness proof.
 - The sampler performance contract passed and verifies the standalone sampler
-  captures the root window once per target, then extracts the three checked
-  sample points from that cached capture.
+  captures the root window once per target, then extracts all checked sample
+  points from that cached capture with one ImageMagick `convert` invocation.
 - The accessibility target discovery silver-thread contract passed and verifies
   checked-in launch, run/runtime, and Select Project target discovery markers,
   structured blockers, and bounded scope wording.
@@ -142,10 +140,7 @@ Explicit non-claims:
   pixel correctness.
 - This evidence does not claim full world execution or world execution
   correctness.
-- This evidence does not claim learner grading, rubric scoring, lesson
-  completion, or creative assessment.
-- This evidence does not claim lesson completion.
-- This evidence does not claim creative assessment.
+- This evidence does not claim grading, lesson completion, or creative assessment.
 - This evidence does not claim Save completion or Save behavior.
 - This evidence does not claim Sims validation.
 - This evidence does not claim deployed installer success or deployment
