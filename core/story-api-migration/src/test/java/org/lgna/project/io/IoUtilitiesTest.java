@@ -3,6 +3,7 @@ package org.lgna.project.io;
 import edu.cmu.cs.dennisc.java.util.zip.ByteArrayDataSource;
 import edu.cmu.cs.dennisc.java.util.zip.DataSource;
 import edu.cmu.cs.dennisc.pattern.IsInstanceCrawler;
+import edu.cmu.cs.dennisc.print.PrintUtilities;
 import edu.cmu.cs.dennisc.xml.XMLUtilities;
 import org.alice.serialization.xml.XmlEncoderDecoder;
 import org.alice.tweedle.file.AliceTextureReference;
@@ -50,6 +51,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -1291,7 +1293,8 @@ public class IoUtilitiesTest {
         Project.SceneCameraType.WindowCamera);
     File exportFile = temporaryFolder.newFile("absolute-path-resource-entries.a3w");
 
-    IoUtilities.exportProject(exportFile, project);
+    String diagnosticOutput = capturePrintUtilities(() -> IoUtilities.exportProject(exportFile, project));
+    assertNoLocalPathLeak(diagnosticOutput);
 
     try (ZipFile zipFile = new ZipFile(exportFile)) {
       assertNotNull(zipFile.getEntry("resources/unix-picture.png"));
@@ -1353,7 +1356,8 @@ public class IoUtilitiesTest {
         Project.SceneCameraType.WindowCamera);
     File projectFile = temporaryFolder.newFile("absolute-path-resource-entries.a3p");
 
-    IoUtilities.writeProject(projectFile, project);
+    String diagnosticOutput = capturePrintUtilities(() -> IoUtilities.writeProject(projectFile, project));
+    assertNoLocalPathLeak(diagnosticOutput);
 
     try (ZipFile zipFile = new ZipFile(projectFile)) {
       assertNotNull(zipFile.getEntry("resources/unix-picture.png"));
@@ -1695,6 +1699,22 @@ public class IoUtilitiesTest {
     assertFalse("Local Windows drive leaked in " + value, value.contains("C:"));
     assertFalse("Local path owner leaked in " + value, value.contains("alice-secret"));
     assertFalse("Local path directory leaked in " + value, value.contains("private-model-assets"));
+  }
+
+  private static String capturePrintUtilities(ThrowingRunnable action) throws Exception {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintUtilities.pushPrintStream();
+    try (PrintStream printStream = new PrintStream(output, true, StandardCharsets.UTF_8.name())) {
+      PrintUtilities.setPrintStream(printStream);
+      action.run();
+    } finally {
+      PrintUtilities.popPrintStream();
+    }
+    return new String(output.toByteArray(), StandardCharsets.UTF_8);
+  }
+
+  private interface ThrowingRunnable {
+    void run() throws Exception;
   }
 
   private static byte[] thumbnailPng() throws IOException {

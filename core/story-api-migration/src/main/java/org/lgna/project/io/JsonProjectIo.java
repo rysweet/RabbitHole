@@ -739,7 +739,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private void compareResources(Set<Resource> projectResources, Set<Resource> crawledResources) {
       for (Resource crawledResource : crawledResources) {
         if (!projectResources.contains(crawledResource)) {
-          PrintUtilities.println("WARNING: added missing resource", crawledResource);
+          PrintUtilities.println(
+              "WARNING: added missing resource",
+              ResourceExportNames.diagnosticName(crawledResource));
         }
       }
     }

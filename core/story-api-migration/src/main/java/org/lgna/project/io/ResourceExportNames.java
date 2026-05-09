@@ -45,6 +45,13 @@ final class ResourceExportNames {
     return (slash < 0) ? entryName : entryName.substring(slash + 1);
   }
 
+  static String diagnosticName(Resource resource) {
+    if (resource == null) {
+      return "<null>";
+    }
+    return entryFileName(resource) + " (" + resource.getId() + ")";
+  }
+
   private static String sanitizeFileName(String fileName) {
     if (fileName == null) {
       return "";

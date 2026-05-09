@@ -454,7 +454,9 @@ public class XmlProjectIo implements ProjectIo {
       for (ResourceExpression resourceExpression : crawler.getList()) {
         Resource resource = resourceExpression.resource.getValue();
         if (!resources.contains(resource)) {
-          PrintUtilities.println("WARNING: adding missing resource", resource);
+          PrintUtilities.println(
+              "WARNING: adding missing resource",
+              ResourceExportNames.diagnosticName(resource));
           resources.add(resource);
         }
       }
