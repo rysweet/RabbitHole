@@ -425,7 +425,7 @@ wizard-palette-completion-smoke
 
 Before adding or changing a scenario:
 
-1. Keep actions and outcomes observable from the user-visible Alice desktop.
+1. Keep actions and outcomes observable from the user-visible Alice desktop, except `gated-command-smoke` scenarios may describe bounded command-seam evidence when they make no default GUI interaction claim.
 2. Use one of the supported [workflow values](../../../docs/reference/alice-desktop-outside-in-qa.md#workflow-values).
 3. Use `xvfb-real-alice` only when the runner can execute the real Alice command and collect logs/screenshots.
 4. Use `manual-evidence-required` when human Swing interaction is required.

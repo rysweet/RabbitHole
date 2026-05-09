@@ -10,11 +10,12 @@ preconditions:
 userActions:
   - Enable gated smokes in a workspace prepared for core AST module tests.
   - Run the focused unsupported adjacent method-call decoder command smoke.
-  - Review the command output for explicit rejection of argument-bearing, unknown, duplicate, non-this, static, chained, and implicit calls.
+  - Review the command output for explicit rejection of argument-bearing, optional-parameter target, unknown, duplicate, non-this target, static target, and chained explicit-this calls.
 expectedOutcomes:
   - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
   - When the gate is enabled, focused unsupported method-call boundary checks exit successfully.
-  - Command evidence confirms the decoder slice stays narrow and does not infer general method-call, member-access, constructor, or player decode support.
+  - Command evidence confirms the decoder slice stays narrow and does not infer general method-call, member-access, constructor, archive, player decode, or migration support.
+  - Command evidence does not prove full Tweedle/player decode, historical archive migration completeness, full UI automation, visible rendering correctness, grading, Save/Open guarantees, or lesson completion.
 automation:
   cwd: .
   argv:
@@ -26,7 +27,7 @@ automation:
     - -pl
     - core/ast
     - -am
-    - -Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+zeroArgumentThisMethodCallDecodeRejectsChainedCall+zeroArgumentThisMethodCallDecodeRejectsImplicitTarget
+    - -Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+zeroArgumentThisMethodCallDecodeRejectsChainedCall
     - test
   timeoutSeconds: 600
   readyWaitSeconds: 1
@@ -40,6 +41,8 @@ fallback:
   notes:
     - If focused core AST tests are unavailable, attach the nearest decoder boundary characterization evidence and record the missing rejection.
     - Do not substitute desktop Save or Select Project proof for this decoder-specific smoke.
+    - Do not substitute archive migration, UI automation, rendering, grading, Save/Open, or lesson-completion evidence for this decoder boundary smoke.
+    - Treat this as gated decoder-boundary evidence only; it does not validate archive/player behavior by itself.
 supportingEvidence:
   - alice-desktop-tweedle-decoder-this-call-smoke
 tags:

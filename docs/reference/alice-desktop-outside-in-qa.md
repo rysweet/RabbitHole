@@ -35,7 +35,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 
 | Scenario ID | Workflow | Automation mode | Purpose |
 | --- | --- | --- | --- |
-| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers historical archive fixture availability used by decoder and migration characterization smokes. |
+| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers generated archive fixture boundary command evidence for decoder and archive-reader characterization smokes. |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
 | `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
 | `alice-desktop-select-project-widget-introspection` | `select-project-widget-introspection-smoke` | `xvfb-real-alice` | Enumerates live Select Project Swing widgets through AT-SPI when the ATK wrapper is active, or records the exact ATK/AT-SPI blocker. |
@@ -603,7 +603,7 @@ reviewed assessment contract and evidence mapping exist.
 Scenario files are the public acceptance contract for this lane. A valid scenario:
 
 1. Uses an ID in the `alice-desktop-<workflow>` family.
-2. Keeps `userActions` and `expectedOutcomes` observable from the desktop user's point of view.
+2. Keeps `userActions` and `expectedOutcomes` observable from the desktop user's point of view, except `gated-command-smoke` scenarios may describe bounded command-seam evidence when they make no default GUI interaction claim.
 3. Names evidence that a reviewer can inspect without reconstructing hidden local state.
 4. Uses `xvfb-real-alice` only for workflows the runner can execute through the real Alice desktop command.
 5. Uses `manual-evidence-required` for Swing GUI workflows that still require human interaction.

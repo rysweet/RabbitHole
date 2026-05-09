@@ -1,5 +1,5 @@
 id: alice-desktop-archive-fixture-smoke
-title: Legacy player resource-recovery boundary smoke
+title: Archive/player fixture boundary smoke
 workflow: archive-fixture-smoke
 automationMode: gated-command-smoke
 preconditions:
@@ -8,13 +8,15 @@ preconditions:
   - The tweedle-lang submodule is initialized.
   - Historical archive round-trip characterization tests are available in the checkout.
 userActions:
-  - Run the focused legacy player resource-recovery boundary characterization smoke from the command line.
-  - Exercise generated JSON .a3w archives with manifest-declared image resources.
-  - Confirm unsupported manifest-declared program and sibling Tweedle types fail explicitly instead of producing partial resource-only readback.
+  - Run the focused historical archive fixture boundary characterization smoke from the command line.
+  - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries.
+  - Confirm JSON .a3w manifest routing, generated fixture handling, unsupported Tweedle diagnostics, legacy player resource-recovery failures, and missing-entry failures stay explicit.
 expectedOutcomes:
-  - The legacy player resource-recovery boundary smoke command exits successfully when the gate is enabled.
-  - Generated JSON .a3w fixtures with unsupported resource initializers report explicit archive readback failures.
-  - Supported generated JSON .a3w neighbors remain covered by the same focused characterization suite.
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
+  - The historical archive fixture boundary smoke command exits successfully when the gate is enabled.
+  - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
+  - Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.
+  - Command evidence does not prove full Tweedle/player decode, historical archive migration completeness, full UI automation, visible rendering correctness, grading, Save/Open guarantees, or lesson completion.
 automation:
   cwd: .
   argv:
@@ -33,16 +35,18 @@ automation:
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the legacy player resource-recovery boundary smoke command.
+    - command.log from the historical archive fixture boundary smoke command.
     - Test output or surefire report naming HistoricalArchiveRoundTripCharacterizationTest.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If the focused Maven smoke is unavailable, attach the nearest legacy player resource-recovery characterization evidence.
-    - Do not substitute GUI save/load evidence for this archive/player boundary.
+    - If the focused Maven smoke is unavailable, attach the nearest archive fixture characterization evidence.
+    - Manual GUI save/load evidence remains covered separately by alice-desktop-save-load.
+    - Do not substitute UI automation, rendering, grading, Save/Open, or lesson-completion evidence for this archive boundary smoke.
 supportingEvidence:
   - alice-desktop-tweedle-decoder-boundary-smoke
 tags:
   - archive-fixture
   - command-smoke
   - archive-player-boundary
+  - archive-io
