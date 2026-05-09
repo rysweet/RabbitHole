@@ -1,10 +1,10 @@
 Default-workflow recovery evidence for PR #419
-Recorded at: 2026-05-09T11:38:29Z
+Recorded at: 2026-05-09T12:45:52Z
 PR: https://github.com/rysweet/RabbitHole/pull/419
 Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
 Base branch: develop
 Evidence stage: final PR419 exact-head readiness handoff
-Exact checked HEAD at final validation: 42250294234559bf07a0b77c8e80f71f849ea555
+Exact checked HEAD at final validation: b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6
 origin/develop at recovery: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 merge-base(HEAD, origin/develop): 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 
@@ -19,7 +19,7 @@ Merge status:
 - The branch contains current origin/develop at the checked recovery
   point; no rebase was performed and no shared PR history was rewritten.
 - PR #419 points at the validated exact HEAD
-  42250294234559bf07a0b77c8e80f71f849ea555 on the existing branch.
+  b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 on the existing branch.
 
 Worktree end state:
 - No unmerged path remains; the previous AA index state for
@@ -92,6 +92,9 @@ Focused validation completed:
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-readiness-evidence-contract.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-current-head-evidence-doc-refinement-contract.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-finalization-evidence-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa validate
+- NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa run alice-desktop-post-open-runtime-display-accessibility-evidence --prepare-only
+- NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa run alice-desktop-run-debug
 
 Observed validation outcomes:
 - Scenario validation accepted 29 checked-in scenarios, including the post-open
@@ -126,6 +129,18 @@ Observed validation outcomes:
   readiness/review/finalization fields, the requested branch, no unmerged paths,
   no recorded timeout-wrapper or manual PR-merge commands, and bounded
   current-head claims.
+- Step 13 outside-in scenario 1 passed from the PR branch through uvx; uv resolved
+  git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
+  to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack alice-qa validate`
+  accepted 29 checked-in Alice desktop QA scenarios.
+- Step 13 outside-in runtime/display scenario was executed from the PR branch
+  through uvx and failed closed with `Controlled display pixel proof blocked:
+  alice-window-not-found`; this is a local desktop automation environment blocker
+  for fresh runtime/display evidence, not a broadened accessibility-target claim.
+- Step 13 outside-in scenario 2 passed from the PR branch through uvx; uv resolved
+  the same branch to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack
+  alice-qa run alice-desktop-run-debug` prepared the manual run/debug evidence
+  checklist for the silver-thread manual context lane.
 
 Readiness claim:
 - PR #419 is ready only as a silver-thread accessibility target discovery
