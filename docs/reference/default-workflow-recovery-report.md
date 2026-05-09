@@ -47,6 +47,7 @@ new_files:
   - qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh
   - scripts/default_workflow_recovery.py
   - tests/test_default_workflow_merge_ready_contract.py
+  - tests/test_default_workflow_recovery_docs_contract.py
   - tests/test_default_workflow_recovery_contract.py
 ```
 
