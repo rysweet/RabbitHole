@@ -135,6 +135,8 @@ class Pr424MigrationHotspotRecoveryContractTest(unittest.TestCase):
 
     def test_project_migration_manager_characterization_tests_remain_in_scope(self) -> None:
         source = MIGRATION_TEST.read_text(encoding="utf-8")
+        # All 18 @Test methods — original 12 characterization + 6 edge-case tests.
+        # Update this list whenever a test method is added or renamed.
         expected_methods = [
             "textMigrationResultVersionsAreValidRoundTrippableAndIncreasing",
             "astMigrationResultVersionsAreValidRoundTrippableAndIncreasing",
@@ -148,11 +150,26 @@ class Pr424MigrationHotspotRecoveryContractTest(unittest.TestCase):
             "textMigrationRewritesVersion3_2_110ResourceFields",
             "textMigrationCharacterizesVersion3_2_111BonePileBoundary",
             "managerReportsNoPendingMigrationsAtCurrentVersion",
+            "textMigrationOfEmptyStringIsNoOp",
+            "textMigrationAtCurrentVersionReturnsInputUnchanged",
+            "migrationListsAreNonEmpty",
+            "textMigrationIsStableWhenReappliedFromResultVersion",
+            "textMigrationResultVersionNeverExceedsCurrentVersion",
+            "astMigrationResultVersionNeverExceedsCurrentVersion",
         ]
 
         for method in expected_methods:
             with self.subTest(method=method):
                 self.assertIn(f"void {method}(", source)
+
+        # Guard against silent test removal: count must match the inventory
+        actual_count = source.count("@Test")
+        self.assertEqual(
+            len(expected_methods),
+            actual_count,
+            f"Expected {len(expected_methods)} @Test methods but found {actual_count}. "
+            "Update expected_methods when adding or removing tests.",
+        )
 
     def test_documentation_triad_files_exist_and_have_minimum_content(self) -> None:
         """Each scoped doc file must exist and contain real content, not stubs."""
