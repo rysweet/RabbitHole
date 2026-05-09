@@ -76,6 +76,9 @@ REQUIRED_PR_BODY_FRAGMENTS = (
     "GitHub Actions",
     "Does not claim",
 )
+REQUIRED_PR_BODY_FRAGMENT_CHECKS = tuple(
+    (fragment, fragment.lower()) for fragment in REQUIRED_PR_BODY_FRAGMENTS
+)
 FOCUSED_COMMAND_FRAGMENTS = (
     REQUIRED_NODE_OPTIONS,
     FOCUSED_MAVEN_FRAGMENT,
@@ -85,6 +88,9 @@ FOCUSED_COMMAND_FRAGMENTS = (
 REQUIRED_FOCUSED_VALIDATION_COMMAND = (
     f"{REQUIRED_NODE_OPTIONS} {FOCUSED_MAVEN_FRAGMENT} "
     f"-Dsurefire.failIfNoSpecifiedTests=false -Dtest={FOCUSED_WORKER_TEST} test"
+)
+REQUIRED_FOCUSED_VALIDATION_COMMAND_NORMALIZED = " ".join(
+    REQUIRED_FOCUSED_VALIDATION_COMMAND.split()
 )
 PASSING_RESULT_RE = re.compile(
     r"\b(?:pass(?:ed|es)?|success(?:ful(?:ly)?)?|succeeded|exit(?:ed)?\s*0)\b",
@@ -138,7 +144,7 @@ def combine_results(results: Iterable[GateResult]) -> GateResult:
     blockers: list[str] = []
     for result in results:
         blockers.extend(result.blockers)
-    return result_from_blockers(blockers)
+    return GateResult(ready=not blockers, blockers=blockers)
 
 
 def _clean_sha(value: object) -> str:
@@ -246,9 +252,8 @@ def _has_focused_worker_command(command: str) -> bool:
     return all(fragment in command_text for fragment in FOCUSED_COMMAND_FRAGMENTS)
 
 
-def _contains_command_with_passing_result(text: str, command: str) -> bool:
+def _contains_normalized_command_with_passing_result(text: str, normalized_command: str) -> bool:
     normalized_text = " ".join(text.split())
-    normalized_command = " ".join(command.split())
     command_index = normalized_text.find(normalized_command)
     if command_index == -1:
         return False
@@ -445,9 +450,15 @@ def validate_github_actions(
     return result_from_blockers(blockers)
 
 
-def _missing_lower_fragments(text: str, fragments: Iterable[str]) -> list[str]:
-    lower_text = text.lower()
-    return [fragment for fragment in fragments if fragment.lower() not in lower_text]
+def _missing_lower_fragments(
+    lower_text: str,
+    fragments: Iterable[tuple[str, str]],
+) -> list[str]:
+    return [
+        fragment
+        for fragment, lower_fragment in fragments
+        if lower_fragment not in lower_text
+    ]
 
 
 def validate_pr_description(
@@ -459,6 +470,7 @@ def validate_pr_description(
 
     blockers: list[str] = []
     body_text = body or ""
+    body_lower = body_text.lower()
     if expected_head_sha and expected_head_sha not in body_text:
         blockers.append(
             not_ready(f"PR description must include current head {expected_head_sha}")
@@ -467,12 +479,15 @@ def validate_pr_description(
         blockers.append(
             not_ready(f"PR description must include current base {expected_base_sha}")
         )
-    missing = _missing_lower_fragments(body_text, REQUIRED_PR_BODY_FRAGMENTS)
+    missing = _missing_lower_fragments(body_lower, REQUIRED_PR_BODY_FRAGMENT_CHECKS)
     if missing:
         blockers.append(
             not_ready("PR description is missing evidence for " + ", ".join(missing))
         )
-    if not _contains_command_with_passing_result(body_text, REQUIRED_FOCUSED_VALIDATION_COMMAND):
+    if not _contains_normalized_command_with_passing_result(
+        body_text,
+        REQUIRED_FOCUSED_VALIDATION_COMMAND_NORMALIZED,
+    ):
         blockers.append(
             not_ready(
                 "PR description must include the exact focused validation command and passing result"
@@ -482,7 +497,6 @@ def validate_pr_description(
         blockers.append(
             not_ready("PR description must include checked origin/develop...HEAD diff scope evidence")
         )
-    body_lower = body_text.lower()
     if (
         "not applicable" not in body_lower
         or (
