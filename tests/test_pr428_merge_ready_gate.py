@@ -3,7 +3,9 @@ import unittest
 
 
 REQUIRED_REMOTE_REF = "origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa"
-HEAD_SHA = "41333b64a0d772ca7aab982090bfaa135ed02e2e"
+HEAD_SHA = "2b8a961d67f2365d38b9f6ea833e700e99e351a2"
+BASE_SHA = "2e1e43c3937a7d163bcc76f1882903a8ad31f1cc"
+STALE_BASE_SHA = "0366dfa17f0f41e2d878c293a6c33fb1f841993a"
 FOCUSED_COMMAND = (
     "NODE_OPTIONS=--max-old-space-size=32768 "
     "mvn -pl core/issue-reporting -am -DfailIfNoTests=false "
@@ -17,10 +19,56 @@ REAL_PR_DIFF_FILES = [
     "docs/index.md",
     "docs/reference/issue-submission-progress-worker.md",
     "docs/tutorials/trace-issue-submission-progress-worker.md",
-    "pyproject.toml",
     "scripts/pr428_merge_ready_gate.py",
     "tests/test_pr428_merge_ready_gate.py",
 ]
+
+
+def complete_evidence_package():
+    return {
+        "branch": {
+            "current_ref": REQUIRED_REMOTE_REF,
+            "local_head": HEAD_SHA,
+            "remote_head": HEAD_SHA,
+            "manual_merge_seen": False,
+        },
+        "base": {
+            "base_ref": "origin/develop",
+            "base_sha": BASE_SHA,
+        },
+        "expected_base_sha": BASE_SHA,
+        "diff_files": REAL_PR_DIFF_FILES,
+        "runnable_evidence": [{"command": FOCUSED_COMMAND, "passed": True, "head_sha": HEAD_SHA}],
+        "docs_impact": {"assessed": True, "files": ["docs/reference/issue-submission-progress-worker.md"]},
+        "scenario_evidence": {
+            "applicability": "not_applicable",
+            "reason": (
+                "No Alice desktop workflow impact because IssueSubmissionProgressWorker "
+                "is a non-UI issue-reporting worker seam."
+            ),
+        },
+        "quality_audit_cycles": [
+            {"seek": "worker seam", "validate": "source review", "fix": "none", "clean": True},
+            {"seek": "docs claims", "validate": "bounded-claim scan", "fix": "none", "clean": True},
+            {"seek": "evidence gates", "validate": "PR body review", "fix": "none", "clean": True},
+        ],
+        "github_checks": [{"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": HEAD_SHA}],
+        "pr_description": f"""
+        Head validated: {HEAD_SHA}
+        Base validated: {BASE_SHA}
+        Focused validation: {FOCUSED_COMMAND} passed.
+        Module validation: core/issue-reporting passed.
+        Docs impact: reference docs reviewed.
+        Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
+        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.
+        Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
+        GitHub Actions: all current-head checks completed successfully for {HEAD_SHA}.
+        Does not claim full UI automation, visible rendering correctness, grading,
+        creative assessment, full lesson completion, project archive attachment contents,
+        real issue-service submission, or full Tweedle/player decode.
+        """,
+        "expected_head_sha": HEAD_SHA,
+    }
 
 
 def gate_module():
@@ -68,6 +116,38 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
 
         self.assertTrue(gate.audit_diff_scope(REAL_PR_DIFF_FILES).ready)
         self.assertBlocked(gate.audit_diff_scope(unrelated_files), "diff scope")
+        self.assertBlocked(gate.audit_diff_scope(REAL_PR_DIFF_FILES + ["pyproject.toml"]), "pyproject.toml")
+
+    def test_complete_evidence_requires_current_develop_base_sha(self) -> None:
+        gate = gate_module()
+        evidence = complete_evidence_package()
+        stale_base = {
+            **evidence,
+            "base": {"base_ref": "origin/develop", "base_sha": STALE_BASE_SHA},
+        }
+        missing_base = {key: value for key, value in evidence.items() if key != "base"}
+
+        self.assertTrue(gate.evaluate_merge_ready(evidence).ready)
+        self.assertBlocked(gate.evaluate_merge_ready(stale_base), "base")
+        self.assertBlocked(gate.evaluate_merge_ready(missing_base), "base")
+
+    def test_github_actions_are_tied_to_current_pr_head(self) -> None:
+        gate = gate_module()
+        evidence = complete_evidence_package()
+        stale_check_head = {
+            **evidence,
+            "github_checks": [
+                {"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": "deadbeef"}
+            ],
+        }
+        missing_check_head = {
+            **evidence,
+            "github_checks": [{"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS"}],
+        }
+
+        self.assertTrue(gate.evaluate_merge_ready(evidence).ready)
+        self.assertBlocked(gate.evaluate_merge_ready(stale_check_head), "current head")
+        self.assertBlocked(gate.evaluate_merge_ready(missing_check_head), "current head")
 
     def test_scenario_non_applicability_requires_specific_non_ui_worker_rationale(self) -> None:
         gate = gate_module()
@@ -174,13 +254,14 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         gate = gate_module()
         body = f"""
         Head validated: {HEAD_SHA}
+        Base validated: {BASE_SHA}
         Focused validation: {FOCUSED_COMMAND} passed.
         Module validation: core/issue-reporting passed.
         Docs impact: reference, how-to, tutorial, and index reviewed.
         Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
-        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, test, and metadata files.
+        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.
         Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
-        GitHub Actions: all current-head checks completed successfully.
+        GitHub Actions: all current-head checks completed successfully for {HEAD_SHA}.
         Does not claim full UI automation, visible rendering correctness, grading,
         creative assessment, full lesson completion, project archive attachment contents,
         real issue-service submission, or full Tweedle/player decode.
@@ -199,6 +280,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
 
         self.assertTrue(gate.validate_pr_description(body, expected_head_sha=HEAD_SHA).ready)
         self.assertBlocked(gate.validate_pr_description(body.replace(HEAD_SHA, "deadbeef"), HEAD_SHA), "head")
+        self.assertBlocked(gate.validate_pr_description(body.replace(BASE_SHA, STALE_BASE_SHA), HEAD_SHA), "base")
         self.assertBlocked(gate.validate_pr_description(headings_only_body, HEAD_SHA), "exact focused")
         self.assertBlocked(gate.validate_pr_description(overclaiming_body, HEAD_SHA), "overclaim")
 
@@ -217,44 +299,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
 
     def test_complete_evidence_package_is_merge_ready_only_when_every_gate_passes(self) -> None:
         gate = gate_module()
-        evidence = {
-            "branch": {
-                "current_ref": REQUIRED_REMOTE_REF,
-                "local_head": HEAD_SHA,
-                "remote_head": HEAD_SHA,
-                "manual_merge_seen": False,
-            },
-            "diff_files": REAL_PR_DIFF_FILES,
-            "runnable_evidence": [{"command": FOCUSED_COMMAND, "passed": True, "head_sha": HEAD_SHA}],
-            "docs_impact": {"assessed": True, "files": ["docs/reference/issue-submission-progress-worker.md"]},
-            "scenario_evidence": {
-                "applicability": "not_applicable",
-                "reason": (
-                    "No Alice desktop workflow impact because IssueSubmissionProgressWorker "
-                    "is a non-UI issue-reporting worker seam."
-                ),
-            },
-            "quality_audit_cycles": [
-                {"seek": "worker seam", "validate": "source review", "fix": "none", "clean": True},
-                {"seek": "docs claims", "validate": "bounded-claim scan", "fix": "none", "clean": True},
-                {"seek": "evidence gates", "validate": "PR body review", "fix": "none", "clean": True},
-            ],
-            "github_checks": [{"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS"}],
-            "pr_description": f"""
-            Head validated: {HEAD_SHA}
-            Focused validation: {FOCUSED_COMMAND} passed.
-            Module validation: core/issue-reporting passed.
-            Docs impact: reference docs reviewed.
-            Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
-            Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, test, and metadata files.
-            Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
-            GitHub Actions: all current-head checks completed successfully.
-            Does not claim full UI automation, visible rendering correctness, grading,
-            creative assessment, full lesson completion, project archive attachment contents,
-            real issue-service submission, or full Tweedle/player decode.
-            """,
-            "expected_head_sha": HEAD_SHA,
-        }
+        evidence = complete_evidence_package()
 
         ready = gate.evaluate_merge_ready(evidence)
         missing_docs = gate.evaluate_merge_ready({**evidence, "docs_impact": {"assessed": False}})

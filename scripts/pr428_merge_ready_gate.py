@@ -21,7 +21,9 @@ from typing import Iterable, Mapping, Sequence
 
 
 REQUIRED_REMOTE_REF = "origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa"
-DEFAULT_EXPECTED_HEAD_SHA = "41333b64a0d772ca7aab982090bfaa135ed02e2e"
+DEFAULT_EXPECTED_HEAD_SHA = "2b8a961d67f2365d38b9f6ea833e700e99e351a2"
+DEFAULT_EXPECTED_BASE_SHA = "2e1e43c3937a7d163bcc76f1882903a8ad31f1cc"
+REQUIRED_BASE_REF = "origin/develop"
 FOCUSED_WORKER_TEST = "org.lgna.issue.IssueSubmissionProgressWorkerTest"
 FOCUSED_MAVEN_FRAGMENT = "mvn -pl core/issue-reporting -am -DfailIfNoTests=false"
 REQUIRED_NODE_OPTIONS = "NODE_OPTIONS=--max-old-space-size=32768"
@@ -34,7 +36,6 @@ ALLOWED_DIFF_FILES = {
     "docs/howto/characterize-issue-submission-progress-worker.md",
     "docs/tutorials/trace-issue-submission-progress-worker.md",
     "docs/index.md",
-    "pyproject.toml",
     "scripts/pr428_merge_ready_gate.py",
     "tests/test_pr428_merge_ready_gate.py",
 }
@@ -174,6 +175,36 @@ def validate_branch_sync(
         blockers.append(not_ready("local head must match the current remote head before validation"))
     if manual_merge_seen:
         blockers.append(not_ready("manual merge/rebase/squash evidence is not allowed"))
+    return result_from_blockers(blockers)
+
+
+def validate_base_evidence(
+    base: Mapping[str, object] | None,
+    expected_base_sha: str = DEFAULT_EXPECTED_BASE_SHA,
+    required_base_ref: str = REQUIRED_BASE_REF,
+) -> GateResult:
+    """Require recovery evidence from the current authoritative develop base."""
+
+    if not isinstance(base, Mapping):
+        return blocked_result("base evidence is missing")
+
+    blockers: list[str] = []
+    base_ref = _as_text(base.get("base_ref"))
+    base_sha = _clean_sha(base.get("base_sha"))
+    expected_sha = _clean_sha(expected_base_sha)
+    if base_ref != required_base_ref:
+        blockers.append(
+            not_ready(f"base evidence must use {required_base_ref}, got {base_ref or '<missing>'}")
+        )
+    if not expected_sha:
+        blockers.append(not_ready("expected base SHA evidence is missing"))
+    elif base_sha != expected_sha:
+        blockers.append(
+            not_ready(
+                "base evidence must match the current origin/develop head "
+                f"{expected_sha}, got {base_sha or '<missing>'}"
+            )
+        )
     return result_from_blockers(blockers)
 
 
@@ -361,7 +392,11 @@ def normalize_github_action_check(check: Mapping[str, object]) -> dict[str, str]
         else:
             status = state
 
-    return {"name": name, "status": status, "conclusion": conclusion}
+    normalized = {"name": name, "status": status, "conclusion": conclusion}
+    head_sha = _clean_sha(check.get("head_sha"))
+    if head_sha:
+        normalized["head_sha"] = head_sha
+    return normalized
 
 
 def parse_github_checks_json(payload: str) -> list[dict[str, str]]:
@@ -378,17 +413,22 @@ def parse_github_checks_json(payload: str) -> list[dict[str, str]]:
     return checks
 
 
-def validate_github_actions(checks: Iterable[Mapping[str, object]]) -> GateResult:
-    """Require all reported GitHub Actions checks to be completed and green."""
+def validate_github_actions(
+    checks: Iterable[Mapping[str, object]],
+    expected_head_sha: str = "",
+) -> GateResult:
+    """Require reported GitHub Actions checks to be completed, green, and current."""
 
     blockers: list[str] = []
     checks_seen = False
+    clean_expected_head_sha = _clean_sha(expected_head_sha)
     for check in checks:
         checks_seen = True
         normalized_check = normalize_github_action_check(check)
         name = normalized_check["name"]
         status = normalized_check["status"]
         conclusion = normalized_check["conclusion"]
+        head_sha = _clean_sha(normalized_check.get("head_sha"))
         if status != "COMPLETED":
             blockers.append(not_ready(f"GitHub Actions check {name} is not completed"))
         if conclusion not in SUCCESS_CONCLUSIONS:
@@ -396,6 +436,13 @@ def validate_github_actions(checks: Iterable[Mapping[str, object]]) -> GateResul
                 not_ready(
                     f"GitHub Actions check {name} is not green: "
                     f"{conclusion or '<missing conclusion>'}"
+                )
+            )
+        if clean_expected_head_sha and head_sha != clean_expected_head_sha:
+            blockers.append(
+                not_ready(
+                    "GitHub Actions check evidence must be tied to the current head "
+                    f"{clean_expected_head_sha}, got {head_sha or '<missing>'} for {name}"
                 )
             )
     if not checks_seen:
@@ -411,6 +458,7 @@ def _missing_lower_fragments(text: str, fragments: Iterable[tuple[str, str]]) ->
 def validate_pr_description(
     body: str,
     expected_head_sha: str = DEFAULT_EXPECTED_HEAD_SHA,
+    expected_base_sha: str = DEFAULT_EXPECTED_BASE_SHA,
 ) -> GateResult:
     """Require PR-body evidence for every merge-ready gate and bounded claims."""
 
@@ -419,6 +467,10 @@ def validate_pr_description(
     if expected_head_sha and expected_head_sha not in body_text:
         blockers.append(
             not_ready(f"PR description must include current head {expected_head_sha}")
+        )
+    if expected_base_sha and expected_base_sha not in body_text:
+        blockers.append(
+            not_ready(f"PR description must include current base {expected_base_sha}")
         )
     missing = _missing_lower_fragments(body_text, REQUIRED_PR_BODY_FRAGMENT_CHECKS)
     if missing:
@@ -491,6 +543,11 @@ def evaluate_merge_ready(evidence: Mapping[str, object]) -> GateResult:
     if not expected_head_sha and isinstance(branch, Mapping):
         expected_head_sha = _clean_sha(branch.get("remote_head"))
     expected_head_sha = expected_head_sha or DEFAULT_EXPECTED_HEAD_SHA
+    base = evidence.get("base")
+    expected_base_sha = _clean_sha(evidence.get("expected_base_sha"))
+    if not expected_base_sha and isinstance(base, Mapping):
+        expected_base_sha = _clean_sha(base.get("base_sha"))
+    expected_base_sha = expected_base_sha or DEFAULT_EXPECTED_BASE_SHA
     docs_impact = evidence.get("docs_impact")
     scenario_evidence = evidence.get("scenario_evidence")
     branch_result = (
@@ -505,6 +562,10 @@ def evaluate_merge_ready(evidence: Mapping[str, object]) -> GateResult:
     )
     results = [
         branch_result,
+        validate_base_evidence(
+            base if isinstance(base, Mapping) else None,
+            expected_base_sha=expected_base_sha,
+        ),
         audit_diff_scope(evidence.get("diff_files", [])),
         validate_runnable_evidence(
             evidence.get("runnable_evidence", []),
@@ -517,8 +578,15 @@ def evaluate_merge_ready(evidence: Mapping[str, object]) -> GateResult:
             scenario_evidence if isinstance(scenario_evidence, Mapping) else None
         ),
         validate_quality_audit_cycles(evidence.get("quality_audit_cycles", [])),
-        validate_github_actions(evidence.get("github_checks", [])),
-        validate_pr_description(_as_text(evidence.get("pr_description")), expected_head_sha),
+        validate_github_actions(
+            evidence.get("github_checks", []),
+            expected_head_sha=expected_head_sha,
+        ),
+        validate_pr_description(
+            _as_text(evidence.get("pr_description")),
+            expected_head_sha,
+            expected_base_sha,
+        ),
     ]
     return combine_results(results)
 
