@@ -1,9 +1,15 @@
 """Default workflow recovery guard and report helpers."""
 
+import json
+import logging
+import re
+import shlex
 import subprocess
-from dataclasses import dataclass
+import time
+from collections.abc import Iterable as IterableABC
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
-from typing import Iterable, Mapping, Optional, Sequence, Union
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Union
 
 
 REQUIRED_REPORT_SECTIONS = (
@@ -25,6 +31,65 @@ UNSUPPORTED_RUN_GAP_CLAIMS = (
     "deployed installer success",
 )
 
+MERGE_READY_REPORT_SECTIONS = (
+    "Summary",
+    "Files modified",
+    "Validation",
+    "QA / scenario evidence",
+    "Docs impact",
+    "Scope / bounded claims",
+    "GitHub and PR evidence",
+    "Quality-audit cycles",
+    "Readiness decision",
+)
+
+NODE_OPTIONS_REQUIREMENT = "NODE_OPTIONS=--max-old-space-size=32768"
+
+UNSUPPORTED_MERGE_READY_CLAIMS = (
+    "full UI automation",
+    "visible rendering correctness",
+    "grading",
+    "creative assessment",
+    "full lesson completion",
+    "full Tweedle/player decode",
+    "full world execution",
+)
+
+FOCUSED_DIFF_PREFIXES = (
+    "scripts/",
+    "tests/",
+    "docs/",
+    "qa/outside-in/alice-desktop/",
+    "core/ide/src/test/",
+    "core/ide/src/main/java/org/alice/tools/",
+)
+
+DEFAULT_PR_METADATA_FIELDS = (
+    "number",
+    "headRefName",
+    "headRefOid",
+    "baseRefName",
+    "mergeStateStatus",
+    "mergeable",
+    "state",
+    "isDraft",
+    "reviewDecision",
+    "statusCheckRollup",
+    "url",
+)
+
+DEFAULT_WORKFLOW_RUN_FIELDS = (
+    "databaseId",
+    "name",
+    "status",
+    "conclusion",
+    "headSha",
+    "url",
+)
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 
 class RepoPathResolutionError(RuntimeError):
     """Raised when the recovery workflow cannot verify the PR worktree."""
@@ -32,6 +97,13 @@ class RepoPathResolutionError(RuntimeError):
 
 class WorkflowReportError(RuntimeError):
     """Raised when a recovery report omits required structured output."""
+
+
+class GitHubServiceError(RuntimeError):
+    """Raised when read-only GitHub service evidence cannot be collected."""
+
+
+CommandRunner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
 
 
 @dataclass(frozen=True)
@@ -56,6 +128,44 @@ class NoOpGuardResult:
     filesModified: list[str]
 
 
+@dataclass(frozen=True)
+class EvidenceResult:
+    status: str
+    blockers: list[str]
+
+
+@dataclass(frozen=True)
+class PrHeadEvidence(EvidenceResult):
+    pr_number: int
+    branch: str
+    local_head_sha: str
+    pr_head_oid: str
+
+
+@dataclass(frozen=True)
+class GitHubCheckEvidence(EvidenceResult):
+    head_sha: str
+    merge_state_status: str
+    mergeable: str
+    workflow_runs: list[Mapping[str, object]]
+
+
+@dataclass(frozen=True)
+class DiffScopeEvidence(EvidenceResult):
+    changed_files: list[str]
+
+
+@dataclass(frozen=True)
+class ValidationCommandEvidence(EvidenceResult):
+    commands: list[str]
+
+
+@dataclass(frozen=True)
+class ReadinessDecision:
+    decision: str
+    blockers: list[str]
+
+
 def _git(repo_or_input_path: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", "-C", str(repo_or_input_path), *args],
@@ -64,6 +174,242 @@ def _git(repo_or_input_path: Path, *args: str) -> str:
         text=True,
     )
     return result.stdout.rstrip("\n")
+
+
+def _default_command_runner(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        list(command),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _transient_external_failure(message: str) -> bool:
+    lowered = message.lower()
+    transient_markers = (
+        "temporar",
+        "timed out",
+        "timeout",
+        "connection reset",
+        "connection refused",
+        "connection aborted",
+        "network",
+        "tls handshake",
+        "stream error",
+        "rate limit",
+        "secondary rate",
+        "502",
+        "503",
+        "504",
+    )
+    return any(marker in lowered for marker in transient_markers)
+
+
+def _evidence_mapping(record: object) -> dict[str, object]:
+    if isinstance(record, Mapping):
+        return dict(record)
+    if is_dataclass(record):
+        return asdict(record)
+    raise TypeError(f"Unsupported evidence record type: {type(record).__name__}")
+
+
+class GhCliClient:
+    """Read-only GitHub adapter backed by the authenticated gh CLI."""
+
+    def __init__(
+        self,
+        *,
+        repo: str,
+        command_runner: Optional[CommandRunner] = None,
+        max_attempts: int = 3,
+        retry_delay_seconds: float = 1.0,
+    ) -> None:
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+        self.repo = repo
+        self.command_runner = command_runner or _default_command_runner
+        self.max_attempts = max_attempts
+        self.retry_delay_seconds = retry_delay_seconds
+
+    def pr_view(self, pr_number: int, *, fields: Sequence[str]) -> Mapping[str, object]:
+        payload = self._run_json(
+            [
+                "gh",
+                "pr",
+                "view",
+                str(pr_number),
+                "--repo",
+                self.repo,
+                "--json",
+                ",".join(fields),
+            ],
+            operation=f"gh pr view #{pr_number}",
+        )
+        if not isinstance(payload, Mapping):
+            raise GitHubServiceError(f"gh pr view #{pr_number} returned non-object JSON.")
+        return payload
+
+    def run_list(
+        self,
+        *,
+        branch: str,
+        commit: str,
+        fields: Sequence[str],
+    ) -> list[Mapping[str, object]]:
+        payload = self._run_json(
+            [
+                "gh",
+                "run",
+                "list",
+                "--repo",
+                self.repo,
+                "--branch",
+                branch,
+                "--commit",
+                commit,
+                "--json",
+                ",".join(fields),
+            ],
+            operation=f"gh run list for {branch}@{commit}",
+        )
+        if not isinstance(payload, list):
+            raise GitHubServiceError(f"gh run list for {branch}@{commit} returned non-list JSON.")
+        runs: list[Mapping[str, object]] = []
+        for index, item in enumerate(payload):
+            if not isinstance(item, Mapping):
+                raise GitHubServiceError(
+                    f"gh run list for {branch}@{commit} returned non-object item {index}."
+                )
+            runs.append(item)
+        return runs
+
+    def _run_json(self, command: Sequence[str], *, operation: str) -> object:
+        last_error = "no command attempts were made"
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                result = self.command_runner(command)
+            except OSError as exc:
+                last_error = f"{operation} failed to start: {exc}"
+                if attempt < self.max_attempts:
+                    self._sleep_before_retry()
+                    continue
+                break
+
+            stderr = (result.stderr or "").strip()
+            stdout = (result.stdout or "").strip()
+            if result.returncode == 0:
+                try:
+                    return json.loads(stdout or "null")
+                except json.JSONDecodeError as exc:
+                    raise GitHubServiceError(
+                        f"{operation} returned invalid JSON on attempt {attempt}: {exc}"
+                    ) from exc
+
+            detail = stderr or stdout or "no output"
+            last_error = f"{operation} exited {result.returncode}: {detail}"
+            if attempt < self.max_attempts and _transient_external_failure(detail):
+                self._sleep_before_retry()
+                continue
+            break
+
+        raise GitHubServiceError(
+            f"{operation} failed after {attempt} attempt(s): {last_error}"
+        )
+
+    def _sleep_before_retry(self) -> None:
+        if self.retry_delay_seconds > 0:
+            time.sleep(self.retry_delay_seconds)
+
+
+def _as_list(value: object) -> list[object]:
+    if value is None:
+        return []
+    if isinstance(value, (str, bytes)):
+        return [value]
+    if isinstance(value, IterableABC):
+        return list(value)
+    return [value]
+
+
+def _mapping_get(mapping: Mapping[str, object], key: str, default: object = None) -> object:
+    return mapping[key] if key in mapping else default
+
+
+def _evidence_status(evidence: Mapping[str, object]) -> str:
+    return str(_mapping_get(evidence, "status", "")).strip().lower()
+
+
+def _evidence_blockers(evidence: Mapping[str, object]) -> list[str]:
+    return [str(blocker) for blocker in _as_list(_mapping_get(evidence, "blockers", []))]
+
+
+def _format_blocker(message: str) -> str:
+    message = message.strip()
+    if message.startswith("NOT_MERGE_READY"):
+        return message
+    return f"NOT_MERGE_READY: {message}"
+
+
+def _collect_blockers_from_evidence(name: str, evidence: object) -> list[str]:
+    if not isinstance(evidence, Mapping):
+        return [_format_blocker(f"{name} evidence is missing or malformed.")]
+
+    blockers = _evidence_blockers(evidence)
+    if blockers:
+        return [_format_blocker(blocker) for blocker in blockers]
+
+    status = _evidence_status(evidence)
+    if status in {"passed", "matched", "focused", "reviewed", "clean"}:
+        return []
+    if not status:
+        return [_format_blocker(f"{name} evidence does not include a status.")]
+    return [_format_blocker(f"{name} evidence status is {status}.")]
+
+
+def _has_outer_timeout_wrapper(command: str) -> bool:
+    try:
+        tokens = shlex.split(command)
+    except ValueError as exc:
+        raise WorkflowReportError(f"Invalid validation command syntax: {command}") from exc
+    if not tokens:
+        return False
+
+    first = tokens[0]
+    return first in {"timeout", "gtimeout"} or first.endswith("/timeout") or first.endswith("/gtimeout")
+
+
+def _requires_node_options(command: str) -> bool:
+    return (
+        "qa/outside-in/alice-desktop/" in command
+        or re.search(r"(^|\s)mvn(\s|$)", command) is not None
+    )
+
+
+def _line_items(values: Iterable[object]) -> list[str]:
+    items = [str(value).strip() for value in values if str(value).strip()]
+    return [f"- {item}" for item in items] or ["None"]
+
+
+def _render_evidence_mapping(evidence: Mapping[str, object]) -> list[str]:
+    lines: list[str] = []
+    for key, value in evidence.items():
+        if key == "blockers":
+            continue
+        if isinstance(value, list):
+            if not value:
+                lines.append(f"- {key}: None")
+            else:
+                lines.append(f"- {key}:")
+                lines.extend(f"  - {item}" for item in value)
+        else:
+            lines.append(f"- {key}: {value}")
+
+    blockers = _evidence_blockers(evidence)
+    if blockers:
+        lines.append("- blockers:")
+        lines.extend(f"  - {_format_blocker(blocker)}" for blocker in blockers)
+    return lines or ["None"]
 
 
 def _resolve_git_top_level(input_path: Path, *, label: str) -> Path:
@@ -194,6 +540,417 @@ def validate_workflow_report(report: str) -> None:
     section_positions = [report.index(section) for section in REQUIRED_REPORT_SECTIONS]
     if section_positions != sorted(section_positions):
         raise WorkflowReportError("Workflow report sections are out of order")
+
+
+def verify_current_pr_head(
+    *,
+    pr_number: int,
+    head_branch: str,
+    local_head_sha: str,
+    pr_head_oid: str,
+) -> PrHeadEvidence:
+    """Verify local evidence is tied to the exact current PR head."""
+
+    blockers: list[str] = []
+    if not local_head_sha or not pr_head_oid:
+        blockers.append(
+            _format_blocker(
+                f"PR #{pr_number} head verification is incomplete for branch {head_branch}."
+            )
+        )
+    elif local_head_sha != pr_head_oid:
+        blockers.append(
+            _format_blocker(
+                "local HEAD does not match current PR headRefOid "
+                f"for PR #{pr_number} on {head_branch}: local={local_head_sha} "
+                f"headRefOid={pr_head_oid}."
+            )
+        )
+
+    status = "blocked" if blockers else "matched"
+    if blockers:
+        logger.warning("PR head verification blocked readiness: %s", "; ".join(blockers))
+    return PrHeadEvidence(
+        status=status,
+        blockers=blockers,
+        pr_number=pr_number,
+        branch=head_branch,
+        local_head_sha=local_head_sha,
+        pr_head_oid=pr_head_oid,
+    )
+
+
+def collect_github_check_evidence(
+    *,
+    head_sha: str,
+    merge_state_status: str,
+    mergeable: str,
+    required_workflows: Sequence[str],
+    workflow_runs: Sequence[Mapping[str, object]],
+) -> GitHubCheckEvidence:
+    """Validate GitHub mergeability and workflow evidence for the same head SHA."""
+
+    blockers: list[str] = []
+    normalized_merge_state = merge_state_status.strip().upper()
+    normalized_mergeable = mergeable.strip().upper()
+    if normalized_merge_state not in {"CLEAN", "HAS_HOOKS"}:
+        blockers.append(_format_blocker(f"mergeStateStatus is {merge_state_status}."))
+    if normalized_mergeable != "MERGEABLE":
+        blockers.append(_format_blocker(f"mergeable state is {mergeable}."))
+
+    runs_by_name: dict[str, list[Mapping[str, object]]] = {}
+    for run in workflow_runs:
+        name = str(run.get("name", "")).strip()
+        if name:
+            runs_by_name.setdefault(name, []).append(run)
+
+    for workflow in required_workflows:
+        runs = runs_by_name.get(workflow, [])
+        if not runs:
+            blockers.append(_format_blocker(f"required workflow {workflow} is missing."))
+            continue
+
+        passing_current_head = False
+        stale_seen = False
+        in_progress_seen = False
+        failed_seen = False
+        for run in runs:
+            run_head = str(run.get("headSha", run.get("head_sha", ""))).strip()
+            status = str(run.get("status", "")).strip().lower()
+            conclusion_value = run.get("conclusion")
+            conclusion = "" if conclusion_value is None else str(conclusion_value).strip().lower()
+            if run_head != head_sha:
+                stale_seen = True
+                continue
+            if status != "completed":
+                in_progress_seen = True
+                continue
+            if conclusion != "success":
+                failed_seen = True
+                continue
+            passing_current_head = True
+
+        if passing_current_head:
+            continue
+        if stale_seen:
+            blockers.append(_format_blocker(f"required workflow {workflow} is stale for current head."))
+        if in_progress_seen:
+            blockers.append(_format_blocker(f"required workflow {workflow} is in progress."))
+        if failed_seen:
+            blockers.append(_format_blocker(f"required workflow {workflow} did not succeed."))
+        if not (stale_seen or in_progress_seen or failed_seen):
+            blockers.append(
+                _format_blocker(f"required workflow {workflow} has no successful completed run.")
+            )
+
+    status = "blocked" if blockers else "passed"
+    if blockers:
+        logger.warning("GitHub check evidence blocked readiness: %s", "; ".join(blockers))
+    return GitHubCheckEvidence(
+        status=status,
+        blockers=blockers,
+        head_sha=head_sha,
+        merge_state_status=merge_state_status,
+        mergeable=mergeable,
+        workflow_runs=list(workflow_runs),
+    )
+
+
+def collect_github_service_evidence(
+    *,
+    pr_number: int,
+    repo: str,
+    local_head_sha: str,
+    required_workflows: Sequence[str],
+    head_branch: Optional[str] = None,
+    client: Optional[object] = None,
+) -> dict[str, object]:
+    """Collect read-only GitHub evidence through a service adapter and fail closed."""
+
+    github_client = client or GhCliClient(repo=repo)
+    try:
+        pr_metadata = github_client.pr_view(
+            pr_number,
+            fields=DEFAULT_PR_METADATA_FIELDS,
+        )
+    except GitHubServiceError as exc:
+        blocker = _format_blocker(f"GitHub PR metadata fetch failed: {exc}")
+        return {
+            "head": _evidence_mapping(
+                PrHeadEvidence(
+                    status="blocked",
+                    blockers=[blocker],
+                    pr_number=pr_number,
+                    branch=head_branch or "",
+                    local_head_sha=local_head_sha,
+                    pr_head_oid="",
+                )
+            ),
+            "github": _evidence_mapping(
+                GitHubCheckEvidence(
+                    status="blocked",
+                    blockers=[blocker],
+                    head_sha=local_head_sha,
+                    merge_state_status="UNKNOWN",
+                    mergeable="UNKNOWN",
+                    workflow_runs=[],
+                )
+            ),
+            "pr_metadata": {},
+        }
+
+    if not isinstance(pr_metadata, Mapping):
+        raise GitHubServiceError("GitHub PR metadata adapter returned non-object evidence.")
+
+    pr_head_oid = str(pr_metadata.get("headRefOid") or "").strip()
+    resolved_head_branch = str(pr_metadata.get("headRefName") or head_branch or "").strip()
+    merge_state_status = str(pr_metadata.get("mergeStateStatus") or "UNKNOWN").strip()
+    mergeable = str(pr_metadata.get("mergeable") or "UNKNOWN").strip()
+    head_evidence = verify_current_pr_head(
+        pr_number=pr_number,
+        head_branch=resolved_head_branch,
+        local_head_sha=local_head_sha,
+        pr_head_oid=pr_head_oid,
+    )
+
+    workflow_runs: list[Mapping[str, object]] = []
+    service_blockers: list[str] = []
+    if not resolved_head_branch or not pr_head_oid:
+        service_blockers.append(
+            _format_blocker(
+                "GitHub PR metadata is missing headRefName or headRefOid; "
+                "workflow evidence cannot be tied to the current head."
+            )
+        )
+    else:
+        try:
+            workflow_runs = github_client.run_list(
+                branch=resolved_head_branch,
+                commit=pr_head_oid,
+                fields=DEFAULT_WORKFLOW_RUN_FIELDS,
+            )
+        except GitHubServiceError as exc:
+            service_blockers.append(_format_blocker(f"GitHub workflow fetch failed: {exc}"))
+
+    github_evidence = collect_github_check_evidence(
+        head_sha=pr_head_oid or local_head_sha,
+        merge_state_status=merge_state_status,
+        mergeable=mergeable,
+        required_workflows=required_workflows,
+        workflow_runs=workflow_runs,
+    )
+    github_mapping = _evidence_mapping(github_evidence)
+    if service_blockers:
+        github_mapping["status"] = "blocked"
+        github_mapping["blockers"] = [
+            *[str(blocker) for blocker in github_mapping.get("blockers", [])],
+            *service_blockers,
+        ]
+
+    return {
+        "head": _evidence_mapping(head_evidence),
+        "github": github_mapping,
+        "pr_metadata": dict(pr_metadata),
+    }
+
+
+def inspect_diff_scope(*, changed_files: Sequence[str]) -> DiffScopeEvidence:
+    """Confirm changed files stay inside the focused recovery, QA, test, and docs scope."""
+
+    files = [path for path in changed_files if path]
+    unrelated = [
+        path
+        for path in files
+        if not any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in FOCUSED_DIFF_PREFIXES)
+    ]
+    blockers = [
+        _format_blocker(f"unrelated diff scope includes {path}.")
+        for path in unrelated
+    ]
+    status = "blocked" if blockers else "focused"
+    if blockers:
+        logger.warning("Diff scope blocked readiness: %s", "; ".join(blockers))
+    return DiffScopeEvidence(status=status, blockers=blockers, changed_files=files)
+
+
+def validate_recovery_commands(commands: Sequence[str]) -> ValidationCommandEvidence:
+    """Validate focused recovery commands use no outer timeout wrappers and required Node heap."""
+
+    blockers: list[str] = []
+    command_list = [command.strip() for command in commands if command.strip()]
+    if not command_list:
+        blockers.append(_format_blocker("focused validation commands are missing."))
+
+    for command in command_list:
+        if _has_outer_timeout_wrapper(command):
+            blockers.append(_format_blocker(f"validation command uses timeout wrappers: {command}"))
+        if _requires_node_options(command) and NODE_OPTIONS_REQUIREMENT not in command:
+            blockers.append(
+                _format_blocker(
+                    f"validation command must include {NODE_OPTIONS_REQUIREMENT}: {command}"
+                )
+            )
+
+    status = "blocked" if blockers else "passed"
+    if blockers:
+        logger.warning("Recovery command validation blocked readiness: %s", "; ".join(blockers))
+    return ValidationCommandEvidence(status=status, blockers=blockers, commands=command_list)
+
+
+def evaluate_readiness(evidence: Mapping[str, object]) -> ReadinessDecision:
+    """Evaluate every merge-ready gate and fail closed with explicit blockers."""
+
+    blockers: list[str] = []
+    required_evidence = (
+        ("current PR head", evidence.get("head")),
+        ("GitHub Actions and PR", evidence.get("github")),
+        ("focused diff scope", evidence.get("diff_scope")),
+        ("validation", evidence.get("validation")),
+        ("runnable QA", evidence.get("qa")),
+        ("docs impact", evidence.get("docs")),
+    )
+    for name, item in required_evidence:
+        blockers.extend(_collect_blockers_from_evidence(name, item))
+
+    quality_cycles = evidence.get("quality_audit_cycles")
+    cycles = _as_list(quality_cycles)
+    if len(cycles) < 3:
+        blockers.append(_format_blocker("fewer than three quality-audit cycles are documented."))
+    elif not isinstance(cycles[-1], Mapping) or not bool(cycles[-1].get("clean")):
+        blockers.append(_format_blocker("final quality-audit cycle is not clean."))
+
+    decision = "NOT_MERGE_READY" if blockers else "MERGE_READY"
+    if blockers:
+        logger.warning("Readiness evaluation blocked merge-ready status: %s", "; ".join(blockers))
+    return ReadinessDecision(decision=decision, blockers=blockers)
+
+
+def _validate_no_overclaims(text: str) -> None:
+    lowered = text.lower()
+    found: list[str] = []
+    negation_pattern = re.compile(
+        r"(does not claim|do not claim|not claim|doesn't claim|without claiming|"
+        r"no claim of|does not prove|do not prove|not prove|explicitly avoids?)"
+    )
+    for claim in UNSUPPORTED_MERGE_READY_CLAIMS:
+        claim_text = claim.lower()
+        search_start = 0
+        claim_is_positive = False
+        while True:
+            index = lowered.find(claim_text, search_start)
+            if index == -1:
+                break
+            sentence_start = max(lowered.rfind(".", 0, index), lowered.rfind("\n", 0, index)) + 1
+            before_claim = lowered[sentence_start:index]
+            if not negation_pattern.search(before_claim):
+                claim_is_positive = True
+                break
+            search_start = index + len(claim_text)
+        if claim_is_positive:
+            found.append(claim)
+    if found:
+        raise WorkflowReportError(
+            "Recovery report overclaims unproven behavior: " + ", ".join(found)
+        )
+
+
+def validate_merge_ready_recovery_report(report: str) -> None:
+    """Validate expanded merge-ready recovery report section ordering."""
+
+    missing = [section for section in MERGE_READY_REPORT_SECTIONS if section not in report]
+    if missing:
+        raise WorkflowReportError(
+            f"Missing required merge-ready recovery report sections: {', '.join(missing)}"
+        )
+
+    section_positions = [report.index(section) for section in MERGE_READY_REPORT_SECTIONS]
+    if section_positions != sorted(section_positions):
+        raise WorkflowReportError("Merge-ready recovery report sections are out of order")
+
+
+def render_merge_ready_recovery_report(
+    *,
+    summary: str,
+    files_modified: Sequence[str],
+    evidence: Mapping[str, object],
+) -> str:
+    """Render current-head recovery evidence and a fail-closed readiness decision."""
+
+    scope_bounded_claims = str(
+        evidence.get(
+            "scope_bounded_claims",
+            (
+                "Evidence is bounded to current-head checks, focused QA contracts, "
+                "docs impact, diff scope, and PR description review."
+            ),
+        )
+    ).strip()
+    _validate_no_overclaims(scope_bounded_claims)
+
+    decision = evaluate_readiness(evidence)
+    files_lines = [f"- {path}" for path in files_modified] or ["None"]
+    validation = evidence.get("validation", {})
+    qa = evidence.get("qa", {})
+    docs = evidence.get("docs", {})
+    github = evidence.get("github", {})
+    head = evidence.get("head", {})
+    diff_scope = evidence.get("diff_scope", {})
+    quality_cycles = _as_list(evidence.get("quality_audit_cycles"))
+
+    validation_lines = (
+        _line_items(validation.get("commands", []))
+        if isinstance(validation, Mapping)
+        else ["None"]
+    )
+    qa_lines = _line_items(qa.get("evidence", [])) if isinstance(qa, Mapping) else ["None"]
+    docs_lines = _render_evidence_mapping(docs) if isinstance(docs, Mapping) else ["None"]
+    github_lines: list[str] = []
+    if isinstance(head, Mapping):
+        github_lines.extend(_render_evidence_mapping(head))
+    if isinstance(github, Mapping):
+        github_lines.extend(_render_evidence_mapping(github))
+    if isinstance(diff_scope, Mapping):
+        github_lines.append("- diff_scope:")
+        github_lines.extend(f"  {line}" for line in _render_evidence_mapping(diff_scope))
+    if not github_lines:
+        github_lines = ["None"]
+
+    quality_lines: list[str] = []
+    for index, cycle in enumerate(quality_cycles, start=1):
+        if isinstance(cycle, Mapping):
+            quality_lines.append(f"- Cycle {index}:")
+            quality_lines.append(f"  - SEEK: {cycle.get('seek', 'None')}")
+            quality_lines.append(f"  - VALIDATE: {cycle.get('validate', 'None')}")
+            quality_lines.append(f"  - FIX: {cycle.get('fix', 'None')}")
+            quality_lines.append(f"  - clean: {bool(cycle.get('clean'))}")
+        else:
+            quality_lines.append(f"- Cycle {index}: {cycle}")
+    if not quality_lines:
+        quality_lines = ["None"]
+
+    readiness_lines = [decision.decision]
+    readiness_lines.extend(f"- {blocker}" for blocker in decision.blockers)
+    if not files_modified:
+        readiness_lines.append(
+            "workflow-accepted No-op justification: no repository implementation "
+            "changes are listed; readiness is tied to the supplied current-head evidence "
+            "and any explicit merge-ready blockers above."
+        )
+
+    sections = [
+        ("Summary", [summary.strip() or "None"]),
+        ("Files modified", files_lines),
+        ("Validation", validation_lines),
+        ("QA / scenario evidence", qa_lines),
+        ("Docs impact", docs_lines),
+        ("Scope / bounded claims", [scope_bounded_claims]),
+        ("GitHub and PR evidence", github_lines),
+        ("Quality-audit cycles", quality_lines),
+        ("Readiness decision", readiness_lines),
+    ]
+    report = "\n\n".join(f"{heading}\n" + "\n".join(lines) for heading, lines in sections)
+    validate_merge_ready_recovery_report(report)
+    return report + "\n"
 
 
 def build_recovery_report(
