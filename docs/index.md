@@ -25,6 +25,12 @@ repository.
 - [Tutorial: Add a Project IO Corpus Characterization](./tutorials/project-io-corpus-characterization.md) - A guided example for protecting generated `.a3p` archive behavior.
 - [Tutorial: Add a ProjectMigrationManager Migration Characterization](./tutorials/project-migration-manager-characterization.md) - A guided example for protecting ordered text migration behavior without binary fixtures.
 
+## Issue-reporting characterization
+
+- [IssueSubmissionProgressWorker Characterization](./reference/issue-submission-progress-worker.md) - Reference for the background submission lifecycle, three test seams, `RecordingIssueSubmissionProgressWorker` harness, QA scenario contract, and compatibility rules.
+- [Characterize IssueSubmissionProgressWorker Behavior](./howto/characterize-issue-submission-progress-worker.md) - How to add or review characterization tests for the background submission progress worker seams.
+- [Tutorial: Trace the IssueSubmissionProgressWorker Characterization](./tutorials/trace-issue-submission-progress-worker.md) - Guided review of the three test methods: success-path progress ordering, attachment opt-out carry-through, and exception-path incomplete sequence.
+
 ## QA and acceptance testing
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
