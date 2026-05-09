@@ -27,6 +27,7 @@ DOWNSTREAM_NON_CLAIMS = [
     "full lesson execution",
 ]
 BLOCKERS = ["merge dirtiness", "missing evidence", "failing validation", "environment dependency"]
+FENCED_BLOCK_PATTERN = re.compile(r"```(?:bash|sh)?\n(.*?)\n```", flags=re.DOTALL)
 
 
 def read(path: Path) -> str:
@@ -41,7 +42,8 @@ def heading_index(text: str, heading: str) -> int:
 
 
 def fenced_block_containing(text: str, marker: str) -> str:
-    for block in re.findall(r"```(?:bash|sh)?\n(.*?)\n```", text, flags=re.DOTALL):
+    for match in FENCED_BLOCK_PATTERN.finditer(text):
+        block = match.group(1)
         if marker in block:
             return block
     raise AssertionError(f"Missing fenced command block containing {marker!r}")
@@ -54,8 +56,8 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         cls.reference = read(REFERENCE_PATH)
         cls.validator = read(VALIDATOR_PATH)
         cls.runner = read(RUNNER_PATH)
-        cls.schema = json.loads(read(SCHEMA_PATH))
-        cls.schema_text = json.dumps(cls.schema)
+        cls.schema_text = read(SCHEMA_PATH)
+        cls.schema = json.loads(cls.schema_text)
 
     def test_pr_state_inspector_requires_exact_pr_head_and_check_metadata(self) -> None:
         text = self.reference

@@ -162,12 +162,12 @@ If GitHub reports `mergeStateStatus=DIRTY`, the no-op report must include the di
 
 No live artifact is acceptable only for a no-op documentation recovery that does not claim live Select Project success and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory. Any claim that Africa Full was selected, opened, or observed after opening requires live artifacts from the run being reported.
 
-For the current PR #437 no-op recovery head, use this report shape only after the executable checks prove the repository already satisfies the focused Select Project contract:
+For PR #437, use this report shape only after the executable checks prove the repository already satisfies the focused Select Project contract at the verified PR head:
 
 ```markdown
 No-op justification:
 - Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
-- Current head: `01fb37c62bbc171b682e65788124f5158456587f`
+- Current head: `<verified headRefOid matching git rev-parse HEAD>`
 - PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
 - Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
 - Disposable merge check: detached worktree merge against the verified PR base completed with no unmerged files, or the report names `merge dirtiness` instead of claiming readiness.

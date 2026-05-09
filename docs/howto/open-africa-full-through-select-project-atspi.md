@@ -314,18 +314,7 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 - Use `Current blocker: None` only when every PR finalization gate passes.
 ```
 
-For PR #437 at current head, a documentation-only recovery report that makes no live Select Project success claim may use this exact no-op shape:
-
-```markdown
-No-op justification:
-- Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
-- Current head: `01fb37c62bbc171b682e65788124f5158456587f`
-- PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
-- Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
-- Disposable merge check: local detached worktree merge against the verified PR base completed with no unmerged files, or the report names `merge dirtiness` instead of claiming readiness.
-- Focused validation: `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`, schema/scenario/proof/probe contracts, `tests/test_pr437_select_project_recovery_contract.py`, and `tests/test_pr437_noop_recovery_report_contract.py` passed at this head.
-- Live artifact exception: no new AT-SPI evidence directory was required because this recovery verified existing documentation/contracts and does not claim live Select Project success.
-```
+For PR #437 at current head, use the canonical [`No-op justification:` shape](../reference/select-project-africa-full-atspi-evidence.md#workflow-accepted-no-op-justification) only for a documentation-only recovery that makes no live Select Project success claim.
 
 If GitHub metadata is unavailable, report `Current blocker: environment dependency`. If branch/head drift is observed, the report must not publish `No-op justification:`; it must first re-establish the exact PR head or stop with the blocker.
 

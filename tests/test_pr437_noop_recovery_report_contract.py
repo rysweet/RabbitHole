@@ -8,7 +8,7 @@ HOWTO_PATH = REPO_ROOT / "docs" / "howto" / "open-africa-full-through-select-pro
 REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "select-project-africa-full-atspi-evidence.md"
 
 EXPECTED_BRANCH = "feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo"
-EXPECTED_HEAD = "01fb37c62bbc171b682e65788124f5158456587f"
+EXPECTED_HEAD_MARKER = "<verified headRefOid matching git rev-parse HEAD>"
 
 FOCUSED_CHECKS = [
     "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
@@ -23,15 +23,11 @@ FOCUSED_CHECKS = [
 ]
 
 
-def read(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
-
-
 class Pr437NoopRecoveryReportContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.howto = read(HOWTO_PATH)
-        cls.reference = read(REFERENCE_PATH)
+        cls.howto = HOWTO_PATH.read_text(encoding="utf-8")
+        cls.reference = REFERENCE_PATH.read_text(encoding="utf-8")
         cls.combined = f"{cls.howto}\n{cls.reference}"
 
     def test_noop_justification_uses_required_current_head_report_labels(self) -> None:
@@ -49,17 +45,17 @@ class Pr437NoopRecoveryReportContractTest(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertIn(label, self.combined)
 
-    def test_noop_justification_is_bound_to_expected_branch_and_head(self) -> None:
-        """Unit contract: PR #437 recovery evidence is tied to the current branch/head."""
+    def test_noop_justification_requires_verified_branch_and_head_match(self) -> None:
+        """Unit contract: PR #437 recovery evidence is tied to the verified branch/head."""
         self.assertIn(EXPECTED_BRANCH, self.combined)
-        self.assertIn(EXPECTED_HEAD, self.combined)
+        self.assertIn(EXPECTED_HEAD_MARKER, self.combined)
         self.assertRegex(
             self.combined,
             rf"No-op justification:[\s\S]*Current branch:\s*`?{re.escape(EXPECTED_BRANCH)}`?",
         )
         self.assertRegex(
             self.combined,
-            rf"No-op justification:[\s\S]*Current head:\s*`?{EXPECTED_HEAD}`?",
+            rf"No-op justification:[\s\S]*Current head:\s*`?{re.escape(EXPECTED_HEAD_MARKER)}`?",
         )
 
     def test_focused_validation_command_list_includes_this_noop_contract(self) -> None:
