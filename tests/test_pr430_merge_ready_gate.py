@@ -11,7 +11,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GATE_PATH = REPO_ROOT / "scripts" / "pr430_merge_ready_gate.py"
 PR_BRANCH = "feat/issue-407-rabbithole-wave7-save-negative-contract-lane-follo"
-HEAD_SHA = "2dcf313222b18edff2247c7a856572519bc0873c"
 NEGATIVE_CONTRACT_COMMAND = (
     "NODE_OPTIONS=--max-old-space-size=32768 "
     "bash qa/outside-in/alice-desktop/tests/"
@@ -20,6 +19,17 @@ NEGATIVE_CONTRACT_COMMAND = (
 PYTHON_TEST_COMMAND = (
     "NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest discover -s tests"
 )
+
+
+def current_head_sha() -> str:
+    return subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO_ROOT,
+        encoding="utf-8",
+    ).strip()
+
+
+HEAD_SHA = current_head_sha()
 
 
 @lru_cache(maxsize=1)
