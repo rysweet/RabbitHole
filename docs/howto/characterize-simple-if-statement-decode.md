@@ -79,9 +79,9 @@ The allowlist accepts:
 2. Explicit zero-argument `this.method();` expression statements that satisfy
    the existing direct-call slice.
 
-It must continue to reject local declarations, returns, while loops, nested
-conditionals, argument-bearing calls, arbitrary receivers, implicit receivers,
-chained calls, and unresolved same-type methods.
+It must continue to reject local declarations, returns, nested conditionals,
+argument-bearing calls, arbitrary receivers, implicit receivers, chained calls,
+and unresolved same-type methods.
 
 ## Preserve existing if/else behavior
 

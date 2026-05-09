@@ -124,9 +124,9 @@ that accepts:
    the existing direct-call slice.
 
 Do not reuse unrestricted method-body decoding without the allowlist. This
-avoids accidentally enabling local declarations, returns, while loops, nested
-conditionals, arbitrary receiver calls, implicit receiver calls, arguments,
-overloads, or optional-argument behavior inside conditional bodies.
+avoids accidentally enabling local declarations, returns, nested conditionals,
+arbitrary receiver calls, implicit receiver calls, arguments, overloads, or
+optional-argument behavior inside conditional bodies.
 
 ## Player archive behavior
 
@@ -178,7 +178,6 @@ adjacent forms that are outside the slice.
 | `if (enabled) { other.helper(); }` | Arbitrary receivers remain unsupported. |
 | `if (enabled) { helper(); }` | Implicit receivers remain unsupported. |
 | `if (enabled) { if (ready) { this.helper(); } }` | Nested conditionals remain unsupported inside this slice. |
-| `if (enabled) { while (ready) { this.helper(); } }` | Nested control-flow statements remain unsupported unless separately documented. |
 | `if (enabled) { WholeNumber x <- 1; }` | New local declarations inside conditional bodies are outside this slice. |
 | `if (enabled) { return 1; }` | Return statements inside conditional bodies are outside this slice. |
 | `if (1) { this.helper(); }` | Non-Boolean conditions remain unsupported. |

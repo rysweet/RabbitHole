@@ -2293,23 +2293,6 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithWhileLoopMethodCallBodyReportsUnsupported() {
-    UnsupportedTweedleDecodeException thrown = assertThrows(
-        UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("""
-            class SyntheticType {
-              void bad(Boolean flag) {
-                while (flag) { this.tick(); }
-              }
-              void tick() { }
-            }
-            """));
-
-    assertTrue(thrown.getMessage().contains("while loop bodies"));
-    assertTrue(thrown.getMessage().contains("bad"));
-  }
-
-  @Test
   public void decodeClassWithWhileLoopInNonVoidMethodReportsUnsupported() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,

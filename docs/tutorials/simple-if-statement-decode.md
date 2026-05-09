@@ -26,9 +26,8 @@ an explicit allowlist:
 2. Explicit zero-argument `this.method();` expression statements.
 
 Do not delegate to unrestricted method-body decoding. That would risk enabling
-locals, returns, while loops, nested conditionals, arbitrary receivers, implicit
-receivers, arguments, overloads, or optional-argument behavior inside
-conditional bodies.
+locals, returns, nested conditionals, arbitrary receivers, implicit receivers,
+arguments, overloads, or optional-argument behavior inside conditional bodies.
 
 ## 1. Create the smallest source
 

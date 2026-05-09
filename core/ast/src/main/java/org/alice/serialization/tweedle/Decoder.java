@@ -191,7 +191,7 @@ public class Decoder {
       List<UserField> fields,
       NamedUserType declaringType,
       Map<String, UserMethod> zeroArgumentMethods) {
-    List<Statement> statements = new ArrayList<>(constructor.getBody().size());
+    List<Statement> statements = new ArrayList<>();
     List<UserLocal> locals = new ArrayList<>();
     for (TweedleStatement statement : constructor.getBody()) {
       if (statement instanceof LocalVariableDeclaration localVariableDeclaration) {
@@ -262,7 +262,7 @@ public class Decoder {
       }
       return new BlockStatement();
     }
-    List<Statement> statements = new ArrayList<>(method.getBody().size());
+    List<Statement> statements = new ArrayList<>();
     List<UserLocal> locals = new ArrayList<>();
     for (int i = 0; i < method.getBody().size(); i++) {
       TweedleStatement statement = method.getBody().get(i);
@@ -358,7 +358,7 @@ public class Decoder {
       NamedUserType declaringType,
       Map<String, UserMethod> zeroArgumentMethods,
       List<TweedleStatement> statements) {
-    List<Statement> decoded = new ArrayList<>(statements.size());
+    List<Statement> decoded = new ArrayList<>();
     for (TweedleStatement statement : statements) {
       if (!(statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement)) {
         throw unsupportedSimpleIfBody(method);
