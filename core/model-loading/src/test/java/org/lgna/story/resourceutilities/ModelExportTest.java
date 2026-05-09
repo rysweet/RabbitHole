@@ -137,6 +137,8 @@ public class ModelExportTest {
     exporter.addResource("TestProp", "Default", "ALICE", null, null);
     exporter.addResource("TestProp", "BlueStripe", "ALICE", null, null);
 
+    assertEquals("BLUE_STRIPE", exporter.createResourceEnumName("TestProp", "BlueStripe"));
+
     Document xml = parseXml(exporter.createXMLString());
     NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
 

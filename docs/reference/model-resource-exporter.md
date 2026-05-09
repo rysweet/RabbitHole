@@ -45,7 +45,9 @@ public final class ResourceExportExample {
 The generated XML root is an `AliceModel` element with class-level attributes
 and one `Resource` element for each subresource. A subresource with the same
 model name as the parent and the default texture produces the `DEFAULT`
-resource enum name.
+resource enum name. A subresource with the same model name as the parent and a
+distinct, non-default texture uses the normalized texture enum name only,
+without prefixing the parent model name.
 
 ## Exporter API
 
@@ -101,6 +103,11 @@ Class-level tags are written once on the root. Subresource tags are written only
 when they are unique from the class-level tags. For example, if the class has
 `shared-tag` and the `VariantProp` subresource has both `shared-tag` and
 `variant-tag`, only `variant-tag` is emitted under that subresource.
+
+Generated `resourceName` values follow the same naming rules as Java enum
+constants. For example, a parent model `TestProp` with
+`textureName="BLUE_STRIPE"` emits `resourceName="BLUE_STRIPE"`, not
+`resourceName="TEST_PROP_BLUE_STRIPE"`.
 
 When `setIsDeprecated(true)` is applied, the XML root includes
 `deprecated="TRUE"`. The flag is class-level metadata; it does not add
@@ -181,6 +188,7 @@ Resource enum constants follow these rules:
 | Input | Generated constant |
 | --- | --- |
 | Parent model name with default texture | `DEFAULT` |
+| Parent model name with distinct texture | Normalized texture enum name only, such as `BLUE_STRIPE` |
 | Different model name with default texture | Model enum name, such as `VARIANT_PROP` |
 | Different model name and distinct texture | Model enum name plus texture enum name, such as `VARIANT_PROP_BLUE` |
 | Resource type `ALICE` | No constructor argument; the default constructor uses `ImplementationAndVisualType.ALICE`. |
