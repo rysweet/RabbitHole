@@ -71,7 +71,10 @@ minimum, populate:
 - `validations` with each focused validation record
 - `githubActions` with check results
 - `prEvidence` with PR description state
-- `commands` listing all commands executed
+- `commands` listing all commands executed (must not be empty)
+
+When performing a repair, also include `repairRequired`, `pushedRepair`, and
+`repairDiffFiles` with the files changed by the repair.
 
 Save the file as `evidence.json`.
 

@@ -221,13 +221,21 @@ Combine all the pieces:
     "boundedArchivePlayerClaimsOnly": true,
     "blockers": []
   },
-  "commands": []
+  "commands": [
+    "git fetch origin develop",
+    "git submodule update --init tweedle-lang",
+    "NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_pr463_owner_free_recovery_gate tests.test_pr463_archive_player_boundary_contract",
+    "NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+    "NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh",
+    "..."
+  ]
 }
 ```
 
 Replace every `<HEAD_SHA>` and `<DEVELOP_SHA>` with the actual values from
-step 4. Replace `"..."` in `validations[].command` and `commands` with the
-actual commands you ran.
+step 4. Replace `"..."` placeholders in `validations[].command` and `commands`
+with the actual commands you ran. The `commands` array must not be empty; the
+gate reports `missing-command-evidence` when no commands are recorded.
 
 ## 10. Run the gate
 
