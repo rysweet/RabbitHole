@@ -21,8 +21,8 @@ import org.lgna.project.io.IoUtilities;
 import org.lgna.story.SScene;
 
 import java.awt.event.WindowEvent;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
@@ -51,7 +51,7 @@ public final class EatmeEditProcedure {
 
   static int run(String[] args, PrintStream out, PrintStream err) {
     PrintStream originalSystemOut = System.out;
-    PrintStream silentSystemOut = new PrintStream(new ByteArrayOutputStream());
+    PrintStream silentSystemOut = new PrintStream(OutputStream.nullOutputStream());
     System.setOut(silentSystemOut);
     try {
       Arguments arguments = Arguments.parse(args);
@@ -100,14 +100,11 @@ public final class EatmeEditProcedure {
     if (method == null) {
       throw new IllegalArgumentException("target procedure not found: " + arguments.procedureSelector());
     }
-    BlockStatement body = method.body.getValue();
-    if (body == null) {
-      body = new BlockStatement();
-      method.body.setValue(body);
-    }
-    if (countCommentMarkers(method, commentText) > 0 || countCommentMarkersOutside(sceneType, method, commentText) > 0) {
+    MarkerCounts existingMarkerCounts = countCommentMarkers(sceneType, method, commentText);
+    if (existingMarkerCounts.total() > 0) {
       throw new IllegalArgumentException("edit marker already exists in project: " + commentText);
     }
+    ensureProcedureBody(method);
     ProcedureTabSelectionEvidence tabSelection = selectProcedureTab(method);
     ProcedureEditCommand.Result commandResult = ProcedureEditCommand.appendComment(
         arguments.procedureSelector(),
@@ -117,8 +114,9 @@ public final class EatmeEditProcedure {
     int beforeStatementCount = commandResult.beforeStatementCount();
     int afterStatementCount = commandResult.afterStatementCount();
     List<String> afterMethods = methodNames(sceneType);
-    int targetMarkerCount = countCommentMarkers(method, commentText);
-    int wrongTargetMarkerCount = countCommentMarkersOutside(sceneType, method, commentText);
+    MarkerCounts markerCounts = countCommentMarkers(sceneType, method, commentText);
+    int targetMarkerCount = markerCounts.target();
+    int wrongTargetMarkerCount = markerCounts.outsideTarget();
     if (targetMarkerCount != 1) {
       throw new IllegalStateException("target marker count mismatch for " + arguments.procedureSelector()
           + ": expected 1 but found " + targetMarkerCount);
@@ -154,6 +152,12 @@ public final class EatmeEditProcedure {
     Files.writeString(actionProofArtifact, actionProofArtifactJson(edit), StandardCharsets.UTF_8);
     requireNonEmptyArtifact(actionProofArtifact, "first-lesson code-editor action proof artifact");
     return edit;
+  }
+
+  private static void ensureProcedureBody(UserMethod method) {
+    if (method.body.getValue() == null) {
+      method.body.setValue(new BlockStatement());
+    }
   }
 
   private static ProcedureTabSelectionEvidence selectProcedureTab(UserMethod method) {
@@ -291,14 +295,18 @@ public final class EatmeEditProcedure {
     return names;
   }
 
-  private static int countCommentMarkersOutside(NamedUserType sceneType, UserMethod target, String marker) {
-    int count = 0;
+  private static MarkerCounts countCommentMarkers(NamedUserType sceneType, UserMethod target, String marker) {
+    int targetCount = 0;
+    int outsideTargetCount = 0;
     for (UserMethod method : sceneType.getDeclaredMethods()) {
-      if (method != target) {
-        count += countCommentMarkers(method, marker);
+      int methodCount = countCommentMarkers(method, marker);
+      if (method == target) {
+        targetCount += methodCount;
+      } else {
+        outsideTargetCount += methodCount;
       }
     }
-    return count;
+    return new MarkerCounts(targetCount, outsideTargetCount);
   }
 
   private static int countCommentMarkers(UserMethod method, String marker) {
@@ -471,5 +479,11 @@ public final class EatmeEditProcedure {
       String codeCompositeDeclaration,
       String codeEditorBacking,
       String codeEditorCode) {
+  }
+
+  record MarkerCounts(int target, int outsideTarget) {
+    int total() {
+      return target + outsideTarget;
+    }
   }
 }

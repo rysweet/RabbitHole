@@ -3,6 +3,7 @@ package org.alice.tools;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.alice.ide.codeeditor.CodeEditor;
 import org.lgna.project.Project;
 import org.lgna.project.ast.AstUtilities;
 import org.lgna.project.ast.BlockStatement;
@@ -36,6 +37,7 @@ public class FirstLessonCodeEditorActionProofTest {
   private static final String MARKER = "wave4-code-editor-action-proof";
   private static final String ACTION_PROOF_ARTIFACT = "first-lesson-code-editor-action-proof.json";
   private static final String BLOCKED_FALLBACK_ARTIFACT = "first-lesson-code-editor-action-blocked.json";
+  private static final String RETIRED_NO_GO_ARTIFACT = "procedure-ui-action-no-go.json";
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -71,10 +73,7 @@ public class FirstLessonCodeEditorActionProofTest {
     assertTrue(result, result.contains("\"status\":\"proved\""));
     assertTrue(result, result.contains("\"action_proof\":\"" + ACTION_PROOF_ARTIFACT + "\""));
     assertNonEmptyFile(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
-    assertFalse("successful proof must not emit a blocked fallback artifact",
-        Files.exists(evidenceDir.resolve(BLOCKED_FALLBACK_ARTIFACT)));
-    assertFalse("successful proof must not keep the older no-go artifact as its success evidence",
-        Files.exists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
+    assertNoBlockedOrRetiredArtifacts(evidenceDir);
 
     String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
     assertTrue(proof, proof.contains("\"schema_version\": \"eatme.alice-first-lesson-code-editor-action-proof/v1\""));
@@ -82,7 +81,7 @@ public class FirstLessonCodeEditorActionProofTest {
     assertTrue(proof, proof.contains("\"procedure_selector\": \"" + FIRST_LESSON_TARGET + "\""));
     assertTrue(proof, proof.contains("\"selected_declaration\": \"" + FIRST_LESSON_METHOD + "\""));
     assertTrue(proof, proof.contains("\"code_composite_declaration\": \"" + FIRST_LESSON_METHOD + "\""));
-    assertTrue(proof, proof.contains("\"code_editor_backing\": \"org.alice.ide.codeeditor.CodeEditor\""));
+    assertTrue(proof, proof.contains("\"code_editor_backing\": \"" + CodeEditor.class.getName() + "\""));
     assertTrue(proof, proof.contains("\"code_editor_code\": \"" + FIRST_LESSON_METHOD + "\""));
     assertTrue(proof, proof.contains("\"action\": \"append-comment\""));
     assertTrue(proof, proof.contains("\"marker\": \"" + MARKER + "\""));
@@ -92,6 +91,46 @@ public class FirstLessonCodeEditorActionProofTest {
     assertTrue(proof, proof.contains("\"wrong_target_marker_count\": 0"));
     assertTrue(proof, proof.contains("\"doesNotClaim\""));
     assertOutOfScopeClaimsStayExplicit(proof + result);
+  }
+
+  @Test
+  public void initializesNullFirstLessonBodyBeforeSelectingProcedureTab() throws Exception {
+    File projectFile = temporaryFolder.newFile("null-body-first-lesson.a3p");
+    Project project = projectWithSceneMethods(WRONG_METHOD);
+    sceneType(project).methods.add(new UserMethod(
+        FIRST_LESSON_METHOD,
+        JavaType.VOID_TYPE,
+        new UserParameter[0],
+        null));
+    IoUtilities.writeProject(projectFile, project);
+    Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", FIRST_LESSON_TARGET,
+            "--edit-spec", "append-comment:" + MARKER,
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(stdout),
+        new PrintStream(stderr));
+
+    assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    Project editedProject = IoUtilities.readProject(evidenceDir.resolve("edited-project.a3p").toFile());
+    UserMethod editedMethod = requireMethod(sceneType(editedProject), FIRST_LESSON_METHOD);
+    assertNotNull("first-lesson body should be initialized before the edit command", editedMethod.body.getValue());
+    assertCommentMarkerCount(editedMethod, MARKER, 1);
+
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(proof, proof.contains("\"selected_declaration\": \"" + FIRST_LESSON_METHOD + "\""));
+    assertTrue(proof, proof.contains("\"code_composite_declaration\": \"" + FIRST_LESSON_METHOD + "\""));
+    assertTrue(proof, proof.contains("\"code_editor_code\": \"" + FIRST_LESSON_METHOD + "\""));
+    assertTrue(proof, proof.contains("\"before_statement_count\": 0"));
+    assertTrue(proof, proof.contains("\"after_statement_count\": 1"));
+    assertNoBlockedOrRetiredArtifacts(evidenceDir);
   }
 
   @Test
@@ -117,7 +156,7 @@ public class FirstLessonCodeEditorActionProofTest {
         stderr.toString(StandardCharsets.UTF_8).contains("target procedure not found: " + FIRST_LESSON_TARGET));
     assertFalse(Files.exists(evidenceDir.resolve("edited-project.a3p")));
     assertFalse(Files.exists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
-    assertFalse(Files.exists(evidenceDir.resolve(BLOCKED_FALLBACK_ARTIFACT)));
+    assertNoBlockedOrRetiredArtifacts(evidenceDir);
 
     Project originalProject = IoUtilities.readProject(projectFile);
     assertFalse("the proof must not auto-create scene.eatmeFirstLesson",
@@ -148,7 +187,7 @@ public class FirstLessonCodeEditorActionProofTest {
             "first-lesson code-editor action proof requires target " + FIRST_LESSON_TARGET));
     assertFalse(Files.exists(evidenceDir.resolve("edited-project.a3p")));
     assertFalse(Files.exists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
-    assertFalse(Files.exists(evidenceDir.resolve(BLOCKED_FALLBACK_ARTIFACT)));
+    assertNoBlockedOrRetiredArtifacts(evidenceDir);
   }
 
   private static Project projectWithSceneMethods(String... methodNames) {
@@ -202,6 +241,13 @@ public class FirstLessonCodeEditorActionProofTest {
   private static void assertNonEmptyFile(Path path) throws Exception {
     assertTrue(path.getFileName() + " should exist", Files.isRegularFile(path));
     assertTrue(path.getFileName() + " should not be empty", Files.size(path) > 0);
+  }
+
+  private static void assertNoBlockedOrRetiredArtifacts(Path evidenceDir) {
+    assertFalse("proof must not emit a blocked fallback artifact",
+        Files.exists(evidenceDir.resolve(BLOCKED_FALLBACK_ARTIFACT)));
+    assertFalse("proof must not keep the older no-go artifact as success evidence",
+        Files.exists(evidenceDir.resolve(RETIRED_NO_GO_ARTIFACT)));
   }
 
   private static void assertOutOfScopeClaimsStayExplicit(String evidence) {
