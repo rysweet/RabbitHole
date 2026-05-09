@@ -506,8 +506,9 @@ seam writes only the fixed artifact `run-window-created.json` inside that
 directory without following a pre-existing artifact symlink.
 
 The artifact is a creation/wiring metadata record. It is not a render-affordance
-artifact, runtime result, Save artifact, grading artifact, screenshot, pixel
-sample, or full UI automation transcript.
+artifact, runtime result, Save artifact, grading artifact, creative-assessment
+artifact, lesson-completion artifact, screenshot, pixel sample, or full UI
+automation transcript.
 
 For the dedicated usage guide, artifact API, Java seam API, configuration, path
 safety rules, examples, and tutorial, see [Run-Window Creation/Wiring
@@ -533,6 +534,10 @@ Required `run-window-created.json` fields:
 | `grading_claimed` | boolean | Always `false`. |
 | `full_ui_automation_claimed` | boolean | Always `false`. |
 | `does_not_claim` | string array | Must include `active-rendering`, `run-execution`, `world-execution-correctness`, `rendering-correctness`, `save`, `grading`, and `full-ui-automation`. |
+
+The v1 artifact does not expose separate creative-assessment or
+lesson-completion booleans. Those claims remain outside the Run-window
+creation/wiring scope and must not be inferred from a passing artifact.
 
 Representative artifact:
 

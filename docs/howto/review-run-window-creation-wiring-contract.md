@@ -6,6 +6,8 @@ only that the Run-window creation hook can write the bounded
 
 For the complete artifact and API contract, see the [Run-Window
 Creation/Wiring Contract reference](../reference/run-window-creation-wiring-contract.md).
+For the aggregate bounded silver-thread report, see the [Alice Desktop
+Silver-Thread Status Report](../reference/silver-thread-status-report.md).
 
 ## Before you start
 
@@ -18,6 +20,40 @@ export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
 Do not add timeout wrappers around the commands in this guide.
+
+## Validate workflow readiness
+
+Run the lane contract check on the current checkout head:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-run-window-contract.sh
+```
+
+This check validates the Run-window scenario, schema, runner allowlist, exact
+focused Maven argv, and prepare-only evidence output. It does not execute broad
+desktop automation and does not prove rendering correctness or program behavior.
+
+Then run the bounded silver-thread status report:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh
+```
+
+Accept the aggregate report only when it exits successfully with
+`status:silver_thread=covered_bounded` and prints the expected
+`claim-boundary:<claim>=not_claimed` lines. Treat the report as readiness
+evidence for the bounded launch, starter-change, object-placement,
+procedure-edit, and run-window-or-render-affordance thread. Do not convert it
+into merge readiness,
+full UI automation, rendering correctness, Save completion, grading, creative
+assessment, or lesson-completion evidence. Do not manually merge a PR from this
+bounded evidence alone.
+
+`gap:save_reopen=not_covered_optional` and `optional_gaps=1` are acceptable
+non-blocking output for this bounded lane; Save/reopen proof stays optional and
+belongs to its own evidence path.
 
 ## Validate the focused Java seam
 

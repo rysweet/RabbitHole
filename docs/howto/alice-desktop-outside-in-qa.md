@@ -346,7 +346,10 @@ the schema and scope fields match the values above, all capability booleans are
 `false`, and `does_not_claim` names the excluded capabilities. Reject artifacts
 with alternate names, path traversal, missing boundaries, success-shaped
 fallback text, or affirmative claims about execution, rendering correctness,
-Save, grading, or full UI automation.
+Save, grading, creative assessment, lesson completion, or full UI automation.
+Creative assessment and lesson completion are excluded by the Run-window
+creation/wiring scope, not by dedicated `creative_assessment_claimed` or
+`lesson_completion_claimed` artifact fields.
 
 ## Collect post-open runtime/display and target-scoped pixel evidence
 

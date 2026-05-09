@@ -32,6 +32,17 @@ creation/wiring record only.
 
 ## Usage
 
+Validate the complete QA lane contract from the repository root:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+bash qa/outside-in/alice-desktop/tests/test-run-window-contract.sh
+```
+
+This script checks the scenario contract, JSON Schema allowlist, runner allowlist,
+and prepare-only evidence path for the Run-window lane. It is the shortest
+review command for contract readiness; it is not a broad desktop automation run.
+
 Run the focused contract characterization from the repository root:
 
 ```bash
@@ -103,6 +114,11 @@ Required fields:
 | `grading_claimed` | boolean | Always `false`. |
 | `full_ui_automation_claimed` | boolean | Always `false`. |
 | `does_not_claim` | string array | Includes `active-rendering`, `run-execution`, `world-execution-correctness`, `rendering-correctness`, `save`, `grading`, and `full-ui-automation`. |
+
+The v1 artifact does not define separate creative-assessment or
+lesson-completion booleans. Those claims are still outside this contract: the
+scope is only Run-window creation/wiring, and reviewers must not use the
+artifact as creative-assessment or lesson-completion evidence.
 
 Representative artifact:
 
@@ -237,6 +253,9 @@ full_ui_automation_claimed=false
 ```
 
 If any of those booleans is `true`, the artifact does not satisfy this contract.
+The same review boundary excludes creative assessment and lesson completion even
+though those exclusions are expressed by scope rather than separate v1 boolean
+fields.
 
 ## Evidence boundaries
 
