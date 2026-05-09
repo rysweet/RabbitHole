@@ -1,4 +1,5 @@
 import unittest
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -20,6 +21,11 @@ PROJECT_FILE_UTILITIES_TEST = Path(
 )
 
 
+@lru_cache(maxsize=None)
+def read_repo_text(relative_path: Path) -> str:
+    return (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+
 class PR426FormalContractWiringTest(unittest.TestCase):
     def test_pr426_formal_and_spec_artifacts_exist(self) -> None:
         for relative_path in (
@@ -33,8 +39,8 @@ class PR426FormalContractWiringTest(unittest.TestCase):
             )
 
     def test_pr426_backup_recovery_tla_invariants_remain_named(self) -> None:
-        tla_text = (REPO_ROOT / BACKUP_LOAD_RECOVERY_TLA).read_text(encoding="utf-8")
-        cfg_text = (REPO_ROOT / BACKUP_LOAD_RECOVERY_CFG).read_text(encoding="utf-8")
+        tla_text = read_repo_text(BACKUP_LOAD_RECOVERY_TLA)
+        cfg_text = read_repo_text(BACKUP_LOAD_RECOVERY_CFG)
         for marker in (
             "Spec ==",
             "UnsafeBackups",
@@ -52,8 +58,8 @@ class PR426FormalContractWiringTest(unittest.TestCase):
             self.assertIn(invariant, cfg_text)
 
     def test_pr426_project_archive_feature_maps_to_executable_junit_anchors(self) -> None:
-        feature_text = (REPO_ROOT / PROJECT_ARCHIVE_FEATURE).read_text(encoding="utf-8")
-        io_test_text = (REPO_ROOT / IO_UTILITIES_TEST).read_text(encoding="utf-8")
+        feature_text = read_repo_text(PROJECT_ARCHIVE_FEATURE)
+        io_test_text = read_repo_text(IO_UTILITIES_TEST)
         for marker in (
             "@export @resources @safety",
             "@export @resources @security",
@@ -76,12 +82,10 @@ class PR426FormalContractWiringTest(unittest.TestCase):
             self.assertIn(anchor, io_test_text)
 
     def test_pr426_backup_recovery_model_maps_to_executable_junit_anchors(self) -> None:
-        feature_text = (REPO_ROOT / PROJECT_ARCHIVE_FEATURE).read_text(encoding="utf-8")
-        selector_text = (REPO_ROOT / BACKUP_SELECTOR_TEST).read_text(encoding="utf-8")
-        recovery_text = (REPO_ROOT / BACKUP_RECOVERY_IO_TEST).read_text(encoding="utf-8")
-        file_utilities_text = (REPO_ROOT / PROJECT_FILE_UTILITIES_TEST).read_text(
-            encoding="utf-8"
-        )
+        feature_text = read_repo_text(PROJECT_ARCHIVE_FEATURE)
+        selector_text = read_repo_text(BACKUP_SELECTOR_TEST)
+        recovery_text = read_repo_text(BACKUP_RECOVERY_IO_TEST)
+        file_utilities_text = read_repo_text(PROJECT_FILE_UTILITIES_TEST)
         for marker in (
             "@load @backup-recovery",
             "Alice marks backup \"auto20240102_140000.a3p\" unloadable",

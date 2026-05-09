@@ -1,4 +1,5 @@
 import unittest
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -66,6 +67,11 @@ EXPECTED_MARKERS = (
 )
 
 
+@lru_cache(maxsize=None)
+def read_repo_text(relative_path: Path) -> str:
+    return (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+
 class FormalSpecContractsReferenceTest(unittest.TestCase):
     def test_formal_spec_backup_safety_contract_maps_to_artifacts(self) -> None:
         self.assertTrue(
@@ -75,7 +81,7 @@ class FormalSpecContractsReferenceTest(unittest.TestCase):
 
         for relative_path, markers in EXPECTED_MARKERS:
             path_label = relative_path.as_posix()
-            text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+            text = read_repo_text(relative_path)
             missing_markers = [marker for marker in markers if marker not in text]
             self.assertEqual(
                 [],
@@ -84,7 +90,7 @@ class FormalSpecContractsReferenceTest(unittest.TestCase):
             )
 
     def test_reference_doc_avoids_point_in_time_validation_claims(self) -> None:
-        text = (REPO_ROOT / REFERENCE_DOC).read_text(encoding="utf-8").lower()
+        text = read_repo_text(REFERENCE_DOC).lower()
 
         for phrase in (
             "this pr validation",
