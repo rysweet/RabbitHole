@@ -98,6 +98,42 @@ for field in candidate_fields:
     if field not in reference_text:
         errors.append(f"reference doc must document runtimeDisplayCandidates.{field}")
 
+for required in [
+    "visible-rendering-world-canvas-pixel-sampling",
+    "target-scoped-raw-pixel-observation-only",
+    "xwd-convert-target-scoped-raw-rgba",
+    '"sampleCount": 3',
+    '"name": "center"',
+    '"name": "upper-left-inset"',
+    '"name": "lower-right-inset"',
+    '"x": 1138',
+    '"y": 828',
+    "## Sampler CLI API",
+    "world-canvas-pixel-sampler.py",
+    "--target-json",
+    "--output",
+    "`target-json-unreadable`",
+    "`target-json-invalid`",
+    "`target-geometry-invalid`",
+    "`pixel-sampling-failed`",
+]:
+    if required not in reference_text:
+        errors.append(f"reference doc must document bounded sampler contract token: {required}")
+
+for forbidden in [
+    "visible-rendering-world-canvas-target-scoped-pixel-observation",
+    "raw-rgba-samples-only",
+    "target-scoped-controlled-display-raw-rgba",
+    '"sampleCount": 5',
+    "upper-right-inset",
+    "lower-left-inset",
+    "visible-rendering proof",
+    "fewer checked samples than requested",
+    "must not omit these three exclusions",
+]:
+    if forbidden in reference_text:
+        errors.append(f"reference doc contains stale or overbroad sampler contract token: {forbidden}")
+
 howto_text = texts["howto"]
 for field in decision_fields:
     if f'"{field}"' not in howto_text and f"`{field}`" not in howto_text:
