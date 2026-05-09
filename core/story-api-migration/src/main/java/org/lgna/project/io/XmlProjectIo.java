@@ -419,6 +419,7 @@ public class XmlProjectIo implements ProjectIo {
 
     private static void writeDataSources(ZipOutputStream zos, DataSource... dataSources) throws IOException {
       for (DataSource dataSource : dataSources) {
+        ZipEntryContainer.validateSafeEntryName(dataSource.getName());
         ZipUtilities.write(zos, dataSource);
       }
     }

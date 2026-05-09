@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -168,6 +169,31 @@ public class ProjectCodeGeneratorTest {
     assertTrue(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation-unsupported"));
     assertFalse(output.contains("\"status\":\"shown-target-pixel-observed\""));
     assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker"));
+    assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
+  }
+
+  @Test
+  public void generatedLauncherEscapesRenderObservationDetailAsJsonString() throws Exception {
+    String output = runGeneratedLauncherWithRobot(
+        "launcher-visible-pixel-json-escaping",
+        """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            throw new UnsupportedOperationException("screen capture \\"denied\\"\\nbackslash \\\\ end");
+          }
+        }
+        """);
+
+    assertTrue(output.contains("ALICE_LAUNCHER_RENDER_OBSERVATION"));
+    assertTrue(output.contains("\"status\":\"pixel-observation-unsupported\""));
+    assertTrue(
+        output,
+        output.contains("\"detail\":\"JavaFX Robot screen capture was unavailable: "
+            + "java.lang.UnsupportedOperationException: screen capture \\\"denied\\\"\\nbackslash \\\\ end\""));
+    assertFalse(output.contains("screen capture \\\"denied\\\"\nbackslash"));
+    assertTrue(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation-unsupported"));
     assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
   }
 
@@ -956,7 +982,9 @@ public class ProjectCodeGeneratorTest {
 
   private static void copyGeneratedResourceFiles(Path sourceDirectory, Path classesDirectory) throws Exception {
     try (Stream<Path> paths = Files.walk(sourceDirectory)) {
-      for (Path path : paths.filter(Files::isRegularFile).toList()) {
+      Iterator<Path> regularFiles = paths.filter(Files::isRegularFile).iterator();
+      while (regularFiles.hasNext()) {
+        Path path = regularFiles.next();
         Path relativePath = sourceDirectory.relativize(path);
         if (relativePath.getNameCount() > 1 && relativePath.getName(0).toString().startsWith("resources")) {
           Path classpathResourcePath = classesDirectory.resolve(relativePath);
