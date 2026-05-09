@@ -1,10 +1,27 @@
-Running default-workflow at 2026-05-07T13:07:04+00:00
-Error: recipe-runner-rs exited with signal SIGTERM (15)
+Default-workflow recovery evidence for PR #388
+Recorded at: 2026-05-09T03:33:47Z
+Starting PR head verified: 6838fdf73a7fb2fe329e56563e6de37cdaf003b5
+Base branch verified: develop
 
-Stopped default-workflow attempt at 2026-05-07T13:08:23+00:00 after it produced no recipe output and did not exit in non-interactive mode.
-Process tree was: bash 1149110 -> amplihack 1149114 -> recipe-runner-rs 1149115.
+Scope inspected:
+- Full origin/develop...HEAD diff reviewed.
+- Diff scope at starting head was test-only:
+  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
+- The generated-source characterization asserts that generated Scene.java forwards
+  SceneActivationEvent through the generated scene activation listener lambda.
 
-Continuation attempt at 2026-05-07T14:03:43Z
-Requested workflow: default-workflow
-Result: workflow skill invocation skipped because active recipe-managed session instructions prohibit invoking workflow skills.
-Fallback: manual default-workflow steps followed for this branch.
+Validation completed at starting head:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+- git merge-tree --write-tree origin/develop HEAD
+
+Result:
+- Focused generated-source characterization passed.
+- merge-tree completed cleanly; write-tree result e0242ceec159d25644aedff8a77e62de70e0b8e9.
+- Prior fallback ownership marker is superseded by this default-workflow-owned evidence.
+
+Limits:
+- This evidence does not claim desktop runtime execution.
+- This evidence does not claim runtime dispatch completion beyond the focused
+  generated-source/headless characterization test.
+- This evidence does not claim export completion.
