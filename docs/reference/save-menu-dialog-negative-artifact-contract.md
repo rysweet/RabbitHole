@@ -8,8 +8,9 @@ future-dated, identity-mismatched, blocked, incomplete, unknown-blocker, or
 internally inconsistent.
 
 The contract is intentionally separate from the positive Save write/readback
-proof. It does not run Alice, does not open the desktop, does not invoke Maven,
-does not add a scenario or workflow, and does not prove full desktop Save
+proof. It registers a tracking scenario (`save-negative-artifact-contract`
+workflow) but does not add a new validator seam, does not run Alice, does not
+open the desktop, does not invoke Maven, and does not prove full desktop Save
 completion.
 
 Keep the claim bounded to fail-closed artifact validation. A passing negative
@@ -128,7 +129,6 @@ present and consistent:
 Run the contract from the repository root:
 
 ```bash
-export NODE_OPTIONS=--max-old-space-size=32768
 bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
 ```
 
