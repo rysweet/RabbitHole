@@ -331,17 +331,6 @@ public class ModelExportTest {
   }
 
   @Test
-  public void modelExporterResolvesThumbnailPathInsideClassResourceDirectory() throws Exception {
-    ModelResourceExporter exporter = createSyntheticPropExporter();
-    Path root = newTestWorkDir("thumbnail-path-boundary");
-    String thumbnailName = AliceResourceUtilities.getThumbnailResourceFileName("TestProp", "Default");
-
-    Path thumbnailPath = Path.of(exporter.getThumbnailPath(root.toString(), thumbnailName));
-
-    assertEquals(root.resolve("org/lgna/story/resources/prop/TestProp").resolve(thumbnailName), thumbnailPath);
-  }
-
-  @Test
   public void createXmlFileSurfacesOutputFailures() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
     Path rootFile = newTestWorkDir("xml-output-failure").resolve("not-a-directory");

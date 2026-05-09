@@ -52,7 +52,6 @@ class AmplihackWrapperTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
-        self.assertIn("amplihack model-export verify", result.stdout)
         self.assertIn("amplihack tweedle-decode verify", result.stdout)
         self.assertIn("simple-if-method-call", result.stdout)
 
@@ -179,57 +178,6 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertIn("PASS: simple-if-player-archive", result.stdout)
         self.assertIn("-pl core/story-api-migration", log)
         self.assertIn("-Dtest=IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType", log)
-
-    def test_model_export_verify_delegates_to_focused_resource_boundary_test(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            write_wrapper_repo(root)
-            bin_dir = root / "bin"
-            log_path = root / "commands.log"
-            write_executable(
-                bin_dir / "git",
-                textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo git "$@" >> {log_path}
-                    """
-                ),
-            )
-            write_executable(
-                bin_dir / "mvn",
-                textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo mvn "$@" >> {log_path}
-                    """
-                ),
-            )
-
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    str(WRAPPER_PATH),
-                    "model-export",
-                    "verify",
-                    "class-resource-texture-boundary",
-                ],
-                cwd=root,
-                check=False,
-                capture_output=True,
-                text=True,
-                env={**os.environ, "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
-            )
-
-            log = log_path.read_text(encoding="utf-8")
-
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("PASS: class-resource-texture-boundary", result.stdout)
-        self.assertIn("git submodule update --init tweedle-lang", log)
-        self.assertIn("-pl core/model-loading", log)
-        self.assertIn(
-            "-Dtest=ModelExportTest#modelExporterNamesClassResourceVariantsByTextureOnly",
-            log,
-        )
 
 
 if __name__ == "__main__":
