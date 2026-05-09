@@ -234,9 +234,11 @@ is_recovery_scope_path() {
     core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java|\
     docs/howto/characterize-project-io-corpus.md|\
     docs/howto/characterize-project-save-export-operations.md|\
+    docs/howto/maintain-modernization-corpus-manifest.md|\
     docs/howto/validate-project-archive-reopen-edit-seam.md|\
     docs/index.md|\
     docs/reference/alice-desktop-outside-in-qa.md|\
+    docs/reference/modernization-corpus-manifest.md|\
     docs/reference/pr-402-reopen-edit-recovery-output-contract.md|\
     docs/reference/project-archive-reopen-edit-seam.md|\
     docs/reference/project-io-corpus-characterization.md|\
