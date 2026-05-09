@@ -111,13 +111,15 @@ public class ProjectCodeGenerator {
     List<FileObject> fileObjectsToFormat = Lists.newLinkedList();
     Set<NamedUserType> namedUserTypes = aliceProject.getNamedUserTypes();
     final Set<org.lgna.common.Resource> resources = aliceProject.getResources();
+    File sourceRootDirectory = javaSrcDirectory.getCanonicalFile();
+    Path sourceRoot = sourceRootDirectory.toPath();
     ResourcesTypeWrapper resourcesTypeWrapper = null;
     if (!resources.isEmpty()) {
-      resourcesTypeWrapper = new ResourcesTypeWrapper(aliceProject.getResources());
+      resourcesTypeWrapper = new ResourcesTypeWrapper(resources);
       namedUserTypes.add(resourcesTypeWrapper.getType());
     }
 
-    ensureGeneratedDestinationFilesAreAvailable(javaSrcDirectory, namedUserTypes, resources, resourcesTypeWrapper);
+    ensureGeneratedDestinationFilesAreAvailable(sourceRootDirectory, sourceRoot, namedUserTypes, resources, resourcesTypeWrapper);
 
     if (!resources.isEmpty()) {
       FileObject javaSrcDirectoryFileObject = FileUtil.toFileObject(javaSrcDirectory);
@@ -147,7 +149,7 @@ public class ProjectCodeGenerator {
     }
     int createWorkUnit = 0;
     for (NamedUserType type : namedUserTypes) {
-      File file = getJavaSourceFileForType(javaSrcDirectory, type);
+      File file = getJavaSourceFileForType(sourceRootDirectory, sourceRoot, type);
       final NetbeansJavaCodeGenerator generator = new NetbeansJavaCodeGenerator(javaCodeGeneratorBuilder);
       type.process(generator);
       String code = generator.getText();
@@ -187,29 +189,29 @@ public class ProjectCodeGenerator {
   }
 
   private static void ensureGeneratedDestinationFilesAreAvailable(
-      File javaSrcDirectory,
+      File sourceRootDirectory,
+      Path sourceRoot,
       Set<NamedUserType> namedUserTypes,
       Set<org.lgna.common.Resource> resources,
       ResourcesTypeWrapper resourcesTypeWrapper) throws IOException {
-    Path sourceRoot = javaSrcDirectory.getCanonicalFile().toPath();
     Set<String> generatedSourceNames = new HashSet<>();
     Set<Path> generatedOutputPaths = new HashSet<>();
     List<Path> existingPaths = new ArrayList<>();
 
     generatedSourceNames.add(LAUNCHER_FILE_NAME);
-    addGeneratedOutputPath(generatedOutputPaths, new File(javaSrcDirectory, LAUNCHER_FILE_NAME), sourceRoot);
+    addGeneratedOutputPath(generatedOutputPaths, new File(sourceRootDirectory, LAUNCHER_FILE_NAME), sourceRoot);
 
     if (resourcesTypeWrapper != null) {
       for (org.lgna.common.Resource resource : resources) {
         addGeneratedOutputPath(
             generatedOutputPaths,
-            new File(javaSrcDirectory, resourcesTypeWrapper.getResourcePathForResource(resource)),
+            new File(sourceRootDirectory, resourcesTypeWrapper.getResourcePathForResource(resource)),
             sourceRoot);
       }
     }
 
     for (NamedUserType type : namedUserTypes) {
-      File file = getJavaSourceFileForType(javaSrcDirectory, type);
+      File file = getJavaSourceFileForType(sourceRootDirectory, sourceRoot, type);
       if (!generatedSourceNames.add(file.getName())) {
         throw new IOException("Duplicate generated Java source file: " + file.getName());
       }
@@ -250,13 +252,12 @@ public class ProjectCodeGenerator {
     }
   }
 
-  private static File getJavaSourceFileForType(File javaSrcDirectory, NamedUserType type) throws IOException {
+  private static File getJavaSourceFileForType(File sourceRootDirectory, Path sourceRoot, NamedUserType type) throws IOException {
     String typeName = type.getName();
     validateJavaIdentifier(typeName, "Unsafe Alice type name for Java source generation");
 
-    File sourceRoot = javaSrcDirectory.getCanonicalFile();
-    File file = new File(sourceRoot, typeName + ".java").getCanonicalFile();
-    if (!file.toPath().startsWith(sourceRoot.toPath())) {
+    File file = new File(sourceRootDirectory, typeName + ".java").getCanonicalFile();
+    if (!file.toPath().startsWith(sourceRoot)) {
       throw new IOException("Generated Java source path escapes source directory: " + file);
     }
     return file;
@@ -588,9 +589,7 @@ public class AliceJavaFXLauncher extends Application {
                 String normalized = message.toLowerCase(java.util.Locale.ROOT);
                 if (normalized.contains("robot")
                         || normalized.contains("screen capture")
-                        || normalized.contains("unable to open display")
-                        || normalized.contains("no display")
-                        || normalized.contains("headless")) {
+                        || isDisplayUnavailableNormalizedMessage(normalized)) {
                     return true;
                 }
             }
@@ -638,14 +637,17 @@ public class AliceJavaFXLauncher extends Application {
         }
         String normalized = message.toLowerCase(java.util.Locale.ROOT);
         return normalized.contains("render target")
-            || isDisplayUnavailableMessage(message);
+            || isDisplayUnavailableNormalizedMessage(normalized);
     }
 
     private static boolean isDisplayUnavailableMessage(String message) {
         if (message == null) {
             return false;
         }
-        String normalized = message.toLowerCase(java.util.Locale.ROOT);
+        return isDisplayUnavailableNormalizedMessage(message.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static boolean isDisplayUnavailableNormalizedMessage(String normalized) {
         return normalized.contains("unable to open display")
             || normalized.contains("no display")
             || normalized.contains("headless");

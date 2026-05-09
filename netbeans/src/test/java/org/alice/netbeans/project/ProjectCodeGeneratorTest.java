@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -981,7 +982,9 @@ public class ProjectCodeGeneratorTest {
 
   private static void copyGeneratedResourceFiles(Path sourceDirectory, Path classesDirectory) throws Exception {
     try (Stream<Path> paths = Files.walk(sourceDirectory)) {
-      for (Path path : paths.filter(Files::isRegularFile).toList()) {
+      Iterator<Path> regularFiles = paths.filter(Files::isRegularFile).iterator();
+      while (regularFiles.hasNext()) {
+        Path path = regularFiles.next();
         Path relativePath = sourceDirectory.relativize(path);
         if (relativePath.getNameCount() > 1 && relativePath.getName(0).toString().startsWith("resources")) {
           Path classpathResourcePath = classesDirectory.resolve(relativePath);
