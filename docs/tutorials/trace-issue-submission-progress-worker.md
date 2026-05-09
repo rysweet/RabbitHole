@@ -49,7 +49,7 @@ construct IssueSubmissionProgressWorker(jSubmitPane, option == YES)
 execute the worker
 ```
 
-That flow proves where the attachment intent enters the worker. It does not prove project archive attachment contents, network submission, or rendered dialog correctness.
+That flow shows where the attachment intent enters the worker. It does not assert project archive attachment contents, network submission, or rendered dialog correctness.
 
 ## Trace a successful delegate
 
@@ -78,7 +78,7 @@ submission:true
 submission:false
 ```
 
-This proves the background submission implementation can observe the user's attachment choice. It does not prove project archive attachment contents or external issue-service behavior.
+This shows the background submission implementation can observe the user's attachment choice. It does not assert project archive attachment contents or external issue-service behavior.
 
 ## Trace a failing delegate
 
@@ -128,12 +128,13 @@ Read the evidence checks as a checklist:
 
 ```text
 branch head matches remote PR head
+base SHA is recorded in handoff or PR-body evidence
 diff files stay inside the worker lane
 focused worker Maven command passed on this head
 docs impact was assessed
 desktop scenario evidence is direct or explicitly not applicable
 three SEEK / VALIDATE / FIX cycles are recorded
-GitHub checks are completed and green, skipped, or neutral
+GitHub checks collected after branch/head verification are completed and green, skipped, or neutral
 PR description contains the same current-head evidence and bounded non-claims
 ```
 
@@ -163,4 +164,4 @@ A blocked result starts each reason with `NOT_MERGE_READY`. For example, stale v
 }
 ```
 
-Treat a blocked gate as an evidence problem to fix on the current PR branch, not as permission to widen this worker seam or recreate the PR.
+The gate validates the PR head through the branch evidence and runnable evidence. It does not validate a separate base-SHA field or a check-run head SHA, so keep those as explicit handoff notes collected after branch/head verification. Treat a blocked gate as an evidence problem to fix on the current PR branch, not as permission to widen this worker seam or recreate the PR.

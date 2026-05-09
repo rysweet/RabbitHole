@@ -116,7 +116,7 @@ Use this lane for issue-reporting background-submission characterization only:
 | Attachment-intent propagation. | Project archive attachment content. |
 | Exception propagation from delegate submission work. | Full Alice desktop end-to-end UI automation. |
 
-If a change needs rendered desktop proof, use the Alice desktop outside-in QA lane instead of broadening this worker test.
+If a change needs rendered desktop evidence, use the Alice desktop outside-in QA lane instead of broadening this worker test.
 
 ## Assess scenario applicability
 
@@ -168,14 +168,14 @@ The evidence file should be generated or edited outside the source tree unless i
 | Evidence | Source command or review |
 | --- | --- |
 | Current PR head | `git --no-pager rev-parse HEAD` after fetching the PR branch. |
-| Current base | `git --no-pager rev-parse origin/develop` after fetching `origin/develop`. |
-| Diff scope | `git --no-pager diff --name-only origin/develop...HEAD`. |
+| Current base | `git --no-pager rev-parse origin/develop` after fetching `origin/develop`; record this in the PR body or handoff notes. The gate does not enforce a separate base-SHA JSON field. |
+| Diff scope | `git --no-pager diff --name-only origin/develop...HEAD`; allowed files are the worker, focused test, directly related docs, the PR #428 gate/test files, and recovered-branch `pyproject.toml` metadata when that file is present in this PR diff. |
 | Focused validation | The exact `IssueSubmissionProgressWorkerTest` Maven command and passing result from this head. |
 | Module validation | The full `core/issue-reporting` Maven command and passing result when issue-reporting production code changed. |
 | Docs impact | This reference, how-to, tutorial, index, or an explicit no-op docs assessment. |
 | Scenario applicability | A direct worker scenario result, or the non-applicable worker-seam statement below. |
 | Quality audit | At least three SEEK / VALIDATE / FIX cycles with a clean final cycle. |
-| GitHub Actions | `gh pr checks 428 --watch=false --json name,state,bucket` or equivalent check-run evidence. |
+| GitHub Actions | `gh pr checks 428 --watch=false --json name,state,bucket` or equivalent check-run evidence, collected after local and remote PR heads match. The check entries do not carry a head SHA that the gate validates independently. |
 | PR body | The exact PR description text that reviewers see for the current head. |
 
 Use this scenario statement when no Alice desktop scenario directly exercises bug-report submission through the worker:
@@ -193,14 +193,14 @@ Before marking a worker-seam PR ready, collect current-head evidence instead of 
 | Gate | What to record |
 | --- | --- |
 | Branch head | The branch name and exact `HEAD` SHA that validation used. |
-| Diff scope | `git --no-pager diff --name-status origin/develop...HEAD`; explain any file outside the worker, focused test, directly related docs, and explicitly justified validation-wrapper metadata. |
+| Diff scope | `git --no-pager diff --name-status origin/develop...HEAD`; explain any file outside the worker, focused test, directly related docs, PR #428 gate/test files, and recovered-branch metadata. |
 | Focused validation | The exact focused Maven command and result for `IssueSubmissionProgressWorkerTest`. |
 | Module validation | The exact full `core/issue-reporting` Maven command and result when production issue-reporting code changed. |
 | Docs impact | The reference, how-to, tutorial, or index entries updated, or an explicit no-op justification if docs already matched the behavior. |
 | Scenario applicability | A direct worker scenario result, or the explicit non-applicable statement from this guide. |
 | Quality audit | At least three SEEK / VALIDATE / FIX cycles, with a clean final cycle. |
-| GitHub Actions | Completed green PR checks from the current PR head. |
-| Claim boundary | A statement that the evidence is limited to the issue-reporting worker seam and does not prove rendered UI, grading, lesson completion, project archive attachment contents, or real issue-service submission. |
+| GitHub Actions | Completed green PR checks collected after confirming the current PR head; do not imply the gate validates a check-run SHA. |
+| Claim boundary | A statement that the evidence is limited to the issue-reporting worker seam and does not establish rendered UI, grading, lesson completion, project archive attachment contents, or real issue-service submission. |
 
 If any gate is missing, write an explicit `NOT_MERGE_READY` blocker with the missing evidence instead of treating green CI as sufficient.
 
@@ -211,7 +211,7 @@ A finished issue-reporting worker characterization has:
 | Requirement | Accepted result |
 | --- | --- |
 | Production behavior preserved | The default worker still uses `JSubmitPane.createIssueBuilder()` and lazy Swing progress-pane creation. |
-| Background ordering protected | Tests prove start, delegate, end ordering for a normal delegate return. |
-| Failure remains explicit | Tests prove delegate exceptions propagate and do not publish the completion marker. |
+| Background ordering protected | Tests assert start, delegate, end ordering for a normal delegate return. |
+| Failure remains explicit | Tests assert delegate exceptions propagate and do not publish the completion marker. |
 | No external side effects | Tests do not contact an issue service, write credentials, or submit a real report. |
 | Bounded claims | Documentation and review notes do not claim rendering, grading, or full end-to-end UI automation. |

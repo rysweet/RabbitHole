@@ -27,7 +27,7 @@ repository.
 ## QA and acceptance testing
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
-- [Issue Submission Progress Worker](./reference/issue-submission-progress-worker.md) - Reference for the issue-reporting background submission worker seam, PR #428 merge-ready evidence gate, progress marker ordering, issue-builder creation, attachment intent, and bounded non-UI claims.
+- [Issue Submission Progress Worker](./reference/issue-submission-progress-worker.md) - Reference for the issue-reporting background submission worker seam, PR #428 merge-ready evidence gate, recovered-branch metadata boundary, progress marker ordering, issue-builder creation, attachment intent, and bounded non-UI claims.
 - [Characterize Issue Submission Progress Worker Behavior](./howto/characterize-issue-submission-progress-worker.md) - How to add or review focused issue-reporting worker characterization and current-head merge-ready evidence without real UI automation or external submission side effects.
 - [Tutorial: Trace Issue Submission Progress Worker Behavior](./tutorials/trace-issue-submission-progress-worker.md) - Guided review of successful, attachment-intent, failing background submission paths, and the PR #428 evidence gate.
 - [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - run and review the target-specific Select Project evidence path for the committed starter project.
