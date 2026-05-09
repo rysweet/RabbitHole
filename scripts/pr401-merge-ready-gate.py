@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from functools import lru_cache
 from typing import Any, Iterable, Mapping, Sequence
 
 
@@ -148,6 +149,7 @@ def validation_plan() -> list[dict[str, Any]]:
     return plan
 
 
+@lru_cache(maxsize=1)
 def expected_validation_commands() -> tuple[tuple[str, ...], frozenset[tuple[str, ...]]]:
     """Return the exact command arrays accepted as validation evidence."""
     plan = validation_plan()
@@ -172,8 +174,7 @@ def validate_pr_body(body: str, expected_head: str) -> list[str]:
     if expected_head not in body or f"Current PR head: {expected_head}" not in body:
         blockers.append(BLOCKER_BODY_MISSING_HEAD)
 
-    stale_heads = {sha for sha in HEX_SHA_RE.findall(body) if sha != expected_head}
-    if stale_heads:
+    if any(m.group() != expected_head for m in HEX_SHA_RE.finditer(body)):
         blockers.append(BLOCKER_BODY_STALE_HEAD)
 
     if _contains_overclaim(body):
@@ -390,9 +391,10 @@ def _checks_green_for_head(checks: Any, head: str) -> bool:
         if check_head != head:
             return False
 
-        status = _string(check_map.get("status") or check_map.get("state")).upper()
+        raw_state = check_map.get("state")
+        status = _string(check_map.get("status") or raw_state).upper()
         conclusion = _string(check_map.get("conclusion")).upper()
-        state = _string(check_map.get("state")).upper()
+        state = _string(raw_state).upper()
         if status not in {"", "COMPLETED", "SUCCESS"}:
             return False
         if conclusion not in {"", "SUCCESS", "NEUTRAL", "SKIPPED"}:
