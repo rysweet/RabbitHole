@@ -164,7 +164,7 @@ def valid_context_with_gadugi_diff() -> dict:
 
 
 class GadugiFilesInAllowedDiffTest(unittest.TestCase):
-    """FAILING: gadugi files must be in the merge-ready gate's ALLOWED_DIFF_FILES."""
+    """Gadugi files must be in the merge-ready gate's ALLOWED_DIFF_FILES."""
 
     def test_gadugi_yaml_is_in_allowed_diff_scope(self) -> None:
         gate = load_gate()
@@ -203,7 +203,7 @@ class GadugiFilesInAllowedDiffTest(unittest.TestCase):
 
 
 class GadugiDiffScopeIntegrationTest(unittest.TestCase):
-    """FAILING: merge-ready gate must accept the real PR diff including gadugi files."""
+    """Merge-ready gate must accept the real PR diff including gadugi files."""
 
     def test_gate_accepts_diff_with_gadugi_files(self) -> None:
         gate = load_gate()
