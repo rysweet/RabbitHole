@@ -33,7 +33,7 @@ Good issue-reporting worker characterization answers one narrow question:
 | Question | Good target |
 | --- | --- |
 | Is background submission bracketed by progress markers? | Assert `START_MESSAGE`, delegate progress, and `END_MESSAGE` ordering. |
-| Is the production builder path preserved? | Assert the worker creates an `Issue.Builder` before delegate submission work runs. |
+| Is the production builder path preserved? | Confirm by source review that production uses `JSubmitPane.createIssueBuilder()`; assert with a test double that builder creation happens before delegate work runs. |
 | Is project attachment intent preserved? | Assert the delegate observes the constructor-provided attachment choice. |
 | Does failure stay visible to worker infrastructure? | Assert delegate exceptions propagate and no completion marker is published after the failure. |
 

@@ -25,7 +25,7 @@ It covers:
 | Attachment intent | The worker preserves the caller-provided `isProjectAttachmentDesired` value and makes it available to the submission implementation. |
 | Progress publishing | The background path publishes `START_MESSAGE`, delegates submission work, then publishes `END_MESSAGE` only after successful delegate return. |
 | Failure behavior | Exceptions thrown by submission work propagate; completion progress is not published after a failed submission delegate. |
-| Progress pane creation | The Swing progress pane remains lazily created from the event-dispatch progress handling path. |
+| Progress pane creation | The Swing progress pane is created lazily on first `getProgressPane()` use, normally from `START_MESSAGE` handling. |
 
 ## Artifact inventory
 
@@ -50,7 +50,7 @@ The event-dispatch progress path interprets messages as follows:
 
 | Message | Event-dispatch behavior |
 | --- | --- |
-| `START_MESSAGE` | Lazily create the `JProgressPane`, build the "Uploading Bug Report" dialog, add the progress pane, pack, and show it. |
+| `START_MESSAGE` | Normally creates the `JProgressPane` on first `getProgressPane()` use, builds the "Uploading Bug Report" dialog, adds the progress pane, packs, and shows it. |
 | `END_MESSAGE` | Hide the root window for the progress pane. |
 | Any other message | Add the message to the progress pane. |
 
@@ -83,7 +83,7 @@ public IssueSubmissionProgressWorker(JSubmitPane owner, boolean isProjectAttachm
 protected Boolean doInternal_onBackgroundThread(Issue.Builder issueBuilder) throws Exception
 ```
 
-Runs the actual submission work after the builder is created. Production behavior publishes diagnostic progress messages, publishes the attachment intent, emits simple progress counts, and returns `Boolean.TRUE`.
+Runs the current internal submission delegate work after the builder is created. Production behavior publishes diagnostic progress messages, publishes the attachment intent, emits simple progress counts, and returns `Boolean.TRUE`.
 
 Tests may override this protected method to characterize ordering, result propagation, and exception behavior without opening UI or submitting to an external service.
 
