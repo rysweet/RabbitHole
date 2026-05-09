@@ -8,15 +8,48 @@ future-dated, identity-mismatched, blocked, incomplete, unknown-blocker, or
 internally inconsistent.
 
 The contract is intentionally separate from the positive Save write/readback
-proof. It registers a tracking scenario (`save-negative-artifact-contract`
-workflow) but does not add a new validator seam, does not run Alice, does not
-open the desktop, does not invoke Maven, and does not prove full desktop Save
-completion.
+proof. It is registered as a first-class gadugi scenario under the
+`save-negative-artifact-contract` workflow, but does not add a new validator
+seam, does not run Alice, does not open the desktop, does not invoke Maven,
+and does not prove full desktop Save completion.
 
 Keep the claim bounded to fail-closed artifact validation. A passing negative
 contract is not evidence for full Save behavior, Save As behavior, visible
 rendering correctness, grading, lesson completion, learner assessment, broad UI
 automation, or native dialog automation.
+
+## Registered scenario
+
+The scenario YAML is:
+
+```text
+qa/outside-in/alice-desktop/scenarios/save-negative-artifact-contract.yaml
+```
+
+| Field | Value |
+| --- | --- |
+| `id` | `alice-desktop-save-negative-artifact-contract` |
+| `workflow` | `save-negative-artifact-contract` |
+| `automationMode` | `manual-evidence-required` |
+| `title` | Save proof evidence negative artifact validation contract |
+
+The automation mode is `manual-evidence-required` because the contract is a
+shell test executed by the reviewer, not a gated command that the runner
+dispatches automatically. Evidence collection requires running the shell
+contract and reviewing its output for explicit fail-closed diagnostics.
+
+The workflow is registered in all five sync surfaces:
+
+1. `qa/outside-in/alice-desktop/schema/scenario.schema.json` — workflow enum
+2. `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` — validator allowlist
+3. `qa/outside-in/alice-desktop/tests/test-workflow-contract.sh` — contract-enforced enum
+4. `docs/reference/alice-desktop-outside-in-qa.md` — scenario catalog and workflow list
+5. `qa/outside-in/alice-desktop/README.md` — supported workflows
+
+The `supportingEvidence` field links the negative contract to the positive
+`alice-desktop-save-menu-dialog-write-proof` scenario. This makes the
+dependency visible in the scenario catalog without changing the positive
+scenario's behavior or evidence requirements.
 
 ## Scope
 
@@ -135,6 +168,42 @@ bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-c
 The contract is shell/Python validation only. It does not require Xvfb,
 `ALICE_QA_RUN_GATED_SMOKES`, or a non-headless AWT display. Those settings are
 required only when collecting positive rendered Save proof evidence.
+
+### Environment variables
+
+| Variable | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `NODE_OPTIONS` | Recommended | — | Set `--max-old-space-size=32768` to avoid OOM during large validation runs. |
+| `ALICE_QA_RUN_GATED_SMOKES` | No | `0` | Not used by this contract. Only the positive `save-menu-dialog-write-proof` scenario requires it. |
+| `DISPLAY` | No | — | Not used. The contract is headless-safe. |
+
+### Fixture files
+
+The checked-in fixture set under `qa/outside-in/alice-desktop/tests/fixtures/save-proof-evidence/` contains:
+
+| Fixture | Purpose |
+| --- | --- |
+| `stale-generated-at.json` | Artifact with `generatedAtUtc` predating command start. |
+| `future-generated-at.json` | Artifact with `generatedAtUtc` exceeding the 300-second skew. |
+| `missing-required-flags.json` | Proven-looking artifact missing required menu/dialog/control/write/readback fields. |
+| `inconsistent-proven.json` | `status: "proven"` with conflicting write/readback facts. |
+| `blocked-known-kind.json` | `status: "blocked"` with a known blocker such as `dialog_not_observed`. |
+| `blocked-unknown-kind.json` | `status: "blocked"` with a blocker outside the supported enum. |
+
+Missing-artifact, wrong-name, symlink, malformed, and non-object cases are
+generated at runtime from temporary files and cleaned up on exit.
+
+### Scenario validation
+
+Validate the scenario YAML before running the contract:
+
+```bash
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+The validator confirms `save-negative-artifact-contract.yaml` is well-formed,
+its workflow matches the schema enum, and its preconditions are syntactically
+valid.
 
 ## Amplihack CLI wrapper
 

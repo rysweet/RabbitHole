@@ -15,6 +15,18 @@ export NODE_OPTIONS=--max-old-space-size=32768
 No display is required. The contract does not launch Alice, run Maven, or use
 Xvfb.
 
+Confirm the tweedle-lang submodule is initialized and the scenario catalog is
+valid:
+
+```bash
+git submodule update --init tweedle-lang
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+The validator must report the `save-negative-artifact-contract` workflow among
+the registered scenarios. If it does not, the scenario YAML or schema enum is
+out of sync.
+
 ## Run the negative contract
 
 ```bash
@@ -112,3 +124,29 @@ For the field-level artifact contract, see
 [Save Proof Evidence](../reference/save-proof-evidence.md). For the full
 negative contract specification, see
 [Save Menu Dialog Negative Artifact Contract](../reference/save-menu-dialog-negative-artifact-contract.md).
+
+## Verify scenario registration
+
+After any edits to the scenario YAML or workflow enum, confirm all five sync
+surfaces agree:
+
+```bash
+# Scenario catalog validation (includes schema enum check)
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+
+# Workflow contract test (exact-match enum enforcement)
+bash qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
+
+# Schema contract test (argv and workflow allowlists)
+bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+```
+
+All three must pass before the negative contract result is trustworthy.
+
+## Related documentation
+
+- [Save Menu Dialog Negative Artifact Contract](../reference/save-menu-dialog-negative-artifact-contract.md) — full reference and registered scenario details
+- [Save Proof Evidence](../reference/save-proof-evidence.md) — canonical artifact field contract
+- [Save Menu Dialog Write/Readback Proof](../reference/save-menu-dialog-write-proof.md) — the positive scenario this contract guards
+- [Alice desktop outside-in QA reference](../reference/alice-desktop-outside-in-qa.md) — scenario catalog and workflow list
+- [Tutorial: Trace PR #430 No-Op Finalization](../tutorials/pr430-save-negative-no-op-finalization.md) — end-to-end guided finalization

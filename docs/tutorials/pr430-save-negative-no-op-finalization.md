@@ -8,9 +8,10 @@ evidence into one bounded no-op decision.
 The tutorial does not teach Save implementation work. It keeps the claim limited
 to invalid Save proof artifacts failing closed.
 
-Steps 1 and 2 are manual local preflight checks. The gate in step 5 evaluates
-the evidence JSON and refreshed GitHub PR state/diff/check/description data; it
-does not read local `HEAD` or run `git status`.
+Steps 1 and 2 are manual local preflight checks. Step 4 verifies the scenario
+registration. The gate in step 6 evaluates the evidence JSON and refreshed
+GitHub PR state/diff/check/description data; it does not read local `HEAD` or
+run `git status`.
 
 ## 1. Start from the PR head
 
@@ -46,7 +47,23 @@ Confirm the response describes PR #430, the branch
 non-draft PR, a clean merge state, and completed green checks for the same
 `headRefOid` as the local checkout.
 
-## 4. Keep the QA claim narrow
+## 4. Verify the scenario is registered
+
+Before running the contract, confirm the scenario YAML is registered and
+passes validation:
+
+```bash
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+Look for `alice-desktop-save-negative-artifact-contract` in the validated
+scenario list. The scenario YAML at
+`qa/outside-in/alice-desktop/scenarios/save-negative-artifact-contract.yaml`
+defines the workflow as `save-negative-artifact-contract` with automation mode
+`manual-evidence-required`. If the validator does not list it, the schema enum
+or YAML is out of sync.
+
+## 5. Keep the QA claim narrow
 
 The focused Save evidence is the negative artifact contract:
 
@@ -58,7 +75,7 @@ Passing output means bad artifacts are rejected with diagnostics. It does not
 mean Alice launched, a project was saved, a `.a3p` file was read back, or a
 visual workflow completed.
 
-## 5. Evaluate the evidence
+## 6. Evaluate the evidence
 
 Run the programmatic gate:
 
@@ -72,7 +89,7 @@ is non-empty, the result may still be merge-ready, but it is not a no-op. The
 `files_modified` value comes from the evidence document, not from local
 `git status`.
 
-## 6. Write the final no-op result
+## 7. Write the final no-op result
 
 Use a no-op result only after all previous checks agree:
 
