@@ -44,7 +44,6 @@
 package org.alice.netbeans.project;
 
 import edu.cmu.cs.dennisc.java.io.TextFileUtilities;
-import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.lgna.project.Project;
 import org.lgna.project.VersionNotSupportedException;
@@ -107,8 +106,6 @@ public class ProjectCodeGenerator {
     JavaCodeGenerator.Builder javaCodeGeneratorBuilder = JavaCodeUtilities.createJavaCodeGeneratorBuilder();
     //JavaCodeGenerator.Builder javaCodeGeneratorBuilder = new JavaCodeGenerator.Builder().isLambdaSupported(true);
 
-    List<FileObject> filesToOpen = Lists.newLinkedList();
-    List<FileObject> fileObjectsToFormat = Lists.newLinkedList();
     Set<NamedUserType> namedUserTypes = aliceProject.getNamedUserTypes();
     final Set<org.lgna.common.Resource> resources = aliceProject.getResources();
     File sourceRootDirectory = javaSrcDirectory.getCanonicalFile();
@@ -118,6 +115,8 @@ public class ProjectCodeGenerator {
       resourcesTypeWrapper = new ResourcesTypeWrapper(resources);
       namedUserTypes.add(resourcesTypeWrapper.getType());
     }
+    List<FileObject> filesToOpen = new ArrayList<>(namedUserTypes.size() + 1);
+    List<FileObject> fileObjectsToFormat = new ArrayList<>(namedUserTypes.size());
 
     ensureGeneratedDestinationFilesAreAvailable(sourceRootDirectory, sourceRoot, namedUserTypes, resources, resourcesTypeWrapper);
 
@@ -196,7 +195,6 @@ public class ProjectCodeGenerator {
       ResourcesTypeWrapper resourcesTypeWrapper) throws IOException {
     Set<String> generatedSourceNames = new HashSet<>();
     Set<Path> generatedOutputPaths = new HashSet<>();
-    List<Path> existingPaths = new ArrayList<>();
 
     generatedSourceNames.add(LAUNCHER_FILE_NAME);
     addGeneratedOutputPath(generatedOutputPaths, new File(sourceRootDirectory, LAUNCHER_FILE_NAME), sourceRoot);
@@ -221,11 +219,8 @@ public class ProjectCodeGenerator {
 
     for (Path generatedOutputPath : generatedOutputPaths) {
       if (generatedOutputPath.toFile().exists()) {
-        existingPaths.add(generatedOutputPath);
+        throw new IOException("Generated destination already exists: " + generatedOutputPath);
       }
-    }
-    if (!existingPaths.isEmpty()) {
-      throw new IOException("Generated destination already exists: " + existingPaths.get(0));
     }
   }
 
@@ -547,41 +542,54 @@ public class AliceJavaFXLauncher extends Application {
     }
 
     private static String escapeJson(String value) {
-        StringBuilder builder = new StringBuilder(value.length());
+        StringBuilder builder = null;
         for (int i = 0; i < value.length(); i++) {
             char ch = value.charAt(i);
-            if ((ch == (char) 34) || (ch == (char) 92)) {
-                builder.append((char) 92).append(ch);
-            } else if (ch == (char) 8) {
-                builder.append((char) 92).append('b');
-            } else if (ch == (char) 9) {
-                builder.append((char) 92).append('t');
-            } else if (ch == (char) 10) {
-                builder.append((char) 92).append('n');
-            } else if (ch == (char) 12) {
-                builder.append((char) 92).append('f');
-            } else if (ch == (char) 13) {
-                builder.append((char) 92).append('r');
-            } else if (ch < (char) 32) {
-                builder.append((char) 92).append('u');
-                String hex = Integer.toHexString(ch);
-                for (int padding = hex.length(); padding < 4; padding++) {
-                    builder.append('0');
+            if ((ch != (char) 34) && (ch != (char) 92) && (ch >= (char) 32)) {
+                if (builder != null) {
+                    builder.append(ch);
                 }
-                builder.append(hex);
             } else {
-                builder.append(ch);
+                if (builder == null) {
+                    builder = new StringBuilder(value.length() + 8);
+                    builder.append(value, 0, i);
+                }
+                appendEscapedJsonCharacter(builder, ch);
             }
         }
-        return builder.toString();
+        return builder == null ? value : builder.toString();
+    }
+
+    private static void appendEscapedJsonCharacter(StringBuilder builder, char ch) {
+        if ((ch == (char) 34) || (ch == (char) 92)) {
+            builder.append((char) 92).append(ch);
+        } else if (ch == (char) 8) {
+            builder.append((char) 92).append('b');
+        } else if (ch == (char) 9) {
+            builder.append((char) 92).append('t');
+        } else if (ch == (char) 10) {
+            builder.append((char) 92).append('n');
+        } else if (ch == (char) 12) {
+            builder.append((char) 92).append('f');
+        } else if (ch == (char) 13) {
+            builder.append((char) 92).append('r');
+        } else {
+            builder.append((char) 92).append('u');
+            String hex = Integer.toHexString(ch);
+            for (int padding = hex.length(); padding < 4; padding++) {
+                builder.append('0');
+            }
+            builder.append(hex);
+        }
     }
 
     private static boolean isPixelObservationUnsupportedFailure(Throwable throwable) {
         for (Throwable current = throwable; current != null; current = current.getCause()) {
+            String className = current.getClass().getName();
             if ((current instanceof UnsupportedOperationException)
-                    || "java.awt.HeadlessException".equals(current.getClass().getName())
-                    || "java.lang.NoClassDefFoundError".equals(current.getClass().getName())
-                    || "java.lang.NoSuchMethodError".equals(current.getClass().getName())) {
+                    || "java.awt.HeadlessException".equals(className)
+                    || "java.lang.NoClassDefFoundError".equals(className)
+                    || "java.lang.NoSuchMethodError".equals(className)) {
                 return true;
             }
             String message = current.getMessage();
@@ -611,7 +619,8 @@ public class AliceJavaFXLauncher extends Application {
                     && isDisplayUnavailableMessage(current.getMessage())) {
                 return true;
             }
-            if ("java.awt.HeadlessException".equals(current.getClass().getName())) {
+            String className = current.getClass().getName();
+            if ("java.awt.HeadlessException".equals(className)) {
                 return true;
             }
         }
@@ -624,7 +633,8 @@ public class AliceJavaFXLauncher extends Application {
                     && isRenderTargetUnavailableMessage(current.getMessage())) {
                 return true;
             }
-            if ("java.awt.HeadlessException".equals(current.getClass().getName())) {
+            String className = current.getClass().getName();
+            if ("java.awt.HeadlessException".equals(className)) {
                 return true;
             }
         }
