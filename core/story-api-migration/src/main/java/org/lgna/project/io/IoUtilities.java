@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.zip.ZipFile;
 
 /**
@@ -115,19 +116,38 @@ public abstract class IoUtilities {
   }
 
   public static ProjectIo.ProjectReader projectReader(File file) throws IOException {
-    return projectReader(new ZipFile(file));
+    return projectReader(new ZipFile(file), fileTypeFromFileName(file.getName()));
   }
 
   private static ProjectIo.ProjectReader projectReader(ZipFile zipFile) throws IOException {
-    return readerForContainer(new ZipEntryContainer(zipFile));
+    return projectReader(zipFile, fileTypeFromFileName(zipFile.getName()));
   }
 
-  private static ProjectIo.ProjectReader readerForContainer(ZipEntryContainer container) throws IOException {
+  private static ProjectIo.ProjectReader projectReader(ZipFile zipFile, String expectedFileType) throws IOException {
+    return readerForContainer(new ZipEntryContainer(zipFile), expectedFileType);
+  }
+
+  private static ProjectIo.ProjectReader readerForContainer(ZipEntryContainer container, String expectedFileType) throws IOException {
     Manifest manifest = readManifest(container);
+    validateJsonArchiveManifestMetadata(manifest, expectedFileType);
     if (isReadableJsonArchive(manifest)) {
       return JsonProjectIo.reader(container);
     }
     return XmlProjectIo.reader(container);
+  }
+
+  private static void validateJsonArchiveManifestMetadata(
+      Manifest manifest,
+      String expectedFileType) throws IOException {
+    if ((manifest == null) || !isJsonArchiveFileType(expectedFileType)) {
+      return;
+    }
+    if ((manifest.metadata == null) || !expectedFileType.equals(manifest.metadata.fileType)) {
+      throw new IOException(
+          ProjectIo.MANIFEST_ENTRY_NAME
+              + " metadata.fileType must be '" + expectedFileType + "' for ."
+              + expectedFileType + " archives");
+    }
   }
 
   private static boolean isReadableJsonArchive(Manifest manifest) {
@@ -136,6 +156,18 @@ public abstract class IoUtilities {
     }
     String fileType = manifest.metadata.fileType;
     return EXPORT_EXTENSION.equals(fileType) || TYPE_EXTENSION.equals(fileType);
+  }
+
+  private static boolean isJsonArchiveFileType(String fileType) {
+    return EXPORT_EXTENSION.equals(fileType) || TYPE_EXTENSION.equals(fileType);
+  }
+
+  private static String fileTypeFromFileName(String name) {
+    int dot = (name == null) ? -1 : name.lastIndexOf('.');
+    if ((dot < 0) || (dot == (name.length() - 1))) {
+      return null;
+    }
+    return name.substring(dot + 1).toLowerCase(Locale.ROOT);
   }
 
   private static Manifest readManifest(ZipEntryContainer container) throws IOException {

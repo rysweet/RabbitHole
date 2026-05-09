@@ -1,101 +1,105 @@
-Default-workflow recovery evidence for PR #388
-Recorded at: 2026-05-09T03:33:47Z
-Starting PR head verified: 6838fdf73a7fb2fe329e56563e6de37cdaf003b5
-Base branch verified: develop
+Default-workflow readiness evidence for PR #423
+Recorded at: 2026-05-09T18:06:02Z
+Validated source tree: the PR branch after the Step 18b review-feedback fixes
+and current develop merge-conflict resolution recorded in this artifact refresh.
+Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
+Base branch: develop
+Pull request: https://github.com/rysweet/RabbitHole/pull/423
 
-Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope at starting head was test-only:
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The generated-source characterization asserts that generated Scene.java forwards
-  SceneActivationEvent through the generated scene activation listener lambda.
+Scope:
+- PR #423 readiness recovery is bounded to the source-code-generator
+  characterization lane, centered on core/ast SourceCodeGeneratorTest and the
+  focused NetBeans ProjectCodeGeneratorTest.
+- The validated source tree includes the review-blocker fixes:
+  - durable reference docs no longer carry point-in-time PR status wording;
+  - pyproject.toml is at alice3-modernization-qa version 0.11.0 from current
+    develop, avoiding a package-version downgrade during conflict resolution;
+  - the source-code-generator tutorial assignment snippet matches the
+     characterized AssignmentExpression constructor shape.
+- This evidence refresh is committed with the blocker fixes, so the final commit
+  SHA changes after this file is written. The validated source tree is therefore
+  identified by branch and the blocker-fix scope above instead of by a
+  self-referential final commit SHA.
+- This log is retained as PR-specific review evidence for PR #423. Durable
+  repository docs describe stable contracts and do not carry point-in-time PR
+  status.
+- .copilot-evidence/default-workflow-attempt.exit remains a zero-exit marker.
 
-Validation completed at starting head:
+Validated commands for the source tree recorded here:
+- git --no-pager status --short --branch
+- git rev-parse --abbrev-ref HEAD
+- git rev-parse HEAD
+- gh pr view 423 --json number,url,state,isDraft,headRefName,baseRefName,headRepositoryOwner,mergeStateStatus,reviewDecision,statusCheckRollup,updatedAt
+- git --no-pager diff --name-only origin/develop...HEAD
 - git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SourceCodeGeneratorTest test -q
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest test -q
+- git --no-pager diff --check -- docs/index.md docs/reference/generated-story-api-listener-source-characterization.md docs/howto/characterize-source-code-generator.md docs/tutorials/trace-source-code-generator-characterization.md .copilot-evidence/default-workflow-attempt.log netbeans/src/main/java/org/alice/netbeans/project/ProjectCodeGenerator.java pyproject.toml
 
 Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result e0242ceec159d25644aedff8a77e62de70e0b8e9.
-- Prior fallback ownership marker is superseded by this default-workflow-owned evidence.
+- Tweedle grammar submodule initialized successfully.
+- Focused SourceCodeGeneratorTest validation passed.
+- Focused ProjectCodeGeneratorTest validation passed.
+- Diff whitespace validation passed for the source-generator documentation,
+   package metadata, evidence log, and ProjectCodeGenerator.java
+   review-feedback path.
+- The QA package metadata resolves to version 0.11.0 from current develop.
+- PR-specific wording was removed from durable docs and retained only in
+   workflow-owned evidence or PR discussion.
+- SourceCodeGeneratorTest now characterizes expression-statement assignment,
+  field access, static and instance method invocation, iterable for-each source,
+  and the current DoTogether runnable fallback in addition to the existing
+  literal, operator, array, class/member, disabled-statement, loop, and stale
+  item repair snippets.
 
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
+Bounded non-claims:
+- This evidence does not claim full Tweedle/player decode.
+- This evidence does not claim full Alice desktop UI automation.
+- This evidence does not claim visible rendering correctness.
+- This evidence does not claim grading correctness.
+- This evidence does not claim lesson completion.
+- This evidence does not claim generated source execution safety beyond the
+   focused generated-source and headless-seam characterization described in the
+   repository documentation.
 
-Default-workflow finalization refresh for PR #388
-Recorded at: 2026-05-09T03:49:48Z
-Current PR head verified before this evidence-only update:
-cec7b96debc2fda4f711069e0ba781d6224fb952
-Base branch verified: develop
+No-timeout default-workflow finalization and optimization refresh for PR #423
+Recorded at: 2026-05-09T19:49:35Z
+Pre-refresh GitHub head verified: 3a3b6fdde94b31bcfd62632aeb2fb2b5c5faa359
+Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
+Base branch: develop
+Pull request: https://github.com/rysweet/RabbitHole/pull/423
 
-Scope re-inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope remains limited to:
-  .copilot-evidence/default-workflow-attempt.exit
-  .copilot-evidence/default-workflow-attempt.log
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The test characterization remains focused on generated Scene.java forwarding
-  SceneActivationEvent through the generated scene activation listener lambda.
+Pre-refresh GitHub evidence:
+- PR state is OPEN.
+- Draft state is false.
+- Merge state is CLEAN.
+- Visible status checks are successful at the verified head:
+  build, coverage, package-netbeans, test, and GitGuardian Security Checks.
+- Branch-protection required status checks are not configured on develop; the
+  GitHub API reports the base branch as unprotected for required status checks.
+- Review decision is empty. The recorded owner reviews are COMMENTED only, so
+  no formal approval is present. This owner-free state is recorded evidence and
+  is not treated as a blocker when the current head is non-draft, clean, green,
+  and branch policy does not require approval.
 
-Validation completed at current PR head before this evidence-only update:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
-
-Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result 52938664ddb5a815cbc06e1940711161baf7f5c1.
-- No unresolved fallback ownership marker remains in tracked evidence.
-
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
-
-Default-workflow recovery/finalization for PR #389
-Recorded at: 2026-05-09T03:55:00Z
-Starting PR head verified: b183575ca623d07affb296fe753d30860cad4832
-Base branch verified: develop
-
-Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope covers the exported-project Ant build smoke workflow rename/wiring,
-  the runner and validator argv allowlists, schema/workflow contract tests, and
-  documentation/evidence-boundary updates.
-- A stale wording blocker was fixed so the docs no longer say the Ant target
-  execution remains unwired.
-
-Validation completed:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-schema-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-gadugi-exported-launcher-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/run-tests.sh
-- ALICE_QA_RUN_GATED_SMOKES=1 NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-exported-project-smoke --evidence-dir /tmp/rabbithole-pr389-exported-ant-evidence
-- git diff --check origin/develop...HEAD
-- git merge-tree clean check against origin/develop
+Scope and local safety:
+- The current PR diff remains in the source-code-generator characterization
+  lane and includes the existing workflow-owned evidence artifact.
+- The post-finalization implementation change is limited to ProjectCodeGenerator
+  performance cleanup in the generated-project path: fewer temporary
+  allocations while preserving existing destination safety and launcher JSON
+  output behavior.
+- The refresh does not change desktop QA, schema, Save/export/load/recovery
+  behavior, Tweedle/player decode behavior, rendering, grading, or lesson
+  completion.
+- Local source-code-generator finalization documentation changes are included as
+  durable workflow documentation, not point-in-time PR status evidence.
+- Focused SourceCodeGeneratorTest and ProjectCodeGeneratorTest validation passed
+  after the performance cleanup.
 
 Result:
-- Prior manual-fallback marker is cleared by default-workflow-owned evidence.
-- Focused QA contracts passed.
-- The gated exported Ant project smoke passed with status.txt outcome=passed,
-  exitCode=0, and Alice3ProjectTemplateAntSmokeTest tests run: 7, failures: 0,
-  errors: 0, skipped: 0.
-- No Ant log contained Java Result.
-- GitHub PR checks for build, package-netbeans, test, and GitGuardian passed at
-  pushed head 96f0834e5259f0b1b96fcbf4e73dd250f0902ab5; coverage was still
-  in progress at the time of base-merge refresh.
-
-Limits:
-- The exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest
-  Ant build/JAR/probe behavior.
-- This evidence does not claim full GUI export journey validation.
-- This evidence does not claim deployed installer validation.
-- This evidence does not claim visible rendering or Sims validation.
+- This refresh records the bounded optimization decision and current-head
+  validation for the verified pre-refresh head while allowing this evidence
+  artifact to be committed as workflow-owned PR evidence.
+- Because committing this evidence changes the PR head, merge-ready status must
+  be rechecked against the pushed commit after the update lands on GitHub.
