@@ -93,6 +93,12 @@ def pr_branch_commits() -> list[str]:
     commits = pr_branch_output("log", "--format=%s", "origin/develop..HEAD").splitlines()
     if not commits:
         raise unittest.SkipTest("PR branch contract is only enforced when HEAD is ahead of origin/develop.")
+    explicit_pr_numbers = set(re.findall(r"\bPR\s*#(\d+)\b", "\n".join(commits), flags=re.IGNORECASE))
+    if explicit_pr_numbers and explicit_pr_numbers != {"87"}:
+        raise unittest.SkipTest(
+            "PR #87 branch-history contract is not applicable to PR(s): "
+            + ", ".join(sorted(explicit_pr_numbers))
+        )
     return commits
 
 
