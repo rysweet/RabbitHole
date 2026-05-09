@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project Ant build smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -15,6 +15,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
+- [Run the exported-project Ant build smoke](#run-the-exported-project-ant-build-smoke)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
 - [Configure scenario and Xvfb runs](#configure-scenario-and-xvfb-runs)
 - [Review evidence](#review-evidence)
@@ -376,6 +377,56 @@ Accept the run only when `status.txt` records `outcome=passed`,
 `runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, or runtime/display candidate is unavailable.
+
+## Run the exported-project Ant build smoke
+
+Use `alice-desktop-exported-project-smoke` when a review needs the bounded
+no-Sims exported Ant/NetBeans build proof. This scenario intentionally advances
+beyond `ProjectCodeGeneratorStandaloneProjectTest`: it executes the real
+exported project Ant template targets through
+`Alice3ProjectTemplateAntSmokeTest`.
+
+Run from the repository root:
+
+```bash
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-exported-project-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-ant-build
+```
+
+The runner maps the workflow to this fixed Maven argv:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl netbeans -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
+  test
+```
+
+Review `status.txt` and `command.log` in the generated evidence directory. A
+passing run proves only the exported Ant project build path: generated classes,
+the exported jar and manifest, resource packaging, Ant `jar`, `run`,
+`run-test-with-main`, `clean`, and deterministic probe markers
+`ANT_RUN_PROBE_OK`, `ANT_RESOURCE_PROBE_OK`,
+`ANT_RUNTIME_CONFIGURATION_PROBE_OK`, and `ANT_TEST_MAIN_PROBE_OK`. No Ant log
+may contain `Java Result:`.
+
+If the command cannot complete, keep the failed evidence directory as the
+blocker. The blocker record must include the exact Maven command, the failing
+Ant target or prerequisite, and the missing condition. Common blocker names are
+`tweedle-grammar-submodule-missing`, `project-template-zip-missing`,
+`alice3-library-classpath-artifact-missing`, `ant-target-failed`,
+`ant-target-timeout`, and `generated-jar-output-missing`.
+
+This smoke is not installer validation, not a full GUI export journey, not
+visible rendering evidence, and not Sims coverage.
 
 ## Prepare evidence for manual workflows
 

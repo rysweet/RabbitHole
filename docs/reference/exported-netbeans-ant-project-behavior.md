@@ -1,10 +1,11 @@
 # Exported NetBeans Ant Project Behavior
 
-This reference documents the exported Alice 3 NetBeans Ant project runtime
-contract. It covers the Ant `run` metadata used by exported projects and the
-generated `AliceJavaFXLauncher` evidence boundary used to prove JavaFX launcher
-handoff, stage validation and minimal scene setup, and deterministic
-display-unavailable no-go behavior.
+This reference documents the exported Alice 3 NetBeans Ant project contract. It
+covers the bounded no-Sims Ant build proof for generated NetBeans projects, the
+Ant `run` metadata used by exported projects, and the generated
+`AliceJavaFXLauncher` evidence boundary used to prove JavaFX launcher handoff,
+stage validation and minimal scene setup, and deterministic display-unavailable
+no-go behavior.
 
 The launcher evidence proves only what the exported project can observe
 deterministically: JavaFX launch handoff, `Application.start(...)` entry, primary
@@ -20,10 +21,11 @@ evidence, or proof of a completed user workflow.
 - [Headless and display-unavailable contract](#headless-and-display-unavailable-contract)
 - [Configuration](#configuration)
 - [Executable characterization](#executable-characterization)
+- [Exported Ant build proof contract](#exported-ant-build-proof-contract)
 - [API reference](#api-reference)
 - [Validation commands](#validation-commands)
 - [Tutorial: verify exported launcher evidence](#tutorial-verify-exported-launcher-evidence)
-- [Tutorial: verify exported Ant runtime metadata](#tutorial-verify-exported-ant-runtime-metadata)
+- [Tutorial: verify exported Ant build evidence](#tutorial-verify-exported-ant-build-evidence)
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
 
@@ -44,7 +46,7 @@ netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandalone
 netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java
 ```
 
-The behavior slice covers a generated, LFS-free Alice project exported into the
+The behavior slice covers generated, LFS-free Alice projects exported into the
 NetBeans Ant template. It verifies that the exported project:
 
 1. Generates `AliceJavaFXLauncher` as the default `main.class`.
@@ -62,6 +64,13 @@ NetBeans Ant template. It verifies that the exported project:
    rethrowing unexpected failures.
 9. Preserves exported Ant runtime metadata such as assertions, Alice runtime
    system properties, library interpolation, and nonzero Java failure handling.
+10. Executes the real generated NetBeans Ant `jar`, `run`, `run-test-with-main`,
+    and `clean` targets against a synthetic exported project.
+11. Produces concrete build output under the exported project, including compiled
+    classes and a distributable jar with the expected generated entries and
+    manifest main class.
+12. Packages generated project resources into the jar and proves the Ant `run`
+    classpath can load them.
 
 This is a behavior-level exported-project contract. It intentionally goes beyond
 generated source text, classpath presence, or merely reaching `Program.main(...)`,
@@ -269,19 +278,61 @@ display is present, the test may assert JavaFX handoff and scene/setup evidence;
 it must not claim rendered output unless it captures a display-backed observable
 artifact.
 
-### Ant runtime metadata characterization
+## Exported Ant build proof contract
 
-`Alice3ProjectTemplateAntSmokeTest` verifies the exported Ant `run` target
-metadata independently of the launcher scene/setup path. Its smoke probe checks
-behavior that can be proven locally without running the generated launcher:
+`Alice3ProjectTemplateAntSmokeTest` is the bounded no-Sims proof for the
+exported Ant/NetBeans project build path. It does not stop at generator
+classpath contracts. The test expands the packaged `ProjectTemplate.zip`,
+generates Alice project source into the template, writes local
+`libs.Alice3Library.*` Ant bindings, and executes the template's generated Ant
+targets with the Ant launcher.
 
-| Probe assertion | Why it matters |
+The proof is accepted only when the real exported project produces concrete
+build output:
+
+| Ant target or path | Required evidence |
 | --- | --- |
-| Java assertions are enabled | Proves `-ea` from `run.jvmargs` reached the launched JVM. |
-| `org.alice.ide.rootDirectory` is set | Proves exported runtime system properties are passed by Ant. |
-| The root directory value has no unresolved `${...}` placeholder | Proves Ant interpolated the Alice library source property. |
-| The root directory ends with `aliceSource.jar_root` | Proves the exported Alice source-root convention is preserved. |
-| The probe prints `ANT_RUNTIME_CONFIGURATION_PROBE_OK` | Gives reviewers a deterministic success marker in the Ant log. |
+| `jar` | `build/classes/Program.class`, `build/classes/AliceJavaFXLauncher.class`, and `dist/Alice3JavaApplication.jar` or the wizard-selected project jar exist. |
+| jar manifest | The generated jar manifest has `Main-Class: AliceJavaFXLauncher`. |
+| jar contents | The generated jar contains `Program.class`, `AliceJavaFXLauncher.class`, and generated resource entries when the source project has resources. |
+| Ant command-line hint | The `jar` target log includes the command-line classpath hint, the generated jar path, `AliceJavaFXLauncher`, `story-api`, and `javafx-graphics`. |
+| `run` | The test overrides `main.class` to a headless probe, compiles it through the exported Ant project, and prints `ANT_RUN_PROBE_OK org.lgna.story.SProgram args=1`. |
+| resource `run` | The resource probe prints `ANT_RESOURCE_PROBE_OK audio.x_wav alice ant resource` after loading the generated resource through the Ant runtime classpath. |
+| runtime metadata `run` | The runtime probe prints `ANT_RUNTIME_CONFIGURATION_PROBE_OK ...aliceSource.jar_root`, proving assertions and Alice root-directory interpolation reached the launched JVM. |
+| `run-test-with-main` | The exported test-main path compiles test classes and prints `ANT_TEST_MAIN_PROBE_OK org.lgna.story.SProgram ...aliceSource.jar_root`. |
+| `clean` | The `clean` target removes `build/` and `dist/` while preserving generated source and `build.xml`. |
+
+Every Ant execution must exit zero. A log containing `Java Result:` is a failure,
+not a passing smoke with a warning. A timeout is also a failure and must name the
+Ant target that did not terminate.
+
+The proof remains bounded:
+
+1. It is no-Sims and uses synthetic generated `.a3p` inputs.
+2. It uses temporary or Maven `target/` project directories, not user project
+   locations.
+3. It does not validate an installer.
+4. It does not drive the full GUI export journey.
+5. It does not prove visible rendering, media playback, grading, creative
+   assessment, or lesson completion.
+6. It replaces the launcher main class with probes for headless Ant `run`
+   assertions; launcher JavaFX handoff remains covered by the launcher
+   characterization tests.
+
+### Executable blockers
+
+If the focused Maven command cannot execute the proof, record the exact command,
+the failing target or prerequisite, and the missing condition. Use these blocker
+names in review notes or PR evidence:
+
+| Blocker | Meaning | Next executable step |
+| --- | --- | --- |
+| `tweedle-grammar-submodule-missing` | Generated Tweedle parser inputs are unavailable. | `git submodule update --init tweedle-lang && test -d tweedle-lang/Grammar` |
+| `project-template-zip-missing` | `target/classes/org/alice/netbeans/ProjectTemplate.zip` is absent from the NetBeans test classpath. | Re-run the focused Maven command so resources are processed, then inspect the NetBeans test resources phase. |
+| `alice3-library-classpath-artifact-missing` | The generated `Alice3Library.xml` references a required runtime artifact that is not present in reactor outputs or the test classpath. | Run the no-Sims reactor command with `-pl netbeans -am`; if the application distribution is required for the wider check, run `NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/resources -am package`. |
+| `ant-target-failed` | The exported Ant target exited nonzero. | Preserve `command.log` or the Surefire report and name the target: `jar`, `run`, `run-test-with-main`, or `clean`. |
+| `ant-target-timeout` | The exported Ant target did not terminate within the bounded test timeout. | Preserve the Ant log and target name; do not claim build evidence. |
+| `generated-jar-output-missing` | The Ant target exited but the required jar, class, manifest, or resource output was absent. | Preserve the assertion message and generated project listing. |
 
 ## API reference
 
@@ -297,7 +348,10 @@ exported NetBeans/Ant project contract and generated launcher behavior:
 | `nbproject/project.properties` | Owns `main.class`, `javac.classpath`, `run.classpath`, `run.jvmargs`, and Java release settings. |
 | `libs.Alice3Library.classpath` | External Ant/NetBeans library binding for Alice runtime jars. |
 | `libs.Alice3Library.src` | External Ant/NetBeans library binding used to derive `org.alice.ide.rootDirectory`. |
+| Ant `jar` target | Compiles generated project classes and packages the exported jar. |
 | Ant `run` target | Compiles project classes and launches `${main.class}` with `${run.jvmargs}` and `${run.classpath}`. |
+| Ant `run-test-with-main` target | Compiles test classes and launches the configured test main class against the exported project classpath. |
+| Ant `clean` target | Removes generated Ant build output while preserving generated source and project metadata. |
 
 Template or generator changes must preserve those names and marker meanings
 unless a compatibility-breaking change is explicitly documented and
@@ -324,17 +378,32 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-Run the focused exported-project Ant metadata smoke when template runtime
-metadata changes:
+Run the focused exported-project Ant build smoke when template runtime metadata,
+generated project resources, or exported Ant behavior changes:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest#exportedProjectAntRunTargetAppliesRuntimeJvmArgumentsUpToGuiBoundary \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
+
+The outside-in QA scenario executes the same focused proof through the gated
+scenario runner:
+
+```bash
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-exported-project-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-ant-build
+```
+
+The scenario's `status.txt` and `command.log` are review evidence for the Maven
+command. The command remains a bounded Ant/template build proof; it is not
+installer validation or full GUI export journey evidence.
 
 Run the broader no-Sims NetBeans reactor validation after launcher generator,
 template, or NetBeans export behavior changes:
@@ -422,7 +491,7 @@ If a review requires display-backed evidence, collect it in a separately gated
 Xvfb or real-display path and attach the observable artifact to the review. Do
 not rename the default launcher evidence to imply display-backed behavior.
 
-## Tutorial: verify exported Ant runtime metadata
+## Tutorial: verify exported Ant build evidence
 
 Use this flow when reviewing or extending the exported-project Ant behavior.
 
@@ -438,7 +507,7 @@ test -d tweedle-lang/Grammar
 Do not pull Git LFS files or Sims/nonfree payloads for this smoke. The
 characterization generates a synthetic Alice project and local Ant fixtures.
 
-### Step 2: Run the focused Ant smoke
+### Step 2: Run the focused Ant build smoke
 
 Run:
 
@@ -447,36 +516,45 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest#exportedProjectAntRunTargetAppliesRuntimeJvmArgumentsUpToGuiBoundary \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
 
-The smoke is accepted only when the Ant run log contains:
+The smoke is accepted only when the generated Ant project produces compiled
+classes, a distributable jar, the expected manifest, resource entries when
+resources are present, successful probe markers, and no nonzero Java result.
+Review the Surefire failure or `command.log` for these markers:
 
 ```text
+ANT_RUN_PROBE_OK
+ANT_RESOURCE_PROBE_OK
 ANT_RUNTIME_CONFIGURATION_PROBE_OK
+ANT_TEST_MAIN_PROBE_OK
 ```
 
-The same log must not contain:
+No Ant log may contain:
 
 ```text
 Java Result:
 ```
 
-### Step 3: Interpret the Ant evidence
+### Step 3: Interpret the Ant build evidence
 
-Treat a passing Ant smoke as evidence that the exported Ant project consumes the
-runtime metadata asserted by the probe up to the launcher boundary. It proves the
-exported `run` target passes assertions, Alice system properties, and
-interpolated library paths to the launched JVM.
+Treat a passing Ant smoke as evidence that the generated NetBeans Ant project can
+compile generated Alice source, package a jar, run headless probes through the
+exported runtime classpath, load generated resources, and clean generated Ant
+outputs.
 
-The exported template also carries module-open arguments in `run.jvmargs`. Those
-arguments are part of the template contract, but the current probe only proves
-them if it is expanded to inspect JVM input arguments.
+Treat a failed run as an executable blocker, not as partial success. The blocker
+must include the exact Maven command, the Ant target or prerequisite that failed,
+and the missing condition, such as `project-template-zip-missing`,
+`alice3-library-classpath-artifact-missing`, `ant-target-failed`,
+`ant-target-timeout`, or `generated-jar-output-missing`.
 
-Do not treat this smoke as evidence that the generated launcher reached JavaFX
-`Application.start(...)`. Launcher handoff and scene/setup evidence belong to the
-launcher characterization tests.
+Do not treat this smoke as evidence that a user completed the GUI export flow,
+that an installer works, or that a JavaFX window rendered. Launcher handoff and
+scene/setup evidence belong to the launcher characterization tests; GUI export
+journey evidence belongs to a separate display-backed or manual outside-in lane.
 
 ## Compatibility rules
 
