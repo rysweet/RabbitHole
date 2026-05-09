@@ -53,14 +53,14 @@ public class TextMigrationRegistryTest {
   public void createAllFirstVersionIs3_1_8() {
     TextMigration[] all = TextMigrationRegistry.createAll();
 
-    assertEquals(new Version("3.1.8.0.0"), all[0].getResultVersion());
+    assertEquals("3.1.8.0.0", all[0].getResultVersion().toString());
   }
 
   @Test
   public void createAllLastVersionIs3_9_0() {
     TextMigration[] all = TextMigrationRegistry.createAll();
 
-    assertEquals(new Version("3.9.0.0"), all[all.length - 1].getResultVersion());
+    assertEquals("3.9.0.0", all[all.length - 1].getResultVersion().toString());
   }
 
   @Test
@@ -166,15 +166,14 @@ public class TextMigrationRegistryTest {
   public void smallVersionsEarlyFirstVersionIs3_1_8() {
     TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
 
-    assertEquals(new Version("3.1.8.0.0"), early[0].getResultVersion());
+    assertEquals("3.1.8.0.0", early[0].getResultVersion().toString());
   }
 
   @Test
   public void smallVersionsEarlyLastVersionIs3_1_33() {
     TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
 
-    assertEquals(new Version("3.1.33.0.0"),
-        early[early.length - 1].getResultVersion());
+    assertEquals("3.1.33.0.0", early[early.length - 1].getResultVersion().toString());
   }
 
   @Test
@@ -203,15 +202,14 @@ public class TextMigrationRegistryTest {
   public void smallVersionsMidFirstVersionIs3_1_35() {
     TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
 
-    assertEquals(new Version("3.1.35.0.0"), mid[0].getResultVersion());
+    assertEquals("3.1.35.0.0", mid[0].getResultVersion().toString());
   }
 
   @Test
   public void smallVersionsMidLastVersionIs3_1_58() {
     TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
 
-    assertEquals(new Version("3.1.58.0.0"),
-        mid[mid.length - 1].getResultVersion());
+    assertEquals("3.1.58.0.0", mid[mid.length - 1].getResultVersion().toString());
   }
 
   @Test
@@ -242,7 +240,7 @@ public class TextMigrationRegistryTest {
   public void v3134VersionIs3_1_34() {
     TextMigration[] v3134 = TextMigrationRegistryV3134.create();
 
-    assertEquals(new Version("3.1.34.0.0"), v3134[0].getResultVersion());
+    assertEquals("3.1.34.0.0", v3134[0].getResultVersion().toString());
   }
 
   // ── Sub-component: V3159 ─────────────────────────────────────────────
@@ -258,7 +256,7 @@ public class TextMigrationRegistryTest {
   public void v3159VersionIs3_1_59() {
     TextMigration[] v3159 = TextMigrationRegistryV3159.create();
 
-    assertEquals(new Version("3.1.59.0.0"), v3159[0].getResultVersion());
+    assertEquals("3.1.59.0.0", v3159[0].getResultVersion().toString());
   }
 
   // ── Sub-component: LateVersions ──────────────────────────────────────
@@ -274,15 +272,14 @@ public class TextMigrationRegistryTest {
   public void lateVersionsFirstVersionIs3_1_68() {
     TextMigration[] late = TextMigrationRegistryLateVersions.create();
 
-    assertEquals(new Version("3.1.68.0.0"), late[0].getResultVersion());
+    assertEquals("3.1.68.0.0", late[0].getResultVersion().toString());
   }
 
   @Test
   public void lateVersionsLastVersionIs3_9_0() {
     TextMigration[] late = TextMigrationRegistryLateVersions.create();
 
-    assertEquals(new Version("3.9.0.0"),
-        late[late.length - 1].getResultVersion());
+    assertEquals("3.9.0.0", late[late.length - 1].getResultVersion().toString());
   }
 
   @Test
