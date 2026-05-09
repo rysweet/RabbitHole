@@ -8,7 +8,7 @@ HOWTO_PATH = REPO_ROOT / "docs" / "howto" / "open-africa-full-through-select-pro
 REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "select-project-africa-full-atspi-evidence.md"
 
 EXPECTED_BRANCH = "feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo"
-EXPECTED_HEAD_MARKER = "<verified headRefOid matching git rev-parse HEAD>"
+EXPECTED_HEAD_MARKER = "the verified `headRefOid` that matches `git rev-parse HEAD`"
 
 FOCUSED_CHECKS = [
     "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",

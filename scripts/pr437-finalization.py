@@ -64,7 +64,6 @@ class NoOpDirtyRecoveryError(FinalizationError):
 class HeadVerification:
     local_head: str
     evidence_basis_sha: str
-    matches: bool
 
 
 @dataclass(frozen=True)
@@ -88,7 +87,6 @@ class GitHubEvidence:
     review_decision: str
     checks: tuple[CheckEvidence, ...]
     url: str
-    raw: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -104,7 +102,6 @@ class MergeReadiness:
 
 @dataclass(frozen=True)
 class FocusedValidation:
-    valid: bool
     accepted_claims: list[str]
     blocker: str
 
@@ -218,7 +215,6 @@ class CurrentHeadVerifier:
         return HeadVerification(
             local_head=local_head,
             evidence_basis_sha=self.expected_head,
-            matches=True,
         )
 
 
@@ -282,16 +278,19 @@ class GitHubEvidenceCollector:
             review_decision=str(payload.get("reviewDecision") or ""),
             checks=checks,
             url=str(payload.get("url") or ""),
-            raw=payload,
         )
 
 
 class MergeReadinessEvaluator:
     def evaluate(self, evidence: GitHubEvidence | dict[str, Any]) -> MergeReadiness:
-        payload = evidence.raw if isinstance(evidence, GitHubEvidence) else evidence
-        merge_state = str(payload.get("mergeStateStatus") or "")
-        review_decision = str(payload.get("reviewDecision") or "")
-        checks = [_parse_check(item) for item in payload.get("statusCheckRollup") or []]
+        if isinstance(evidence, GitHubEvidence):
+            merge_state = evidence.merge_state_status
+            review_decision = evidence.review_decision
+            checks = list(evidence.checks)
+        else:
+            merge_state = str(evidence.get("mergeStateStatus") or "")
+            review_decision = str(evidence.get("reviewDecision") or "")
+            checks = [_parse_check(item) for item in evidence.get("statusCheckRollup") or []]
         required_checks = [check for check in checks if check.required]
         review_state = review_decision or "owner-free/unset"
         approved = review_decision.upper() == "APPROVED"
@@ -392,7 +391,6 @@ class FocusedSelectProjectValidator:
             )
 
         return FocusedValidation(
-            valid=True,
             accepted_claims=accepted,
             blocker="; ".join(blockers),
         )
@@ -438,16 +436,19 @@ class DirtyRecoveryPlanner:
 
         action = "NOT_MERGE_READY" if blocker else "EDIT_AND_PUSH"
         reconcile_ref = f"origin/{self.base_ref}"
-        validation_commands = (
-            "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
-            "qa/outside-in/alice-desktop/tests/test-select-project-proof.sh",
-            "qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh",
-            "qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh",
-            "python3 -m unittest "
-            "tests/test_pr437_select_project_recovery_contract.py "
-            "tests/test_pr437_finalization_workflow.py "
-            "tests/test_pr437_noop_recovery_report_contract.py "
-            "tests/test_pr437_dirty_recovery_workflow.py",
+        validation_commands = tuple(
+            self._with_node_options(command)
+            for command in (
+                "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+                "qa/outside-in/alice-desktop/tests/test-select-project-proof.sh",
+                "qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh",
+                "qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh",
+                "python3 -m unittest "
+                "tests/test_pr437_select_project_recovery_contract.py "
+                "tests/test_pr437_finalization_workflow.py "
+                "tests/test_pr437_noop_recovery_report_contract.py "
+                "tests/test_pr437_dirty_recovery_workflow.py",
+            )
         )
         return DirtyRecoveryPlan(
             action=action,
@@ -471,6 +472,9 @@ class DirtyRecoveryPlanner:
             changed_files=list(changed_files),
             blocker=blocker,
         )
+
+    def _with_node_options(self, command: str) -> str:
+        return f"NODE_OPTIONS={self.node_options} {command}"
 
 
 class ChangeGate:
@@ -562,16 +566,18 @@ class FinalReportGenerator:
                 f"{focused_lines}\n"
                 "Publish this summary after the commit/push.\n"
             )
-        return (
-            "Report path: `NOT_MERGE_READY`\n"
-            f"Current branch: `{branch}`\n"
-            f"Current head: `{current_head}`\n"
-            "Concrete blockers:\n"
-            f"{focused_lines}\n"
-            "Do not merge manually.\n"
-            "Do not use no-op mode.\n"
-            "Finalization is blocked; do not publish a no-op or merge-ready report.\n"
-        )
+        if action == "BLOCKED_WITH_REASON":
+            return (
+                "Report path: `NOT_MERGE_READY`\n"
+                f"Current branch: `{branch}`\n"
+                f"Current head: `{current_head}`\n"
+                "Concrete blockers:\n"
+                f"{focused_lines}\n"
+                "Do not merge manually.\n"
+                "Do not use no-op mode.\n"
+                "Finalization is blocked; do not publish a no-op or merge-ready report.\n"
+            )
+        raise ValueError(f"unknown finalization report action: {action}")
 
 
 def _parse_check(item: dict[str, Any]) -> CheckEvidence:
@@ -697,7 +703,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             pr_head=evidence.head_ref_oid,
             merge_ready=readiness.merge_ready,
             review_state=readiness.review_state,
-            focused_scope_valid=focused.valid,
+            focused_scope_valid=True,
             worktree_changes=changes,
             stale_evidence=False,
         )

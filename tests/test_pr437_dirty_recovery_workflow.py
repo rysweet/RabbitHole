@@ -134,7 +134,13 @@ class Pr437DirtyRecoveryWorkflowTddTest(unittest.TestCase):
         self.assertNotIn("git merge develop", plan.reconcile_commands)
         for command in FOCUSED_SELECT_PROJECT_VALIDATION:
             with self.subTest(command=command):
-                self.assertIn(command, plan.validation_commands)
+                self.assertTrue(
+                    any(command in actual for actual in plan.validation_commands),
+                    f"missing focused validation command: {command}",
+                )
+        self.assertTrue(
+            all(actual.startswith("NODE_OPTIONS=--max-old-space-size=32768 ") for actual in plan.validation_commands)
+        )
         self.assertEqual(
             [
                 "Select Project visibility",
@@ -181,7 +187,6 @@ class Pr437DirtyRecoveryWorkflowTddTest(unittest.TestCase):
             ]
         )
 
-        self.assertTrue(focused.valid)
         self.assertEqual(
             [
                 "Select Project visibility",

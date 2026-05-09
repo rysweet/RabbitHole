@@ -173,7 +173,7 @@ For PR #437, use this report shape only after the executable checks prove the re
 ```markdown
 No-op justification:
 - Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
-- Current head: `<verified headRefOid matching git rev-parse HEAD>`
+- Current head: the verified `headRefOid` that matches `git rev-parse HEAD`
 - PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
 - Worktree cleanliness: `git status --short --branch` showed no repository changes.
 - Merge-ready evidence: `mergeStateStatus=CLEAN`, every required check in `statusCheckRollup` completed with `SUCCESS`, and branch refs point at the verified head.
@@ -191,7 +191,7 @@ Use the focused pushed-change summary path, not `No-op justification:`, when rec
 ```markdown
 Report path: `EDIT_AND_PUSH`
 - Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
-- Current head: `<verified headRefOid matching git rev-parse HEAD after push>`
+- Current head: the verified pushed `headRefOid` that matches `git rev-parse HEAD`
 - PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
 - Worktree cleanliness: `git status --short --branch` showed no uncommitted repository changes after the commit/push.
 - Merge-ready evidence: `mergeStateStatus=CLEAN`, every required check in `statusCheckRollup` completed with `SUCCESS`, and branch refs point at the verified pushed head; include the conditional local merge-check result only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after head/base verification.
