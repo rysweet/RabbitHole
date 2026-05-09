@@ -173,7 +173,8 @@ tab-click-observation.json
 post-project-open-observation.json
 x-window-inventory.json
 controlled-display-pixel-observation.json
-visible-rendering-pixel-observation.json or visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-observation.json (planned)
 launch.log
 xvfb.log
 screenshot.png or screenshot.xwd
@@ -188,15 +189,24 @@ python3 -m json.tool \
 sed -n '1,120p' <run-directory>/status.txt
 ```
 
-Accept this tutorial step only when `status.txt` records `outcome=passed`,
-`runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`,
-and `visibleRenderingPixelSamplingStatus=observed`; when
+For the current implementation, accept this tutorial step as runtime/display and
+controlled-display evidence only when `status.txt` records
+`runtimeDisplayAccessibilityStatus=observed`,
+`controlledDisplayPixelStatus=observed`, and
+`visibleRenderingPixelSamplingStatus=blocked`; when
 `post-open-runtime-display-accessibility-evidence.json` records `status=observed`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount`
 greater than zero, and `blocker=none`; and when
-`visible-rendering-pixel-observation.json` records checked raw RGBA samples inside
-the validated Run-window/world-canvas target with
-`visibleRenderingCorrectnessEstablished=false`. `runtime-display-accessibility-status.txt`
+`visible-rendering-pixel-sampling-blocker.json` records
+`renderedWorldPixelsObserved=false` with either
+`world-canvas-pixel-target-not-ready` or
+`world-canvas-pixel-sampling-not-implemented`. [PLANNED] After the sampler
+lands, full pass acceptance also requires `status.txt` to record
+`outcome=passed` and `visibleRenderingPixelSamplingStatus=observed`, and
+`visible-rendering-pixel-observation.json` to record checked raw RGBA samples
+inside the validated Run-window/world-canvas target with
+`visibleRenderingCorrectnessEstablished=false`.
+`runtime-display-accessibility-status.txt`
 is probe-local; use final `status.txt` for the overall pass/block decision. Use
 `tab-click-observation.json`, `post-project-open-observation.json`,
 `controlled-display-pixel-observation.json`, and the pixel observation or blocker

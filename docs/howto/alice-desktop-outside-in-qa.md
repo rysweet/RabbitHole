@@ -260,13 +260,13 @@ The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
 collects evidence for one bounded post-open rendering-adjacent step. It reuses
 the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and
 project-open setup, then runs a read-only AT-SPI probe against the live Alice
-accessibility tree. The runner validates exactly one visible/showing
-Run-window/world-canvas target with positive screen-coordinate extents before it
-attempts target-scoped pixel sampling. A successful run records raw RGBA samples
-inside that target under controlled conditions. A blocked run records the exact
-target or sampler blocker. Neither result is a full rendering, visible rendering
-correctness, world execution, grading, lesson completion, Save, Select Project,
-installer, or decoder proof. For the complete artifact API and review contract,
+accessibility tree. The current runner validates exactly one visible/showing
+Run-window/world-canvas target with positive screen-coordinate extents, then
+fails closed at the sampling seam because the target-scoped pixel sampler is not
+implemented. The planned sampler will record raw RGBA samples inside that target
+under controlled conditions. Neither result is a full rendering, visible
+rendering correctness, world execution, grading, lesson completion, Save, Select
+Project, installer, or decoder proof. For the complete artifact API and review contract,
 see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 Command from the repository root:
@@ -295,7 +295,8 @@ post-project-open-observation.json
 post-open-runtime-display-accessibility-evidence.json
 runtime-display-accessibility-status.txt
 controlled-display-pixel-observation.json
-visible-rendering-pixel-observation.json or visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-observation.json (planned)
 status.txt
 screenshot.png or screenshot.xwd
 ```
@@ -390,9 +391,10 @@ because it also records `controlledDisplayPixelStatus`,
 `controlledDisplayPixelBlocker`, `visibleRenderingPixelSamplingStatus`, and
 `visibleRenderingPixelSamplingArtifact`. Review `tab-click-observation.json`,
 `post-project-open-observation.json`, `controlled-display-pixel-observation.json`,
-and either `visible-rendering-pixel-observation.json` or
-`visible-rendering-pixel-sampling-blocker.json` as supporting setup and bounded
-sampling artifacts.
+and `visible-rendering-pixel-sampling-blocker.json` as supporting setup and the
+current fail-closed sampling artifact. [PLANNED]
+`visible-rendering-pixel-observation.json` becomes the bounded sampling artifact
+only after target-scoped pixel sampling is implemented.
 
 To review the latest run directory without changing it:
 
@@ -406,12 +408,16 @@ python3 -m json.tool \
   "$run_dir/post-open-runtime-display-accessibility-evidence.json"
 ```
 
-Accept the run only when `status.txt` records `outcome=passed`,
-`runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`,
-and `visibleRenderingPixelSamplingStatus=observed`; the JSON decision artifact
-records `status=observed`, `blocker=none`,
+Accept the current run as runtime/display and controlled-display evidence only
+when `status.txt` records `runtimeDisplayAccessibilityStatus=observed` and
+`controlledDisplayPixelStatus=observed`; the JSON decision artifact records
+`status=observed`, `blocker=none`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, and
 `runtimeDisplayCandidateCount` greater than zero; and
+`visible-rendering-pixel-sampling-blocker.json` records
+`renderedWorldPixelsObserved=false`. Target-ready runs should use
+`blocker=world-canvas-pixel-sampling-not-implemented` until the sampler exists.
+[PLANNED] After sampler implementation, accept the full run only when
 `visible-rendering-pixel-observation.json` records
 `visibleRenderingCorrectnessEstablished=false`, checked sample points inside the
 validated target, and raw RGBA values. Preserve `status=blocked` as the correct
