@@ -163,7 +163,8 @@ test -d tweedle-lang/Grammar
 Run the focused archive/player evidence suite:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
@@ -176,6 +177,8 @@ For the branch-installable evidence package, run:
 uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack archive-player-boundary verify
 ```
+
+Replace `<branch>` with the branch under review.
 
 The wrapper validates scenario metadata, initializes `tweedle-lang`, and runs
 the focused Maven characterization. It is not desktop UI, rendering, grading,

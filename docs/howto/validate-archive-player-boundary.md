@@ -32,15 +32,17 @@ uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack archive-player-boundary verify
 ```
 
-Run it from an Alice checkout of the branch under review. The command validates
-the archive fixture smoke scenario contract, initializes `tweedle-lang`, and
-runs the focused historical archive characterization suite. It does not run the
-desktop, broaden the player claim, or execute unrelated Maven suites.
+Replace `<branch>` with the branch under review, and run it from an Alice
+checkout of that branch. The command validates the archive fixture smoke
+scenario contract, initializes `tweedle-lang`, and runs the focused historical
+archive characterization suite. It does not run the desktop, broaden the player
+claim, or execute unrelated Maven suites.
 
 Use the direct Maven command when you are already in a prepared checkout:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
