@@ -78,8 +78,9 @@ decode through the supported JSON project/type path.
 `IoUtilities.readProject(File)` selects `JsonProjectIo` for JSON `.a3w` archives.
 `JsonProjectIo.Reader.readProject(boolean)` then follows this order:
 
-1. Read `manifest.json`, manifest-backed resources, and manifest-declared Tweedle
-   type references.
+1. Read `manifest.json` and manifest-declared Tweedle type references, then read
+   manifest-backed binary resources only after the archive stays on a supported
+   or explicitly recovered path.
 2. Return a normal `Project` when the manifest-named program type decodes through
    the supported JSON project/type path.
 3. Treat `Program` as a legacy/player candidate only if the manifest-named

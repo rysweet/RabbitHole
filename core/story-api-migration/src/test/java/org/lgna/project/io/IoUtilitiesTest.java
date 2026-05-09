@@ -933,7 +933,7 @@ public class IoUtilitiesTest {
   }
 
   @Test
-  public void legacyProgramJsonArchiveWithModelReferenceFailsClosedInsteadOfDroppingModel() throws Exception {
+  public void legacyProgramJsonArchiveWithModelReferenceKeepsDecodedProgramReadable() throws Exception {
     TypeReference typeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
     ModelReference modelReference = new ModelReference();
     modelReference.name = "LegacyModel";
@@ -956,12 +956,13 @@ public class IoUtilitiesTest {
       writeZipEntry(zipOutputStream, modelReference.file, "{}");
     }
 
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+    Project readProject = IoUtilities.readProject(exportFile);
 
-    assertTrue(thrown.getMessage().contains(
-        "Unsupported legacy JSON project archive: manifest advertises Program but no supported project structure was found"));
-    assertTrue(thrown.getMessage().contains("unsupported player resource references"));
-    assertTrue(thrown.getMessage().contains("model 'LegacyModel' at archive entry 'models/LegacyModel/LegacyModel.gltf'"));
+    assertNotNull(readProject);
+    assertSingleIntegerField(readProject.getProgramType(), "count");
+    assertTrue(
+        "Model references remain manifest entries; they are not binary resources read by this boundary.",
+        readProject.getResources().isEmpty());
   }
 
   @Test

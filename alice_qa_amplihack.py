@@ -13,7 +13,7 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
-  amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive|legacy-program-model-boundary>
+  amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
 
 Run from the Alice repository root or one of its child directories.
 """
@@ -41,11 +41,6 @@ TWEEDLE_DECODE_SCENARIOS = {
         "description": "JSON player archive Tweedle type decodes the simple-if method-call slice",
         "module": "core/story-api-migration",
         "tests": "IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType",
-    },
-    "legacy-program-model-boundary": {
-        "description": "Legacy Program JSON player archive with model resources fails closed",
-        "module": "core/story-api-migration",
-        "tests": "IoUtilitiesTest#legacyProgramJsonArchiveWithModelReferenceFailsClosedInsteadOfDroppingModel",
     },
 }
 
