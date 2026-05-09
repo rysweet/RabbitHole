@@ -71,15 +71,12 @@ repository.
 - [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments and the argument-bearing explicit `this.method(label: value, ...)` fail-fast boundary.
 - [Simple if-statement decode reference](./reference/simple-if-statement-decode.md) - Tweedle decoder contract for simple `if (condition) { ... }` bodies with supported conditions and an explicit conditional-body allowlist including zero-argument `this.method();` calls.
 - [Player archive unsupported Tweedle diagnostics](./reference/player-archive-unsupported-tweedle-diagnostics.md) - narrow JSON `.a3w` archive contract for surfacing unsupported argument-bearing explicit `this` call reasons while keeping literal arithmetic field-initializer support scoped.
-- [Legacy Program JSON Archive Boundary](./reference/legacy-program-json-archive-boundary.md) - fail-closed `JsonProjectIo.readProject` contract for `.a3w` archives whose manifest names `Program`, supported decoding fails, and the narrow one-image recovery path does not apply.
 - [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice and named argument-bearing boundary.
 - [Characterize simple if-statement decode](./howto/characterize-simple-if-statement-decode.md) - how to add or review focused positive and negative tests for simple-if bodies that preserve supported conditions and the conditional-body allowlist.
 - [Characterize player archive unsupported Tweedle diagnostics](./howto/characterize-player-archive-unsupported-tweedle-diagnostics.md) - how to add generated `.a3w` characterization for archive-level unsupported decode reason reporting.
-- [Characterize the Legacy Program JSON Archive Boundary](./howto/characterize-legacy-program-json-archive-boundary.md) - how to add or review negative `IoUtilitiesTest` coverage for `Program` archives after supported decoding fails and one-image recovery does not apply.
 - [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage and unsupported-neighbor assertions without broadening decoder claims.
 - [Tutorial: Trace simple if-statement decode](./tutorials/simple-if-statement-decode.md) - guided example for asserting the decoded `ConditionalStatement` shape, allowlisted body statements, and unsupported neighboring conditional-body cases.
 - [Tutorial: Trace a player archive unsupported this-call diagnostic](./tutorials/player-archive-unsupported-this-call-diagnostic.md) - guided example for checking fail-closed `.a3w` diagnostics around `this.helper(value: 1)` and `caller.this.helper` context.
-- [Tutorial: Trace the Legacy Program JSON Archive Boundary](./tutorials/trace-legacy-program-json-archive-boundary.md) - guided walk-through of the unsupported `Program` archive failure path and non-claims.
 
 ## Formal specification lane
 
