@@ -552,7 +552,7 @@ Java Result:
 
 ### Step 3: Interpret the Ant build evidence
 
-After the feature is wired, treat a passing Ant smoke as evidence that the generated NetBeans Ant project can
+A passing Ant smoke is evidence that the generated NetBeans Ant project can
 compile generated Alice source, package a jar, run headless probes through the
 exported runtime classpath, load generated resources, and clean generated Ant
 outputs.
