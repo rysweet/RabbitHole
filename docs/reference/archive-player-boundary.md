@@ -14,6 +14,7 @@ validation, or grading validation.
 
 - [Usage](#usage)
 - [Archive contracts](#archive-contracts)
+- [Resource path safety](#resource-path-safety)
 - [API behavior](#api-behavior)
 - [Configuration](#configuration)
 - [Examples](#examples)
@@ -93,7 +94,7 @@ archive with all of these properties:
 | Manifest description name | `Program` |
 | Type references | Exactly one `TypeReference` named `Program` |
 | Resource references | Exactly one `ImageReference` |
-| Image data | The referenced image archive entry exists and reads successfully |
+| Image data | The referenced image archive entry uses a safe relative archive path, exists, and reads successfully |
 | Program Tweedle | The `Program` type reaches an unsupported Tweedle decode boundary |
 
 For that exact shape, `IoUtilities.readProject(File)` returns a resource-only
@@ -113,6 +114,7 @@ legacy image-resource recovery. Covered fail-closed shapes include:
 | Unsupported `Program` plus an image and an unsupported model reference | Throws `IOException`; no partial image recovery. |
 | Unsupported `Program` plus an image whose data entry is missing | Throws `IOException` with the missing image entry available from the cause. |
 | Unsupported `Program` plus a sibling Tweedle type and an image | Throws `IOException`; no partial recovery when extra type references exist. |
+| Unsupported `Program` plus an image reference with an absolute, drive-letter, traversal, or normalized-escaping path | Throws `IOException`; unsafe archive paths never enter compatibility recovery. |
 
 The stable message fragments for the fail-closed legacy boundary are:
 
@@ -123,6 +125,35 @@ no safe legacy resource recovery applies
 ```
 
 Tests should assert stable fragments instead of full-message equality.
+
+## Resource path safety
+
+Archive resource entries are untrusted input. Alice exporters write resource
+payloads under `resources/`, but the JSON player reader's safety check is about
+archive-entry safety, not a required namespace prefix. The reader accepts only
+non-empty relative entry names with safe path segments.
+
+Exported image references normally point at entries like:
+
+```text
+resources/picture.png
+```
+
+The reader also accepts another safe relative archive entry if a legacy archive
+manifest already names one. It rejects paths that can escape or ambiguously
+address archive content, including:
+
+| Rejected path shape | Example |
+| --- | --- |
+| Parent traversal | `../evil.png` |
+| Normalized escape | `resources/images/../../manifest.json` |
+| Absolute POSIX path | `/tmp/picture.png` |
+| Windows drive-letter path | `C:\temp\picture.png` |
+| Empty or current-directory path | `.` |
+
+An unsafe path is an archive-read failure. The reader must not rewrite it to a
+nearby safe-looking entry, skip it, extract it to the filesystem, or return a
+resource-only project from it.
 
 ## API behavior
 
@@ -142,6 +173,10 @@ shape.
 manifest-declared types. For the legacy `Program` player archive path, it checks
 whether safe image-resource recovery applies before deciding whether to return a
 resource-only project or throw the bounded legacy `IOException`.
+
+The safe recovery check includes manifest shape, resource kind, resource count,
+and safe-entry validation. If any check fails, the public API reports
+`IOException` instead of returning a partial project.
 
 ## Configuration
 
@@ -204,7 +239,37 @@ assertEquals(ImageResource.class, resource.getClass());
 ```
 
 Keep this assertion paired with archive-shape checks that prove the manifest has
-exactly one `Program` type reference and exactly one valid image reference.
+exactly one `Program` type reference and exactly one valid image reference whose
+path is a safe relative archive entry. Generated fixtures should use the exporter
+convention, such as `resources/picture.png`, unless the test is specifically
+covering a legacy archive that names another safe relative entry.
+
+### Assert unsafe image paths fail closed
+
+```java
+ImageReference imageReference = imageReference(UUID.randomUUID(), "evil.png", "png");
+imageReference.file = "../evil.png";
+
+// Given playerArchiveFile is an unsupported legacy Program archive whose only
+// image reference uses imageReference.file. The Program source should stop at
+// the unsupported Tweedle boundary, for example:
+// class Program extends MissingSuper {}
+
+IOException thrown = assertThrows(IOException.class,
+    () -> IoUtilities.readProject(playerArchiveFile));
+
+assertTrue(thrown.getMessage().contains("Unsupported legacy JSON project archive"));
+assertTrue(thrown.getMessage().contains("Program Tweedle decode is unsupported"));
+assertTrue(thrown.getMessage().contains("no safe legacy resource recovery applies"));
+assertNotNull(thrown.getCause());
+assertTrue(thrown.getCause().getMessage().contains(imageReference.file));
+```
+
+Do not assert that unsafe paths are ignored. An archive with an unsafe resource
+path is outside the compatibility shape. Direct supported-resource read failures
+can surface the unsafe entry in the top-level message; unsupported legacy
+recovery wraps that resource-read failure as the cause under the stable legacy
+message.
 
 ## Validation
 

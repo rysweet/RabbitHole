@@ -932,6 +932,44 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void unsupportedLegacyProgramJsonArchiveWithUnsafeImagePathFailsClosed() throws Exception {
+    String[] unsafeImagePaths = {
+        "../evil.png",
+        "resources/images/../../manifest.json",
+        "/tmp/picture.png",
+        "C:\\temp\\picture.png",
+        "."
+    };
+    int archiveIndex = 0;
+    for (String unsafeImagePath : unsafeImagePaths) {
+      TypeReference typeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
+      ImageReference imageReference = imageReference(UUID.randomUUID(), "unsafe-legacy-picture.png", "png");
+      imageReference.file = unsafeImagePath;
+      ProjectManifest manifest = new ProjectManifest();
+      manifest.description.name = "Program";
+      manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+      manifest.metadata.identifier.name = UUID.randomUUID().toString();
+      manifest.metadata.identifier.type = Manifest.ProjectType.World;
+      manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+      manifest.resources.add(typeReference);
+      manifest.resources.add(imageReference);
+      File exportFile = temporaryFolder.newFile("unsupported-legacy-program-unsafe-image-" + archiveIndex++ + ".a3w");
+
+      try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+        writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+        writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+        writeZipEntry(zipOutputStream, typeReference.file, "class Program extends MissingSuper {}");
+      }
+
+      IOException thrown = assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
+      assertNotNull(thrown.getCause());
+      assertTrue(
+          "Cause should identify unsafe image path " + unsafeImagePath,
+          thrown.getCause().getMessage().contains(unsafeImagePath));
+    }
+  }
+
+  @Test
   public void unsupportedLegacyProgramJsonArchiveWithImageAndSiblingTypeDoesNotPartiallyRecover() throws Exception {
     TypeReference programTypeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
     TypeReference siblingTypeReference = new TypeReference("Helper", "src/Helper.twe", "tweedle");

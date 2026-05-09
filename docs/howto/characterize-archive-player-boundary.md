@@ -34,7 +34,7 @@ Start with the archive shape the change affects:
 | Supported `description.name` and matching Tweedle type | `IoUtilities.readProject` returns a project with that program type. |
 | Supported program type plus image reference | Program type and image resource both read back. |
 | Unsupported legacy `Program` plus exactly one valid image reference | Project reads back with `null` program type and one `ImageResource`. |
-| Unsupported legacy `Program` with audio, model, sibling type, missing image data, or no recoverable image | `IoUtilities.readProject` throws `IOException`. |
+| Unsupported legacy `Program` with audio, model, sibling type, missing image data, unsafe image path, or no recoverable image | `IoUtilities.readProject` throws `IOException`. |
 
 Do not broaden the test into UI, rendering, grading, or full Tweedle language
 coverage.
@@ -73,6 +73,20 @@ resources/picture.png
 Adding an audio reference, model reference, sibling type reference, or missing
 image entry moves the fixture out of the characterized compatibility shape and
 should fail closed.
+
+Keep the image entry path safe. Exported fixtures should use a relative entry
+under `resources/`, such as `resources/picture.png`. The reader safety check
+accepts safe relative archive entries; `resources/` is the exporter convention,
+not a required reader prefix. The following paths are outside the compatibility
+shape and should fail at the public read boundary:
+
+```text
+../evil.png
+resources/../Program.twe
+resources/images/../../manifest.json
+/tmp/picture.png
+C:\temp\picture.png
+```
 
 ## Assert through the public API
 
@@ -119,6 +133,29 @@ assertNotNull(thrown.getCause());
 assertTrue(thrown.getCause().getMessage().contains(imageReference.file));
 ```
 
+If an unsafe resource path causes unsupported legacy recovery to fail, keep the
+bounded top-level legacy assertions and assert the unsafe entry on the cause:
+
+```java
+ImageReference imageReference = imageReference(UUID.randomUUID(), "evil.png", "png");
+imageReference.file = "../evil.png";
+
+// Build the fixture as an unsupported legacy Program archive with exactly one
+// Program TypeReference and this one ImageReference.
+
+IOException thrown = assertThrows(IOException.class,
+    () -> IoUtilities.readProject(playerArchiveFile));
+assertTrue(thrown.getMessage().contains("Unsupported legacy JSON project archive"));
+assertTrue(thrown.getMessage().contains("Program Tweedle decode is unsupported"));
+assertTrue(thrown.getMessage().contains("no safe legacy resource recovery applies"));
+assertNotNull(thrown.getCause());
+assertTrue(thrown.getCause().getMessage().contains(imageReference.file));
+```
+
+Direct supported-resource read failures may surface the unsafe entry in the
+top-level message. Unsupported legacy recovery wraps resource-read failures as
+the cause under the stable legacy error.
+
 ## Keep the boundary conservative
 
 Do not describe resource-only legacy readback as a decoded player program. A
@@ -128,6 +165,10 @@ image payload only.
 Do not add silent fallback parsing. Unsupported legacy archives must either match
 the exact image-resource compatibility shape or surface the checked
 `IOException` at `IoUtilities.readProject`.
+
+Do not sanitize unsafe resource paths into valid archive entries during readback.
+Path validation is part of deciding whether safe legacy image-resource recovery
+applies.
 
 ## Run the focused checks
 
