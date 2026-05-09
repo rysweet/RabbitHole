@@ -9,7 +9,6 @@ config parsing.
 from __future__ import annotations
 
 import importlib.util
-import json
 import subprocess
 import sys
 import unittest

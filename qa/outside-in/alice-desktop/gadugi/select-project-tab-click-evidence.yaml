@@ -1,45 +1,42 @@
 name: select-project-tab-click-evidence
-description: 'Validates PR #437 select-project tab-click evidence workflow wiring
-  and AT-SPI selection/open evidence contract only; it does not validate visible rendering,
-  rendered pixels, full project interaction, project grading, creative assessment,
-  full lesson completion, or the full Alice desktop workflow.'
+description: "Validates PR #437 select-project tab-click evidence workflow wiring and AT-SPI selection/open evidence contract only; it does not validate visible rendering, rendered pixels, full project interaction, project grading, creative assessment, full lesson completion, or the full Alice desktop workflow."
 config:
   timeout: 180000
 environment:
   requires: []
 agents:
-- id: alice-desktop-qa-cli
-  type: cli
-  config:
-    workingDirectory: .
+  - id: alice-desktop-qa-cli
+    type: cli
+    config:
+      workingDirectory: .
 metadata:
   priority: medium
   tags:
-  - cli
-  - gadugi
-  - pr-437
-  - select-project-tab-click
-  - tab-click-evidence-contract
+    - cli
+    - gadugi
+    - pr-437
+    - select-project-tab-click
+    - tab-click-evidence-contract
 steps:
-- name: prepare-select-project-tab-click-evidence
-  action: run
-  params:
-    command: qa/outside-in/alice-desktop/runners/run-scenario.sh
-    args:
-    - run
-    - alice-desktop-select-project-tab-click-exec
-    - --prepare-only
-    - --evidence-dir
-    - qa/outside-in/alice-desktop/evidence/gadugi-select-project-tab-click
-  timeout: 60000
-- name: validate-desktop-outside-in-catalog
-  action: run
-  params:
-    command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
-  timeout: 60000
-- name: run-desktop-outside-in-contract-tests
-  action: run
-  params:
-    command: qa/outside-in/alice-desktop/tests/run-tests.sh
-  timeout: 120000
+  - name: validate-desktop-outside-in-catalog
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+    timeout: 60000
+  - name: prepare-select-project-tab-click-evidence
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/run-scenario.sh
+      args:
+        - run
+        - alice-desktop-select-project-tab-click-exec
+        - --prepare-only
+        - --evidence-dir
+        - qa/outside-in/alice-desktop/evidence/gadugi-select-project-tab-click
+    timeout: 60000
+  - name: run-desktop-outside-in-contract-tests
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/tests/run-tests.sh
+    timeout: 120000
 assertions: []
