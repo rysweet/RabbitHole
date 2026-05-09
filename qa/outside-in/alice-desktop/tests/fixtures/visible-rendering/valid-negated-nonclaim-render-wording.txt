@@ -1,0 +1,5 @@
+Fixture purpose: valid nonclaim wording.
+
+Render evidence was produced, but it does not establish visible correctness.
+Screenshots, sampled pixels, and generated files do not prove the rendered result was visibly correct.
+They only show artifact production and bounded raw capture.
