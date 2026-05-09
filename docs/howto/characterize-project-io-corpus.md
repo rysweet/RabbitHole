@@ -120,8 +120,9 @@ prerequisite, and the Tweedle type reference.
 
 When a `.a3w` fixture includes resource-expression constructs, document the
 current decode boundary explicitly: simple program source can round trip, while
-unsupported resource-expression source currently leaves the program type
-undecoded even though binary resource data reads back.
+unsupported resource-expression source only returns resource-only readback for
+the exact legacy image-resource compatibility shape. Nearby unsupported player
+archive shapes fail closed with `IOException`.
 
 For a manifest-declared type/resource boundary, keep the fixture small:
 
@@ -133,10 +134,12 @@ resources/<resource-name>
 ```
 
 Use a `manifest.json` that includes both a Tweedle `TypeReference` and a valid
-resource reference. If the Tweedle source contains an unsupported member, assert
-that `IoUtilities.readProject` returns no decoded program type while the resource
-identity, name, original file name, content type, and bytes are still readable.
-Do not describe that case as a full player archive program/type decode.
+resource reference. If the Tweedle source contains an unsupported member, first
+decide whether the fixture matches the exact legacy image-resource compatibility
+shape. Assert resource identity, name, original file name, content type, and bytes
+only for that compatibility shape or for supported Tweedle source; otherwise,
+assert the public `IOException` boundary. Do not describe compatibility readback
+as a full player archive program/type decode.
 
 For resource-bearing `.a3c` type archives:
 

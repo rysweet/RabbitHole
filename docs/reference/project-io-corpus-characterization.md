@@ -57,8 +57,9 @@ Project IO corpus characterization covers observable archive behavior:
 
 This project archive reading coverage also protects current limitations. For
 example, a `.a3w` program whose Tweedle source contains resource-expression
-constructs remains at the currently documented decode boundary, while the binary
-resource data still reads back.
+constructs remains at the currently documented decode boundary. Resource-only
+readback is limited to the exact legacy image-resource compatibility shape;
+nearby unsupported player archive shapes fail at the public read boundary.
 
 This is not a migration-manager refactor effort. `ProjectMigrationManager`
 refactors require characterization at the relevant IO seam first.
@@ -485,6 +486,7 @@ Then the second archive preserves the same observable contract
 10. Missing or mismatched manifest-named JSON player program types fail fast with
     `IOException`; `IoUtilitiesTest` covers both the missing type-reference and
     mismatched program-name cases.
-11. Manifest-declared JSON player resources remain readable when an unsupported
-    Tweedle `TypeReference` leaves the program type undecoded; this is not a full
-    player-to-editor decode contract.
+11. Manifest-declared JSON player resources remain readable with unsupported
+    Tweedle only for the exact legacy image-resource compatibility shape; other
+    unsupported JSON player shapes fail at the public read boundary instead of
+    returning partial projects.
