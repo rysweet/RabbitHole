@@ -2358,6 +2358,45 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithWhileLoopMethodCallBodyCreatesWhileMethodInvocation() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          void run(WholeNumber n) {
+            while (n > 0) { this.helper(); }
+          }
+          void helper() { }
+        }
+        """);
+
+    UserMethod run = userMethodNamed(type, "run");
+    UserMethod helper = userMethodNamed(type, "helper");
+    assertEquals(1, run.body.getValue().statements.size());
+    assertTrue(run.body.getValue().statements.get(0) instanceof WhileLoop);
+    WhileLoop loop = (WhileLoop) run.body.getValue().statements.get(0);
+    assertRelationalInfix(loop.conditional.getValue(), RelationalInfixExpression.Operator.GREATER);
+    assertEquals(1, loop.body.getValue().statements.size());
+    assertTrue(loop.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) loop.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+  }
+
+  @Test
+  public void decodeClassWithArgumentBearingThisMethodCallInWhileBodyReportsUnsupportedBoundary() {
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
+        class SyntheticType {
+          void run(Boolean flag) {
+            while (flag) { this.helper(value: 1); }
+          }
+          void helper(WholeNumber value) { }
+        }
+        """, "run.this.helper");
+  }
+
+  @Test
   public void decodeClassWithWhileLoopNonBooleanConditionReportsUnsupported() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,

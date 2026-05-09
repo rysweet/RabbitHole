@@ -285,7 +285,8 @@ public class Decoder {
           throw new UnsupportedTweedleDecodeException(
               "Tweedle while loops are only supported in void methods by the AST decoder: " + method.getName());
         }
-        statements.add(decodeWhileLoop(method, allParameters, locals, fields, whileLoop));
+        statements.add(decodeWhileLoop(
+            method, allParameters, locals, fields, declaringType, zeroArgumentMethods, whileLoop));
       } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
           && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
         statements.add(decodeZeroArgumentSameClassMethodCallStatement(
@@ -409,13 +410,16 @@ public class Decoder {
       UserParameter[] parameters,
       List<UserLocal> locals,
       List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods,
       org.alice.tweedle.ast.WhileLoop whileLoop) {
     Expression condition = decodeValueExpression(method.getName(), whileLoop.getRunCondition(), parameters, locals, fields);
     if (!JavaType.BOOLEAN_OBJECT_TYPE.isAssignableFrom(condition.getType())) {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle while condition must be a Boolean expression: " + method.getName());
     }
-    BlockStatement body = decodeWhileLoopBody(method, parameters, locals, fields, whileLoop.getStatements());
+    BlockStatement body = decodeWhileLoopBody(
+        method, parameters, locals, fields, declaringType, zeroArgumentMethods, whileLoop.getStatements());
     return new WhileLoop(condition, body);
   }
 
@@ -424,16 +428,22 @@ public class Decoder {
       UserParameter[] parameters,
       List<UserLocal> locals,
       List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods,
       List<TweedleStatement> statements) {
     List<Statement> decoded = new ArrayList<>(statements.size());
     for (TweedleStatement statement : statements) {
-      if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
-          && expressionStatement.getExpression() instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
+      if (!(statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement)) {
+        throw unsupportedWhileLoopBody(method);
+      }
+      TweedleExpression expression = expressionStatement.getExpression();
+      if (expression instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
         decoded.add(decodeMethodAssignmentStatement(method, assignment, parameters, locals, fields));
+      } else if (expression instanceof MethodCallExpression methodCall) {
+        decoded.add(decodeZeroArgumentSameClassMethodCallStatement(
+            declaringType, method.getName(), methodCall, zeroArgumentMethods));
       } else {
-        throw new UnsupportedTweedleDecodeException(
-            "Only assignment statements are supported in Tweedle while loop bodies by the AST decoder: "
-                + method.getName());
+        throw unsupportedWhileLoopBody(method);
       }
     }
     return new BlockStatement(decoded.toArray(Statement[]::new));
@@ -1115,6 +1125,13 @@ public class Decoder {
         "Only assignment statements, explicit zero-argument this-method calls, "
             + "and implicit zero-argument same-class method calls are supported "
             + "in Tweedle simple if bodies by the AST decoder: " + method.getName());
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedWhileLoopBody(TweedleMethod method) {
+    return new UnsupportedTweedleDecodeException(
+        "Only assignment statements, explicit zero-argument this-method calls, "
+            + "and implicit zero-argument same-class method calls are supported "
+            + "in Tweedle while loop bodies by the AST decoder: " + method.getName());
   }
 
   private UnsupportedTweedleDecodeException unsupportedZeroArgumentThisMethodCall(

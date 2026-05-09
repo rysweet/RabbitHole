@@ -13,7 +13,7 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
-  amplihack tweedle-decode verify <literal-arithmetic-return|literal-arithmetic-return-boundary|simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
+  amplihack tweedle-decode verify <literal-arithmetic-return|literal-arithmetic-return-boundary|simple-if-method-call|simple-if-boundaries|simple-if-player-archive|while-loop-player-archive>
 
 Run from the Alice repository root or one of its child directories.
 """
@@ -57,6 +57,15 @@ TWEEDLE_DECODE_SCENARIOS = {
         "description": "JSON player archive Tweedle type decodes the simple-if method-call slice",
         "module": "core/story-api-migration",
         "tests": "IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType",
+    },
+    "while-loop-player-archive": {
+        "description": "JSON player archive Tweedle type decodes the while-loop method-call slice and keeps argument calls rejected",
+        "module": "core/story-api-migration",
+        "tests": (
+            "HistoricalArchiveRoundTripCharacterizationTest#"
+            "generatedJsonPlayerArchiveDecodesWhileLoopWithZeroArgumentThisMethodCall"
+            "+generatedJsonPlayerArchiveWithArgumentBearingThisMethodCallInWhileBodyReportsUnsupportedBoundary"
+        ),
     },
 }
 

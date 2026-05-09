@@ -38,6 +38,7 @@ import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
+import org.lgna.project.ast.WhileLoop;
 import org.lgna.story.SProgram;
 
 import java.awt.image.BufferedImage;
@@ -548,6 +549,66 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(
         "GeneratedSimpleIfThisCallScene",
         namedUserTypeNamed(readProject, "GeneratedSimpleIfThisCallScene").getName());
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveDecodesWhileLoopWithZeroArgumentThisMethodCall() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-while-this-call.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithWhileThisCall",
+        """
+            class GeneratedProgramWithWhileThisCall extends SProgram {
+              void run(WholeNumber n) {
+                while (n > 0) { this.helper(); }
+              }
+              void helper() { }
+            }
+            """,
+        "GeneratedWhileThisCallScene",
+        "class GeneratedWhileThisCallScene extends SScene {}");
+
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with a while-loop method-call body should decode", readProgramType);
+    assertEquals("GeneratedProgramWithWhileThisCall", readProgramType.getName());
+    assertWhileLoopMethodInvocation(readProgramType, "run", "helper", RelationalInfixExpression.Operator.GREATER);
+    assertEquals(
+        "GeneratedWhileThisCallScene",
+        namedUserTypeNamed(readProject, "GeneratedWhileThisCallScene").getName());
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveWithArgumentBearingThisMethodCallInWhileBodyReportsUnsupportedBoundary() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-while-argument-this-call-boundary.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithWhileArgumentThisCallBoundary",
+        """
+            class GeneratedProgramWithWhileArgumentThisCallBoundary extends SProgram {
+              void run(Boolean flag) {
+                while (flag) { this.helper(value: 1); }
+              }
+              void helper(WholeNumber value) { }
+            }
+            """,
+        "GeneratedWhileArgumentThisCallBoundaryScene",
+        "class GeneratedWhileArgumentThisCallBoundaryScene extends SScene {}");
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
+    String message = thrown.getMessage();
+
+    assertTrue(message.contains(
+        "Project archive manifest names program type 'GeneratedProgramWithWhileArgumentThisCallBoundary'"));
+    assertTrue(message.contains("decoded type names are [GeneratedWhileArgumentThisCallBoundaryScene]"));
+    assertTrue(message.contains(
+        "unsupported manifest-declared Tweedle type names are [GeneratedProgramWithWhileArgumentThisCallBoundary]"));
+    assertTrue(message.contains(
+        "GeneratedProgramWithWhileArgumentThisCallBoundary: Tweedle argument-bearing explicit this method calls"));
+    assertTrue(message.contains("run.this.helper"));
   }
 
   @Test
@@ -1716,6 +1777,33 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertTrue(invocation.variableArguments.isEmpty());
     assertTrue(invocation.keyedArguments.isEmpty());
     assertTrue(conditional.elseBody.getValue().statements.isEmpty());
+  }
+
+  private static void assertWhileLoopMethodInvocation(
+      NamedUserType type,
+      String callerName,
+      String targetName,
+      RelationalInfixExpression.Operator expectedOperator) {
+    UserMethod caller = userMethodNamed(type, callerName);
+    UserMethod target = userMethodNamed(type, targetName);
+    assertSame(JavaType.VOID_TYPE, caller.getReturnType());
+    assertEquals(1, caller.getRequiredParameters().size());
+    assertEquals(1, caller.body.getValue().statements.size());
+    assertTrue(caller.body.getValue().statements.get(0) instanceof WhileLoop);
+    WhileLoop loop = (WhileLoop) caller.body.getValue().statements.get(0);
+    assertTrue(loop.conditional.getValue() instanceof RelationalInfixExpression);
+    RelationalInfixExpression condition = (RelationalInfixExpression) loop.conditional.getValue();
+    assertSame(expectedOperator, condition.operator.getValue());
+    assertEquals(1, loop.body.getValue().statements.size());
+    assertTrue(loop.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement statement = (ExpressionStatement) loop.body.getValue().statements.get(0);
+    assertTrue(statement.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(target, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
   }
 
   private static UserMethod userMethodNamed(NamedUserType type, String name) {
