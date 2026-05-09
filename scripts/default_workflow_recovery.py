@@ -64,6 +64,7 @@ CLAIM_NEGATION_PATTERN = re.compile(
 )
 
 FOCUSED_DIFF_PREFIXES = (
+    "pyproject.toml",
     "scripts/",
     "tests/",
     "docs/",

@@ -364,6 +364,7 @@ class DiffScopeInspectorContractTest(unittest.TestCase):
                 "qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh",
                 "tests/test_default_workflow_merge_ready_contract.py",
                 "docs/reference/default-workflow-recovery-report.md",
+                "pyproject.toml",
             ]
         )
 
