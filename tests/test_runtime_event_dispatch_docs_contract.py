@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = REPO_ROOT / "tests" / "test_runtime_event_dispatch_docs_contract.py"
 REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "generated-story-api-listener-source-characterization.md"
 INDEX_PATH = REPO_ROOT / "docs" / "index.md"
-EXPECTED_BRANCH = "wave6-runtime-event-dispatch-1778302300"
+TEST_BRANCH = "runtime-event-dispatch-guard-test-branch"
 NON_CLAIM_TERMS = [
     "desktop runtime execution",
     "full world playback",
@@ -168,18 +168,29 @@ class RuntimeEventDispatchDocsContractTest(unittest.TestCase):
 
 
 class RuntimeEventDispatchNoOpGuardContractTest(unittest.TestCase):
-    def test_guard_accepts_current_linked_worktree_and_reports_resolved_root(self) -> None:
-        result = run_guard(
-            "--worktree",
-            str(REPO_ROOT / "docs"),
-            "--expected-branch",
-            EXPECTED_BRANCH,
-            "--check-only",
-        )
+    def create_guard_worktree(self, directory: str, branch: str = TEST_BRANCH) -> Path:
+        root = Path(directory)
+        init = git_command("init", "--initial-branch", branch, cwd=root)
+        self.assertEqual(0, init.returncode, init.stderr + init.stdout)
 
-        self.assertEqual(0, result.returncode, result.stderr + result.stdout)
-        self.assertIn(str(REPO_ROOT), result.stdout)
-        self.assertIn(EXPECTED_BRANCH, result.stdout)
+        worktree_path = root / "docs"
+        worktree_path.mkdir()
+        return worktree_path
+
+    def test_guard_accepts_linked_worktree_and_reports_resolved_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worktree_path = self.create_guard_worktree(directory)
+            result = run_guard(
+                "--worktree",
+                str(worktree_path),
+                "--expected-branch",
+                TEST_BRANCH,
+                "--check-only",
+            )
+
+            self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+            self.assertIn(str(Path(directory).resolve()), result.stdout)
+            self.assertIn(TEST_BRANCH, result.stdout)
 
     def test_guard_rejects_non_git_path_without_clean_noop_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -187,7 +198,7 @@ class RuntimeEventDispatchNoOpGuardContractTest(unittest.TestCase):
                 "--worktree",
                 directory,
                 "--expected-branch",
-                EXPECTED_BRANCH,
+                TEST_BRANCH,
                 "--check-only",
             )
 
@@ -198,13 +209,15 @@ class RuntimeEventDispatchNoOpGuardContractTest(unittest.TestCase):
         self.assertNotIn("no changes", combined_output.lower())
 
     def test_guard_rejects_unexpected_branch_before_status_checks(self) -> None:
-        result = run_guard(
-            "--worktree",
-            str(REPO_ROOT),
-            "--expected-branch",
-            "not-the-runtime-event-dispatch-branch",
-            "--check-only",
-        )
+        with tempfile.TemporaryDirectory() as directory:
+            worktree_path = self.create_guard_worktree(directory)
+            result = run_guard(
+                "--worktree",
+                str(worktree_path),
+                "--expected-branch",
+                "not-the-runtime-event-dispatch-branch",
+                "--check-only",
+            )
 
         self.assertNotEqual(0, result.returncode)
         combined_output = result.stdout + result.stderr
