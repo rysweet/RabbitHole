@@ -1,4 +1,4 @@
-# [PLANNED - Implementation Pending] Alice Desktop Silver-Thread Status Report
+# [TDD RED - Implementation Pending] Alice Desktop Silver-Thread Status Report
 
 This reference documents the intended behavior of the planned repository-owned
 silver-thread QA report:
@@ -7,9 +7,11 @@ silver-thread QA report:
 qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh
 ```
 
-The shell artifact is not yet present in this checkout. Until it is implemented,
-treat this page as the contract for the feature we will build, not as runnable
-instructions or proof that the aggregate report has already executed.
+A TDD contract shell artifact is now present at this path, but the aggregate
+evidence implementation is not complete. Until the implementation replaces the
+pending report body, treat this page and the shell assertions as the contract
+for the feature we will build, not as proof that the aggregate report has
+already executed successfully.
 
 The planned report will be a fail-closed shell artifact that aggregates existing
 executable Alice desktop evidence for the product-spanning thread:
@@ -42,16 +44,19 @@ already exercise the underlying behavior.
 ## Implementation status
 
 This page is a retcon specification for implementation-pending documentation.
-The lower-level evidence seams listed below are checked-in inputs, but the
-aggregate shell report path is not yet a runnable artifact.
+The lower-level evidence seams listed below are checked-in inputs, and the
+aggregate shell report path now contains the red TDD contract test. The report
+implementation is still pending.
 
 Before this page can be treated as implemented reference documentation:
 
-1. Add `qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh`.
+1. Replace the pending TDD report body in
+   `qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh` with
+   literal marker aggregation over the repository-owned seams.
 2. Make the script emit the status, evidence, gap, and claim-boundary lines
    defined here.
 3. Verify the script fails closed when required files or markers are absent.
-4. Remove the `[PLANNED - Implementation Pending]` title marker and planned
+4. Remove the `[TDD RED - Implementation Pending]` title marker and planned
    wording from this page.
 
 ## Planned usage
