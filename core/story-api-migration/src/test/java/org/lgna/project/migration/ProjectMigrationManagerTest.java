@@ -189,6 +189,70 @@ public class ProjectMigrationManagerTest {
     assertFalse(manager.hasAstMigrationsFor(currentVersion));
   }
 
+  @Test
+  public void textMigrationOfEmptyStringIsNoOp() {
+    String result = migrateWithoutTestLogNoise("", "3.1.7.0.0");
+
+    assertEquals("", result);
+  }
+
+  @Test
+  public void textMigrationAtCurrentVersionReturnsInputUnchanged() {
+    String source = "org.lgna.story.resources.dresser.DresserCentralAsian INDIA_BRICK_D";
+    Version currentVersion = manager.getCurrentVersion();
+
+    String result = migrateWithoutTestLogNoise(source, currentVersion.toString());
+
+    assertEquals(source, result);
+  }
+
+  @Test
+  public void migrationListsAreNonEmpty() {
+    assertTrue(manager.getTextMigrations().length > 0);
+    assertTrue(manager.getAstMigrations().length > 0);
+  }
+
+  @Test
+  public void textMigrationIsStableWhenReappliedFromResultVersion() {
+    String source = String.join("\n",
+        "org.lgna.story.resources.dresser.DresserCentralAsian",
+        "INDIA_BRICK_D",
+        "org.lgna.story.Program"
+    );
+
+    String firstPass = migrateWithoutTestLogNoise(source, "3.1.7.0.0");
+    Version currentVersion = manager.getCurrentVersion();
+    String secondPass = migrateWithoutTestLogNoise(firstPass, currentVersion.toString());
+
+    assertEquals(firstPass, secondPass);
+  }
+
+  @Test
+  public void textMigrationResultVersionNeverExceedsCurrentVersion() {
+    Version currentVersion = manager.getCurrentVersion();
+
+    for (TextMigration migration : manager.getTextMigrations()) {
+      assertTrue(
+          migration.getResultVersion() + " should not exceed current " + currentVersion,
+          migration.getResultVersion().compareTo(currentVersion) <= 0
+      );
+    }
+  }
+
+  @Test
+  public void astMigrationResultVersionNeverExceedsCurrentVersion() {
+    Version currentVersion = manager.getCurrentVersion();
+
+    for (AstMigration migration : manager.getAstMigrations()) {
+      if (migration != null) {
+        assertTrue(
+            migration.getResultVersion() + " should not exceed current " + currentVersion,
+            migration.getResultVersion().compareTo(currentVersion) <= 0
+        );
+      }
+    }
+  }
+
   private TextMigration textMigrationFor(String versionText) {
     Version version = new Version(versionText);
     for (TextMigration migration : manager.getTextMigrations()) {

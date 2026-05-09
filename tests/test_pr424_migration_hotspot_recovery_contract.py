@@ -154,6 +154,62 @@ class Pr424MigrationHotspotRecoveryContractTest(unittest.TestCase):
             with self.subTest(method=method):
                 self.assertIn(f"void {method}(", source)
 
+    def test_documentation_triad_files_exist_and_have_minimum_content(self) -> None:
+        """Each scoped doc file must exist and contain real content, not stubs."""
+        for path in SCOPED_DOCS:
+            with self.subTest(path=path.relative_to(REPO_ROOT)):
+                self.assertTrue(path.exists(), f"{path.name} must exist")
+                text = path.read_text(encoding="utf-8")
+                self.assertGreater(
+                    len(text), 200,
+                    f"{path.name} must have substantive content (>200 bytes), not be a stub",
+                )
+                self.assertTrue(
+                    text.startswith("# "),
+                    f"{path.name} must start with a Markdown heading",
+                )
+
+    def test_documentation_cross_references_follow_diataxis_pattern(self) -> None:
+        """Reference, howto, and tutorial docs must cross-link to each other."""
+        ref = (REPO_ROOT / "docs" / "reference" / "project-migration-manager-characterization.md")
+        howto = (REPO_ROOT / "docs" / "howto" / "characterize-project-migration-manager.md")
+        tutorial = (REPO_ROOT / "docs" / "tutorials" / "project-migration-manager-characterization.md")
+        concept = (REPO_ROOT / "docs" / "concepts" / "migration-hotspot-characterization.md")
+
+        ref_text = ref.read_text(encoding="utf-8")
+        howto_text = howto.read_text(encoding="utf-8")
+        tutorial_text = tutorial.read_text(encoding="utf-8")
+
+        with self.subTest(doc="reference links to howto"):
+            self.assertIn("characterize-project-migration-manager.md", ref_text)
+        with self.subTest(doc="reference links to tutorial"):
+            self.assertIn("project-migration-manager-characterization.md", ref_text)
+        with self.subTest(doc="reference links to concept"):
+            self.assertIn("migration-hotspot-characterization.md", ref_text)
+        with self.subTest(doc="howto links to reference"):
+            self.assertIn("project-migration-manager-characterization.md", howto_text)
+        with self.subTest(doc="tutorial links to concept"):
+            self.assertIn("migration-hotspot-characterization.md", tutorial_text)
+
+    def test_java_test_package_matches_production_package(self) -> None:
+        """The test must live in org.lgna.project.migration, not org.alice.stageide.migration."""
+        source = MIGRATION_TEST.read_text(encoding="utf-8")
+        self.assertIn("package org.lgna.project.migration;", source)
+        self.assertNotIn("org.alice.stageide.migration", source)
+
+    def test_index_migration_section_links_all_four_diataxis_types(self) -> None:
+        """The migration section in index.md must have concept, reference, howto, and tutorial links."""
+        index = DOCS_INDEX.read_text(encoding="utf-8")
+        diataxis_prefixes = {
+            "concept": "./concepts/migration-hotspot-characterization.md",
+            "reference": "./reference/project-migration-manager-characterization.md",
+            "howto": "./howto/characterize-project-migration-manager.md",
+            "tutorial": "./tutorials/project-migration-manager-characterization.md",
+        }
+        for doc_type, link in diataxis_prefixes.items():
+            with self.subTest(doc_type=doc_type):
+                self.assertIn(link, index, f"index.md must link to the {doc_type} doc")
+
 
 if __name__ == "__main__":
     unittest.main()
