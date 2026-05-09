@@ -10,6 +10,22 @@ targetStarter:
 
 The evidence is intentionally narrow. It proves starter identification, target-specific selection/opening progress, or the exact blocker that stopped progress. It does not prove visible rendering correctness, full lesson execution, grading, Save behavior, full UI automation, or world interaction.
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+- [PR #437 recovery note](#pr-437-recovery-note)
+- [Target evidence vocabulary](#target-evidence-vocabulary)
+- [Validate the contract](#validate-the-contract)
+- [What the runner validates before launch](#what-the-runner-validates-before-launch)
+- [Required probe order](#required-probe-order)
+- [Review opened evidence](#review-opened-evidence)
+- [Review blocked evidence](#review-blocked-evidence)
+- [Runner summary fields](#runner-summary-fields)
+- [Post-open probe boundary](#post-open-probe-boundary)
+- [Publish the result](#publish-the-result)
+- [PR #437 publication boundary](#pr-437-publication-boundary)
+
 ## Prerequisites
 
 Run commands from the repository root.
@@ -42,11 +58,27 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 Generated evidence under `qa/outside-in/alice-desktop/evidence/` is transient and ignored by Git. Promote only intentionally reviewed evidence or documentation; do not treat ignored run output as durable by default.
 
+## Configuration
+
+Use the checked-in runner and probe contracts directly. Do not merge manually. Do not use timeout wrappers. The runner owns readiness waits and writes an explicit blocker when the desktop or accessibility environment is not usable.
+
+| Setting | Use |
+| --- | --- |
+| `NODE_OPTIONS=--max-old-space-size=32768` | Required shell preference for focused validation and QA commands in this lane. |
+| `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` | Opts into isolated test license acceptance for controlled Alice launches. |
+| `--evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full` | Keeps generated Select Project evidence in a predictable ignored path for review. |
+| `GH_EXTERNAL_ATTEMPTS` | Optional retry count for GitHub metadata/fetch calls in the PR recovery contract. |
+| `GH_EXTERNAL_RETRY_SECONDS` | Optional delay between GitHub metadata/fetch retries. |
+
+The scenario itself supplies the only accepted target starter metadata. Do not override `Africa Full` from the shell or reuse artifacts from a different starter as proof for this lane.
+
 ## PR #437 recovery note
 
 Use this how-to for the focused Select Project evidence run. If the run is part of PR #437 recovery or finalization, follow the [PR #437 recovery contract](../reference/select-project-africa-full-atspi-evidence.md#pr-437-recovery-contract) after the local prerequisites above are satisfied. That contract requires exact PR head SHA verification, a disposable local merge check with safe cleanup, and a finalization report that keeps merge state, evidence, and blockers separate.
 
 GitHub PR metadata is an external dependency for that recovery path, not Alice runtime proof. If `gh pr view`, `gh pr checkout`, or `git fetch` cannot complete because of GitHub CLI authentication, network connectivity, or rate limiting, report `environment dependency` and do not replace the missing PR metadata with cached or hand-entered values.
+
+The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed. That justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, disposable merge-check result, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required.
 
 ## Target evidence vocabulary
 
@@ -74,9 +106,10 @@ bash qa/outside-in/alice-desktop/tests/test-select-project-completion-contract.s
 bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
+python3 -m unittest tests/test_pr437_select_project_recovery_contract.py
 ```
 
-These checks should cover the scenario target metadata, validator allowlists, runner promotion fields, target-specific tab-click evidence, blocked evidence shape, post-open gating, and no-overclaim wording. They are not rendering, grading, lesson, Save, or full UI automation tests.
+These checks should cover the scenario target metadata, validator allowlists, runner promotion fields, target-specific tab-click evidence, blocked evidence shape, post-open gating, PR #437 recovery/finalization wording, and no-overclaim wording. They are not rendering, grading, lesson, Save, or full UI automation tests.
 
 ## What the runner validates before launch
 
@@ -240,7 +273,7 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 ```markdown
 ## Verified evidence
 
-- PR state: `headRefName`, `headRefOid`, `baseRefName`, `isDraft`, `mergeStateStatus`, and check summary from a successful `gh pr view`.
+- PR state: open state, `headRefName`, `headRefOid`, `baseRefName`, `isDraft`, `mergeStateStatus`, review decision, and check summary from a successful `gh pr view`.
 - Local PR head: `git rev-parse HEAD` value and confirmation that it matches `headRefOid`.
 - Local merge check: command used, conflict files if any, and final merge-check result.
 - Focused Select Project validation: commands run and exit status.

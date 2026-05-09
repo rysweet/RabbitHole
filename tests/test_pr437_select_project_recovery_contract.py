@@ -52,16 +52,50 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         text = read(REFERENCE_PATH)
 
         self.assertIn("gh pr view 437 --repo rysweet/RabbitHole", text)
+        self.assertIn("`state`", text)
         self.assertIn("headRefName", text)
         self.assertIn("headRefOid", text)
         self.assertIn("baseRefName", text)
         self.assertIn("isDraft", text)
         self.assertIn("mergeStateStatus", text)
+        self.assertIn("`reviewDecision`", text)
         self.assertIn("statusCheckRollup", text)
         self.assertIn('PR_HEAD_OID="$(printf', text)
         self.assertIn("gh pr checkout 437 --repo rysweet/RabbitHole", text)
         self.assertIn('test "$LOCAL_HEAD_SHA" = "$PR_HEAD_OID"', text)
         self.assertIn("must not mark the PR ready from a `develop` checkout", text)
+
+    def test_pr_state_commands_capture_open_state_review_decision_and_checks(self) -> None:
+        text = read(REFERENCE_PATH)
+        howto = read(HOWTO_PATH)
+        block = fenced_block_containing(text, "gh pr view 437 --repo rysweet/RabbitHole")
+
+        for field in ["state", "isDraft", "mergeStateStatus", "reviewDecision", "statusCheckRollup"]:
+            with self.subTest(field=field):
+                self.assertIn(field, block)
+        self.assertIn("open state", text)
+        self.assertIn("review decision", text)
+        self.assertIn("check summary", howto)
+        self.assertIn("review decision", howto)
+
+    def test_recovery_contract_forbids_manual_merge_and_external_timeout_wrappers(self) -> None:
+        howto = read(HOWTO_PATH)
+        reference = read(REFERENCE_PATH)
+
+        for text in [howto, reference]:
+            with self.subTest(surface="howto" if text == howto else "reference"):
+                self.assertIn("Do not merge manually", text)
+                self.assertIn("Do not use timeout wrappers", text)
+
+    def test_howto_publication_boundary_allows_current_head_noop_justification_only(self) -> None:
+        text = read(HOWTO_PATH)
+
+        self.assertIn("workflow-accepted no-op justification", text)
+        self.assertIn("current-head run proves that no repository change is needed", text)
+        self.assertIn("exact PR metadata command", text)
+        self.assertIn("worktree cleanliness", text)
+        self.assertIn("disposable merge-check result", text)
+        self.assertIn("reviewed artifacts or the explicit reason no live artifact was required", text)
 
     def test_github_external_service_boundary_uses_retry_and_explicit_failure(self) -> None:
         text = read(REFERENCE_PATH)

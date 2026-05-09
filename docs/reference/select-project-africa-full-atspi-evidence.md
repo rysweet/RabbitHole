@@ -4,19 +4,41 @@ This reference defines the target scenario metadata, validator rules, runner int
 
 The lane is intentionally narrow. It records target identification, target-specific selection/opening progress, or the exact blocker that stopped progress. It does not establish visible rendering correctness, full lesson execution, grading, Save behavior, full UI automation, or world interaction.
 
+## Contents
+
+- [PR #437 recovery contract](#pr-437-recovery-contract)
+- [Artifact field names](#artifact-field-names)
+- [Target starter metadata](#target-starter-metadata)
+- [Validator contract](#validator-contract)
+- [Runner interface](#runner-interface)
+- [Focused commands](#focused-commands)
+- [`tab-click-observation.json`](#tab-click-observationjson)
+- [Required action order](#required-action-order)
+- [Evidence statuses](#evidence-statuses)
+- [Blocker object](#blocker-object)
+- [Select Project and PID context](#select-project-and-pid-context)
+- [Post-open gating](#post-open-gating)
+- [Evidence hygiene](#evidence-hygiene)
+- [Contract test coverage](#contract-test-coverage)
+- [Publishing boundary](#publishing-boundary)
+- [PR finalization gate](#pr-finalization-gate)
+- [Claim boundaries](#claim-boundaries)
+
 ## PR #437 recovery contract
 
-The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. It starts from the GitHub PR head, reproduces merge state locally, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker.
+The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. Do not merge manually. Do not use timeout wrappers. It starts from the GitHub PR head, reproduces merge state locally, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker.
 
 The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR state snapshot records:
 
 | Field | Required use |
 | --- | --- |
+| `state` | GitHub open state. The PR must still be open before recovery evidence can support finalization. |
 | `headRefName` | Branch checked out for recovery work. Do not infer this from the current local branch. |
 | `headRefOid` | Exact PR head commit. The checked-out local `git rev-parse HEAD` value must match this SHA before validation or merge checks count as PR evidence. |
 | `baseRefName` | Branch used for local merge reproduction. |
 | `isDraft` | Draft state used by the finalization gate. |
 | `mergeStateStatus` | GitHub mergeability signal. `DIRTY` is actionable until locally reproduced or disproved. |
+| `reviewDecision` | Current review decision used as finalization context only; it does not replace local readiness evidence. |
 | `statusCheckRollup` | Current GitHub check context. Passing checks do not override local merge dirtiness or missing evidence. |
 
 `mergeStateStatus=DIRTY` is a blocker until the exact PR head is checked out explicitly and a local merge check against the PR base lists either no unmerged files or the exact conflict files. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot alone.
@@ -56,10 +78,10 @@ with_external_retry() {
 }
 
 with_external_retry gh pr view 437 --repo rysweet/RabbitHole \
-  --json number,title,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,statusCheckRollup,url
+  --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url
 
 PR_JSON="$(with_external_retry gh pr view 437 --repo rysweet/RabbitHole \
-  --json number,title,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,statusCheckRollup,url)"
+  --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url)"
 PR_HEAD_OID="$(printf '%s\n' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefOid"])')"
 BASE_REF="$(printf '%s\n' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["baseRefName"])')"
 test -n "$PR_HEAD_OID"
@@ -121,23 +143,21 @@ For each conflict file, record:
 
 If the conflict touches behavior-sensitive Alice code and no characterization or focused validation exists, the recovery lane records `merge dirtiness` as the current blocker instead of guessing a resolution.
 
-### PR #437 recovery snapshot from 2026-05-09
+### Workflow-accepted no-op justification
 
-`Verified evidence`:
+The recovery lane may publish a no-op justification only when a current-head run proves that no repository change is needed. A no-op report is still evidence, not an assumption: it records the exact PR metadata command, exact local head SHA, worktree cleanliness, disposable merge-check result, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required.
 
-- `gh pr view 437 --repo rysweet/RabbitHole --json number,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,statusCheckRollup,url` reported `headRefName=feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`, `headRefOid=472c7f1325b054eae1fe2e7ab9470198865e0312`, `baseRefName=develop`, `isDraft=true`, and `mergeStateStatus=DIRTY`.
-- `gh pr checkout 437 --repo rysweet/RabbitHole` followed by `git rev-parse HEAD` confirmed the local head SHA was `472c7f1325b054eae1fe2e7ab9470198865e0312`, matching the PR head.
-- A disposable worktree merge check against `refs/remotes/origin/develop` exited non-zero and reported one unmerged file: `pyproject.toml`.
-- `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` exited 0 and validated 29 scenarios.
-- `bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh`, `bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh`, and `bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh` exited 0.
+Use a no-op justification only when all of these conditions are true:
 
-`Unverified assumptions`:
+| Condition | Required evidence |
+| --- | --- |
+| Exact PR head | `gh pr view` reports `headRefOid`, and local `git rev-parse HEAD` matches it. |
+| Clean worktree | `git status --short --branch` has no uncommitted repository changes unrelated to the no-op report. |
+| Merge readiness | The disposable merge check has no unmerged files, or the report names one `merge dirtiness` blocker instead of claiming readiness. |
+| Focused validation | The Select Project scenario/schema/probe checks in [Focused commands](#focused-commands) pass, or the report names `failing validation`. |
+| Evidence boundary | The report separates verified evidence from unverified assumptions and makes no full UI automation, rendering, Save, grading, creative-assessment, or lesson-completion claim. |
 
-- A live `run-scenario.sh run alice-desktop-select-project-tab-click-exec` AT-SPI execution was not completed in this snapshot, so this snapshot does not prove full UI automation, visible rendering correctness, Save completion, grading, or lesson completion.
-
-`Current blocker`:
-
-- `merge dirtiness`: `pyproject.toml` has a version-only conflict between PR `0.8.0` and base `0.7.1`. The narrow resolution is to keep the PR's later `0.8.0` package version when merging the base, then rerun focused validation before any ready-for-review change.
+If GitHub reports `mergeStateStatus=DIRTY`, the no-op report must include the disposable local merge reproduction. GitHub metadata alone is not enough to claim that no repository change is required.
 
 ### Recovery blocker taxonomy
 
@@ -239,6 +259,7 @@ bash qa/outside-in/alice-desktop/tests/test-select-project-completion-contract.s
 bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
+python3 -m unittest tests/test_pr437_select_project_recovery_contract.py
 
 ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run \
@@ -404,6 +425,7 @@ Use the existing QA contract test structure for the committed field vocabulary:
 | `qa/outside-in/alice-desktop/tests/test-select-project-proof.sh` | Select Project window proof preserves exact Java dialog/window context and does not claim project/world interaction. |
 | `qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh` | Tab-click probe emits target-specific Africa Full opened/blocked evidence and does not click OK/Open without target-specific selection evidence. |
 | `qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh` | Post-open gating requires prior target-specific opened evidence and blocks generic main-window proof. |
+| `tests/test_pr437_select_project_recovery_contract.py` | PR #437 recovery docs keep exact PR-head verification, disposable merge reproduction, focused validation commands, single-blocker reporting, and no-overclaim boundaries aligned. |
 
 ## Publishing boundary
 
