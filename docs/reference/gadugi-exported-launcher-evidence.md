@@ -10,9 +10,11 @@ Implementation files:
 - `qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml`
 - `qa/outside-in/alice-desktop/tests/test-gadugi-exported-launcher-contract.sh`
 
-The scenario validates launcher evidence wiring and JavaFX handoff/no-go checks
-only. It does not prove visible rendering, save behavior, grading, creative
-assessment, or full lesson completion.
+The scenario validates exported-project evidence wiring by delegating to the
+Alice outside-in runner. The default Gadugi path remains prepare-only; the
+underlying checked-in Alice scenario is the bounded no-Sims exported Ant build
+smoke. The Gadugi lane does not prove visible rendering, installer behavior,
+save behavior, grading, creative assessment, or full lesson completion.
 
 ## Contents
 
@@ -36,12 +38,14 @@ lesson workflow:
    `exported-launcher-evidence`.
 2. It delegates to the existing Alice outside-in QA runners instead of adding a
    second project-export validation path.
-3. It uses the outside-in runner's prepare-only mode for the exported-project
-   smoke so the default path proves evidence wiring without requiring the gated
-   Maven smoke.
-4. It records launcher evidence, JavaFX handoff, and deterministic no-go
-   boundaries without claiming rendered pixels, visible windows, save behavior,
-   grading, creative assessment, or lesson completion.
+3. It uses the outside-in runner's prepare-only mode for the current
+   exported-project smoke so the default path proves evidence wiring without
+   requiring the gated Maven smoke.
+4. When the underlying gated smoke is executed intentionally, it runs
+   `Alice3ProjectTemplateAntSmokeTest`. That proof remains bounded to exported
+   Ant target execution and must not claim rendered pixels, visible windows,
+   installer behavior, save behavior, grading, creative assessment, or lesson
+   completion.
 
 For generated launcher behavior itself, see
 [Exported NetBeans Ant Project Behavior](./exported-netbeans-ant-project-behavior.md).
@@ -98,11 +102,11 @@ qa/outside-in/alice-desktop/tests/run-tests.sh
 ```
 
 `--prepare-only` is the default evidence-contract lane for Gadugi execution. It
-creates reviewable outside-in runner evidence for the exported-project smoke and
-returns success without enabling the gated Maven smoke. `ALICE_QA_RUN_GATED_SMOKES=1`
-only matters when running the underlying Alice runner without `--prepare-only`.
-Use the gated runner only when a review explicitly requires command execution
-evidence.
+creates reviewable outside-in runner evidence for the current exported-project
+smoke and returns success without enabling the gated Maven smoke.
+`ALICE_QA_RUN_GATED_SMOKES=1` only matters when running the underlying Alice
+runner without `--prepare-only`. Use the gated runner only when a review
+explicitly requires command execution evidence.
 
 ## Configuration
 
@@ -123,7 +127,7 @@ The surrounding QA environment may set:
 | Variable | Purpose |
 | --- | --- |
 | `NODE_OPTIONS=--max-old-space-size=32768` | Keeps Node-based Gadugi orchestration within the preferred memory limit. |
-| `ALICE_QA_RUN_GATED_SMOKES=1` | Enables the underlying Alice gated command smoke only when intentionally running `run-scenario.sh` without `--prepare-only`. The default Gadugi command remains prepare-only. |
+| `ALICE_QA_RUN_GATED_SMOKES=1` | Enables the underlying Alice gated command smoke only when intentionally running `run-scenario.sh` without `--prepare-only`. That smoke targets `Alice3ProjectTemplateAntSmokeTest`; the default Gadugi command remains prepare-only. |
 
 Do not point Gadugi at `qa/outside-in/alice-desktop/scenarios/`; that directory
 uses the custom Alice outside-in schema. The runnable command selects the
@@ -172,7 +176,7 @@ NODE_OPTIONS=--max-old-space-size=32768 \
   qa/outside-in/alice-desktop/tests/run-tests.sh
 ```
 
-If a review explicitly requires the real gated Maven evidence command,
+If a review explicitly requires the real current gated Maven evidence command,
 initialize the Tweedle grammar submodule first:
 
 ```bash
@@ -180,14 +184,14 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Then run the focused exported-project launcher evidence test:
+Then run the focused exported Ant project smoke:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
+  -pl netbeans -am \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
 
@@ -226,9 +230,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 This produces `command.log` and a pass/fail `status.txt` through the existing
-outside-in runner. Treat the result as exported launcher evidence command output,
-not as visible rendering, save, grading, creative assessment, or full lesson
-completion evidence.
+outside-in runner. Treat the result as bounded exported Ant target evidence, not
+as visible rendering, installer, save, grading, creative assessment, full GUI
+export journey, or full lesson completion evidence.
 
 ## Evidence boundaries
 
@@ -236,12 +240,15 @@ Accepted Gadugi launcher evidence proves:
 
 - The Gadugi CLI scenario is valid and runnable.
 - The scenario delegates to the repo-owned Alice outside-in runner.
-- The Alice runner can prepare the exported-project smoke evidence contract.
-- The evidence wording stays within launcher handoff and no-go boundaries.
+- The Alice runner can prepare the current exported-project smoke evidence
+  contract.
+- The evidence wording stays within exported-project build and launcher evidence
+  boundaries.
 
 It does not prove:
 
 - Visible rendering or rendered pixels.
+- Installer validation.
 - Save behavior.
 - Grading.
 - Creative assessment.
@@ -259,6 +266,6 @@ evidence artifacts.
 | `gadugi-test` is not found | Gadugi tooling is not installed or not on `PATH`. | Install the Gadugi CLI tooling used by the review environment before running the scenario commands. |
 | `gadugi-test validate` rejects `qa/outside-in/alice-desktop/scenarios/exported-project-smoke.yaml` | That file uses the Alice custom outside-in schema, not the Gadugi schema. | Validate `qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` with Gadugi and keep the custom scenario under `scenarios/`. |
 | `gadugi-test run` cannot find `exported-launcher-evidence` | The run command is not pointed at the Gadugi directory or the scenario name differs from the contract. | Use `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` from the repository root. |
-| The outside-in runner reports `gated-not-run` | The prepare-only runner path prepared a gated smoke without executing the heavy command. | This is expected for prepare-only evidence. Set `ALICE_QA_RUN_GATED_SMOKES=1` only when intentionally running the gated smoke without `--prepare-only`. |
+| The outside-in runner reports `gated-not-run` | The prepare-only runner path prepared a gated smoke without executing the heavy command. | This is expected for prepare-only evidence. Set `ALICE_QA_RUN_GATED_SMOKES=1` only when intentionally running the current gated smoke without `--prepare-only`. |
 | Maven validation reports missing Tweedle parser grammar files | The Tweedle grammar submodule is not initialized. | Run `git submodule update --init tweedle-lang` and confirm `test -d tweedle-lang/Grammar`. |
 | A review comment says the scenario proves rendering, save behavior, grading, creative assessment, or full lesson completion | The scenario wording is too broad. | Reword it to "launcher evidence wiring", "JavaFX handoff", or "display no-go evidence" and keep those broader claims out of the Gadugi scenario. |
