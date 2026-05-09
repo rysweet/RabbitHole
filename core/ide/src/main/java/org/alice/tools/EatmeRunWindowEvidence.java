@@ -7,12 +7,23 @@ import org.lgna.project.ast.NamedUserType;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 
 public final class EatmeRunWindowEvidence {
   public static final String EVIDENCE_DIR_PROPERTY = "org.alice.eatme.runWindowEvidenceDir";
   public static final String RUN_WINDOW_CREATED_ARTIFACT = "run-window-created.json";
+  private static final String SCHEMA_VERSION = "eatme.alice-run-window-created/v1";
+  private static final String CONTRACT_SCOPE = "run-window-creation-wiring";
+  private static final String EVIDENCE_SOURCE = "org.alice.stageide.run.RunComposite#handlePreShowWindow";
+  private static final String[] DOES_NOT_CLAIM = {
+      "active-rendering",
+      "run-execution",
+      "world-execution-correctness",
+      "rendering-correctness",
+      "save",
+      "grading",
+      "full-ui-automation"
+  };
 
   private EatmeRunWindowEvidence() {
   }
@@ -24,7 +35,7 @@ public final class EatmeRunWindowEvidence {
     }
     try {
       writeRunWindowCreated(Path.of(evidenceDir), title(frame), typeName(programType));
-    } catch (IOException | InvalidPathException | SecurityException ex) {
+    } catch (IOException | SecurityException | IllegalArgumentException ex) {
       Logger.throwable(ex, "eatme Run-window evidence write failed: " + evidenceDir);
     }
   }
@@ -35,10 +46,22 @@ public final class EatmeRunWindowEvidence {
     Files.writeString(
         artifact,
         "{\n"
-            + "  \"schema_version\": \"eatme.alice-run-window-created/v1\",\n"
+            + "  \"schema_version\": \"" + SCHEMA_VERSION + "\",\n"
             + "  \"status\": \"created\",\n"
+            + "  \"contract_scope\": \"" + CONTRACT_SCOPE + "\",\n"
+            + "  \"evidence_source\": \"" + EVIDENCE_SOURCE + "\",\n"
+            + "  \"artifact\": \"" + RUN_WINDOW_CREATED_ARTIFACT + "\",\n"
             + "  \"frame_title\": \"" + escapeJson(frameTitle) + "\",\n"
-            + "  \"program_type\": \"" + escapeJson(programTypeName) + "\"\n"
+            + "  \"program_type\": \"" + escapeJson(programTypeName) + "\",\n"
+            + "  \"active_rendering_claimed\": false,\n"
+            + "  \"run_program_claimed\": false,\n"
+            + "  \"run_execution_claimed\": false,\n"
+            + "  \"world_execution_claimed\": false,\n"
+            + "  \"rendering_correctness_claimed\": false,\n"
+            + "  \"save_claimed\": false,\n"
+            + "  \"grading_claimed\": false,\n"
+            + "  \"full_ui_automation_claimed\": false,\n"
+            + doesNotClaimJson()
             + "}\n",
         StandardCharsets.UTF_8);
     if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
@@ -56,11 +79,25 @@ public final class EatmeRunWindowEvidence {
         || normalized.startsWith("..")) {
       throw new IllegalArgumentException("artifact path must be a single relative file name: " + relativePath);
     }
-    Path resolved = evidenceDir.resolve(normalized).normalize();
-    if (!resolved.startsWith(evidenceDir)) {
+    Path normalizedEvidenceDir = evidenceDir.normalize();
+    Path resolved = normalizedEvidenceDir.resolve(normalized).normalize();
+    if (!resolved.startsWith(normalizedEvidenceDir)) {
       throw new IllegalArgumentException("artifact path escapes evidence dir: " + relativePath);
     }
     return resolved;
+  }
+
+  private static String doesNotClaimJson() {
+    StringBuilder json = new StringBuilder("  \"does_not_claim\": [\n");
+    for (int i = 0; i < DOES_NOT_CLAIM.length; i++) {
+      json.append("    \"").append(DOES_NOT_CLAIM[i]).append("\"");
+      if (i + 1 < DOES_NOT_CLAIM.length) {
+        json.append(",");
+      }
+      json.append("\n");
+    }
+    json.append("  ]\n");
+    return json.toString();
   }
 
   static String escapeJson(String value) {

@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the Run-window creation/wiring evidence contract and artifact API, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md#run-window-creationwiring-contract). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -113,6 +113,7 @@ procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
 run-debug
+run-window-contract
 save-load
 save-menu-dialog-write-proof
 scene-creation
@@ -124,6 +125,26 @@ tweedle-decoder-boundary-smoke
 tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
+
+The Run-window creation/wiring contract is a supported non-executing workflow.
+Reviewers prepare it with:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-window-contract \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-window-contract
+```
+
+The default Run-window contract path is a `gated-command-smoke` preflight. It
+writes `status.txt` with `outcome=gated-not-run` and a
+`manual-evidence-checklist.txt` that names the fixed `run-window-created.json`
+artifact. When `ALICE_QA_RUN_GATED_SMOKES=1` is set, the same scenario runs the
+focused `EatmeRunWindowEvidenceTest` Maven command through the exact allowlisted
+argv. That command verifies only the creation and wiring metadata seam. It does
+not claim active rendering, full world execution, rendering correctness, Save
+behavior, grading, or full UI automation.
 
 To observe only the live first-lesson procedure/code-editor target after Select
 Project opens the configured starter:

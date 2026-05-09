@@ -11,6 +11,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 - [Scenario schema](#scenario-schema)
 - [Automation modes](#automation-modes)
 - [Evidence contract](#evidence-contract)
+- [Run-window creation/wiring contract](#run-window-creationwiring-contract)
 - [Learner-world boundary](#learner-world-boundary)
 - [Workflow evidence requirements](#workflow-evidence-requirements)
 - [Scenario authoring rules](#scenario-authoring-rules)
@@ -47,6 +48,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-instructor-student-setup` | `instructor-student-setup` | `manual-evidence-required` | Covers instructor starter-project preparation and student project opening/saving. |
 | `alice-desktop-scene-creation` | `scene-creation` | `manual-evidence-required` | Covers creating or selecting a starter scene and saving it as an Alice project. |
 | `alice-desktop-run-debug` | `run-debug` | `manual-evidence-required` | Covers program run controls plus the closest baseline debug-like control, such as fast-forward or statement execution. |
+| `alice-desktop-run-window-contract` | `run-window-contract` | `gated-command-smoke` | Covers opt-in Run-window creation/wiring metadata and explicit non-claim boundaries without active rendering or run-execution claims. |
 | `alice-desktop-save-load` | `save-load` | `manual-evidence-required` | Covers saving an `.a3p` project, reopening it, and checking persistence. |
 | `alice-desktop-open-load-save` | `open-load-save` | `manual-evidence-required` | Covers opening an existing `.a3p`, saving a copy, reopening it, and comparing visible state. |
 | `alice-desktop-export` | `export` | `manual-evidence-required` | Covers the current Alice export path and verification of the exported artifact. |
@@ -74,6 +76,12 @@ desktop edit action; it does not perform a desktop edit, Save, rendering
 correctness check, learner assessment, creative assessment, or full first-lesson
 completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
+
+The Run-window contract scenario is a non-executing creation/wiring lane: its
+default `--prepare-only` path records scenario wiring and checklist evidence, and
+its gated command runs only the focused `EatmeRunWindowEvidenceTest` seam test.
+It does not claim active rendering, runtime semantic correctness, rendering
+correctness, Save behavior, grading, or full UI automation.
 
 ## Learner-world boundary
 
@@ -245,6 +253,38 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
 
 `--prepare-only` is the intentional preflight mode for gated command smokes. It writes `outcome=gated-not-run` evidence and returns success without executing the configured command.
 
+### Run-window creation/wiring command interface
+
+Prepare-only mode is the default review path for scenario wiring:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-window-contract \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-window-contract
+```
+
+When the focused seam check should run, reviewers enable the gated command
+explicitly:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-window-contract \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-window-contract
+```
+
+The scenario's allowed argv is exact:
+
+```text
+mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/ide -am -Dtest=org.alice.tools.EatmeRunWindowEvidenceTest test
+```
+
+No shell command string, alternate Maven goal, broader test selector, or
+rendering/execution probe may be part of this scenario.
+
 ### Run the Gadugi exported launcher evidence scenario
 
 The Gadugi scenario is stored outside the custom Alice scenario catalog because
@@ -395,6 +435,7 @@ procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
 run-debug
+run-window-contract
 save-load
 save-menu-dialog-write-proof
 scene-creation
@@ -453,6 +494,76 @@ Enabled gated command smoke execution also includes:
 | --- | --- |
 | `command.log` | Captured stdout/stderr for the configured command. |
 | `status.txt` | Scenario ID, automation mode, command, working directory, timeout, command log name, exit code, and `outcome=passed` or `outcome=failed`. |
+
+### Run-window creation/wiring contract
+
+The Run-window contract lane is centered on one opt-in product seam:
+`EatmeRunWindowEvidence`. The seam is enabled only by the JVM property
+`org.alice.eatme.runWindowEvidenceDir`. When the property is unset, no artifact
+is written. When it is set, the seam writes only the fixed artifact
+`run-window-created.json` inside the configured evidence directory.
+
+The artifact is a creation/wiring metadata record. It is not a render-affordance
+artifact, runtime result, Save artifact, grading artifact, screenshot, pixel
+sample, or full UI automation transcript.
+
+Required `run-window-created.json` fields:
+
+| Field | Type | Required value or meaning |
+| --- | --- | --- |
+| `schema_version` | string | `eatme.alice-run-window-created/v1`. |
+| `status` | string | `created`. |
+| `contract_scope` | string | `run-window-creation-wiring`. |
+| `evidence_source` | string | `org.alice.stageide.run.RunComposite#handlePreShowWindow`. |
+| `artifact` | string | `run-window-created.json`; alternate names are invalid. |
+| `frame_title` | string | Optional display metadata from the created frame title, JSON-escaped. Empty string is valid when unavailable. |
+| `program_type` | string | Optional display metadata from the active program type name, JSON-escaped. Empty string is valid when unavailable. |
+| `active_rendering_claimed` | boolean | Always `false`. |
+| `run_program_claimed` | boolean | Always `false`. |
+| `run_execution_claimed` | boolean | Always `false`. |
+| `world_execution_claimed` | boolean | Always `false`. |
+| `rendering_correctness_claimed` | boolean | Always `false`. |
+| `save_claimed` | boolean | Always `false`. |
+| `grading_claimed` | boolean | Always `false`. |
+| `full_ui_automation_claimed` | boolean | Always `false`. |
+| `does_not_claim` | string array | Must include `active-rendering`, `run-execution`, `world-execution-correctness`, `rendering-correctness`, `save`, `grading`, and `full-ui-automation`. |
+
+Representative artifact:
+
+```json
+{
+  "schema_version": "eatme.alice-run-window-created/v1",
+  "status": "created",
+  "contract_scope": "run-window-creation-wiring",
+  "evidence_source": "org.alice.stageide.run.RunComposite#handlePreShowWindow",
+  "artifact": "run-window-created.json",
+  "frame_title": "Run Alice",
+  "program_type": "Scene",
+  "active_rendering_claimed": false,
+  "run_program_claimed": false,
+  "run_execution_claimed": false,
+  "world_execution_claimed": false,
+  "rendering_correctness_claimed": false,
+  "save_claimed": false,
+  "grading_claimed": false,
+  "full_ui_automation_claimed": false,
+  "does_not_claim": [
+    "active-rendering",
+    "run-execution",
+    "world-execution-correctness",
+    "rendering-correctness",
+    "save",
+    "grading",
+    "full-ui-automation"
+  ]
+}
+```
+
+Path safety is part of the API: callers and tests reject absolute paths,
+parent traversal, nested artifact names, empty artifact names, and any resolved
+artifact path that escapes the configured evidence directory. Invalid evidence
+directories and write failures are logged as seam failures; they do not produce
+success-shaped fallback artifacts.
 
 Successful `xvfb-real-alice` evidence capture can include these common and scenario-specific artifacts:
 
@@ -576,6 +687,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
 12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
 13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-world grading, rubric scoring, correctness assessment, or creative assessment.
+14. Keeps any future Run-window contract narrow: do not use `run-window-created.json`, the scenario checklist, or the focused seam test to claim active rendering, runtime semantic correctness, rendering correctness, Save behavior, grading, or full UI automation.
 
 ## Extension rules
 
