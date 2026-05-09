@@ -7,8 +7,9 @@ repository.
 ## Project save and export characterization
 
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, and characterization seams.
-- [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Reference for the `save-menu-dialog-write-proof` QA scenario that runs the bounded Robot File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof shard.
-- [Robot Save Menu Dialog Write/Readback Proof](./reference/robot-save-menu-dialog-write-readback-proof.md) - Reference for the bounded Robot File-menu Save activation, Swing chooser control, `.a3p` write, readback, marker, and blocker artifact contract.
+- [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Implemented contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.
+- [Save Proof Evidence](./reference/save-proof-evidence.md) - Canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
+- [Robot Save Menu Dialog Write/Readback Proof](./reference/robot-save-menu-dialog-write-readback-proof.md) - Reference for the Robot File-menu Save activation, Swing chooser control, `.a3p` write, readback, marker, and blocker artifact contract.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
 - [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
 - [ProjectMigrationManager Migration Characterization](./reference/project-migration-manager-characterization.md) - Reference for generated XML-string characterization around versioned Alice project text migrations.
@@ -18,7 +19,7 @@ repository.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to add or review compatibility tests for save/export operations.
 - [Validate the Project Archive Reopen/Edit Seam](./howto/validate-project-archive-reopen-edit-seam.md) - How to run focused `core/ide` validation for the repository-owned archive reopen/edit seam and distinguish narrower archive coverage from the required edit assertion.
 - [Run the Save Menu Dialog Write/Readback Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused Robot Save menu/dialog/write/readback QA scenario with Xvfb when needed.
-- [Run the Robot Save Menu Dialog Write/Readback Proof](./howto/run-robot-save-menu-dialog-write-readback-proof.md) - Guide for running the focused Robot Save menu/dialog/write/readback proof and reviewing the complete blocked artifact schema.
+- [Run the Robot Save Menu Dialog Write/Readback Proof](./howto/run-robot-save-menu-dialog-write-readback-proof.md) - Guide for running the focused Robot Save menu/dialog/write/readback proof and reviewing the canonical artifact contract.
 - [Characterize Project IO Corpus Behavior](./howto/characterize-project-io-corpus.md) - How to add deterministic LFS-free IO corpus characterization around Alice archive readers and writers.
 - [Tutorial: Add a Save Operation Characterization Test](./tutorials/save-operation-characterization-test.md) - A guided example for the first direct Save operation characterization test.
 - [Tutorial: Trace the Project Archive Reopen/Edit Seam](./tutorials/trace-project-archive-reopen-edit-seam.md) - Guided review of the file-backed archive journey, required edit persistence assertion, export readback, loader rejection, and non-claims.
@@ -35,6 +36,7 @@ repository.
 - [Learner-world assessment boundary](./reference/learner-world-assessment-boundary.md) - reference for the manual instructor/student setup/open/save evidence boundary, generated checklist wording, unsupported assessment claims, and `define-reviewed-assessment-contract` next boundary.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, claim boundaries, and world-canvas pixel target readiness contract.
+- [Alice Desktop Silver-Thread Status Report](./reference/silver-thread-status-report.md) - fail-closed shell QA report that aggregates bounded launch, starter change, object placement, procedure edit, run-window/render-affordance, and optional Save/reopen evidence.
 - [First-Lesson Live Procedure Target Action Seam](./reference/first-lesson-live-procedure-target-observation.md) - read-only live desktop shard contract for opening the first-lesson starter through Select Project and producing edit-ready-or-named-blocker evidence.
 - [Run the First-Lesson Live Procedure Target Action Seam](./howto/run-first-lesson-live-procedure-target-action-seam.md) - how to collect and review the read-only first-lesson procedure/code-editor action-seam evidence.
 - [First-Lesson Procedure Tab Code-Editor Backing](./reference/first-lesson-procedure-tab-code-editor-backing.md) - reference for proving `scene.eatmeFirstLesson` tab selection lands on the expected `CodeComposite` and `CodeEditor.getCode()` model.

@@ -254,9 +254,20 @@ proof.
 For the artifact API, configuration, examples, and claim boundaries, see
 [First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
 
-## Collect post-open runtime/display accessibility evidence
+## Collect post-open runtime/display and target-scoped pixel evidence
 
-The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario collects evidence for one narrow post-open runtime/display signal. It reuses the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and project-open setup, then runs a read-only AT-SPI probe against the live Alice accessibility tree. The claim is limited to accessibility-visible runtime/display state after a project is open; it is not a full rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder proof. For the complete artifact API and review contract, see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
+The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
+collects evidence for one bounded post-open rendering-adjacent step. It reuses
+the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and
+project-open setup, then runs a read-only AT-SPI probe against the live Alice
+accessibility tree. The runner validates exactly one visible/showing
+Run-window/world-canvas target with positive screen-coordinate extents, then
+attempts target-scoped raw RGBA sampling inside that target under controlled
+conditions. If target validation or sampling cannot support that bounded
+observation, it writes the precise blocker instead. Neither result is a full rendering, visible
+rendering correctness, world execution, grading, lesson completion, Save, Select
+Project, installer, or decoder proof. For the complete artifact API and review contract,
+see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 Command from the repository root:
 
@@ -284,6 +295,8 @@ post-project-open-observation.json
 post-open-runtime-display-accessibility-evidence.json
 runtime-display-accessibility-status.txt
 controlled-display-pixel-observation.json
+visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-observation.json
 status.txt
 screenshot.png or screenshot.xwd
 ```
@@ -306,7 +319,15 @@ screenshot.png or screenshot.xwd
       "name": "Scene display",
       "path": "application/0/3",
       "role": "canvas",
-      "states": ["enabled", "showing", "visible"]
+      "states": ["enabled", "showing", "visible"],
+      "geometryStatus": "available",
+      "screenExtents": {
+        "coordinateType": "screen",
+        "x": 144,
+        "y": 188,
+        "width": 996,
+        "height": 642
+      }
     }
   ],
   "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
@@ -328,7 +349,15 @@ For acceptance, check the minimum decision fields:
       "name": "Scene display",
       "path": "application/0/3",
       "role": "canvas",
-      "states": ["enabled", "showing", "visible"]
+      "states": ["enabled", "showing", "visible"],
+      "geometryStatus": "available",
+      "screenExtents": {
+        "coordinateType": "screen",
+        "x": 144,
+        "y": 188,
+        "width": 996,
+        "height": 642
+      }
     }
   ],
   "blocker": "none"
@@ -354,7 +383,17 @@ If an implementation or environment prerequisite is missing, the runner still wr
 }
 ```
 
-Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus` and `controlledDisplayPixelBlocker`. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
+Use `status.txt` for automation and
+`post-open-runtime-display-accessibility-evidence.json` for detailed review.
+`runtime-display-accessibility-status.txt` is probe-local and useful for
+debugging the AT-SPI probe result, but `status.txt` is the final scenario status
+because it also records `controlledDisplayPixelStatus`,
+`controlledDisplayPixelBlocker`, `visibleRenderingPixelSamplingStatus`, and
+`visibleRenderingPixelSamplingArtifact`. Review `tab-click-observation.json`,
+`post-project-open-observation.json`, `controlled-display-pixel-observation.json`,
+and `visible-rendering-pixel-sampling-blocker.json` or
+`visible-rendering-pixel-observation.json` as supporting setup and the bounded
+sampling result.
 
 To review the latest run directory without changing it:
 
@@ -368,14 +407,22 @@ python3 -m json.tool \
   "$run_dir/post-open-runtime-display-accessibility-evidence.json"
 ```
 
-Accept the run only when `status.txt` records `outcome=passed`,
-`runtimeDisplayAccessibilityStatus=observed`, and
-`controlledDisplayPixelStatus=observed`, and the JSON decision artifact records
+Accept the run as runtime/display, controlled-display, and bounded sampling
+evidence only when `status.txt` records
+`outcome=passed`,
+`runtimeDisplayAccessibilityStatus=observed`,
+`controlledDisplayPixelStatus=observed`,
+`visibleRenderingPixelSamplingStatus=observed`, and
+`visibleRenderingCorrectnessEstablished=false`; the JSON decision artifact records
 `status=observed`, `blocker=none`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, and
-`runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
+`runtimeDisplayCandidateCount` greater than zero; and
+`visible-rendering-pixel-observation.json` records
+`visibleRenderingCorrectnessEstablished=false`, checked sample points inside the
+validated target, and raw RGBA values. If the sampling status is blocked, review
+`visible-rendering-pixel-sampling-blocker.json` and preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
-controlled-display pixels, or runtime/display candidate is unavailable.
+controlled-display pixels, target validation, or sampler is unavailable.
 
 ## Prepare evidence for manual workflows
 
@@ -519,6 +566,8 @@ Override the launch timeout when a workstation is slow:
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
   --timeout-seconds 180
 ```
+
+Do not use `--timeout-seconds`, scenario `automation.timeoutSeconds`, or shell `timeout` for the target `alice-desktop-save-menu-dialog-write-proof` workflow. That workflow is intentionally no-timeout and instead fails closed through bounded Java proof waits and the emitted Save proof evidence artifact.
 
 Gated command smokes cover exported-project, NetBeans package, package/install, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure path, future UI startup, menu/action plumbing, and wizard/palette/completion paths. Without `ALICE_QA_RUN_GATED_SMOKES=1`, those scenarios write `status.txt` with `outcome=gated-not-run` and exit non-zero so they cannot pass by accident. Use `--prepare-only` for intentional preflight/checklist preparation. Enable the gate only in a worktree prepared for the configured Maven, packaging, or display-backed command.
 

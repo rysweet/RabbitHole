@@ -66,7 +66,7 @@ Start with the highest-value untested behavior in the operation layer:
 | Export always prompts and uses export extension | `ExportProjectOperation` |
 | Shared project extension | `AbstractSaveProjectOperation` as observed through Save and Save As operations |
 | Finish, cancel, wait cursor, and retry flow | `SaveOperationFlow` |
-| Save menu item, live Save chooser approval, and `.a3p` write proof | `StageIdeSaveMenuDoClickToWriteProofTest` |
+| Rendered File-menu Save, live Save chooser control, `.a3p` write, readback, and marker proof | `RobotSaveMenuDialogWriteReadbackProofTest` |
 | Saved Alice project reopens, accepts an edit, saves again, reopens again with the edit, and exports | `IoUtilitiesTest` |
 
 Keep archive-content tests in lower-level classes that save Alice projects,
@@ -172,24 +172,23 @@ For prompted Save As or Export-style retries, characterize the existing suggesti
 
 ## Run the Save menu dialog write proof
 
-Use the canonical proof shard when the behavior must be proven beyond operation dispatch and flow seams. The shard starts from the production Save menu item, controls exactly one expected live Swing `JFileChooser`, verifies the normalized temp-directory `.a3p` target, and asserts a non-empty `.a3p` file write.
+Use the target canonical proof shard when the behavior must be proven beyond operation dispatch and flow seams. The finished shard starts from the rendered File menu, uses AWT Robot to click the production Save item, controls exactly one expected live Swing `JFileChooser`, verifies the proof-root `.a3p` target, asserts a non-empty `.a3p` file write, reads the file back, and verifies `robotSaveMenuRoundTripMarker`.
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 xvfb-run -a mvn -DincludeSims=false -Dinstall4j.skip \
   -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest \
+  -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest \
+  -Dorg.alice.eatme.saveProof.scenario=alice-desktop-save-menu-dialog-write-proof \
+  -Dorg.alice.eatme.saveProof.runId=save-proof-$(date -u +%Y%m%dT%H%M%SZ)-manual \
+  -Dorg.alice.eatme.saveProof.evidencePath=core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json \
   test
 ```
 
-An environment with no usable display produces `status: unsupported` with this exact reason:
+The focused proof target emits `core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json`. A no-display, exhausted bounded wait, or unsafe UI state emits `status: "blocked"` with exactly one known blocker and fails the proof; use that artifact as the executable blocker, not as Save completion evidence.
 
-```text
-No available non-headless AWT display
-```
-
-Do not broaden this proof while reviewing Save behavior. It does not cover Save As, backup saves, retry behavior, rendering correctness, grading, lesson completion, broad UI automation, or native dialog control.
+Do not broaden this proof while reviewing Save behavior. It does not cover Save As, backup saves, retry behavior, overwrite prompts, cancellation, rendering correctness, grading, lesson completion, broad UI automation, or native dialog control. For the complete artifact contract, see [Save Proof Evidence](../reference/save-proof-evidence.md).
 
 ## Add a project archive round-trip test
 
