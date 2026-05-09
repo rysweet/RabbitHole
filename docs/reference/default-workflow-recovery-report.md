@@ -20,9 +20,12 @@ the final report structured, even when no files changed.
 ## Scope
 
 Use this report contract for recovery work that continues an existing PR branch
-without rewriting PR history. The workflow may merge the current target branch
-into the PR branch, resolve only relevant conflicts, run focused validation, and
-emit readiness evidence for the exact checked head.
+without rewriting PR history. When branch recovery has been separately
+authorized, the workflow may record that the operator merged the current target
+branch into the PR branch, resolved only relevant conflicts, ran focused
+validation, and emitted readiness evidence for the exact checked head. The
+report is evidence about those completed actions; it does not authorize a merge,
+rebase, push, or conflict-resolution pass.
 
 The report is a workflow artifact. It does not expand product claims, desktop QA
 claims, Run execution claims, visible rendering claims, Save claims, grading
@@ -138,9 +141,10 @@ Readiness evidence
 ### Summary
 
 State the durable outcome in one or two sentences. For PR branch recovery,
-include whether the branch was updated from the target branch, whether conflicts
-were resolved, and whether the focused work remains bounded to the intended
-feature.
+record only completed, operator-authorized recovery actions: whether the branch
+was updated from the target branch, whether relevant conflicts were resolved,
+and whether the focused work remains bounded to the intended feature. Do not use
+the report summary as permission to merge branches or resolve conflicts.
 
 ### Files modified
 
@@ -218,7 +222,7 @@ readiness is blocked by the PR conflict result.
 | --- | --- |
 | Explicit PR worktree path | Preferred source for `repo_path`; may be the repo root or a subdirectory, and must resolve through `git -C "$input_path" rev-parse --show-toplevel`. |
 | Current working directory | Fallback only when no explicit PR worktree path is supplied; resolved through the same Git top-level command. |
-| Target branch | Merged into the PR branch when recovery requires current target-branch content without rewriting PR history. |
+| Target branch | May be merged into the PR branch only as part of separately authorized recovery that requires current target-branch content without rewriting PR history; the report records the result but does not grant that authority. |
 | PR number | Used only for read-only GitHub metadata evidence through `gh pr view`; conflict status blocks merge-readiness claims. |
 | `NODE_OPTIONS` | Use `--max-old-space-size=32768` for focused Node-adjacent QA commands in this repository. |
 
