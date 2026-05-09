@@ -94,9 +94,11 @@ generatedSyntheticSceneListenerRegistrationSourceCompiles
 
 This test builds a synthetic Alice project entirely in memory:
 
-1. Creates a user type extending `SScene` with a `handleActiveChanged` method.
-2. Adds `addTimeListener(null, 2)` and `addSceneActivationListener(null)` calls
-   to the method body using `AstUtilities.lookupMethod(...)`.
+1. Creates a `Program` type (extending `SProgram`) with a `scene` field whose type
+   is a synthetic `Scene` extending `SScene`.
+2. The `Scene` type has a `handleActiveChanged` method containing
+   `addTimeListener(null, 2)` and `addSceneActivationListener(null)` calls
+   resolved through `AstUtilities.lookupMethod(...)`.
 3. Writes the project to a temporary `.a3p` with `IoUtilities.writeProject(...)`.
 4. Generates Java source with `ProjectCodeGenerator.generateCode(..., false)`.
 
@@ -133,11 +135,18 @@ this.addSceneActivationListener((SceneActivationEvent p0) ->
 
 **What to observe in sequence:**
 
-### 4a. Compilation and class loading
+### 4a. Compilation, class loading, and listener registration
 
 The generated source is compiled with the JDK compiler. The test loads the
-generated `Scene` class from the compiled output using a custom class loader that
-sees both the generated classes and the Story API runtime classpath.
+generated `Scene` class from the compiled output using a `URLClassLoader`
+configured with the compiled classes directory and the current thread's context
+class loader as parent, so it sees both generated classes and the Story API
+runtime classpath.
+
+The test then instantiates the generated `Scene` and invokes
+`handleActiveChanged(Boolean.TRUE, 1)` via reflection. This runs the generated
+method body, which calls `addSceneActivationListener(lambda)` — registering the
+lambda that records the runtime dispatch event.
 
 ### 4b. Pre-dispatch assertion
 
@@ -153,8 +162,9 @@ waiting for actual dispatch.
 
 ### 4c. Scene activation dispatch
 
-The test invokes `EventManager.sceneActivated()` on the loaded scene instance.
-This fires through the existing headless runtime dispatch path:
+The test obtains the `EventManager` from the scene's implementation
+(`scene.getImplementation().getEventManager()`) and invokes `sceneActivated()`
+on it. This fires through the existing headless runtime dispatch path:
 
 ```text
 EventManager.sceneActivated()

@@ -320,7 +320,7 @@ class under test, and invoke explicit seams without launching Alice desktop UI.
 | --- | --- |
 | Generated `configureStory()` method | Direct invocation updates `SProgram.getSimulationSpeedFactor()` to `1.5` under a headless `ProgramImp` test double. |
 | Generated scene activation listener lambda | After the fixture registers the listener, invoking the implementation event handler seam trips the test latch. |
-| Scene activation event payload | The generated listener receives the exact `SceneActivationEvent` instance fired through the handler seam. |
+| Scene activation event payload | The generated listener receives a payload whose class is exactly `SceneActivationEvent` (type check via `assertSame` on the `Class` object, not instance identity). |
 | Generated time listener lambda | Activating and updating the implementation timer seam trips the test latch. |
 | Time listener elapsed payload | The generated listener receives the elapsed-time value from `TimeEvent.getTimeSinceLastFire()`. |
 
