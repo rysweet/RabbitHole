@@ -43,7 +43,10 @@ new_files:
   - docs/howto/recover-pr-with-default-workflow.md
   - docs/reference/default-workflow-recovery-report.md
   - docs/reference/desktop-run-execution-gap-report.md
+  - docs/reference/gadugi-run-execution-gap-evidence.md
   - docs/tutorials/trace-no-timeout-pr-recovery.md
+  - qa/outside-in/alice-desktop/gadugi/run-execution-gap-evidence.yaml
+  - qa/outside-in/alice-desktop/tests/test-gadugi-run-execution-gap-contract.sh
   - qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh
   - scripts/default_workflow_recovery.py
   - tests/test_default_workflow_merge_ready_contract.py
