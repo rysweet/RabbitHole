@@ -29,7 +29,7 @@
       "enum": [
         "archive-fixture-smoke",
         "export",
-        "exported-project-smoke",
+        "exported-project-ant-build-smoke",
         "failure-path-smoke",
         "file-loader-smoke",
         "first-lesson-live-procedure-target-observation",
@@ -163,6 +163,9 @@
                   "const": "-Dinstall4j.skip"
                 },
                 {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
                   "const": "-Dsurefire.failIfNoSpecifiedTests=false"
                 },
                 {
@@ -175,15 +178,15 @@
                   "const": "-am"
                 },
                 {
-                  "const": "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest"
+                  "const": "-Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest"
                 },
                 {
                   "const": "test"
                 }
               ],
               "items": false,
-              "minItems": 9,
-              "maxItems": 9
+              "minItems": 10,
+              "maxItems": 10
             },
             {
               "prefixItems": [

@@ -17,6 +17,8 @@ not prove
 world-canvas pixel correctness, visible rendering correctness, deployed installer
 success, full world execution, grading, lesson completion, active Save behavior,
 active Select Project behavior, or decoder behavior.
+The executable nonclaim boundary is documented in
+[Visible rendering evidence nonclaim contract](./visible-rendering-evidence-nonclaim-contract.md).
 
 ## Contents
 

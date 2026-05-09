@@ -1,7 +1,7 @@
 Default-workflow readiness evidence for PR #423
-Recorded at: 2026-05-09T17:55:13Z
-Validated source tree: the PR branch after the Step 17e blocking
-evidence/tutorial fixes recorded in this artifact refresh.
+Recorded at: 2026-05-09T18:06:02Z
+Validated source tree: the PR branch after the Step 18b review-feedback fixes
+and current develop merge-conflict resolution recorded in this artifact refresh.
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
@@ -12,9 +12,10 @@ Scope:
   focused NetBeans ProjectCodeGeneratorTest.
 - The validated source tree includes the review-blocker fixes:
   - durable reference docs no longer carry point-in-time PR status wording;
-  - pyproject.toml is at alice3-modernization-qa version 0.7.1;
+  - pyproject.toml is at alice3-modernization-qa version 0.9.0 from current
+    develop, avoiding a package-version downgrade during conflict resolution;
   - the source-code-generator tutorial assignment snippet matches the
-    characterized AssignmentExpression constructor shape.
+     characterized AssignmentExpression constructor shape.
 - This evidence refresh is committed with the blocker fixes, so the final commit
   SHA changes after this file is written. The validated source tree is therefore
   identified by branch and the blocker-fix scope above instead of by a
@@ -40,24 +41,16 @@ Result:
 - Focused SourceCodeGeneratorTest validation passed.
 - Focused ProjectCodeGeneratorTest validation passed.
 - Diff whitespace validation passed for the source-generator documentation,
-  package metadata, evidence log, and ProjectCodeGenerator.java
-  review-feedback path.
-- The QA package metadata is consistently documented at version 0.7.1.
+   package metadata, evidence log, and ProjectCodeGenerator.java
+   review-feedback path.
+- The QA package metadata resolves to version 0.9.0 from current develop.
 - PR-specific wording was removed from durable docs and retained only in
-  workflow-owned evidence or PR discussion.
+   workflow-owned evidence or PR discussion.
 - SourceCodeGeneratorTest now characterizes expression-statement assignment,
   field access, static and instance method invocation, iterable for-each source,
   and the current DoTogether runnable fallback in addition to the existing
   literal, operator, array, class/member, disabled-statement, loop, and stale
   item repair snippets.
-
-Visible GitHub status at the recorded head:
-- PR #423 is open against develop.
-- PR #423 is merge-clean.
-- Visible checks reported success for Alice Checkstyle CI, Alice Coverage
-  Reports, Alice NetBeans Package CI, Alice Test CI, and GitGuardian Security
-  Checks.
-- PR #423 is not marked draft.
 
 Bounded non-claims:
 - This evidence does not claim full Tweedle/player decode.
@@ -66,5 +59,5 @@ Bounded non-claims:
 - This evidence does not claim grading correctness.
 - This evidence does not claim lesson completion.
 - This evidence does not claim generated source execution safety beyond the
-  focused generated-source and headless-seam characterization described in the
-  repository documentation.
+   focused generated-source and headless-seam characterization described in the
+   repository documentation.
