@@ -54,11 +54,11 @@ netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandalone
 netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java
 ```
 
-The target behavior slice covers generated, LFS-free Alice projects exported
-into the NetBeans Ant template. The implemented launcher/generator tests cover
-the current generated-source and launcher evidence portion; the Ant target
-execution requirements are the feature still to wire through the outside-in QA
-lane. The completed feature will verify that the exported project:
+The behavior slice covers generated, LFS-free Alice projects exported into the
+NetBeans Ant template. The wired outside-in QA lane runs the bounded Ant build
+proof when gated, while launcher/generator tests continue to cover the
+generated-source and JavaFX handoff evidence portion. Together they verify that
+the exported project:
 
 1. Generates `AliceJavaFXLauncher` as the default `main.class`.
 2. Compiles generated Alice project source against the exported runtime
@@ -503,9 +503,9 @@ not rename the default launcher evidence to imply display-backed behavior.
 
 ## Tutorial: verify target exported Ant build evidence
 
-Use this flow when implementing or reviewing the target exported-project Ant
-behavior. The current outside-in smoke remains a generated-project launcher
-smoke until the scenario wiring is updated.
+Use this flow when reviewing the wired exported-project Ant behavior. The
+current outside-in smoke runs `Alice3ProjectTemplateAntSmokeTest` when the gated
+command is intentionally enabled.
 
 ### Step 1: Start from a no-Sims checkout
 

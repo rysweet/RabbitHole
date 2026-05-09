@@ -230,10 +230,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 This produces `command.log` and a pass/fail `status.txt` through the existing
-outside-in runner. Today, treat the result as generated-project compile/launcher
-handoff evidence, not as bounded exported Ant target evidence and not as visible
-rendering, installer, save, grading, creative assessment, or full lesson
-completion evidence.
+outside-in runner. Treat the result as bounded exported Ant target evidence, not
+as visible rendering, installer, save, grading, creative assessment, full GUI
+export journey, or full lesson completion evidence.
 
 ## Evidence boundaries
 
