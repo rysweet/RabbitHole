@@ -30,7 +30,7 @@ expectedOutcomes:
   - tab-click-observation.json records tabClickAttempts for the Select Project tab controls and confirms the Starters context was activated before searching for Africa Full.
   - tab-click-observation.json records Starters-tab safety metadata showing the target search scope was the active Starters tab.
   - tab-click-observation.json records targetStarter.displayName="Africa Full" and targetStarter.repositoryPath="core/resources/src/application/resources/starter-projects/AfricaFull.a3p".
-  - tab-click-observation.json records evidenceStatus=opened only when targetStarterObserved.name="Africa Full", targetStarterSelected=true, targetStarterOpenAttempted=true, openedStarter matches the Africa Full metadata, and projectOpenObserved=true with projectOpenDetail confirming the Select Project frame is no longer present in the AT-SPI tree.
+  - tab-click-observation.json records evidenceStatus=opened only when targetStarterObserved.name="Africa Full", targetSelectionObserved=true, openAttempted=true, openedStarter matches the Africa Full metadata, and projectOpenObserved=true with projectOpenDetail confirming the Select Project frame is no longer present in the AT-SPI tree.
   - If Africa Full cannot be selected/opened through AT-SPI, tab-click-observation.json records evidenceStatus=blocked or selected plus nextBlocker.observedAtspiState, nextBlocker.actionAttempted, nextBlocker.expectedNextAction, and nextBlocker.reasonProgressStopped.
   - The proof confirms only target-specific AT-SPI selection/open evidence for the committed Africa Full starter; it does not claim visible rendering, full project interaction, grading, or lesson completion.
 automation:
@@ -61,7 +61,7 @@ fallback:
     - If the Select Project window is not visible within the readiness wait, the wait mechanism must be confirmed to include the new scenario ID (alice-desktop-select-project-tab-click-exec).
     - If tab nodes have only toggle-button role with empty names, record the exact AT-SPI property gap.
     - If targetStarter selection fails, record the target role/name/states/actions/tree path, parent selection-interface availability, attempted action, expected next action, and reason progress stopped.
-    - Do not claim Africa Full opening unless tab-click-observation.json records openedStarter matching the Africa Full metadata, targetStarterSelected=true, targetStarterOpenAttempted=true, and projectOpenObserved=true.
+    - Do not claim Africa Full opening unless tab-click-observation.json records openedStarter matching the Africa Full metadata, targetSelectionObserved=true, openAttempted=true, and projectOpenObserved=true.
 supportingEvidence:
   - alice-desktop-select-project-atk-exec
   - alice-desktop-select-project-widget-introspection

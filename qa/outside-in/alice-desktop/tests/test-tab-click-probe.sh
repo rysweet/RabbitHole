@@ -279,6 +279,10 @@ if success.get("targetStarterSelected") is not True:
     raise AssertionError("targetStarterSelected must be true after selecting Africa Full")
 if success.get("targetStarterOpenAttempted") is not True:
     raise AssertionError("targetStarterOpenAttempted must be true when OK/Open is clicked for Africa Full")
+if success.get("targetSelectionObserved") is not True:
+    raise AssertionError("targetSelectionObserved must be true after target-specific Africa Full selection")
+if success.get("openAttempted") is not True:
+    raise AssertionError("openAttempted must be true only after target-specific Africa Full selection")
 if success.get("openedStarter") != {
     "displayName": TARGET_DISPLAY_NAME,
     "repositoryPath": TARGET_REPOSITORY_PATH,
@@ -331,6 +335,10 @@ if absent.get("targetStarterSelected") is not False:
     raise AssertionError("targetStarterSelected must be false when the active Starters context lacks Africa Full")
 if absent.get("targetStarterOpenAttempted") is not False:
     raise AssertionError("OK/Open must not be attempted when Africa Full was not observed in active Starters")
+if absent.get("targetSelectionObserved") is not False:
+    raise AssertionError("targetSelectionObserved must be false when active Starters lacks Africa Full")
+if absent.get("openAttempted") is not False:
+    raise AssertionError("openAttempted must be false when Africa Full was not observed in active Starters")
 if absent_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when only a non-active/hidden Africa Full node was observed")
 assert_blocker_shape(absent)
@@ -351,6 +359,10 @@ if tab_blocked.get("targetStarterSelected") is not False:
     raise AssertionError("targetStarterSelected must be false when Starters tab activation fails")
 if tab_blocked.get("targetStarterOpenAttempted") is not False:
     raise AssertionError("OK/Open must not be attempted when Starters tab activation fails")
+if tab_blocked.get("targetSelectionObserved") is not False:
+    raise AssertionError("targetSelectionObserved must be false when Starters tab activation fails")
+if tab_blocked.get("openAttempted") is not False:
+    raise AssertionError("openAttempted must be false when Starters tab activation fails")
 if tab_blocked_counters["africa"] != 0:
     raise AssertionError("probe must not select Africa Full when Starters tab activation fails")
 if tab_blocked_counters["ok"] != 0:
@@ -370,6 +382,10 @@ if blocked.get("targetStarterSelected") is not False:
     raise AssertionError("targetStarterSelected must be false when no target action or parent selection interface works")
 if blocked.get("targetStarterOpenAttempted") is not False:
     raise AssertionError("OK/Open must not be attempted without target-specific selection evidence")
+if blocked.get("targetSelectionObserved") is not False:
+    raise AssertionError("targetSelectionObserved must be false when target-specific selection fails")
+if blocked.get("openAttempted") is not False:
+    raise AssertionError("openAttempted must be false when target-specific selection fails")
 if blocked_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open after a target-specific selection capability gap")
 assert_blocker_shape(blocked)
@@ -388,6 +404,8 @@ assert_contains "$output" '"targetStarter": \{' "blocked probe output preserves 
 assert_contains "$output" '"displayName": "Africa Full"' "blocked probe output records target display name"
 assert_contains "$output" '"repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull\.a3p"' "blocked probe output records target repository path"
 assert_contains "$output" '"evidenceStatus": "blocked"' "blocked probe output uses blocked evidenceStatus"
+assert_contains "$output" '"targetSelectionObserved": false' "blocked probe output records targetSelectionObserved=false"
+assert_contains "$output" '"openAttempted": false' "blocked probe output records openAttempted=false"
 assert_contains "$output" '"nextBlocker": \{' "blocked probe output includes structured next blocker"
 
 invalid_target_output="$tmp_root/invalid-target-output.json"

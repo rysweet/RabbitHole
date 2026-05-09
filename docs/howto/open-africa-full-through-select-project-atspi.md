@@ -1,38 +1,6 @@
 # Open Africa Full through Select Project with AT-SPI
 
-Use the Select Project AT-SPI scenario to prove that the committed `Africa Full` starter was selected/opened, or to capture the exact automation blocker that prevents that proof.
-
-## Prerequisites
-
-Run commands from the repository root.
-
-```bash
-java -version
-mvn -version
-git submodule update --init tweedle-lang
-test -d tweedle-lang/Grammar
-```
-
-The scenario requires the real Alice desktop accessibility path:
-
-```bash
-sudo apt-get install -y python3-pyatspi
-test -f /usr/share/java/java-atk-wrapper.jar
-```
-
-Use an isolated first-run license state for controlled QA launches:
-
-```bash
-export NODE_OPTIONS=--max-old-space-size=32768
-ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
-qa/outside-in/alice-desktop/runners/run-scenario.sh run \
-  alice-desktop-select-project-tab-click-exec \
-  --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
-```
-
-## What the scenario targets
-
-The checked-in scenario binds the proof to the starter target in `targetStarter`:
+Use this focused Select Project lane to prove progress toward selecting or opening the committed `Africa Full` starter through Alice's Select Project dialog. The lane accepts exactly one target:
 
 ```yaml
 targetStarter:
@@ -40,11 +8,55 @@ targetStarter:
   repositoryPath: core/resources/src/application/resources/starter-projects/AfricaFull.a3p
 ```
 
-The validator rejects missing target metadata, absolute paths, path traversal, and any path other than the committed Africa Full starter path for this scenario. The path is evidence metadata only; the AT-SPI probe does not read or write that file.
+The evidence is intentionally narrow. It proves starter identification, target-specific selection/opening progress, or the exact blocker that stopped progress. It does not prove visible rendering correctness, full lesson execution, grading, Save behavior, full UI automation, or world interaction.
 
-## Validate the focused contract
+## Target evidence vocabulary
 
-Run only the focused Select Project contract checks:
+The artifact contract uses the committed target-scoped field names:
+
+| Field | Meaning |
+| --- | --- |
+| `targetStarter` | Validated Africa Full starter metadata. |
+| `targetStarterObserved` | Safe AT-SPI observation for the Africa Full starter node. |
+| `targetSelectionObserved` | Target-specific Africa Full selection was observed. |
+| `openAttempted` | OK/Open was attempted after target-specific selection evidence. |
+| `openedStarter` | Starter metadata recorded only after the guarded Select Project dismissal. |
+
+## Prerequisites
+
+Run commands from the repository root.
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+
+java -version
+mvn -version
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+test -f core/resources/src/application/resources/starter-projects/AfricaFull.a3p
+```
+
+The live AT-SPI path requires the same accessibility stack as the existing Select Project probes:
+
+```bash
+sudo apt-get install -y python3-pyatspi
+test -f /usr/share/java/java-atk-wrapper.jar
+```
+
+Use isolated first-run license state for controlled QA launches:
+
+```bash
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-select-project-tab-click-exec \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
+```
+
+Generated evidence under `qa/outside-in/alice-desktop/evidence/` is transient and ignored by Git. Promote only intentionally reviewed evidence or documentation; do not treat ignored run output as durable by default.
+
+## Validate the contract
+
+Run the focused documentation-backed checks before reviewing a run:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -58,23 +70,38 @@ bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 ```
 
-These checks cover the scenario/schema contract, runner-published Select Project status fields, Select Project window proof shape, target-specific `Africa Full` opened/blocked evidence shape, and the post-open gate that rejects incomplete target-starter evidence. They do not exercise Save, rendering, grading, lessons, model export, archive fixtures, procedure/edit, or coverage.
+These checks should cover the scenario target metadata, validator allowlists, runner promotion fields, target-specific tab-click evidence, blocked evidence shape, post-open gating, and no-overclaim wording. They are not rendering, grading, lesson, Save, or full UI automation tests.
 
-## Required action order
+## What the runner validates before launch
 
-The proof must keep the action sequence conservative:
+`validate-scenarios.sh` rejects the Select Project tab-click scenario unless:
 
-1. Activate the active `Starters` context.
-2. Locate `Africa Full` in that active context and record its safe AT-SPI role, state, action, tree path, and selection evidence.
-3. Try the target node's supported action first, such as `click` or `activate`.
-4. If the target node has no usable action, try the parent selection interface second and record the interface used.
-5. Click OK/Open only after target-specific selection evidence exists.
+1. `workflow` is `select-project-tab-click-smoke`.
+2. `targetStarter.displayName` is exactly `Africa Full`.
+3. `targetStarter.repositoryPath` is exactly `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`.
+4. The repository path is relative, normalized, inside the repository, and not a traversal path.
+5. The automation argv is one of the approved Alice desktop launch argv lists.
 
-Do not convert a generic Select Project dismissal into Africa Full proof.
+`run-scenario.sh` passes the validated target metadata to `tab-click-probe.py` with quoted arguments or safe environment values. The runner must not use `eval`, executable interpolation, or scenario YAML as shell code.
 
-## Review successful evidence
+## Required probe order
 
-Open `status.txt`, then open `tab-click-observation.json` in the same run directory. Treat the Select Project step as proved only when the artifact contains target-specific starter evidence with matching metadata:
+The target `tab-click-probe.py` behavior follows the existing Select Project QA/probe flow and stops rather than overclaiming:
+
+1. Wait for the real Select Project dialog and record its Java/window context.
+2. Identify and activate the `Starters` tab.
+3. Record `startersTabSafety` showing that the Starters tab was activated before target search and that the active search scope is `active-starters-tab`.
+4. Search only that active context for `Africa Full`.
+5. Record safe target observation data: role, state names, available actions, tree path, parent selection-interface availability, and bounded candidate names.
+6. Set `targetSelectionObserved=true` only when target-specific evidence shows `Africa Full` was selected.
+7. Set `openAttempted=true` only after target-specific selection evidence exists.
+8. Set `projectOpenObserved=true` only when the Select Project frame is no longer present after the guarded open attempt.
+
+A generic Select Project dismissal, unrelated main-window state, or generic starter candidate must not become Africa Full proof.
+
+## Review opened evidence
+
+Open `status.txt`, then review `tab-click-observation.json` in the same run directory. An opened result uses this narrow shape:
 
 ```json
 {
@@ -82,47 +109,75 @@ Open `status.txt`, then open `tab-click-observation.json` in the same run direct
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
   },
+  "evidenceStatus": "opened",
+  "startersTabSafety": {
+    "tabName": "Starters",
+    "activationAttempted": true,
+    "activatedBeforeTargetSearch": true,
+    "activationDetail": "Starters tab activated before target search",
+    "targetSearchScope": "active-starters-tab"
+  },
   "targetStarterObserved": {
-    "name": "Africa Full"
+    "name": "Africa Full",
+    "role": "panel",
+    "states": ["enabled", "visible", "showing"],
+    "availableActions": ["click"],
+    "treePath": [0, 3, 1, 0],
+    "parentSelectionAvailable": false
   },
-  "targetStarterSelected": true,
-  "targetStarterOpenAttempted": true,
-  "openedStarter": {
-    "displayName": "Africa Full",
-    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  "targetSelectionObserved": true,
+  "targetSelectionAttempt": {
+    "actionAttempts": [
+      {
+        "action": "click",
+        "success": true,
+        "detail": "click action succeeded"
+      }
+    ],
+    "parentSelectionAttempted": false,
+    "parentSelectionSuccess": false,
+    "selected": true,
+    "detail": "target starter selected via click action"
   },
+  "openAttempted": true,
   "projectOpenObserved": true,
-  "evidenceStatus": "opened"
+  "projectOpenDetail": "Select Project frame no longer present after guarded Africa Full open attempt"
 }
 ```
 
-`targetStarterObserved` must be non-null and must describe the observed `Africa Full` AT-SPI node in the active Starters context. `evidenceStatus=opened` means only that AT-SPI evidence supports selecting/opening `Africa Full` and the Select Project frame was dismissed. It does not prove full Alice UI automation, visible rendering, world interaction, grading, creative assessment, Save completion, first-lesson completion, unrelated launcher behavior, or unrelated decoder behavior.
+Treat `evidenceStatus=opened` as proof only when the artifact echoes the validated `targetStarter`, records safe `startersTabSafety`, records `targetSelectionObserved=true`, records `openAttempted=true`, and records `projectOpenObserved=true` from the same guarded run. It means only that AT-SPI evidence supports selecting/opening the committed Africa Full starter through Select Project.
 
-The run must also include Alice Java/window context in `x-window-inventory.json` and `select-project-window.json`. The Select Project window context must be the current Java dialog from the same run, not a broad process list or unrelated window.
+The same run must also include `x-window-inventory.json` and `select-project-window.json` for the Alice Java/window context. These artifacts provide PID/window context only; they are not project rendering or lesson execution proof.
 
 ## Review blocked evidence
 
-If AT-SPI can see the Select Project window but cannot complete target-specific selection/opening, `tab-click-observation.json` must preserve the existing blocker shape with a string `blocker` code and `blockerDetail`, then add structured target-specific details in `nextBlocker`:
+If the probe cannot complete target-specific selection/opening, it records the exact next blocker instead of success:
 
 ```json
 {
   "targetStarter": {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "blocked",
+  "startersTabSafety": {
+    "tabName": "Starters",
+    "activationAttempted": true,
+    "activatedBeforeTargetSearch": true,
+    "activationDetail": "Starters tab activated before target search",
+    "targetSearchScope": "active-starters-tab"
   },
   "targetStarterObserved": {
     "name": "Africa Full",
     "role": "panel",
     "states": ["enabled", "visible", "showing"],
     "availableActions": [],
-    "parentSelectionAvailable": false,
     "treePath": [0, 3, 1, 0],
-    "indexInParent": 0
+    "parentSelectionAvailable": false
   },
-  "targetStarterSelected": false,
-  "targetStarterOpenAttempted": false,
+  "targetSelectionObserved": false,
+  "openAttempted": false,
   "projectOpenObserved": false,
-  "evidenceStatus": "blocked",
   "blocker": "target-starter-selection-unavailable",
   "blockerDetail": "Africa Full is visible in the active Starters context but exposes no click/activate action and no usable parent selection interface.",
   "nextBlocker": {
@@ -134,21 +189,40 @@ If AT-SPI can see the Select Project window but cannot complete target-specific 
 }
 ```
 
-A blocked artifact is an acceptable `nextBlocker` result when it names the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. Do not replace this with generic main-window evidence.
+A blocked result is acceptable evidence when it names exactly one next blocker and includes the observed AT-SPI state, action attempted, expected next action, and reason progress stopped. Report that blocker as the result; do not replace it with generic main-window evidence.
 
-When publishing a blocked result, report exactly one next blocker. Include the current Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, and OK/Open attempt state. Do not include a general status dump.
+## Runner summary fields
 
-## Evidence hygiene
+When `tab-click-observation.json` echoes the validated target metadata, the runner promotes only narrow Select Project summary fields into `status.txt`:
 
-Evidence and blocker payloads must stay scoped to safe AT-SPI state and scenario metadata. Do not dump unrelated environment variables, process lists, usernames, home paths, tokens, credentials, or arbitrary filesystem paths into `tab-click-observation.json` or post-open artifacts.
-
-## Publish the narrow result
-
-Publish only the Select Project result:
-
-| Result | Publish |
+| Field | Meaning |
 | --- | --- |
-| Opened | `evidenceStatus=opened`, exact `Africa Full` target metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, `projectOpenObserved=true`, and the Alice Java/window PID context. |
-| Blocked | One blocker code/detail plus Alice Java/window PID context, Select Project window context, Starters-tab activation state, target observation state, target selection state, OK/Open attempt state, and one structured `nextBlocker`. |
+| `selectProjectTargetDisplayName` | Validated target display name: `Africa Full`. |
+| `selectProjectTargetRepositoryPath` | Validated committed starter path. |
+| `selectProjectEvidenceStatus` | `opened`, `selected`, `blocked`, or `failed`. |
+| `selectProjectStartersTabSafety` | Compact status for the active Starters search scope. |
+| `selectProjectTargetSelectionObserved` | `true` only when target-specific Africa Full selection evidence exists. |
+| `selectProjectOpenAttempted` | `true` only when OK/Open was attempted after target-specific selection evidence. |
+| `selectProjectProjectOpenObserved` | `true` only when the Select Project frame disappeared after that guarded attempt. |
+| `selectProjectNextBlocker` | Structured blocker detail for non-opened results. |
 
-Do not publish downstream claims from this proof. The lane does not prove full Alice UI automation, Save completion, visible rendering correctness, grading, creative assessment, first-lesson completion, model export, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage.
+The runner may also publish `selectProjectOpenedStarterDisplayName` and `selectProjectOpenedStarterRepositoryPath` as diagnostics. Opened proof still requires the target selection, open-attempt, and project-open flags above to be present and true. If the probe output omits or drifts from the validated `targetStarter`, the runner must not promote success-shaped Select Project fields.
+
+## Post-open probe boundary
+
+The `post-project-open-probe.py` gate may report narrow post-open progress only after the prior tab-click artifact proves the Africa Full path with matching target metadata, `targetSelectionObserved=true`, `openAttempted=true`, and `projectOpenObserved=true`.
+
+The probe preserves legacy diagnostic fields, but the gate is the canonical target-specific contract above.
+
+If that gate is missing or inconsistent, `post-project-open-observation.json` records a blocked result. If the gate passes, the post-open artifact may report accessible main-window presence and PID/window continuity. It must not claim visible rendering correctness, grading, full lesson execution, Save completion, or full UI automation.
+
+## Publish the result
+
+Publish only one of these outcomes:
+
+| Outcome | Publish |
+| --- | --- |
+| Opened | Exact `Africa Full` `targetStarter` metadata, `evidenceStatus=opened`, `startersTabSafety`, `targetSelectionObserved=true`, `openAttempted=true`, `projectOpenObserved=true`, and Alice Java/window context. |
+| Blocked | One blocker code/detail, Alice Java/window context, Select Project window context, Starters-tab safety, target observation state, target selection state, open-attempt state, project-open state, and one structured `nextBlocker`. |
+
+Do not publish downstream claims from this lane. It does not prove visible rendering correctness, full UI automation, Save completion, grading, creative assessment, full lesson execution, model export, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage.

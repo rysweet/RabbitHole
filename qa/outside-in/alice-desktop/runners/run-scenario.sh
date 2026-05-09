@@ -3180,10 +3180,13 @@ JSON
   local select_project_opened_display_name=not-requested
   local select_project_opened_repo_path=not-requested
   local select_project_project_open_observed=not-requested
+  local select_project_target_selection_observed=not-requested
+  local select_project_open_attempted=not-requested
   local select_project_next_blocker=not-requested
   local select_project_window_context=not-requested
   local select_project_alice_java_pid=not-requested
   local select_project_starters_tab_safety=not-requested
+  local select_project_target_metadata_echo_valid=not-requested
   if [ "$needs_tab_click_probe" -eq 1 ]; then
     # Allow the Swing accessibility tree to build before probing, then run
     # the target-specific Select Project starter proof.
@@ -3204,19 +3207,31 @@ JSON
       openedStarter.displayName \
       openedStarter.repositoryPath \
       projectOpenObserved \
+      targetSelectionObserved \
+      openAttempted \
       javaPid
     tab_click_status=${tab_click_fields[0]}
     tab_click_blocker=${tab_click_fields[1]}
-    select_project_evidence_status=${tab_click_fields[2]}
-    select_project_target_display_name=${tab_click_fields[3]}
-    select_project_target_repo_path=${tab_click_fields[4]}
-    select_project_opened_display_name=${tab_click_fields[5]}
-    select_project_opened_repo_path=${tab_click_fields[6]}
-    select_project_project_open_observed=${tab_click_fields[7]}
-    select_project_next_blocker=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" nextBlocker)
-    select_project_window_context=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" selectProjectWindowContext)
-    select_project_alice_java_pid=${tab_click_fields[8]}
-    select_project_starters_tab_safety=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" startersTabSafety)
+    if [ "${tab_click_fields[3]}" = "$target_starter_display_name" ] \
+        && [ "${tab_click_fields[4]}" = "$target_starter_repo_path" ]; then
+      select_project_target_metadata_echo_valid=true
+      select_project_evidence_status=${tab_click_fields[2]}
+      select_project_target_display_name=${tab_click_fields[3]}
+      select_project_target_repo_path=${tab_click_fields[4]}
+      select_project_opened_display_name=${tab_click_fields[5]}
+      select_project_opened_repo_path=${tab_click_fields[6]}
+      select_project_project_open_observed=${tab_click_fields[7]}
+      select_project_target_selection_observed=${tab_click_fields[8]}
+      select_project_open_attempted=${tab_click_fields[9]}
+      select_project_next_blocker=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" nextBlocker)
+      select_project_window_context=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" selectProjectWindowContext)
+      select_project_alice_java_pid=${tab_click_fields[10]}
+      select_project_starters_tab_safety=$(inventory_json_compact_field "$run_dir/tab-click-observation.json" startersTabSafety)
+    else
+      select_project_target_metadata_echo_valid=false
+      select_project_evidence_status=target-metadata-echo-mismatch
+      select_project_next_blocker='{"actionAttempted":"Promote Select Project tab-click evidence.","expectedNextAction":"Rerun tab-click probe with validated Africa Full targetStarter metadata.","observedAtspiState":"tab-click-observation.json did not echo the validated targetStarter metadata.","reasonProgressStopped":"Runner refused to promote target-specific evidence from mismatched or missing targetStarter metadata."}'
+    fi
   fi
   local post_open_status=not-requested post_open_blocker=not-requested
   if [ "$scenario_id" = alice-desktop-post-project-open-window-state ] \
@@ -3329,10 +3344,13 @@ JSON
     printf 'selectProjectOpenedStarterDisplayName=%s\n' "$select_project_opened_display_name"
     printf 'selectProjectOpenedStarterRepositoryPath=%s\n' "$select_project_opened_repo_path"
     printf 'selectProjectProjectOpenObserved=%s\n' "$select_project_project_open_observed"
+    printf 'selectProjectTargetSelectionObserved=%s\n' "$select_project_target_selection_observed"
+    printf 'selectProjectOpenAttempted=%s\n' "$select_project_open_attempted"
     printf 'selectProjectNextBlocker=%s\n' "$select_project_next_blocker"
     printf 'selectProjectWindowContext=%s\n' "$select_project_window_context"
     printf 'selectProjectAliceJavaPid=%s\n' "$select_project_alice_java_pid"
     printf 'selectProjectStartersTabSafety=%s\n' "$select_project_starters_tab_safety"
+    printf 'selectProjectTargetMetadataEchoValid=%s\n' "$select_project_target_metadata_echo_valid"
     printf 'postProjectOpenObservation=%s\n' post-project-open-observation.json
     printf 'postProjectOpenStatus=%s\n' "$post_open_status"
     printf 'postProjectOpenBlocker=%s\n' "$post_open_blocker"

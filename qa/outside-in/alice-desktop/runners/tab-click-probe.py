@@ -226,6 +226,8 @@ def add_target_metadata(
             "targetStarterObserved": None,
             "targetStarterSelected": False,
             "targetStarterOpenAttempted": False,
+            "targetSelectionObserved": False,
+            "openAttempted": False,
             "openedStarter": None,
             "evidenceStatus": evidence_status,
             "nextBlocker": blocker,
@@ -836,6 +838,10 @@ def add_target_observed_metadata(
             "targetStarterOpenAttempted": project_open_result.get(
                 "targetStarterOpenAttempted", False
             ),
+            "targetSelectionObserved": project_open_result.get(
+                "targetSelectionObserved", False
+            ),
+            "openAttempted": project_open_result.get("openAttempted", False),
             "openedStarter": project_open_result.get("openedStarter"),
             "evidenceStatus": project_open_result.get("evidenceStatus", "blocked"),
             "nextBlocker": project_open_result.get("nextBlocker"),
@@ -1335,6 +1341,8 @@ def target_project_open_record(target_starter: dict[str, str]) -> dict[str, Any]
         "targetStarterObserved": None,
         "targetStarterSelected": False,
         "targetStarterOpenAttempted": False,
+        "targetSelectionObserved": False,
+        "openAttempted": False,
         "openedStarter": None,
         "targetSelectionAttempt": {},
         "okButtonClick": {"attempted": False, "success": False, "detail": ""},
@@ -1413,6 +1421,7 @@ def select_target_starter_for_open(
     selected, selection_attempt = attempt_target_selection(target_match)
     record["targetSelectionAttempt"] = selection_attempt
     record["targetStarterSelected"] = selected
+    record["targetSelectionObserved"] = selected
     if selected:
         return record
 
@@ -1450,6 +1459,7 @@ def click_ok_for_target_open(
 
     ok, detail = do_action(ok_node, "click")
     record["targetStarterOpenAttempted"] = True
+    record["openAttempted"] = True
     record["okButtonClick"] = {"attempted": True, "success": ok, "detail": detail}
     if ok:
         return record
