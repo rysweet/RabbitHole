@@ -24,7 +24,6 @@ package org.lgna.story.resourceutilities;
 import edu.cmu.cs.dennisc.image.ImageUtilities;
 import edu.cmu.cs.dennisc.java.io.FileUtilities;
 import org.lgna.story.implementation.alice.AliceResourceUtilities;
-import org.lgna.story.implementation.alice.ModelResourceIoUtilities;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -46,7 +45,7 @@ final class ModelResourceThumbnailWriter {
     if (!rootPath.endsWith("/") && !rootPath.endsWith("\\")) {
       rootPath += "/";
     }
-    String resourceDirectory = rootPath + JavaCodeUtilities.getDirectoryStringForPackage(packageString) + ModelResourceIoUtilities.getResourceSubDirWithSeparator(className);
+    String resourceDirectory = rootPath + JavaCodeUtilities.getDirectoryStringForPackage(packageString) + className + File.separator;
     return resourceDirectory + thumbnailName;
   }
 
