@@ -51,9 +51,6 @@ repository.
 - [Characterize headless-safe desktop actions](./howto/characterize-headless-safe-desktop-actions.md) - how to add or review desktop action characterization without display-dependent tests.
 - [Tutorial: Trace a Desktop Action Journey](./tutorials/desktop-action-journey-characterization.md) - guided walkthrough from outside-in menu/action smoke evidence to headless-safe Save action tests.
 - [Expand coverage ratchets](./howto/expand-coverage-ratchets.md) - measure no-Sims coverage, choose safe module floors, and document protected hotspot decisions.
-- [Issue Reporting Progress Worker Coverage](./reference/issue-reporting-progress-worker-coverage.md) - scoped `core/issue-reporting` contract for the progress-worker characterization test and protected submission/progress seams.
-- [Run the Issue Reporting Progress Worker Coverage Proof](./howto/run-issue-reporting-progress-worker-coverage.md) - focused command and review checklist for the `IssueSubmissionProgressWorker` coverage proof.
-- [Tutorial: Trace the Issue Reporting Progress Worker Coverage Proof](./tutorials/issue-reporting-progress-worker-coverage.md) - guided review of the pending state, progress order, synthetic issue builder, attachment preference, and false result assertions.
 - [Coverage ratchet and hotspot review tutorial](./tutorials/coverage-ratchet-and-hotspot-review.md) - guided ratchet expansion example with conservative thresholds and a hotspot skip/refactor decision.
 - [Coverage reporting reference](./reference/coverage-reporting.md) - aggregate and module JaCoCo reporting, CLI options, CI ratchet gates, configuration, and path toward 70% line coverage.
 - [CI efficiency notes](./reference/ci-efficiency.md) - current pull request check timing, parallelism status, and safe next targets.
