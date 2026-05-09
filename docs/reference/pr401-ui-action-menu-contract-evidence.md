@@ -60,6 +60,11 @@ This is not live menu automation, visible rendering proof, lesson completion,
 assessment/grading evidence, installer validation, Sims coverage, Save
 completion, or full Tweedle/player decode behavior.
 
+Menu order after Run and before Help is a code-review invariant in
+[`window-menu-action-contract.md`](./window-menu-action-contract.md), not an
+executable readiness claim from `AliceMenuBarContractTest`. Treat order as
+readiness evidence only after adding a focused assertion for it.
+
 ## Evidence basis
 
 | Field | Value |
@@ -83,11 +88,17 @@ Before citing readiness, the local checkout and PR metadata must agree:
 ```bash
 git rev-parse HEAD
 gh pr view 401 --json headRefName,headRefOid,statusCheckRollup,mergeStateStatus
+gh api repos/rysweet/RabbitHole/commits/<current-pr-head-sha>/check-runs \
+  --paginate \
+  --jq '.check_runs[] | [.name,.status,.conclusion,.head_sha] | @tsv'
 ```
 
 Both commands must identify branch `wave6-ui-action-menu-contract-1778302300`
 and the same PR head. If a later push changes the PR head, rerun the evidence
 and update the PR body instead of carrying forward old exact-head claims.
+Use the check-run API output as the source for per-check `head_sha` evidence;
+`statusCheckRollup` can prove the rollup is green without exposing the SHA for
+each required check.
 
 ## Current-head recovery review
 
@@ -101,7 +112,7 @@ The recovery review is complete only when these current-head checks pass:
 | Review item | Required current-head evidence |
 | --- | --- |
 | Head source of truth | `gh pr view 401 --json headRefOid` returns the head recorded in the PR body, and local `git rev-parse HEAD` matches it. |
-| Required check rollup | `build`, `coverage`, `package-netbeans`, `test`, and `GitGuardian Security Checks` are complete and successful for the current PR head. |
+| Required check provenance | `build`, `coverage`, `package-netbeans`, `test`, and `GitGuardian Security Checks` are complete and successful for the current PR head, with per-check `head_sha` evidence from the check-run API. |
 | Previous failure areas | `workflow-publish`, `pre-commit`, and finalization failures are treated as stale unless a current-head check run, status, or required gate still reports them as failing. |
 | Default-workflow review | The current-head review records focused diff scope, docs impact, bounded claims, and three `SEEK -> VALIDATE -> FIX` cycles with a clean final cycle. |
 | Window menu scope | The diff and review evidence stay limited to `WindowMenuModel` registration, stable identity, menu-bar membership lookup, bounded QA scenario wiring, and PR-specific evidence docs/gates. |
@@ -116,7 +127,7 @@ Current PR head: <current-pr-head-sha>
 Checks: build, coverage, package-netbeans, test, and GitGuardian Security Checks are green for the current PR head; workflow-publish, pre-commit, and finalization failure areas are not failing on the current head.
 Scope: focused Window menu model registration recovery only; diff remains limited to menu registration contract, bounded QA wiring, evidence docs, PR-specific gates, and directly related test metadata.
 Review/finalization evidence: current-head PR metadata, focused diff review, docs impact review, and three default-workflow SEEK -> VALIDATE -> FIX cycles are refreshed; final cycle clean.
-Repository changes: none required.
+Repository source changes: none required.
 ```
 
 ## Merge-ready gate
@@ -128,7 +139,7 @@ Green checks and workflow completion are necessary but not sufficient.
 | --- | --- |
 | Branch and head alignment | `gh pr view 401` reports branch `wave6-ui-action-menu-contract-1778302300`; `git rev-parse HEAD` equals the PR `headRefOid`. |
 | No manual merge | No local merge commit, no manual merge of PR #401, and no push to protected branch state. |
-| GitHub Actions | All required checks complete successfully and each required check entry carries the exact same `headRefOid`. Missing check SHA evidence is blocking. |
+| GitHub Actions | All required checks complete successfully and each required check-run API entry carries the exact same `headRefOid` as `head_sha`. Missing check SHA evidence is blocking. |
 | Runnable QA/scenario evidence | Focused Maven contract and applicable QA scenario/schema/workflow/gated-command checks run as the exact command arrays printed by `scripts/pr401-merge-ready-gate.py --validation-plan`, without timeout wrappers. |
 | Docs impact | Changed reference, how-to, tutorial, and QA docs are accurate for the feature boundary and do not overclaim. |
 | Quality audit | At least three `SEEK -> VALIDATE -> FIX` cycles are documented; the final cycle is clean. |
@@ -291,7 +302,7 @@ contain these fields before readiness is claimed:
 ```text
 Current PR head: <current-pr-head-sha>
 Branch: wave6-ui-action-menu-contract-1778302300
-GitHub Actions: build, coverage, package-netbeans, test, and GitGuardian Security Checks successful for the same head
+GitHub Actions: build, coverage, package-netbeans, test, and GitGuardian Security Checks successful for the same head, with per-check head_sha evidence from the check-run API
 Focused Java contract: org.alice.ide.croquet.models.AliceMenuBarContractTest
 QA/scenario evidence: validate-scenarios.sh, test-schema-contract.sh, test-workflow-contract.sh, test-gated-command-contract.sh, test-save-menu-dialog-write-proof-contract.sh, and test-silver-thread-status-report.sh
 Docs impact: window menu action contract and PR #401 handoff docs reviewed for bounded claims and no committed exact-head SHA
