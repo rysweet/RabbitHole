@@ -1,58 +1,56 @@
-Default-workflow recovery evidence for PR #388
-Recorded at: 2026-05-09T03:33:47Z
-Starting PR head verified: 6838fdf73a7fb2fe329e56563e6de37cdaf003b5
-Base branch verified: develop
+Default-workflow readiness evidence for PR #423
+Recorded at: 2026-05-09T07:58:26Z
+Validated source tree base HEAD: 9b1130812b1e15744c472ae024dcce90857bc29c
+Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
+Base branch: develop
+Pull request: https://github.com/rysweet/RabbitHole/pull/423
 
-Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope at starting head was test-only:
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The generated-source characterization asserts that generated Scene.java forwards
-  SceneActivationEvent through the generated scene activation listener lambda.
+Scope:
+- PR #423 readiness recovery is bounded to the source-code-generator
+  characterization lane, centered on core/ast SourceCodeGeneratorTest.
+- The current diff against origin/develop contains source-generator
+  characterization changes, bounded launcher/source-generation documentation,
+  and generated-project code paths already in the PR branch.
+- Validation included the current working tree additions to
+  SourceCodeGeneratorTest, docs/index.md,
+  docs/reference/generated-story-api-listener-source-characterization.md, and
+  this evidence file.
+- This log is retained as review evidence for PR #423. The prior PR #388
+  fallback evidence was stale and has been replaced.
+- .copilot-evidence/default-workflow-attempt.exit remains a zero-exit marker.
 
-Validation completed at starting head:
+Validated commands for the source tree recorded here:
 - git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SourceCodeGeneratorTest test -q
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false test -q
 
 Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result e0242ceec159d25644aedff8a77e62de70e0b8e9.
-- Prior fallback ownership marker is superseded by this default-workflow-owned evidence.
+- Tweedle grammar submodule initialized successfully.
+- Focused SourceCodeGeneratorTest validation passed.
+- Focused core/ast reactor validation passed.
+- Maven emitted existing parser diagnostic text during the run, but the focused
+  commands exited successfully.
+- SourceCodeGeneratorTest now characterizes expression-statement assignment,
+  field access, static and instance method invocation, iterable for-each source,
+  and the current DoTogether runnable fallback in addition to the existing
+  literal, operator, array, class/member, disabled-statement, loop, and stale
+  item repair snippets.
 
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
+Visible GitHub status at the base head before publishing this recovery evidence:
+- PR #423 is open against develop.
+- PR #423 is merge-clean.
+- Visible checks reported success for Alice Checkstyle CI, Alice Coverage
+  Reports, Alice NetBeans Package CI, Alice Test CI, and GitGuardian Security
+  Checks.
+- PR #423 was still marked draft when this evidence was recorded; this is a
+  review-state blocker, not a source-code-generator characterization failure.
 
-Default-workflow finalization refresh for PR #388
-Recorded at: 2026-05-09T03:49:48Z
-Current PR head verified before this evidence-only update:
-cec7b96debc2fda4f711069e0ba781d6224fb952
-Base branch verified: develop
-
-Scope re-inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope remains limited to:
-  .copilot-evidence/default-workflow-attempt.exit
-  .copilot-evidence/default-workflow-attempt.log
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The test characterization remains focused on generated Scene.java forwarding
-  SceneActivationEvent through the generated scene activation listener lambda.
-
-Validation completed at current PR head before this evidence-only update:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
-
-Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result 52938664ddb5a815cbc06e1940711161baf7f5c1.
-- No unresolved fallback ownership marker remains in tracked evidence.
-
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
+Bounded non-claims:
+- This evidence does not claim full Tweedle/player decode.
+- This evidence does not claim full Alice desktop UI automation.
+- This evidence does not claim visible rendering correctness.
+- This evidence does not claim grading correctness.
+- This evidence does not claim lesson completion.
+- This evidence does not claim generated source execution safety beyond the
+  focused generated-source and headless-seam characterization described in the
+  repository documentation.

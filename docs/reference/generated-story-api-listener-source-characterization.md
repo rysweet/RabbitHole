@@ -17,6 +17,7 @@ completion.
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
+- [Recorded PR 423 source-generator evidence](#recorded-pr-423-source-generator-evidence)
 - [Generated-source specimen reference](#generated-source-specimen-reference)
 - [Review checklist: source generation](#review-checklist-source-generation)
 - [Compatibility rules](#compatibility-rules)
@@ -59,9 +60,9 @@ core AST generator. The protected surface includes:
 | AST fixture | Required generated-source behavior |
 | --- | --- |
 | `ForEachInArrayLoop` with a cached placeholder item name `COUNT__` | Repairs the item variable before header and body emission, producing `for(String itemA : new String[]{"red", "blue"})` and `final String copy=itemA;` without `COUNT__`. |
-| `ForEachInArrayLoop` with explicit item name `item` | Preserves the explicit name in both the loop header and local access body. |
-| Local declaration, conditional, count loop, while loop, return, and disabled statement fixtures | Emit stable representative Java snippets, including disabled code inside the existing block-comment form. |
-| String, integer, float, double, null, type, array, logical, arithmetic, relational, and conditional expressions | Emit Java literals and operators that remain valid source and preserve special primitive names such as `Integer.MAX_VALUE`, `Float.NaN`, and `Double.NEGATIVE_INFINITY`. |
+| `ForEachInArrayLoop` with explicit item name `item`, and `ForEachInIterableLoop` over a local iterable | Preserves the explicit item name in loop headers and local access bodies. |
+| Local declaration, expression statement, conditional, count loop, while loop, return, `DoTogether`, and disabled statement fixtures | Emit stable representative Java snippets, including disabled code inside the existing block-comment form and the current non-lambda runnable fallback for `DoTogether`. |
+| String, integer, float, double, null, type, array, field access, logical, arithmetic, relational, conditional, assignment, static method-call, and instance method-call expressions | Emit Java literals, operators, member access, and invocation snippets that remain valid source and preserve special primitive names such as `Integer.MAX_VALUE`, `Float.NaN`, and `Double.NEGATIVE_INFINITY`. |
 | Named user type with constructor, method, getter, and field | Emits a compact, compiler-shaped class body with default organizer behavior. |
 
 These are golden snippets, not a promise that every possible AST node or every
@@ -218,6 +219,55 @@ before changing generated-source tests:
 git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
 ```
+
+## Recorded PR 423 source-generator evidence
+
+The recorded source-code-generator characterization evidence is documented by
+the repository-owned evidence file:
+
+```text
+.copilot-evidence/default-workflow-attempt.log
+```
+
+For the exact validated commit, timestamp, PR state, and check state, use the
+latest contents of that evidence file rather than copying commit-specific values
+into this durable reference page.
+
+The recorded focused validation includes:
+
+```bash
+git submodule update --init tweedle-lang
+
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=SourceCodeGeneratorTest \
+  test -q
+
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  test -q
+```
+
+At the evidence-recorded commit, the focused `SourceCodeGeneratorTest` command
+and the focused `core/ast` reactor command pass. Any Maven parser diagnostic
+text emitted during those commands is treated as non-blocking only when the
+command exits successfully.
+
+PR 423 source-generator evidence is bounded to the generated-source lane:
+
+| Surface | Evidence note |
+| --- | --- |
+| `SourceCodeGeneratorTest` | Completed characterization of representative statement, expression statement, assignment, field access, static and instance method calls, disabled statement, literal, operator, array access/length, class/member, loop/foreach, `DoTogether`, stale item repair, and observable formatting snippets. |
+| `.copilot-evidence/default-workflow-attempt.log` | Current PR 423 evidence replaces stale PR 388 fallback text and records why the log remains in the review set. |
+| GitHub checks | Visible checks at the evidence-recorded head are passing when the evidence is recorded. |
+| Draft state | A draft flag is a PR review-state blocker, not a failing source-code-generator characterization result. |
+
+These evidence notes are intentionally not a full Alice behavior certification.
+They exclude full Tweedle/player decode, full UI automation, visible rendering
+correctness, grading correctness, and lesson completion.
 
 ## Generated-source specimen reference
 
