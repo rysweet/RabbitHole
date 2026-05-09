@@ -83,6 +83,9 @@ repository.
 - [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage and unsupported-neighbor assertions without broadening decoder claims.
 - [Tutorial: Trace simple if-statement decode](./tutorials/simple-if-statement-decode.md) - guided example for asserting the decoded `ConditionalStatement` shape, allowlisted body statements, and unsupported neighboring conditional-body cases.
 - [Tutorial: Trace a player archive unsupported this-call diagnostic](./tutorials/player-archive-unsupported-this-call-diagnostic.md) - guided example for checking fail-closed `.a3w` diagnostics around `this.helper(value: 1)` and `caller.this.helper` context.
+- [PR #463 Recovery Gate](./reference/pr463-recovery-gate.md) - evidence shape, verifiers, blocker codes, and readiness result contract for the focused archive/player PR #463 recovery gate.
+- [Run the PR #463 Recovery Gate](./howto/run-pr463-recovery-gate.md) - how to collect evidence, run the gate, and interpret merge-readiness results.
+- [Tutorial: Assemble PR #463 Recovery Evidence](./tutorials/pr463-recovery-gate-evidence.md) - guided walkthrough for building the structured evidence JSON and running the gate.
 
 ## Formal specification lane
 
