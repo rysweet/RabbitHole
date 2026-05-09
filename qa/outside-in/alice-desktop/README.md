@@ -355,6 +355,23 @@ playback, Sims, and installer limits are review-language boundaries. See
 [Desktop Run execution gap
 report](../../../docs/reference/desktop-run-execution-gap-report.md).
 
+To prepare the outside-in review container for this evidence family, generate
+the manual `run-debug` checklist:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-debug \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-debug
+```
+
+The generated checklist is not a pass result. Reviewers place or reference the
+bounded Run-window artifacts, the gap report, the run log, workflow-context
+screenshots or screen captures, the saved `.a3p` used for the run, and
+`review-notes.txt` in the timestamped directory. Acceptance language must stay
+limited to bounded Run-window evidence and the deterministic world-advance proof
+blocker.
+
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
 
 ## Configuration

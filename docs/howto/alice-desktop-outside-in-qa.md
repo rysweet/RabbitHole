@@ -454,6 +454,55 @@ behavior is preserved. Review notes must also avoid playback, Sims validation,
 and deployed installer success claims because this evidence lane does not cover
 them.
 
+To prepare the outside-in `run-debug` review checklist, create a manual scenario
+run directory:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-debug \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-debug
+```
+
+Place the bounded Run-window artifacts and supporting manual evidence in the
+timestamped directory before review:
+
+```text
+manual-evidence-checklist.txt
+environment.txt
+status.txt
+desktop-run-render-affordance.json
+desktop-run-pixel-observation.json
+desktop-run-status-summary.json
+desktop-run-execution-gap-report.json
+launch.log or run.log
+screenshot or screen capture for workflow context
+saved .a3p project used for the run
+review-notes.txt
+```
+
+Use this review note shape for a bounded acceptance decision:
+
+```text
+scenario: alice-desktop-run-debug
+reviewedEvidence:
+  - desktop-run-render-affordance.json
+  - desktop-run-pixel-observation.json
+  - desktop-run-status-summary.json
+  - desktop-run-execution-gap-report.json
+decision: accept bounded Run-window evidence only
+blocker: deterministic world-advance proof is still missing
+unsupportedClaims:
+  - full world execution
+  - playback
+  - visible rendering correctness
+  - full UI automation
+  - Save completion
+  - grading
+  - Sims validation
+  - deployed installer success
+```
+
 For the complete artifact API, configuration, examples, and review rules, see
 [Desktop Run execution gap report](../reference/desktop-run-execution-gap-report.md).
 

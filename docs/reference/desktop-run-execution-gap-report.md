@@ -21,6 +21,7 @@ Save validation, or world-advance proof.
 - [Configuration](#configuration)
 - [Report API](#report-api)
 - [Fail-closed behavior](#fail-closed-behavior)
+- [Scenario checklist handoff](#scenario-checklist-handoff)
 - [Examples](#examples)
 - [Review rules](#review-rules)
 - [Validation commands](#validation-commands)
@@ -106,6 +107,23 @@ succeeded, pixels rendered correctly, learner work was graded, Save finished,
 Sims were validated, a deployed installer succeeded, or the full Alice UI was
 automated.
 
+To prepare the outside-in manual evidence checklist for this same bounded review
+area, run the `run-debug` scenario:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-debug \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-debug
+```
+
+Checklist generation is not a pass result. It creates a timestamped manual run
+directory where a reviewer can place the bounded Run-window artifacts, a launch
+or run log, screenshots or screen captures for workflow context, the saved
+project used during the run, and `review-notes.txt`. The checklist and the gap
+report remain conservative: they document the current Run execution proof gap
+and the evidence available for review; they do not complete or simulate full
+Alice world execution.
+
 ## Configuration
 
 | Property | Purpose |
@@ -116,6 +134,16 @@ automated.
 The report does not introduce new environment variables, network calls,
 credentials, authentication behavior, Node options, or persistent user
 preferences.
+
+Surrounding QA orchestrators may still set the repository-standard large Node
+heap option before invoking the shell runners:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+```
+
+That setting is outside the report API. The report writer is controlled by the
+JVM system properties above.
 
 ## Report API
 
@@ -259,6 +287,44 @@ artifact. A report-validation failure should omit or log the report artifact and
 preserve normal Run behavior; it is not a product execution failure. The
 expected steady-state report status is `blocked` because the report names an
 execution proof gap.
+
+## Scenario checklist handoff
+
+The `alice-desktop-run-debug` scenario is the outside-in checklist for reviewing
+this feature area from a desktop user's point of view. Its generated
+`manual-evidence-checklist.txt` asks for the Run controls, the closest visible
+debug-like control exposed by the current Alice baseline, bounded Run-window
+artifacts, and manual review notes.
+
+Use this handoff when collecting review evidence:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-debug \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-debug
+```
+
+The timestamped run directory is the review container. If opt-in desktop Run
+evidence is enabled during the same review, place or reference these artifacts
+from that directory:
+
+```text
+desktop-run-render-affordance.json
+desktop-run-pixel-observation.json
+desktop-run-status-summary.json
+desktop-run-execution-gap-report.json
+launch.log or run.log
+manual screenshot or screen capture for workflow context
+saved .a3p project used for the run
+review-notes.txt
+```
+
+`review-notes.txt` should state that the decision accepts bounded Run-window
+evidence only and keeps deterministic world-advance proof blocked until a
+separate reviewed oracle exists. It should not say that playback completed,
+pixels rendered correctly, Save completed, grading ran, Sims were validated, a
+deployed installer succeeded, or the full Alice UI was automated.
 
 ## Examples
 
