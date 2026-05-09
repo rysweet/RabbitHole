@@ -197,6 +197,8 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 
 The canonical evidence command uses `test`. Adding `-q` only reduces Maven log
 verbosity and should be called out as such if used in PR notes.
+Do not wrap the command in an external timeout helper. Reviewers need the Maven
+result for the final head, not a timeout wrapper status.
 
 Use the commit SHA that actually contains the final fixture and documentation
 changes when recording PR readiness evidence.
@@ -244,3 +246,40 @@ Legacy projects are now generally supported.
 ```
 
 Those claims are outside this lane.
+
+## 10. Trace merge-ready evidence
+
+A merge-ready PR body for this lane ties the focused characterization to the
+current integration target. The
+[reference contract](../reference/legacy-fixture-roundtrip-readiness.md#merge-ready-evidence-contract)
+is canonical; this tutorial only shows how to trace the same evidence. Review
+the evidence in this order:
+
+| Evidence | What the PR body should say |
+| --- | --- |
+| Current base | The PR branch has been updated by merging the named integration target into it, without rebasing or force-pushing. |
+| QA/scenario | `archive-fixture-smoke` is wired through scenario, runner, validator, schema, and schema-contract surfaces. |
+| Documentation | The reference, how-to, tutorial, and docs index describe the finished bounded lane. |
+| Quality audit | SEEK names the scoped fixture lane and non-claims, VALIDATE lists focused validation, and FIX names only scoped changes. |
+| CI | Required checks are listed by name with successful or pending states. |
+| Focused scope | The note repeats that full historical migration, full Tweedle decode, full player decode, arbitrary user archive support, and desktop UI behavior are out of scope. |
+
+Use this finished-state wording when all required checks have completed:
+
+```text
+The PR is current with <base-branch> at <head-sha>. Focused local evidence,
+QA/scenario wiring, documentation coverage, quality-audit SEEK/VALIDATE/FIX, and
+required CI checks are complete for the bounded legacy fixture round-trip lane.
+The evidence stays inside generated fixture round-trip readiness and does not
+claim full historical archive migration, full Tweedle decode, full player decode,
+arbitrary user archive support, or desktop UI behavior.
+```
+
+Use this wording while CI is still running:
+
+```text
+The PR branch is current with <base-branch> at <head-sha>. Focused local
+evidence, QA/scenario wiring, documentation coverage, and quality-audit
+SEEK/VALIDATE/FIX are complete for the bounded lane. CI checks <names> are still
+pending, so this note does not claim strict merge-ready or all checks passed.
+```

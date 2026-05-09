@@ -194,6 +194,8 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 
 `test` is the canonical Maven goal for documentation and PR evidence. `test -q`
 is equivalent for scope when only quieter Maven logs are desired.
+Do not wrap the command in an external timeout helper. A timeout result is a
+separate infrastructure signal, not a successful characterization result.
 
 If the lane changes QA scenario files, also run the relevant desktop QA schema
 and contract scripts. If no QA files changed, this Maven command is the focused
@@ -244,12 +246,35 @@ In PR notes, separate the state into:
 | Section | What belongs there |
 | --- | --- |
 | Completed evidence | Exact focused command, result, and matching head SHA. |
+| QA/scenario evidence | `archive-fixture-smoke` scenario, validator, runner, schema, and schema-contract wiring. |
+| Documentation evidence | Links to the reference, how-to, tutorial, and docs index entries for this lane. |
+| Quality-audit cycle | SEEK scope, VALIDATE commands and checks, and FIX changes made inside this bounded lane. |
+| CI evidence | Required check names and whether each is successful, pending, queued, or in progress. |
+| Focused-scope evidence | Explicit statement that conflicts and fixes stayed inside the legacy fixture round-trip lane. |
 | Pending checks | Check names still queued, in progress, or pending. |
 | Non-blocking pending CI status | Why the PR does not claim all checks passed yet. |
 | Non-claims | Full historical archive migration, full Tweedle decode, full player decode, and arbitrary user archive support remain out of scope. |
 
 Do not write "fully ready", "fully green", or "all checks passed" while any
 required check is still pending.
+
+## 10. Recover strict merge-ready wording after the target branch moves
+
+When the integration target changes, update the PR branch by merging the current
+integration target into it. Do not rebase, force-push, or merge the PR branch
+into the target branch manually.
+
+After resolving scoped conflicts and rerunning affected focused validation, use
+the [merge-ready evidence contract](../reference/legacy-fixture-roundtrip-readiness.md#merge-ready-evidence-contract)
+as the canonical PR body source. The how-to evidence should not introduce a
+separate contract; it should point to the reference and record the final head
+SHA, integration target, focused validation command, QA/scenario wiring, docs
+coverage, quality-audit SEEK/VALIDATE/FIX, CI state, and focused non-claims.
+
+If any required check is pending, the PR body should say "focused local evidence
+is complete and CI is pending" rather than "strict merge-ready". Strict
+merge-ready wording is reserved for a current-base branch with completed required
+checks and final-head focused evidence.
 
 ## Review checklist
 
@@ -263,3 +288,4 @@ required check is still pending.
 | Does the wording avoid full historical migration claims? | Yes. |
 | Does the wording avoid full Tweedle or player decode claims? | Yes. |
 | Are ad hoc recovery files absent from the PR? | Yes. |
+| Does the PR evidence name QA/scenario, docs, quality-audit SEEK/VALIDATE/FIX, CI, and focused-scope evidence? | Yes. |

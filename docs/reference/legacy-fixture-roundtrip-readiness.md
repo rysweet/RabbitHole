@@ -20,6 +20,7 @@ shapes fail at the archive I/O boundary with explicit checked failures.
 - [Validation](#validation)
 - [Desktop QA smoke](#desktop-qa-smoke)
 - [PR evidence wording](#pr-evidence-wording)
+- [Merge-ready evidence contract](#merge-ready-evidence-contract)
 - [Examples](#examples)
 - [Claim boundaries](#claim-boundaries)
 
@@ -264,6 +265,8 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 
 The command above is the canonical form for docs and PR evidence. Adding `-q` is
 only a Maven log-verbosity choice and does not change the evidence scope.
+Run the command directly from the shell or CI job. Do not wrap this focused gate
+in an external timeout helper; a timeout result is not fixture-readiness evidence.
 
 For PR readiness evidence, record the commit SHA that was pushed and the exact
 focused command that ran at that SHA. Evidence gathered before the final commit
@@ -317,18 +320,23 @@ instead of treating the smoke as completed evidence.
 ## PR evidence wording
 
 PR notes for this lane should name the exact PR head SHA used for final
-validation. The note should separate completed evidence from pending checks and
-avoid green/readiness claims while checks are pending.
+validation and the integration target used for merge-readiness review. The note
+should separate completed evidence from pending checks and avoid green/readiness
+claims while checks are pending.
 
 Use this shape:
 
 ```text
-Legacy fixture round-trip lane evidence for <head-sha>:
+Legacy fixture round-trip lane evidence for <head-sha> against <base-branch>:
 
 Completed evidence:
 - Focused Maven characterization:
   NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest test
-- QA schema/allowlist coverage covers archive-fixture-smoke across scenario, validator, runner, schema, and schema contract.
+- QA/scenario coverage: archive-fixture-smoke is wired through the scenario, validator, runner, schema, and schema contract.
+- Docs coverage: reference, how-to, tutorial, and docs index describe the bounded legacy fixture round-trip lane and non-claims.
+- Quality-audit cycle: SEEK identified the bounded lane and non-claims; VALIDATE ran the focused evidence; FIX kept changes scoped to generated fixture round-trip readiness.
+- Focused-scope review: no broad historical migration, full Tweedle decode, full player decode, arbitrary user archive, or desktop UI behavior claim is included.
+- CI: <required checks completed successfully|required checks pending: names>.
 
 Pending checks:
 - <check name>: <queued|in_progress|pending>
@@ -344,6 +352,33 @@ If all checks have completed successfully, the PR note may say the named checks
 completed successfully. If any check is pending, the note should say the focused
 local evidence is complete and CI is pending; it should not say fully ready,
 fully green, or all checks passed.
+
+## Merge-ready evidence contract
+
+The lane is merge-ready only when the PR head is up to date with the integration
+target, local evidence applies to the final pushed head, and the PR body carries
+the same bounded claims as the documentation.
+
+When the target branch changes, update the PR branch by merging the current
+integration target into it. Do not rebase, force-push, or merge the PR branch
+into the target branch manually. Resolve conflicts only in the bounded legacy
+fixture round-trip lane before refreshing evidence.
+
+The merge-ready evidence block should include:
+
+| Evidence area | Required wording |
+| --- | --- |
+| QA/scenario | `archive-fixture-smoke` is explicitly wired through the scenario, runner, validator, schema, and schema contract. |
+| Docs | The reference, how-to, tutorial, and docs index describe the implemented lane, usage, validation, and non-claims. |
+| Quality audit | The SEEK/VALIDATE/FIX loop names the scoped lane, the focused evidence, and any scoped fixes. |
+| CI | Required checks are reported by name as successful, pending, queued, or in progress. |
+| Focused validation | The exact no-timeout Maven command and final head SHA are recorded. |
+| Focused scope | The note repeats the non-claims for full historical migration, full Tweedle decode, full player decode, arbitrary user archive support, and desktop UI behavior. |
+
+The evidence block should not treat a clean focused review as a substitute for
+current-base mergeability. If the target branch has changed since that review,
+update the branch, rerun the focused evidence that can be affected by the merge,
+and refresh the PR body before claiming strict merge-ready status.
 
 ## Examples
 
