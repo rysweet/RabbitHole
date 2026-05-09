@@ -126,10 +126,14 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
             "base": {"base_ref": "origin/develop", "base_sha": STALE_BASE_SHA},
         }
         missing_base = {key: value for key, value in evidence.items() if key != "base"}
+        missing_expected_base = {
+            key: value for key, value in evidence.items() if key != "expected_base_sha"
+        }
 
         self.assertTrue(gate.evaluate_merge_ready(evidence).ready)
         self.assertBlocked(gate.evaluate_merge_ready(stale_base), "base")
         self.assertBlocked(gate.evaluate_merge_ready(missing_base), "base")
+        self.assertBlocked(gate.evaluate_merge_ready(missing_expected_base), "expected base SHA")
 
     def test_github_actions_are_tied_to_current_pr_head(self) -> None:
         gate = gate_module()
@@ -173,7 +177,8 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                     "passed": True,
                     "head_sha": HEAD_SHA,
                 }
-            ]
+            ],
+            expected_head_sha=HEAD_SHA,
         )
         timeout_wrapped = gate.validate_runnable_evidence(
             [
@@ -278,9 +283,22 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         """
         overclaiming_body = body + "\nThis proves full UI automation and visible rendering correctness."
 
-        self.assertTrue(gate.validate_pr_description(body, expected_head_sha=HEAD_SHA).ready)
+        self.assertTrue(
+            gate.validate_pr_description(
+                body,
+                expected_head_sha=HEAD_SHA,
+                expected_base_sha=BASE_SHA,
+            ).ready
+        )
         self.assertBlocked(gate.validate_pr_description(body.replace(HEAD_SHA, "deadbeef"), HEAD_SHA), "head")
-        self.assertBlocked(gate.validate_pr_description(body.replace(BASE_SHA, STALE_BASE_SHA), HEAD_SHA), "base")
+        self.assertBlocked(
+            gate.validate_pr_description(
+                body.replace(BASE_SHA, STALE_BASE_SHA),
+                expected_head_sha=HEAD_SHA,
+                expected_base_sha=BASE_SHA,
+            ),
+            "base",
+        )
         self.assertBlocked(gate.validate_pr_description(headings_only_body, HEAD_SHA), "exact focused")
         self.assertBlocked(gate.validate_pr_description(overclaiming_body, HEAD_SHA), "overclaim")
 

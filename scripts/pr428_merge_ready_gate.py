@@ -21,8 +21,6 @@ from typing import Iterable, Mapping, Sequence
 
 
 REQUIRED_REMOTE_REF = "origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa"
-DEFAULT_EXPECTED_HEAD_SHA = "2b8a961d67f2365d38b9f6ea833e700e99e351a2"
-DEFAULT_EXPECTED_BASE_SHA = "2e1e43c3937a7d163bcc76f1882903a8ad31f1cc"
 REQUIRED_BASE_REF = "origin/develop"
 FOCUSED_WORKER_TEST = "org.lgna.issue.IssueSubmissionProgressWorkerTest"
 FOCUSED_MAVEN_FRAGMENT = "mvn -pl core/issue-reporting -am -DfailIfNoTests=false"
@@ -177,7 +175,7 @@ def validate_branch_sync(
 
 def validate_base_evidence(
     base: Mapping[str, object] | None,
-    expected_base_sha: str = DEFAULT_EXPECTED_BASE_SHA,
+    expected_base_sha: str = "",
     required_base_ref: str = REQUIRED_BASE_REF,
 ) -> GateResult:
     """Require recovery evidence from the current authoritative develop base."""
@@ -261,7 +259,7 @@ def _contains_command_with_passing_result(text: str, command: str) -> bool:
 
 def validate_runnable_evidence(
     evidence: Iterable[Mapping[str, object]],
-    expected_head_sha: str = DEFAULT_EXPECTED_HEAD_SHA,
+    expected_head_sha: str = "",
 ) -> GateResult:
     """Require current-head focused worker validation with no timeout wrapper."""
 
@@ -454,8 +452,8 @@ def _missing_lower_fragments(text: str, fragments: Iterable[str]) -> list[str]:
 
 def validate_pr_description(
     body: str,
-    expected_head_sha: str = DEFAULT_EXPECTED_HEAD_SHA,
-    expected_base_sha: str = DEFAULT_EXPECTED_BASE_SHA,
+    expected_head_sha: str = "",
+    expected_base_sha: str = "",
 ) -> GateResult:
     """Require PR-body evidence for every merge-ready gate and bounded claims."""
 
@@ -539,12 +537,8 @@ def evaluate_merge_ready(evidence: Mapping[str, object]) -> GateResult:
     expected_head_sha = _clean_sha(evidence.get("expected_head_sha"))
     if not expected_head_sha and isinstance(branch, Mapping):
         expected_head_sha = _clean_sha(branch.get("remote_head"))
-    expected_head_sha = expected_head_sha or DEFAULT_EXPECTED_HEAD_SHA
     base = evidence.get("base")
     expected_base_sha = _clean_sha(evidence.get("expected_base_sha"))
-    if not expected_base_sha and isinstance(base, Mapping):
-        expected_base_sha = _clean_sha(base.get("base_sha"))
-    expected_base_sha = expected_base_sha or DEFAULT_EXPECTED_BASE_SHA
     docs_impact = evidence.get("docs_impact")
     scenario_evidence = evidence.get("scenario_evidence")
     branch_result = (
