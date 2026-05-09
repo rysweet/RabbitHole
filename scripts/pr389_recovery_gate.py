@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -90,6 +91,7 @@ FORBIDDEN_PATH_FRAGMENTS = (
     "signing/",
 )
 GREEN_CONCLUSIONS = frozenset(("success",))
+COMPLETED_CHECK_STATUSES = frozenset(("completed",))
 TIMEOUT_WRAPPER_COMMANDS = frozenset(("timeout", "gtimeout"))
 
 
@@ -110,6 +112,10 @@ def _as_bool(value: Any) -> bool:
 
 def _text(value: Any) -> str:
     return "" if value is None else str(value)
+
+
+def _normalized_text(value: Any) -> str:
+    return _text(value).strip().lower()
 
 
 def _head_sha(evidence: dict[str, Any]) -> str:
@@ -134,9 +140,15 @@ def _dedupe(blockers: Iterable[str]) -> list[str]:
 
 def _split_command_text(command: str) -> tuple[str, ...]:
     try:
-        return tuple(shlex.split(command))
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>")
+        lexer.whitespace_split = True
+        return tuple(lexer)
     except ValueError:
-        return tuple(command.split())
+        return tuple(
+            token
+            for segment in re.split(r"&&|\|\||[;&|()<>]", command)
+            for token in segment.split()
+        )
 
 
 def _command_tokens(command: Any) -> tuple[str, ...]:
@@ -150,7 +162,7 @@ def _command_tokens(command: Any) -> tuple[str, ...]:
     expanded: list[str] = []
     for token in tokens:
         expanded.append(token)
-        if any(character.isspace() for character in token):
+        if any(character.isspace() or character in ";&|()<>" for character in token):
             expanded.extend(_split_command_text(token))
     return tuple(expanded)
 
@@ -358,9 +370,11 @@ def verify_github_actions(evidence: dict[str, Any]) -> list[str]:
         blockers.append("missing-github-actions-checks")
     for raw_check in checks:
         check = _as_mapping(raw_check)
-        if check.get("status") != "completed":
+        status = _normalized_text(check.get("status"))
+        conclusion = _normalized_text(check.get("conclusion"))
+        if status not in COMPLETED_CHECK_STATUSES:
             blockers.append("github-actions-not-complete")
-        elif check.get("conclusion") not in GREEN_CONCLUSIONS:
+        elif conclusion not in GREEN_CONCLUSIONS:
             blockers.append("github-actions-not-green")
 
     return _dedupe(blockers)

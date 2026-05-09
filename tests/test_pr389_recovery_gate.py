@@ -348,6 +348,14 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
             "github-actions-not-complete",
         )
 
+    def test_github_actions_verifier_accepts_gh_pr_view_status_check_rollup_casing(self) -> None:
+        self.evidence["githubActions"]["checks"] = [
+            {"name": "test", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "docs", "status": " COMPLETED ", "conclusion": " SUCCESS "},
+        ]
+
+        self.assert_no_blockers("verify_github_actions")
+
     def test_pr_description_verifier_requires_current_head_evidence_and_bounded_claims(self) -> None:
         self.assert_no_blockers("verify_pr_description")
         self.assert_has_blocker(
@@ -399,6 +407,35 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
             "verify_command_safety",
             lambda evidence: evidence["commands"].append(["sh", "-c", "git fetch && git merge HEAD"]),
             "manual-merge-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append("echo ok;gh pr merge 389"),
+            "manual-merge-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append(
+                ["bash", "-lc", "echo ok;gh pr merge 389"]
+            ),
+            "manual-merge-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append("true&&gh pr merge 389"),
+            "manual-merge-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append("echo ok;timeout 600 mvn test"),
+            "timeout-wrapper-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append(
+                ["bash", "-lc", "echo ok;timeout 600 mvn test"]
+            ),
+            "timeout-wrapper-used",
         )
 
 
