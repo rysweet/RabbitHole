@@ -10,6 +10,7 @@ REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "select-project-africa-full-
 VALIDATOR_PATH = REPO_ROOT / "qa" / "outside-in" / "alice-desktop" / "runners" / "validate-scenarios.sh"
 RUNNER_PATH = REPO_ROOT / "qa" / "outside-in" / "alice-desktop" / "runners" / "run-scenario.sh"
 SCHEMA_PATH = REPO_ROOT / "qa" / "outside-in" / "alice-desktop" / "schema" / "scenario.schema.json"
+INDEX_PATH = REPO_ROOT / "docs" / "index.md"
 
 TARGET_STARTER = "Africa Full"
 TARGET_STARTER_PATH = "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
@@ -58,6 +59,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         cls.runner = read(RUNNER_PATH)
         cls.schema_text = read(SCHEMA_PATH)
         cls.schema = json.loads(cls.schema_text)
+        cls.index = read(INDEX_PATH)
 
     def test_pr_state_inspector_requires_exact_pr_head_and_check_metadata(self) -> None:
         text = self.reference
@@ -255,6 +257,18 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("the docs name the missing dependency instead of claiming proof", text)
         self.assertIn("It must not report visible rendering correctness", text)
         self.assertIn("full UI automation", text)
+
+    def test_pr437_recovery_docs_are_not_marked_as_placeholders(self) -> None:
+        for label, text in {
+            "howto": self.howto,
+            "reference": self.reference,
+            "index": self.index,
+        }.items():
+            with self.subTest(label=label):
+                self.assertNotIn("[PLANNED", text)
+                self.assertNotIn("Implementation Pending", text)
+                self.assertNotIn("planned dirty-repair", text)
+                self.assertNotIn("planned [", text)
 
 
 if __name__ == "__main__":

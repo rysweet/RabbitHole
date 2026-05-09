@@ -1,6 +1,6 @@
-# [PLANNED - Implementation Pending] Recover PR #437 after DIRTY merge state
+# Recover PR #437 after DIRTY merge state
 
-This how-to describes the intended dirty-recovery behavior for RabbitHole PR #437. Use it when PR #437 reports `mergeStateStatus=DIRTY` or an equivalent current-base conflict against `develop`. The recovery is an edit-and-push repair: it reconciles the PR branch with current `develop`, resolves only the conflict hunks required for the dirty state, reruns focused Select Project validation, pushes the focused repair commit only after validation passes, and then refreshes finalization evidence against the pushed head.
+This how-to describes the dirty-recovery behavior for RabbitHole PR #437. Use it when PR #437 reports `mergeStateStatus=DIRTY` or an equivalent current-base conflict against `develop`. The recovery is an edit-and-push repair: it reconciles the PR branch with current `develop`, resolves only the conflict hunks required for the dirty state, reruns focused Select Project validation, pushes the focused repair commit only after validation passes, and then refreshes finalization evidence against the pushed head.
 
 This lane is not a no-op path. Do not publish `No-op justification:` for a dirty repair.
 

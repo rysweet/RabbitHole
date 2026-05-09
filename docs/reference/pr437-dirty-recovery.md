@@ -1,6 +1,6 @@
-# [PLANNED - Implementation Pending] PR #437 dirty recovery reference
+# PR #437 dirty recovery reference
 
-This reference defines the intended dirty-recovery contract for RabbitHole PR #437. The contract repairs a current-base `DIRTY` state without no-op mode, keeps evidence limited to the Select Project `Africa Full` starter lane, reruns focused validation, pushes only focused repair commits, and refreshes merge-ready evidence against the pushed head.
+This reference defines the dirty-recovery contract for RabbitHole PR #437. The contract repairs a current-base `DIRTY` state without no-op mode, keeps evidence limited to the Select Project `Africa Full` starter lane, reruns focused validation, pushes only focused repair commits, and refreshes merge-ready evidence against the pushed head.
 
 For operator steps, see [Recover PR #437 after DIRTY merge state](../howto/recover-pr437-dirty-select-project.md). For the underlying Select Project evidence contract, see [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md).
 
