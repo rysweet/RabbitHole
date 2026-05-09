@@ -482,26 +482,31 @@ def _shell_inline_command(tokens: Sequence[str], executable_index: int) -> Optio
     return None
 
 
-def _has_outer_timeout_wrapper(command: str, *, _depth: int = 0) -> bool:
-    try:
-        tokens = shlex.split(command)
-    except ValueError as exc:
-        raise WorkflowReportError(f"Invalid validation command syntax: {command}") from exc
-    if not tokens:
-        return False
+def _has_outer_timeout_wrapper(command: str) -> bool:
+    commands_to_scan = [command]
+    scanned_commands: set[str] = set()
 
-    for executable_index in _simple_command_executable_indices(tokens):
-        if _is_named_executable(tokens[executable_index], {"timeout", "gtimeout"}):
-            return True
-        if _perl_alarm_exec_wrapper(tokens, executable_index):
-            return True
-        shell_command = _shell_inline_command(tokens, executable_index)
-        if (
-            shell_command is not None
-            and _depth < 3
-            and _has_outer_timeout_wrapper(shell_command, _depth=_depth + 1)
-        ):
-            return True
+    while commands_to_scan:
+        current_command = commands_to_scan.pop()
+        if current_command in scanned_commands:
+            continue
+        scanned_commands.add(current_command)
+
+        try:
+            tokens = shlex.split(current_command)
+        except ValueError as exc:
+            raise WorkflowReportError(f"Invalid validation command syntax: {current_command}") from exc
+        if not tokens:
+            continue
+
+        for executable_index in _simple_command_executable_indices(tokens):
+            if _is_named_executable(tokens[executable_index], {"timeout", "gtimeout"}):
+                return True
+            if _perl_alarm_exec_wrapper(tokens, executable_index):
+                return True
+            shell_command = _shell_inline_command(tokens, executable_index)
+            if shell_command is not None:
+                commands_to_scan.append(shell_command)
     return False
 
 

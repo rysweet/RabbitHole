@@ -424,6 +424,10 @@ class QaEvidenceRunnerContractTest(unittest.TestCase):
                     "NODE_OPTIONS=--max-old-space-size=32768 "
                     "bash -lc 'timeout 600 qa/outside-in/alice-desktop/runners/validate-scenarios.sh'"
                 ),
+                (
+                    "NODE_OPTIONS=--max-old-space-size=32768 "
+                    "bash -lc 'bash -lc \"bash -lc \\\"bash -lc timeout 600 mvn test\\\"\"'"
+                ),
             ]
         )
 
