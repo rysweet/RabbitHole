@@ -9,6 +9,11 @@ This seam lives in `core/story-api-migration`. It does not require Alice desktop
 Save-menu automation, visible rendering, grading, or first-lesson workflow
 completion.
 
+A neighboring `core/ide` bridge may load a saved project through
+`FileProjectLoader` and save/export it through `ProjectFileUtilities`, but that
+bridge depends on this archive IO contract for byte-level persistence and has
+the same non-UI claim boundaries.
+
 Use this reference with
 [Validate the Project Archive Reopen/Edit Seam](../howto/validate-project-archive-reopen-edit-seam.md)
 and
@@ -26,6 +31,7 @@ For neighboring generated archive coverage, see
 - [Security and failure boundaries](#security-and-failure-boundaries)
 - [Configuration](#configuration)
 - [Validation](#validation)
+- [Neighboring headless IDE bridge](#neighboring-headless-ide-bridge)
 - [Readiness workflow surfaces](#readiness-workflow-surfaces)
 - [No-op guard command API](#no-op-guard-command-api)
 - [PR 402 readiness evidence](#pr-402-readiness-evidence)
@@ -230,6 +236,20 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
   test
 ```
 
+## Neighboring headless IDE bridge
+
+`core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java`
+checks the IDE-side handoff without Alice desktop. Its focused edit path loads a
+synthetic `.a3p` through `FileProjectLoader`, edits the loaded `Project`, saves a
+copy through `ProjectFileUtilities.saveCopyOfProjectTo`, reloads that copy, and
+exports through `ProjectFileUtilities.exportCopyOfProjectTo`.
+
+That bridge is useful evidence that the IDE load/save/export helpers preserve
+edited project-owned state when they are already given a `Project`. It is not a
+replacement for the `IoUtilitiesTest` archive contract, and it does not prove
+Save-menu activation, Save dialog completion, rendering, grading, lesson
+completion, or player runtime behavior.
+
 ## Readiness workflow surfaces
 
 The PR readiness workflow for this seam is a bounded verification path, not a
@@ -239,11 +259,11 @@ fresh focused validation evidence.
 
 | Surface | Required behavior |
 | --- | --- |
-| Git/PR state verifier | Confirms PR `402`, branch `wave6-project-reopen-edit-chain-1778302300`, base `develop`, local `HEAD`, PR head SHA, merge-base state, and local worktree status before reporting readiness. Repeats the PR head check after any merge, push, or committed recovery change. |
-| Diff scope inspector | Reviews `origin/develop...HEAD` and groups changed files as implementation, characterization test, QA metadata, documentation, or guard scope. Unrelated desktop, rendering, grading, Save-completion, or first-lesson changes are not part of this evidence. |
-| Validation runner | Runs focused `core/story-api-migration` archive reopen/edit validation with `NODE_OPTIONS=--max-old-space-size=32768` after any required sync. |
+| Git/PR state verifier | Confirms PR `402`, branch `wave6-project-reopen-edit-chain-1778302300`, base `develop`, local `HEAD`, PR head SHA, remote branch head SHA, `origin/develop` head SHA, exact merge-base SHA, merge-base state, and local worktree status before reporting readiness. Repeats the local, remote branch, and PR head checks after any merge, push, or committed recovery change. |
+| Diff scope inspector | Reviews `origin/develop...HEAD` and groups changed files as implementation, characterization test, headless IDE bridge, QA metadata, documentation, or guard scope. Unrelated desktop, rendering, grading, Save-completion, or first-lesson changes are not part of this evidence. |
+| Validation runner | Runs focused `core/story-api-migration` archive reopen/edit validation with `NODE_OPTIONS=--max-old-space-size=32768` after any required sync. Runs `ProjectOpenSaveExportJourneyTest` too when the diff includes the headless `core/ide` bridge. |
 | No-op guard | Detects whether the worktree has uncommitted recovery changes. A clean worktree is valid only when the final output includes an exact-head no-op justification. |
-| Evidence reporter | Records PR, branch, base, PR head, local HEAD, merge-base status, worktree status, diff summary, validation result, check state, and either files modified or a no-op justification. |
+| Evidence reporter | Records PR, branch, base, PR head, local HEAD, remote branch head, origin/develop head, merge-base SHA/status, worktree status, diff summary, validation result, check state, and either files modified or a no-op justification. |
 | CI/check reconciler | Inspects PR checks and resolves only blockers directly tied to project archive reopen/edit readiness. Pending unrelated checks are reported as pending, not converted into broad readiness claims. |
 
 ## No-op guard command API
@@ -294,11 +314,15 @@ Record:
 | Base | `develop` |
 | PR head | Exact SHA from `gh pr view 402 --json headRefOid --jq .headRefOid`. |
 | Local HEAD | Exact SHA from `git rev-parse HEAD`; it must match the PR head before final evidence is recorded. |
-| Merge-base status | `merge-base equals origin/develop` when no integration is needed, or `merged origin/develop` when develop drift required a minimal merge. |
+| Remote branch HEAD | Exact SHA from `git rev-parse origin/wave6-project-reopen-edit-chain-1778302300`; it must match local `HEAD` and the PR head before final evidence is recorded. |
+| origin/develop HEAD | Exact SHA from `git rev-parse origin/develop`. |
+| Merge-base | Exact SHA from `git merge-base HEAD origin/develop`. |
+| Merge-base status | `merge-base equals origin/develop` when the merge-base SHA equals the `origin/develop` HEAD SHA, or `merged origin/develop` when develop drift required a minimal merge. |
 | Worktree status | `clean`, or exact `git status --short` entries reviewed as recovery-scope changes before they are listed under `Files modified`. |
-| Diff summary | Grouped summary of `origin/develop...HEAD` by implementation, characterization test, QA metadata, documentation, and guard scope. |
+| Diff summary | Grouped summary of `origin/develop...HEAD` by implementation, characterization test, headless IDE bridge, QA metadata, documentation, and guard scope. |
 | Validation command | The focused `IoUtilitiesTest` command above, with `NODE_OPTIONS=--max-old-space-size=32768`; do not substitute desktop Save, lesson, rendering, or grading validation for this seam. |
 | Validation result | Exit status and concise pass/fail outcome. |
+| Headless bridge validation | Include the `ProjectOpenSaveExportJourneyTest` command and result when `ProjectOpenSaveExportJourneyTest.java`, `FileProjectLoader`, or `ProjectFileUtilities` handoff behavior changed. Otherwise record why it is not required for the exact diff. |
 | Compatibility validation | Include the `HistoricalArchiveRoundTripCharacterizationTest` command and result when `.a3c`, `.a3w`, JSON/XML routing, parser, writer, Tweedle decode, or archive-resource behavior changed. Otherwise record why it is not required for the exact diff. |
 | Checks | PR check names and states, with blockers limited to archive reopen/edit readiness. |
 | Files modified | Relative paths changed by the recovery step. |
@@ -312,19 +336,22 @@ tied to repository-owned project archive IO seams.
 After any merge or committed recovery change creates a new local `HEAD`, push the
 branch normally and re-read PR head with
 `gh pr view 402 --json headRefOid --jq .headRefOid`. Do not record readiness
-until that SHA matches `git rev-parse HEAD`; readiness evidence must not describe
-a local-only merge commit or stale PR check state.
+until that SHA and
+`git rev-parse origin/wave6-project-reopen-edit-chain-1778302300` both match
+`git rev-parse HEAD`; readiness evidence must not describe a local-only merge
+commit, stale remote branch head, or stale PR check state.
 
 Use this exact-head no-op shape when no files change:
 
 ```text
 No-op justification:
   PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
-  <HEAD>, local HEAD matches the PR head, merge-base equals origin/develop, the
-  origin/develop...HEAD diff is limited to project archive reopen/edit
-  characterization/readiness surfaces, focused archive reopen/edit validation
-  passed at <HEAD>, and no scoped PR check blocker requires a code or docs
-  change.
+  <HEAD>, local HEAD matches both the PR head and remote branch head,
+  origin/develop is <origin/develop HEAD>, merge-base is <merge-base>, merge-base
+  equals origin/develop, the origin/develop...HEAD diff is limited to project
+  archive reopen/edit characterization/readiness surfaces, focused archive
+  reopen/edit validation passed at <HEAD>, and no scoped PR check blocker
+  requires a code or docs change.
 ```
 
 ## Boundaries

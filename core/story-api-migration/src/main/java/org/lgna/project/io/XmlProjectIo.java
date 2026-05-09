@@ -307,6 +307,9 @@ public class XmlProjectIo implements ProjectIo {
     }
 
     private byte[] readResourceData(String entryName, Element xmlElement) throws IOException {
+      if (!ResourceExportNames.isResourceEntryName(entryName)) {
+        throw new IOException("Resource data entry outside resources directory for " + resourceContext(xmlElement, entryName));
+      }
       InputStream resourceStream = container.getInputStream(entryName);
       if (resourceStream == null) {
         throw new IOException("Missing resource data for " + resourceContext(xmlElement, entryName));

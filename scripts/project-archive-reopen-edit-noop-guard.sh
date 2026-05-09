@@ -119,6 +119,8 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
     || fail 1 "stale no-op evidence for expected head $expected_head"
   [[ "$evidence_text" == *"Local HEAD: $expected_head"* ]] \
     || fail 1 "stale no-op evidence for expected head $expected_head"
+  [[ "$evidence_text" == *"Remote branch HEAD: $expected_head"* ]] \
+    || fail 1 "stale no-op evidence for expected head $expected_head"
 
   if ! grep -A8 -F "No-op justification:" <<< "$evidence_text" | grep -Fq "$expected_head"; then
     fail 1 "no-op justification must reference expected head $expected_head"
@@ -131,18 +133,26 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
   [[ "$evidence_text" == *"Stale evidence note:"* ]] \
     || fail 1 "no-op evidence must include a stale evidence note"
 
+  missing_exclusions=()
   for required_exclusion in \
     "full desktop lesson automation" \
+    "full ui automation" \
+    "desktop save-menu completion" \
     "visible rendering correctness" \
     "grading" \
-    "full save completion"; do
+    "full save completion" \
+    "full first-lesson completion" \
+    "player runtime behavior"; do
     if [[ "$evidence_text_lower" != *"$required_exclusion"* ]]; then
-      fail 1 "no-op evidence scope exclusions must mention $required_exclusion"
+      missing_exclusions+=("$required_exclusion")
     fi
   done
+  if [[ "${#missing_exclusions[@]}" -gt 0 ]]; then
+    fail 1 "no-op evidence scope exclusions must mention ${missing_exclusions[*]}"
+  fi
 
-  if grep -Eiq '^[[:space:]]*(full desktop lesson automation|visible rendering correctness|grading workflow|grading|full save completion)[[:space:]]*:[[:space:]]*(proven|validated|supported|complete|passed|ready)' <<< "$evidence_text"; then
-    fail 1 "no-op evidence contains out-of-scope desktop, rendering, grading, or full Save claims"
+  if grep -Eiq '^[[:space:]]*(full desktop lesson automation|full ui automation|desktop save-menu completion|save dialog completion|visible rendering correctness|grading workflow|grading|full save completion|full first-lesson completion|lesson completion|player runtime behavior)[[:space:]]*:[[:space:]]*(proven|validated|supported|complete|passed|ready)' <<< "$evidence_text"; then
+    fail 1 "no-op evidence contains out-of-scope desktop, rendering, grading, Save, lesson, or player claims"
   fi
 
   exit 0

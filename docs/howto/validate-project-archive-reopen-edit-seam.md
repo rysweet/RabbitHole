@@ -16,6 +16,7 @@ For a guided walkthrough, see
 - [Sync PR 402 recovery branch](#sync-pr-402-recovery-branch)
 - [Inspect the exact diff](#inspect-the-exact-diff)
 - [Run primary validation](#run-primary-validation)
+- [Run headless bridge validation when needed](#run-headless-bridge-validation-when-needed)
 - [Run compatibility validation when needed](#run-compatibility-validation-when-needed)
 - [Inspect PR checks](#inspect-pr-checks)
 - [Use the no-op guard](#use-the-no-op-guard)
@@ -90,25 +91,36 @@ Confirm PR 402 still points at this branch:
 gh pr view 402 --json number,headRefName,headRefOid,headRepositoryOwner,baseRefName
 ```
 
-Confirm the local worktree is the PR head:
+Record the exact local, remote, base, and merge-base commits before making
+readiness claims:
 
 ```bash
-test "$(git rev-parse HEAD)" = "$(gh pr view 402 --json headRefOid --jq .headRefOid)"
+local_head="$(git rev-parse HEAD)"
+pr_head="$(gh pr view 402 --json headRefOid --jq .headRefOid)"
+remote_branch_head="$(git rev-parse origin/wave6-project-reopen-edit-chain-1778302300)"
+origin_develop_head="$(git rev-parse origin/develop)"
+merge_base="$(git merge-base HEAD origin/develop)"
+worktree_status="$(git status --short)"
 ```
 
-Account for the recovery baseline and integration base:
+Confirm the local worktree is the checked-out PR head and remote branch head:
+
+```bash
+test "$local_head" = "$pr_head"
+test "$local_head" = "$remote_branch_head"
+```
+
+Account for the recovery baseline:
 
 ```bash
 git merge-base --is-ancestor 50b4d8687a42 HEAD
-develop_head="$(git rev-parse origin/develop)"
-merge_base="$(git merge-base HEAD origin/develop)"
 ```
 
 Do not integrate `develop` when the branch already contains current
 `origin/develop`:
 
 ```bash
-test "$merge_base" = "$develop_head"
+test "$merge_base" = "$origin_develop_head"
 ```
 
 If that test passes, record `merge-base equals origin/develop`. If it fails,
@@ -145,11 +157,14 @@ or recording final evidence:
 
 ```bash
 pr_head="$(gh pr view 402 --json headRefOid --jq .headRefOid)"
+remote_branch_head="$(git rev-parse origin/wave6-project-reopen-edit-chain-1778302300)"
 local_head="$(git rev-parse HEAD)"
 test "$local_head" = "$pr_head"
+test "$local_head" = "$remote_branch_head"
 ```
 
-Do not record readiness for a local-only merge commit or stale PR head.
+Do not record readiness for a local-only merge commit, stale remote branch head,
+or stale PR head.
 
 ## Inspect the exact diff
 
@@ -167,6 +182,7 @@ Group the changed files in readiness evidence:
 | --- | --- |
 | Implementation | `core/story-api-migration/src/main/java/org/lgna/project/io/` when archive reader/writer behavior changed. |
 | Characterization test | `core/story-api-migration/src/test/java/org/lgna/project/io/` for focused reopen/edit or compatibility coverage. |
+| Headless IDE bridge | `core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java` when `FileProjectLoader` or `ProjectFileUtilities` handoff behavior changed. |
 | QA metadata | Repository-owned QA scenario, schema, or runner files only when they directly support this archive IO seam. |
 | Documentation | `docs/reference/project-archive-reopen-edit-seam.md`, this guide, and the matching tutorial. |
 | Guard scope | `scripts/project-archive-reopen-edit-noop-guard.sh` and `tests/test_project_archive_reopen_edit_noop_guard.py` when the no-op guard itself changes. |
@@ -201,6 +217,26 @@ write .a3p -> read .a3p -> edit Project -> write edited .a3p
 The seam is not complete if the test only proves file creation, first reopen, or
 export existence. The edited program type must survive the second
 `IoUtilities.readProject` call.
+
+## Run headless bridge validation when needed
+
+Run the `core/ide` bridge test when the diff includes
+`ProjectOpenSaveExportJourneyTest.java`, `FileProjectLoader`, or
+`ProjectFileUtilities` handoff behavior:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.ProjectOpenSaveExportJourneyTest \
+  test
+```
+
+This validates only the headless loaded-project bridge. It does not replace the
+primary `IoUtilitiesTest` archive seam validation and does not prove desktop
+Save-menu completion, Save dialog automation, rendering, grading, lesson
+completion, or player runtime behavior.
 
 ## Run compatibility validation when needed
 
@@ -308,17 +344,22 @@ Branch: wave6-project-reopen-edit-chain-1778302300
 Base: develop
 PR head: <exact SHA from gh pr view 402 --json headRefOid --jq .headRefOid>
 Local HEAD: <exact git rev-parse HEAD value>
-Merge-base status: <merge-base equals origin/develop | merged origin/develop>
+Remote branch HEAD: <exact git rev-parse origin/wave6-project-reopen-edit-chain-1778302300 value>
+origin/develop HEAD: <exact git rev-parse origin/develop value>
+Merge-base: <exact git merge-base HEAD origin/develop value>
+Merge-base status: <merge-base equals origin/develop | merged origin/develop, with exact base/merge-base SHAs above>
 Worktree status: <clean | exact git status --short entries reviewed as recovery scope>
 Diff summary:
   Implementation: <paths or none>
   Characterization test: <paths or none>
+  Headless IDE bridge: <paths or none>
   QA metadata: <paths or none>
   Documentation: <paths or none>
   Guard scope: <paths or none>
 Validation:
   NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=IoUtilitiesTest test
 Result: <passed with exit code 0 | failed with exit code N and blocker summary>
+Headless bridge validation: <not run; no core/ide bridge surface changed | command and result>
 Compatibility validation: <not run; no parser/writer/routing compatibility surface changed | command and result>
 Checks: <PR check names and states, with scoped blockers only>
 Files modified: <relative paths changed by this recovery step>
@@ -329,11 +370,12 @@ If the guard reports a clean worktree, replace `Files modified` with:
 ```text
 No-op justification:
   PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
-  <HEAD>, local HEAD matches the PR head, merge-base equals origin/develop, the
-  origin/develop...HEAD diff is limited to project archive reopen/edit
-  characterization/readiness surfaces, focused archive reopen/edit validation
-  passed at <HEAD>, and no scoped PR check blocker requires a code or docs
-  change.
+  <HEAD>, local HEAD matches both the PR head and remote branch head,
+  origin/develop is <origin/develop HEAD>, merge-base is <merge-base>, merge-base
+  equals origin/develop, the origin/develop...HEAD diff is limited to project
+  archive reopen/edit characterization/readiness surfaces, focused archive
+  reopen/edit validation passed at <HEAD>, and no scoped PR check blocker
+  requires a code or docs change.
 ```
 
 Run and record compatibility validation when `.a3c`, `.a3w`, JSON/XML routing,

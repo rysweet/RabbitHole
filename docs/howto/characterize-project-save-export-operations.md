@@ -10,6 +10,7 @@ Use this guide to add or review compatibility tests for Alice project Save, Save
 - [Add a direct operation test](#add-a-direct-operation-test)
 - [Add a flow-level test through SaveOperationFlow](#add-a-flow-level-test-through-saveoperationflow)
 - [Run the Save menu dialog write proof](#run-the-save-menu-dialog-write-proof)
+- [Add a headless loaded-project bridge test](#add-a-headless-loaded-project-bridge-test)
 - [Add a project archive round-trip test](#add-a-project-archive-round-trip-test)
 - [Run the focused tests](#run-the-focused-tests)
 
@@ -20,6 +21,11 @@ Work in the `core/ide` module and keep tests in the same Java package as the ope
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
 ```
+
+Use `core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java`
+for headless bridge coverage that loads a project file, edits project-owned
+state, saves a copy through `ProjectFileUtilities`, reloads it, and exports it
+without Alice desktop.
 
 Use JUnit 4 and existing test fixtures. Do not add a mocking library for this package.
 
@@ -67,6 +73,7 @@ Start with the highest-value untested behavior in the operation layer:
 | Shared project extension | `AbstractSaveProjectOperation` as observed through Save and Save As operations |
 | Finish, cancel, wait cursor, and retry flow | `SaveOperationFlow` |
 | Rendered File-menu Save, live Save chooser control, `.a3p` write, readback, and marker proof | `RobotSaveMenuDialogWriteReadbackProofTest` |
+| Loaded project saves a copy, reopens with edited state, and exports without UI | `ProjectOpenSaveExportJourneyTest` |
 | Saved Alice project reopens, accepts an edit, saves again, reopens again with the edit, and exports | `IoUtilitiesTest` |
 
 Keep archive-content tests in lower-level classes that save Alice projects,
@@ -190,6 +197,26 @@ The focused proof target emits `core/ide/target/save-menu-proofs/robot-save-menu
 
 Do not broaden this proof while reviewing Save behavior. It does not cover Save As, backup saves, retry behavior, overwrite prompts, cancellation, rendering correctness, grading, lesson completion, broad UI automation, or native dialog control. For the complete artifact contract, see [Save Proof Evidence](../reference/save-proof-evidence.md).
 
+## Add a headless loaded-project bridge test
+
+Use `ProjectOpenSaveExportJourneyTest` when the behavior is about the `core/ide`
+handoff from a loaded project file into save/export helpers without user
+interface automation. Keep the fixture synthetic and file-backed:
+
+```text
+Given a synthetic project saved to classroom-edit.a3p
+When FileProjectLoader loads it
+And the loaded project's program type and methods are edited
+And ProjectFileUtilities.saveCopyOfProjectTo writes classroom-edit-copy.a3p
+Then FileProjectLoader reloads the copy with the edited name and marker method
+And ProjectFileUtilities.exportCopyOfProjectTo writes classroom-edit-export.a3w
+And the export contains src/EditedClassroomProgram.twe
+```
+
+This bridge covers `FileProjectLoader` plus `ProjectFileUtilities` handoff
+behavior. It must not launch Alice desktop, click the Save menu, control a
+`JFileChooser`, depend on rendering, or claim full Save completion.
+
 ## Add a project archive round-trip test
 
 Use `IoUtilitiesTest` when the behavior is about the actual project archive that
@@ -256,3 +283,18 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 This command validates archive-level reopen/edit behavior only. It does not
 validate desktop Save-menu completion, visible rendering correctness, grading,
 full lesson automation, or player runtime behavior.
+
+After adding or changing the headless loaded-project bridge, run:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.ProjectOpenSaveExportJourneyTest \
+  test
+```
+
+This command validates the `FileProjectLoader`/`ProjectFileUtilities` bridge
+only. It does not validate desktop Save-menu completion, visible rendering,
+grading, full lesson automation, or player runtime behavior.

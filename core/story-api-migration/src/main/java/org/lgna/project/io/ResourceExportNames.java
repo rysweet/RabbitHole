@@ -45,6 +45,30 @@ final class ResourceExportNames {
     return (slash < 0) ? entryName : entryName.substring(slash + 1);
   }
 
+  static boolean isResourceEntryName(String entryName) {
+    int slash = (entryName == null) ? -1 : entryName.indexOf('/');
+    if (slash <= 0) {
+      return false;
+    }
+    String directory = entryName.substring(0, slash);
+    if ("resources".equals(directory)) {
+      return true;
+    }
+    if (!directory.startsWith("resources")) {
+      return false;
+    }
+    for (int i = "resources".length(); i < directory.length(); i++) {
+      if (!Character.isDigit(directory.charAt(i))) {
+        return false;
+      }
+    }
+    return directory.length() > "resources".length();
+  }
+
+  static boolean isSourceEntryName(String entryName) {
+    return (entryName != null) && entryName.startsWith("src/");
+  }
+
   private static String sanitizeFileName(String fileName) {
     if (fileName == null) {
       return "";

@@ -18,6 +18,12 @@ VALIDATION_COMMAND = (
     "-Dtest=org.lgna.project.io.IoUtilitiesTest test"
 )
 SCOPE_EXCLUSIONS = (
+    "Scope exclusions: no full desktop lesson automation, full UI automation, "
+    "desktop Save-menu completion, visible rendering correctness, grading, "
+    "grading correctness, full Save completion, full first-lesson completion, "
+    "player runtime behavior, or broad migration correctness claims"
+)
+INCOMPLETE_SCOPE_EXCLUSIONS = (
     "Scope exclusions: no full desktop lesson automation, visible rendering "
     "correctness, grading, or full Save completion claims"
 )
@@ -206,6 +212,28 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         combined_output = (result.stdout + result.stderr).lower()
         self.assertIn("scope exclusions", combined_output)
 
+    def test_guard_rejects_clean_worktree_noop_evidence_with_incomplete_scope_exclusions(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, scope_exclusions=INCOMPLETE_SCOPE_EXCLUSIONS),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("scope exclusions", combined_output)
+        self.assertIn("save-menu", combined_output)
+        self.assertIn("player runtime", combined_output)
+
     def test_guard_rejects_clean_worktree_noop_evidence_with_out_of_scope_claims(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -219,6 +247,34 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
                         "Visible rendering correctness: proven",
                         "Grading workflow: proven",
                         "Full Save completion: proven",
+                    ]
+                ),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("out-of-scope", combined_output)
+
+    def test_guard_rejects_noop_evidence_with_save_menu_player_or_lesson_completion_claims(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head)
+                + "\n"
+                + "\n".join(
+                    [
+                        "Desktop Save-menu completion: validated",
+                        "Player runtime behavior: ready",
+                        "Full first-lesson completion: complete",
                     ]
                 ),
             )
@@ -307,6 +363,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         include_noop_justification: bool = True,
         include_scope_exclusions: bool = True,
         include_noop_head: bool = True,
+        scope_exclusions: str = SCOPE_EXCLUSIONS,
     ) -> str:
         lines = [
             "PR: 402",
@@ -314,6 +371,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             f"Base: {BASE_BRANCH}",
             f"PR head: {head}",
             f"Local HEAD: {head}",
+            f"Remote branch HEAD: {head}",
+            f"origin/{BASE_BRANCH} HEAD: {head}",
+            f"Merge-base: {head}",
             f"Merge-base status: merge-base equals origin/{BASE_BRANCH}",
             "Worktree status: clean",
             "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
@@ -323,17 +383,19 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             "Positive claim scope: repository-owned archive reopen/edit behavior only",
         ]
         if include_scope_exclusions:
-            lines.append(SCOPE_EXCLUSIONS)
+            lines.append(scope_exclusions)
         lines.append("Stale evidence note: older evidence must not be reused for a different HEAD")
         if include_noop_justification:
             validated_head = head if include_noop_head else "the validated PR head"
+            state_head = head if include_noop_head else "the recorded base and merge-base"
             validation_result = f"passed at {head}," if include_noop_head else "passed,"
             lines.extend(
                 [
                     "No-op justification:",
                     f"  PR 402 branch {PR_BRANCH} already points at",
-                    f"  {validated_head}, local HEAD matches the PR head, merge-base equals",
-                    f"  origin/{BASE_BRANCH}, the origin/{BASE_BRANCH}...HEAD diff is limited to",
+                    f"  {validated_head}, local HEAD matches both the PR head and remote",
+                    f"  branch head, origin/{BASE_BRANCH} is {state_head}, merge-base is {state_head},",
+                    f"  merge-base equals origin/{BASE_BRANCH}, the origin/{BASE_BRANCH}...HEAD diff is limited to",
                     "  project archive reopen/edit characterization/readiness surfaces,",
                     "  focused archive reopen/edit validation",
                     f"  {validation_result} and no scoped PR check blocker requires a code or docs",

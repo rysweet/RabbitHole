@@ -1299,6 +1299,19 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonPlayerReaderRejectsResourceReferenceOutsideResourceDirectory() throws Exception {
+    ImageReference imageReference = imageReference(UUID.randomUUID(), "evil.png", "png");
+    imageReference.file = "evil.png";
+    File exportFile = temporaryFolder.newFile("unexpected-resource-location.a3w");
+    writePlayerArchive(exportFile, imageReference, new byte[] {1, 2, 3});
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue(thrown.getMessage().contains(imageReference.file));
+    assertTrue(thrown.getMessage().contains("resources"));
+  }
+
+  @Test
   public void jsonPlayerReaderRejectsTraversalTypeReference() throws Exception {
     ProjectManifest manifest = new ProjectManifest();
     manifest.description.name = "Program";
@@ -1319,6 +1332,30 @@ public class IoUtilitiesTest {
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
 
     assertTrue(thrown.getMessage().contains(typeReference.file));
+  }
+
+  @Test
+  public void jsonPlayerReaderRejectsTypeReferenceOutsideSourceDirectory() throws Exception {
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "Program";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    TypeReference typeReference = new TypeReference("Program", "Program.twe", "tweedle");
+    manifest.resources.add(typeReference);
+    File exportFile = temporaryFolder.newFile("unexpected-type-location.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class Program {}");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue(thrown.getMessage().contains(typeReference.file));
+    assertTrue(thrown.getMessage().contains("src"));
   }
 
   @Test
@@ -1386,6 +1423,22 @@ public class IoUtilitiesTest {
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectFile));
 
     assertTrue(thrown.getMessage().contains("../evil.txt"));
+  }
+
+  @Test
+  public void xmlProjectReaderRejectsResourceEntryOutsideResourceDirectory() throws Exception {
+    File projectFile = temporaryFolder.newFile("unexpected-resource-location.a3p");
+    writeXmlProjectArchive(
+        projectFile,
+        TestResource.class.getName(),
+        "evil.txt",
+        "evil.txt",
+        "not safe".getBytes(StandardCharsets.UTF_8));
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectFile));
+
+    assertTrue(thrown.getMessage().contains("evil.txt"));
+    assertTrue(thrown.getMessage().contains("resources"));
   }
 
   @Test

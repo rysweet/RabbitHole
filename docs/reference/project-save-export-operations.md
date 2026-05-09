@@ -9,6 +9,7 @@ This reference describes the `core/ide` project Save, Save As, and Export operat
 - [Operation responsibilities](#operation-responsibilities)
 - [User-visible behavior](#user-visible-behavior)
 - [Archive reopen/edit/export seam](#archive-reopeneditexport-seam)
+- [Headless loaded-project bridge](#headless-loaded-project-bridge)
 - [API reference](#api-reference)
 - [Evidence artifacts](#evidence-artifacts)
 - [Testing notes](#testing-notes)
@@ -33,6 +34,12 @@ Characterization tests for this layer live in the matching test package:
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
 ```
 
+Headless load/save/export bridge tests live in:
+
+```text
+core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java
+```
+
 The operation layer routes Croquet actions to `ProjectApplication` save/export
 behavior. Archive file contents remain owned by lower-level classes that write
 Alice project archives, reopen them, edit them, write them again, reopen them
@@ -50,6 +57,7 @@ The operation coverage plan is organized as:
 | Flow seam tests | `SaveOperationFlowTest` covers observable routing, prompt consultation, backup-save naming, retry behavior, wait cursor wrapping, finish/cancel outcomes, and returned result counts. |
 | Completion result evidence tests | `SaveOperationCompletionEvidenceTest` covers opt-in result and dialog-control artifacts, finished/canceled/incomplete-style result summaries, `wroteFile` claim boundaries, path redaction, missing-active-`StageIDE` proof, and non-interruption when evidence writing fails. |
 | Action-invocation proof tests | `StageIdeSaveActionInvocationProofTest` and `StageIdeSaveMenuItemDispatchProofTest` cover proof-only active-`StageIDE`/document-frame and Swing menu dispatch paths where the environment supports them. The `missing_project_document_frame` status remains part of the artifact contract for the production guard path and should be exercised by any future test seam that can construct that state without unsafe desktop interception. |
+| Headless loaded-project bridge | `ProjectOpenSaveExportJourneyTest` covers `FileProjectLoader` plus `ProjectFileUtilities` save/export helpers with synthetic projects and temporary archive files, without launching Alice desktop or controlling Save dialogs. |
 | Compatibility assertions | Assert the exact behavior currently implemented by `SaveProjectOperation`, `SaveAsProjectOperation`, and `ExportProjectOperation`. |
 | Portable file fixtures | Use real files from JUnit `TemporaryFolder`; use a missing file as the portable "cannot be reused" Save case. |
 
@@ -129,6 +137,29 @@ automation, visible rendering correctness, grading, full lesson automation, or
 player runtime behavior. See
 [Project Archive Reopen/Edit Seam](./project-archive-reopen-edit-seam.md) for
 the detailed archive contract.
+
+## Headless loaded-project bridge
+
+`ProjectOpenSaveExportJourneyTest` is the `core/ide` bridge between loaded
+project files and the archive IO layer. The focused edit test:
+
+```text
+IoUtilities.writeProject(original.a3p, project)
+-> FileProjectLoader.load()
+-> edit loaded Project-owned AST state
+-> ProjectFileUtilities.saveCopyOfProjectTo(edited.a3p)
+-> FileProjectLoader.load()
+-> ProjectFileUtilities.exportCopyOfProjectTo(exported.a3w)
+-> inspect exported archive structure
+```
+
+The required persistence checks are the edited program type name and marker
+method after the saved copy is loaded again, plus the exported Tweedle entry
+named for the edited program. This bridge proves the headless
+`FileProjectLoader`/`ProjectFileUtilities` path can preserve edited project
+state through save and export. It does not click the Save menu, drive a
+`JFileChooser`, prove rendered UI behavior, or broaden the archive IO contract
+owned by `core/story-api-migration`.
 
 ## API reference
 
@@ -315,6 +346,17 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
+When changing the headless loaded-project bridge, run:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.ProjectOpenSaveExportJourneyTest \
+  test
+```
+
 Display-backed proof tests remain intentionally separate and are documented in their proof-specific how-to pages. Coverage claims for this shard should be limited to `SaveOperationFlow` and `SaveOperationCompletionEvidence` behavior backed by these tests; do not infer aggregate target progress from trivial accessor tests or from desktop proof tests that exercise a narrower path.
 
 ## Save menu dialog write proof
@@ -416,6 +458,10 @@ Tests and refactors in this package preserve these rules:
 13. Archive reopen/edit claims come only from `core/story-api-migration`
     `IoUtilities` validation, not from operation routing, menu dispatch, or
     desktop rendering evidence.
+14. Headless loaded-project bridge claims come only from
+    `ProjectOpenSaveExportJourneyTest`; they cover `FileProjectLoader` and
+    `ProjectFileUtilities` archive handoff behavior, not user-visible Save menu
+    or Save dialog completion.
 
 ## Examples
 
