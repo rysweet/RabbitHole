@@ -55,6 +55,13 @@ UNSUPPORTED_MERGE_READY_CLAIMS = (
     "full world execution",
 )
 
+MAVEN_COMMAND_PATTERN = re.compile(r"(^|\s)mvn(\s|$)")
+
+CLAIM_NEGATION_PATTERN = re.compile(
+    r"(does not claim|do not claim|not claim|doesn't claim|without claiming|"
+    r"no claim of|does not prove|do not prove|not prove|explicitly avoids?)"
+)
+
 FOCUSED_DIFF_PREFIXES = (
     "scripts/",
     "tests/",
@@ -382,12 +389,16 @@ def _has_outer_timeout_wrapper(command: str) -> bool:
 def _requires_node_options(command: str) -> bool:
     return (
         "qa/outside-in/alice-desktop/" in command
-        or re.search(r"(^|\s)mvn(\s|$)", command) is not None
+        or MAVEN_COMMAND_PATTERN.search(command) is not None
     )
 
 
 def _line_items(values: Iterable[object]) -> list[str]:
-    items = [str(value).strip() for value in values if str(value).strip()]
+    items: list[str] = []
+    for value in values:
+        item = str(value).strip()
+        if item:
+            items.append(item)
     return [f"- {item}" for item in items] or ["None"]
 
 
@@ -410,6 +421,111 @@ def _render_evidence_mapping(evidence: Mapping[str, object]) -> list[str]:
         lines.append("- blockers:")
         lines.extend(f"  - {_format_blocker(blocker)}" for blocker in blockers)
     return lines or ["None"]
+
+
+def _metadata_text(metadata: Mapping[str, object], key: str, default: str = "") -> str:
+    return str(metadata.get(key) or default).strip()
+
+
+def _workflow_run_state(run: Mapping[str, object], head_sha: str) -> str:
+    run_head = str(run.get("headSha", run.get("head_sha", ""))).strip()
+    status = str(run.get("status", "")).strip().lower()
+    conclusion_value = run.get("conclusion")
+    conclusion = "" if conclusion_value is None else str(conclusion_value).strip().lower()
+    if run_head != head_sha:
+        return "stale"
+    if status != "completed":
+        return "in progress"
+    if conclusion != "success":
+        return "did not succeed"
+    return "passed"
+
+
+def _workflow_readiness_blockers(
+    workflow: str,
+    runs: Sequence[Mapping[str, object]],
+    head_sha: str,
+) -> list[str]:
+    if not runs:
+        return [_format_blocker(f"required workflow {workflow} is missing.")]
+
+    states: set[str] = set()
+    for run in runs:
+        state = _workflow_run_state(run, head_sha)
+        if state == "passed":
+            return []
+        states.add(state)
+
+    blockers: list[str] = []
+    state_messages = (
+        ("stale", f"required workflow {workflow} is stale for current head."),
+        ("in progress", f"required workflow {workflow} is in progress."),
+        ("did not succeed", f"required workflow {workflow} did not succeed."),
+    )
+    for state, message in state_messages:
+        if state in states:
+            blockers.append(_format_blocker(message))
+    return blockers or [
+        _format_blocker(f"required workflow {workflow} has no successful completed run.")
+    ]
+
+
+def _blocked_github_service_evidence(
+    *,
+    pr_number: int,
+    branch: str,
+    local_head_sha: str,
+    blocker: str,
+) -> dict[str, object]:
+    return {
+        "head": _evidence_mapping(
+            PrHeadEvidence(
+                status="blocked",
+                blockers=[blocker],
+                pr_number=pr_number,
+                branch=branch,
+                local_head_sha=local_head_sha,
+                pr_head_oid="",
+            )
+        ),
+        "github": _evidence_mapping(
+            GitHubCheckEvidence(
+                status="blocked",
+                blockers=[blocker],
+                head_sha=local_head_sha,
+                merge_state_status="UNKNOWN",
+                mergeable="UNKNOWN",
+                workflow_runs=[],
+            )
+        ),
+        "pr_metadata": {},
+    }
+
+
+def _collect_current_head_workflow_runs(
+    *,
+    client: object,
+    branch: str,
+    head_sha: str,
+) -> tuple[list[Mapping[str, object]], list[str]]:
+    if not branch or not head_sha:
+        return [], [
+            _format_blocker(
+                "GitHub PR metadata is missing headRefName or headRefOid; "
+                "workflow evidence cannot be tied to the current head."
+            )
+        ]
+
+    try:
+        return list(
+            client.run_list(
+                branch=branch,
+                commit=head_sha,
+                fields=DEFAULT_WORKFLOW_RUN_FIELDS,
+            )
+        ), []
+    except GitHubServiceError as exc:
+        return [], [_format_blocker(f"GitHub workflow fetch failed: {exc}")]
 
 
 def _resolve_git_top_level(input_path: Path, *, label: str) -> Path:
@@ -598,50 +714,18 @@ def collect_github_check_evidence(
     if normalized_mergeable != "MERGEABLE":
         blockers.append(_format_blocker(f"mergeable state is {mergeable}."))
 
+    workflow_run_list = list(workflow_runs)
+    required_workflow_names = set(required_workflows)
     runs_by_name: dict[str, list[Mapping[str, object]]] = {}
-    for run in workflow_runs:
+    for run in workflow_run_list:
         name = str(run.get("name", "")).strip()
-        if name:
+        if name in required_workflow_names:
             runs_by_name.setdefault(name, []).append(run)
 
     for workflow in required_workflows:
-        runs = runs_by_name.get(workflow, [])
-        if not runs:
-            blockers.append(_format_blocker(f"required workflow {workflow} is missing."))
-            continue
-
-        passing_current_head = False
-        stale_seen = False
-        in_progress_seen = False
-        failed_seen = False
-        for run in runs:
-            run_head = str(run.get("headSha", run.get("head_sha", ""))).strip()
-            status = str(run.get("status", "")).strip().lower()
-            conclusion_value = run.get("conclusion")
-            conclusion = "" if conclusion_value is None else str(conclusion_value).strip().lower()
-            if run_head != head_sha:
-                stale_seen = True
-                continue
-            if status != "completed":
-                in_progress_seen = True
-                continue
-            if conclusion != "success":
-                failed_seen = True
-                continue
-            passing_current_head = True
-
-        if passing_current_head:
-            continue
-        if stale_seen:
-            blockers.append(_format_blocker(f"required workflow {workflow} is stale for current head."))
-        if in_progress_seen:
-            blockers.append(_format_blocker(f"required workflow {workflow} is in progress."))
-        if failed_seen:
-            blockers.append(_format_blocker(f"required workflow {workflow} did not succeed."))
-        if not (stale_seen or in_progress_seen or failed_seen):
-            blockers.append(
-                _format_blocker(f"required workflow {workflow} has no successful completed run.")
-            )
+        blockers.extend(
+            _workflow_readiness_blockers(workflow, runs_by_name.get(workflow, []), head_sha)
+        )
 
     status = "blocked" if blockers else "passed"
     if blockers:
@@ -652,7 +736,7 @@ def collect_github_check_evidence(
         head_sha=head_sha,
         merge_state_status=merge_state_status,
         mergeable=mergeable,
-        workflow_runs=list(workflow_runs),
+        workflow_runs=workflow_run_list,
     )
 
 
@@ -675,37 +759,20 @@ def collect_github_service_evidence(
         )
     except GitHubServiceError as exc:
         blocker = _format_blocker(f"GitHub PR metadata fetch failed: {exc}")
-        return {
-            "head": _evidence_mapping(
-                PrHeadEvidence(
-                    status="blocked",
-                    blockers=[blocker],
-                    pr_number=pr_number,
-                    branch=head_branch or "",
-                    local_head_sha=local_head_sha,
-                    pr_head_oid="",
-                )
-            ),
-            "github": _evidence_mapping(
-                GitHubCheckEvidence(
-                    status="blocked",
-                    blockers=[blocker],
-                    head_sha=local_head_sha,
-                    merge_state_status="UNKNOWN",
-                    mergeable="UNKNOWN",
-                    workflow_runs=[],
-                )
-            ),
-            "pr_metadata": {},
-        }
+        return _blocked_github_service_evidence(
+            pr_number=pr_number,
+            branch=head_branch or "",
+            local_head_sha=local_head_sha,
+            blocker=blocker,
+        )
 
     if not isinstance(pr_metadata, Mapping):
         raise GitHubServiceError("GitHub PR metadata adapter returned non-object evidence.")
 
-    pr_head_oid = str(pr_metadata.get("headRefOid") or "").strip()
-    resolved_head_branch = str(pr_metadata.get("headRefName") or head_branch or "").strip()
-    merge_state_status = str(pr_metadata.get("mergeStateStatus") or "UNKNOWN").strip()
-    mergeable = str(pr_metadata.get("mergeable") or "UNKNOWN").strip()
+    pr_head_oid = _metadata_text(pr_metadata, "headRefOid")
+    resolved_head_branch = _metadata_text(pr_metadata, "headRefName", head_branch or "")
+    merge_state_status = _metadata_text(pr_metadata, "mergeStateStatus", "UNKNOWN")
+    mergeable = _metadata_text(pr_metadata, "mergeable", "UNKNOWN")
     head_evidence = verify_current_pr_head(
         pr_number=pr_number,
         head_branch=resolved_head_branch,
@@ -713,24 +780,11 @@ def collect_github_service_evidence(
         pr_head_oid=pr_head_oid,
     )
 
-    workflow_runs: list[Mapping[str, object]] = []
-    service_blockers: list[str] = []
-    if not resolved_head_branch or not pr_head_oid:
-        service_blockers.append(
-            _format_blocker(
-                "GitHub PR metadata is missing headRefName or headRefOid; "
-                "workflow evidence cannot be tied to the current head."
-            )
-        )
-    else:
-        try:
-            workflow_runs = github_client.run_list(
-                branch=resolved_head_branch,
-                commit=pr_head_oid,
-                fields=DEFAULT_WORKFLOW_RUN_FIELDS,
-            )
-        except GitHubServiceError as exc:
-            service_blockers.append(_format_blocker(f"GitHub workflow fetch failed: {exc}"))
+    workflow_runs, service_blockers = _collect_current_head_workflow_runs(
+        client=github_client,
+        branch=resolved_head_branch,
+        head_sha=pr_head_oid,
+    )
 
     github_evidence = collect_github_check_evidence(
         head_sha=pr_head_oid or local_head_sha,
@@ -828,10 +882,6 @@ def evaluate_readiness(evidence: Mapping[str, object]) -> ReadinessDecision:
 def _validate_no_overclaims(text: str) -> None:
     lowered = text.lower()
     found: list[str] = []
-    negation_pattern = re.compile(
-        r"(does not claim|do not claim|not claim|doesn't claim|without claiming|"
-        r"no claim of|does not prove|do not prove|not prove|explicitly avoids?)"
-    )
     for claim in UNSUPPORTED_MERGE_READY_CLAIMS:
         claim_text = claim.lower()
         search_start = 0
@@ -842,7 +892,7 @@ def _validate_no_overclaims(text: str) -> None:
                 break
             sentence_start = max(lowered.rfind(".", 0, index), lowered.rfind("\n", 0, index)) + 1
             before_claim = lowered[sentence_start:index]
-            if not negation_pattern.search(before_claim):
+            if not CLAIM_NEGATION_PATTERN.search(before_claim):
                 claim_is_positive = True
                 break
             search_start = index + len(claim_text)
@@ -868,6 +918,67 @@ def validate_merge_ready_recovery_report(report: str) -> None:
         raise WorkflowReportError("Merge-ready recovery report sections are out of order")
 
 
+def _mapping_lines_or_none(value: object) -> list[str]:
+    return _render_evidence_mapping(value) if isinstance(value, Mapping) else ["None"]
+
+
+def _merge_ready_list_lines(
+    evidence: Mapping[str, object],
+    evidence_key: str,
+    list_key: str,
+) -> list[str]:
+    value = evidence.get(evidence_key, {})
+    if not isinstance(value, Mapping):
+        return ["None"]
+    return _line_items(value.get(list_key, []))
+
+
+def _merge_ready_github_lines(evidence: Mapping[str, object]) -> list[str]:
+    lines: list[str] = []
+    for key in ("head", "github"):
+        value = evidence.get(key, {})
+        if isinstance(value, Mapping):
+            lines.extend(_render_evidence_mapping(value))
+
+    diff_scope = evidence.get("diff_scope", {})
+    if isinstance(diff_scope, Mapping):
+        lines.append("- diff_scope:")
+        lines.extend(f"  {line}" for line in _render_evidence_mapping(diff_scope))
+    return lines or ["None"]
+
+
+def _quality_audit_cycle_lines(evidence: Mapping[str, object]) -> list[str]:
+    lines: list[str] = []
+    for index, cycle in enumerate(_as_list(evidence.get("quality_audit_cycles")), start=1):
+        if isinstance(cycle, Mapping):
+            seek = cycle.get("seek", "None")
+            validate = cycle.get("validate", "None")
+            fix = cycle.get("fix", "None")
+            clean = bool(cycle.get("clean"))
+            lines.append(f"- Cycle {index}:")
+            lines.append(f"  - SEEK: {seek}")
+            lines.append(f"  - VALIDATE: {validate}")
+            lines.append(f"  - FIX: {fix}")
+            lines.append(f"  - clean: {clean}")
+        else:
+            lines.append(f"- Cycle {index}: {cycle}")
+    return lines or ["None"]
+
+
+def _readiness_decision_lines(
+    decision: ReadinessDecision,
+    files_modified: Sequence[str],
+) -> list[str]:
+    lines = [decision.decision, *[f"- {blocker}" for blocker in decision.blockers]]
+    if not files_modified:
+        lines.append(
+            "workflow-accepted No-op justification: no repository implementation "
+            "changes are listed; readiness is tied to the supplied current-head evidence "
+            "and any explicit merge-ready blockers above."
+        )
+    return lines
+
+
 def render_merge_ready_recovery_report(
     *,
     summary: str,
@@ -889,64 +1000,17 @@ def render_merge_ready_recovery_report(
 
     decision = evaluate_readiness(evidence)
     files_lines = [f"- {path}" for path in files_modified] or ["None"]
-    validation = evidence.get("validation", {})
-    qa = evidence.get("qa", {})
-    docs = evidence.get("docs", {})
-    github = evidence.get("github", {})
-    head = evidence.get("head", {})
-    diff_scope = evidence.get("diff_scope", {})
-    quality_cycles = _as_list(evidence.get("quality_audit_cycles"))
-
-    validation_lines = (
-        _line_items(validation.get("commands", []))
-        if isinstance(validation, Mapping)
-        else ["None"]
-    )
-    qa_lines = _line_items(qa.get("evidence", [])) if isinstance(qa, Mapping) else ["None"]
-    docs_lines = _render_evidence_mapping(docs) if isinstance(docs, Mapping) else ["None"]
-    github_lines: list[str] = []
-    if isinstance(head, Mapping):
-        github_lines.extend(_render_evidence_mapping(head))
-    if isinstance(github, Mapping):
-        github_lines.extend(_render_evidence_mapping(github))
-    if isinstance(diff_scope, Mapping):
-        github_lines.append("- diff_scope:")
-        github_lines.extend(f"  {line}" for line in _render_evidence_mapping(diff_scope))
-    if not github_lines:
-        github_lines = ["None"]
-
-    quality_lines: list[str] = []
-    for index, cycle in enumerate(quality_cycles, start=1):
-        if isinstance(cycle, Mapping):
-            quality_lines.append(f"- Cycle {index}:")
-            quality_lines.append(f"  - SEEK: {cycle.get('seek', 'None')}")
-            quality_lines.append(f"  - VALIDATE: {cycle.get('validate', 'None')}")
-            quality_lines.append(f"  - FIX: {cycle.get('fix', 'None')}")
-            quality_lines.append(f"  - clean: {bool(cycle.get('clean'))}")
-        else:
-            quality_lines.append(f"- Cycle {index}: {cycle}")
-    if not quality_lines:
-        quality_lines = ["None"]
-
-    readiness_lines = [decision.decision]
-    readiness_lines.extend(f"- {blocker}" for blocker in decision.blockers)
-    if not files_modified:
-        readiness_lines.append(
-            "workflow-accepted No-op justification: no repository implementation "
-            "changes are listed; readiness is tied to the supplied current-head evidence "
-            "and any explicit merge-ready blockers above."
-        )
 
     sections = [
         ("Summary", [summary.strip() or "None"]),
         ("Files modified", files_lines),
-        ("Validation", validation_lines),
-        ("QA / scenario evidence", qa_lines),
-        ("Docs impact", docs_lines),
+        ("Validation", _merge_ready_list_lines(evidence, "validation", "commands")),
+        ("QA / scenario evidence", _merge_ready_list_lines(evidence, "qa", "evidence")),
+        ("Docs impact", _mapping_lines_or_none(evidence.get("docs", {}))),
         ("Scope / bounded claims", [scope_bounded_claims]),
-        ("GitHub and PR evidence", github_lines),
-        ("Quality-audit cycles", quality_lines),
-        ("Readiness decision", readiness_lines),
+        ("GitHub and PR evidence", _merge_ready_github_lines(evidence)),
+        ("Quality-audit cycles", _quality_audit_cycle_lines(evidence)),
+        ("Readiness decision", _readiness_decision_lines(decision, files_modified)),
     ]
     report = "\n\n".join(f"{heading}\n" + "\n".join(lines) for heading, lines in sections)
     validate_merge_ready_recovery_report(report)

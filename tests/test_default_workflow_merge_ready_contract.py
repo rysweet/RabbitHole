@@ -200,6 +200,29 @@ class GitHubCheckCollectorContractTest(unittest.TestCase):
         self.assertEqual("passed", field(evidence, "status"))
         self.assertEqual([], blockers(evidence))
 
+    def test_stops_scanning_workflow_runs_after_current_head_success(self) -> None:
+        module = load_recovery_module()
+
+        class RunThatShouldNotBeClassified(dict):
+            def get(self, key, default=None):
+                if key == "name":
+                    return "CI"
+                raise AssertionError(f"unexpected classification of extra run key {key!r}")
+
+        evidence = module.collect_github_check_evidence(
+            head_sha=HEAD_SHA,
+            merge_state_status="CLEAN",
+            mergeable="MERGEABLE",
+            required_workflows=["CI"],
+            workflow_runs=[
+                {"name": "CI", "status": "completed", "conclusion": "success", "headSha": HEAD_SHA},
+                RunThatShouldNotBeClassified(),
+            ],
+        )
+
+        self.assertEqual("passed", field(evidence, "status"))
+        self.assertEqual([], blockers(evidence))
+
     def test_blocks_greenish_but_stale_or_incomplete_github_evidence(self) -> None:
         module = load_recovery_module()
 
