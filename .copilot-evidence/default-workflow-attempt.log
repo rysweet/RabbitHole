@@ -1,24 +1,36 @@
 Default-workflow recovery evidence for PR #419
-Recorded at: 2026-05-09T06:43:26Z
+Recorded at: 2026-05-09T10:07:42Z
 PR: https://github.com/rysweet/RabbitHole/pull/419
 Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
 Base branch: develop
 Evidence stage: final PR419 exact-head readiness handoff
-Exact checked HEAD at final validation: e2b4207cca650e45c4fd67e52ec7df05fcb82ade
-origin/develop at recovery: ea27623ec93673fe1e2f7937783926bce10ae69e
-merge-base(HEAD, origin/develop): ea27623ec93673fe1e2f7937783926bce10ae69e
+Exact checked HEAD at final validation: e28058677c0a3b9335672a7b9e989fac5759247b
+origin/develop at recovery: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
+merge-base(HEAD, origin/develop): 0366dfa17f0f41e2d878c293a6c33fb1f841993a
+
+Workflow readiness/review/finalization evidence:
+- Current-head evidence boundary: claims below apply only to commands listed in this recovery pass.
+- No timeout wrappers were used; NODE_OPTIONS=--max-old-space-size=32768 was exported for focused checks.
+- No manual PR merge was performed for PR #419.
+- Unmerged-path check: git diff --name-only --diff-filter=U produced no output.
+- Conflict-marker check: rg '(<{7}|={7}|>{7})' docs qa pyproject.toml produced no output.
 
 Merge status:
-- The branch already contains current origin/develop at the checked recovery
+- The branch contains current origin/develop at the checked recovery
   point; no rebase was performed and no shared PR history was rewritten.
 - PR #419 points at the validated exact HEAD
-  e2b4207cca650e45c4fd67e52ec7df05fcb82ade on the existing branch.
+  e28058677c0a3b9335672a7b9e989fac5759247b on the existing branch.
 
 Worktree end state:
-- The existing PR branch is pushed at the validated exact HEAD above.
-- This local evidence refresh is the only intentional post-push working-tree
-  change, so reviewers can see the exact pushed PR head without rewriting
-  shared branch history.
+- No unmerged path remains; the previous AA index state for
+  docs/reference/visible-rendering-evidence-nonclaim-contract.md is resolved.
+- The existing PR branch is pushed at the validated exact HEAD above. The
+  retcon documentation and evidence-specification updates in this worktree are
+  staged recovery changes and must stay bounded to the checks recorded here
+  until they are committed through the normal PR branch flow.
+- After those staged docs/evidence changes are committed, refresh this log's
+  exact HEAD and PR-head metadata to the post-commit SHA before describing the
+  committed branch as final exact-head readiness.
 
 Intentional changes:
 - Runtime/display accessibility probe artifacts now state the target-discovery
@@ -37,6 +49,14 @@ Intentional changes:
 - Step 10 review pass narrows silver-thread doc wording from "full Alice desktop
   QA contract suite" to "Alice desktop QA contract suite" to avoid implying
   validation beyond the focused target-discovery lane.
+- Step 6 retcon documentation adds current-head refresh instructions, documents
+  that review Git coordinates are external metadata rather than runner-emitted
+  `environment.txt` fields, resolves the visible-rendering nonclaim reference,
+  and keeps pixel sampling documented as observation-or-blocker for one run.
+- Step 8b external service integration was skipped because this recovery lane
+  introduces no API client implementation, service adapter, or runtime external
+  service call. The recorded `gh pr view` command is review metadata only and is
+  not a repository runtime integration; no retry path was added.
 
 Scope inspected:
 - Full origin/develop...HEAD diff reviewed for the existing PR #419 branch.
@@ -71,6 +91,8 @@ Focused validation completed:
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-world-canvas-pixel-sampler-contract.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-readiness-evidence-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-current-head-evidence-doc-refinement-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-finalization-evidence-contract.sh
 
 Observed validation outcomes:
 - Scenario validation accepted 29 checked-in scenarios, including the post-open
@@ -97,6 +119,14 @@ Observed validation outcomes:
 - The PR419 readiness evidence contract passed and verifies exact-head evidence
   fields, stale-evidence removal, validation commands, worktree state, and
   explicit non-claims.
+- The current-head evidence documentation refinement contract passed and verifies
+  parameterized PR recovery instructions, external Git SHA review metadata,
+  target-readiness blocker visibility, observation-or-blocker pixel sampling
+  wording, fail-on-match conflict-marker guidance, and bounded nonclaim language.
+- The PR419 finalization evidence contract passed and verifies workflow
+  readiness/review/finalization fields, the requested branch, no unmerged paths,
+  no recorded timeout-wrapper or manual PR-merge commands, and bounded
+  current-head claims.
 
 Readiness claim:
 - PR #419 is ready only as a silver-thread accessibility target discovery
@@ -114,6 +144,8 @@ Explicit non-claims:
   correctness.
 - This evidence does not claim learner grading, rubric scoring, lesson
   completion, or creative assessment.
+- This evidence does not claim lesson completion.
+- This evidence does not claim creative assessment.
 - This evidence does not claim Save completion or Save behavior.
 - This evidence does not claim Sims validation.
 - This evidence does not claim deployed installer success or deployment

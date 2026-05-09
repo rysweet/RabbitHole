@@ -11,6 +11,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 - [Scenario schema](#scenario-schema)
 - [Automation modes](#automation-modes)
 - [Evidence contract](#evidence-contract)
+- [Current-head evidence refresh](#current-head-evidence-refresh)
 - [Learner-world boundary](#learner-world-boundary)
 - [Workflow evidence requirements](#workflow-evidence-requirements)
 - [Scenario authoring rules](#scenario-authoring-rules)
@@ -65,8 +66,6 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
-| `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
-| `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
 The first-lesson live procedure target action seam is a read-only contract. It
 records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
@@ -478,8 +477,7 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact and target-readiness source for bounded world-canvas pixel sampling. |
-| `visible-rendering-pixel-sampling-blocker.json` | Fail-closed target-scoped sampling artifact. It records `renderedWorldPixelsObserved=false` and `visibleRenderingCorrectnessEstablished=false` with an exact target or sampler blocker. |
-| `visible-rendering-pixel-observation.json` | Bounded target-scoped raw pixel samples inside one validated Run-window/world-canvas target. It must keep `visibleRenderingCorrectnessEstablished=false`. |
+| `visible-rendering-pixel-observation.json` or `visible-rendering-pixel-sampling-blocker.json` | Final target-scoped sampling result for post-open runtime/display evidence. Observed runs write bounded raw pixel samples inside one validated Run-window/world-canvas target and keep `visibleRenderingCorrectnessEstablished=false`; blocked runs write the exact target or sampler blocker with `renderedWorldPixelsObserved=false`. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
@@ -537,6 +535,36 @@ assessment, no creative assessment, next boundary
 lines for learner-world grading, rubric scoring, correctness assessment, and
 creative assessment. Those capabilities remain manual/unsupported until that
 reviewed assessment contract and evidence mapping exist.
+
+## Current-head evidence refresh
+
+PR readiness and review evidence is current only when it is produced from the PR
+branch or PR ref after reconciliation with `origin/develop`. The reviewer records
+the PR head SHA, reconciled `HEAD`, `origin/develop` SHA, merge base, scenario
+ID, run directory, timestamp, and blocker or observation decision in review
+notes, PR text, or CI artifact metadata. The runner-emitted `environment.txt`
+currently records timestamp/repository/display/Java/Maven/OS details, not Git
+SHAs. Evidence from `develop`, from the pre-merge PR head, or from a different
+worktree is stale for the current review unless it is explicitly marked
+`superseded`.
+
+The current-head refresh workflow is:
+
+1. Fetch `origin/develop` and the PR ref.
+2. Check out the PR branch or PR ref.
+3. Merge or rebase `origin/develop` into that branch.
+4. Resolve all conflicts and verify no merge/rebase state, unmerged path, or
+   conflict marker remains.
+5. Validate the scenario catalog and focused contract checks.
+6. Run the target scenario when live prerequisites are available, or preserve the
+   exact blocked current-head artifact when they are not.
+7. Review only the final run directory for readiness claims.
+
+Generated current-head evidence remains local and ignored by Git unless a
+separate process publishes it as a CI artifact. Documentation and PR text may
+point to the run directory, contract checks, and blocker IDs, but they must keep
+claims bounded to observed runtime/display, controlled-display, target-ready, or
+raw target-scoped sampling signals.
 
 ## Workflow evidence requirements
 
