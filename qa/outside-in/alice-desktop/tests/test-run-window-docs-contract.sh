@@ -16,16 +16,12 @@ assert_cached_contains() {
   local content_var=$1
   local pattern=$2
   local label=$3
-  local line
 
-  while IFS= read -r line || [ -n "$line" ]; do
-    if [[ $line =~ $pattern ]]; then
-      pass "$label"
-      return
-    fi
-  done <<<"${!content_var}"
-
-  fail "$label (pattern not found: $pattern)"
+  if grep -Eq -- "$pattern" <<<"${!content_var}"; then
+    pass "$label"
+  else
+    fail "$label (pattern not found: $pattern)"
+  fi
 }
 
 read_cached_doc() {

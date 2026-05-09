@@ -115,6 +115,8 @@ claim_text = "\n\n".join([
     evidence_text,
     "\n".join(scenario.get("fallback", {}).get("notes", [])),
 ])
+claim_paragraphs = re.split(r"\n\s*\n", claim_text.lower())
+negation_markers = ("not ", "no ", "does not", "do not", "unclaimed", "non-claim", "outside", "without")
 for forbidden in (
     "run the program",
     "program runs",
@@ -129,9 +131,8 @@ for forbidden in (
     "full ui automation",
     "full-ui-automation",
 ):
-    matches = [paragraph for paragraph in re.split(r"\n\s*\n", claim_text.lower()) if forbidden in paragraph]
-    for paragraph in matches:
-        if not any(marker in paragraph for marker in ("not ", "no ", "does not", "do not", "unclaimed", "non-claim", "outside", "without")):
+    for paragraph in claim_paragraphs:
+        if forbidden in paragraph and not any(marker in paragraph for marker in negation_markers):
             errors.append(f"scenario must not overclaim {forbidden}: {paragraph[:160]}")
 
 if errors:

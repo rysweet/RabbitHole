@@ -72,7 +72,7 @@ public final class EatmeRunWindowEvidence {
   }
 
   private static void writeArtifactAtomically(Path evidenceRoot, Path artifact, String content) throws IOException {
-    if (Files.exists(artifact, LinkOption.NOFOLLOW_LINKS) && Files.isSymbolicLink(artifact)) {
+    if (Files.isSymbolicLink(artifact)) {
       throw new IOException("Run-window evidence artifact refuses to overwrite symlink: " + artifact);
     }
     Path tempArtifact = Files.createTempFile(evidenceRoot, RUN_WINDOW_CREATED_ARTIFACT, ".tmp");
