@@ -55,7 +55,7 @@ workflow_counts = Counter(scenario["workflow"] for scenario in catalog_list)
 required_workflows = [
     "archive-fixture-smoke",
     "export",
-    "exported-project-smoke",
+    "exported-project-ant-build-smoke",
     "failure-path-smoke",
     "file-loader-smoke",
     "first-lesson-live-procedure-target-observation",
@@ -379,6 +379,42 @@ for scenario_id in gated_scenarios:
         errors.append(f"{scenario_id} must require status.txt evidence")
     if not any(token in evidence_text for token in ("command.log", "artifact", "project", "failure")):
         errors.append(f"{scenario_id} must require command, artifact, project, or failure-path evidence")
+
+exported_project_smoke = catalog.get("alice-desktop-exported-project-smoke")
+if exported_project_smoke is None:
+    errors.append("catalog must contain alice-desktop-exported-project-smoke")
+else:
+    expected_exported_ant_build_argv = (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "netbeans",
+        "-am",
+        "-Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest",
+        "test",
+    )
+    actual_exported_ant_build_argv = tuple(exported_project_smoke.get("automation", {}).get("argv", []))
+    exported_project_text = json.dumps(exported_project_smoke, sort_keys=True)
+    exported_project_lower = exported_project_text.lower()
+    if exported_project_smoke["workflow"] != "exported-project-ant-build-smoke":
+        errors.append("exported project smoke must use the exported-project-ant-build-smoke workflow")
+    if actual_exported_ant_build_argv != expected_exported_ant_build_argv:
+        errors.append(
+            "exported project smoke must run the focused no-Sims Alice3ProjectTemplateAntSmokeTest Maven command"
+        )
+    if "ProjectCodeGeneratorStandaloneProjectTest" in exported_project_text:
+        errors.append("exported project smoke must not treat ProjectCodeGeneratorStandaloneProjectTest as final Ant build proof")
+    if "launcher handoff" in exported_project_lower:
+        errors.append("exported project Ant build proof must not claim launcher handoff evidence as its required outcome")
+    for required in ("ant", "jar", "build/classes"):
+        if required not in exported_project_lower:
+            errors.append(f"exported project Ant build proof must name concrete {required} evidence")
+    for forbidden in ("installer validation", "full gui export journey"):
+        if forbidden in exported_project_lower:
+            errors.append(f"exported project Ant build proof must not overclaim {forbidden}")
 
 if errors:
     raise AssertionError("\n".join(errors))
