@@ -7,6 +7,8 @@ import org.lgna.croquet.StandardMenuItemPrepModel;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class AliceMenuBarContractTest {
@@ -17,15 +19,14 @@ public class AliceMenuBarContractTest {
     AliceMenuBar menuBar = new AliceMenuBar(null);
 
     WindowMenuModel windowMenuModel = null;
-    int windowMenuCount = 0;
     for (StandardMenuItemPrepModel child : menuBar.getChildren()) {
-      if (child instanceof WindowMenuModel) {
-        windowMenuModel = (WindowMenuModel) child;
-        windowMenuCount++;
+      if (child instanceof WindowMenuModel candidateWindowMenuModel) {
+        assertNull("desktop menu bar should register exactly one WindowMenuModel", windowMenuModel);
+        windowMenuModel = candidateWindowMenuModel;
       }
     }
 
-    assertEquals("desktop menu bar should register exactly one WindowMenuModel", 1, windowMenuCount);
+    assertNotNull("desktop menu bar should register exactly one WindowMenuModel", windowMenuModel);
     assertEquals("WindowMenuModel should keep the registered menu identity",
         WINDOW_MENU_MODEL_ID, windowMenuModel.getMigrationId());
     assertTrue("WindowMenuModel should be reachable through menu bar membership lookup",
