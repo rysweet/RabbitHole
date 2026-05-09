@@ -13,26 +13,50 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
-  amplihack tweedle-decode verify <while-method-call|while-method-call-boundaries>
+  amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive|while-method-call|while-method-call-boundaries>
 
 Run from the Alice repository root or one of its child directories.
 """
 
 
 TWEEDLE_DECODE_SCENARIOS = {
-    "while-method-call": (
-        "Tweedle while-loop body decodes a zero-argument this.method() call",
-        "TweedleEncoderDecoderTest#decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation",
-    ),
-    "while-method-call-boundaries": (
-        "Tweedle while-loop body keeps unsupported neighboring method calls rejected",
-        (
+    "simple-if-method-call": {
+        "description": "Tweedle simple-if body decodes a zero-argument this.method() call",
+        "module": "core/ast",
+        "tests": "TweedleEncoderDecoderTest#decodeClassWithSimpleIfMethodCallBodyCreatesConditionalMethodInvocation",
+    },
+    "simple-if-boundaries": {
+        "description": "Tweedle simple-if body keeps unsupported neighboring statements rejected",
+        "module": "core/ast",
+        "tests": (
+            "TweedleEncoderDecoderTest#"
+            "decodeClassWithSimpleIfLogicalConditionAndMixedSupportedBodyCreatesOrderedStatements"
+            "+decodeClassWithArgumentBearingThisMethodCallInIfBodyReportsUnsupportedBoundary"
+            "+decodeClassWithArbitraryReceiverMethodCallInIfBodyReportsUnsupportedBoundary"
+            "+decodeClassWithMethodCallInIfElseBodyReportsUnsupportedBoundary"
+            "+decodeClassWithNestedIfInIfBodyReportsUnsupported"
+        ),
+    },
+    "simple-if-player-archive": {
+        "description": "JSON player archive Tweedle type decodes the simple-if method-call slice",
+        "module": "core/story-api-migration",
+        "tests": "IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType",
+    },
+    "while-method-call": {
+        "description": "Tweedle while-loop body decodes a zero-argument this.method() call",
+        "module": "core/ast",
+        "tests": "TweedleEncoderDecoderTest#decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation",
+    },
+    "while-method-call-boundaries": {
+        "description": "Tweedle while-loop body keeps unsupported neighboring method calls rejected",
+        "module": "core/ast",
+        "tests": (
             "TweedleEncoderDecoderTest#"
             "decodeClassWithWhileLoopMixedAssignmentAndMethodCallBodyCreatesOrderedStatements"
             "+decodeClassWithWhileLoopArgumentBearingThisMethodCallReportsUnsupportedBoundary"
             "+decodeClassWithWhileLoopNonThisMethodCallReportsUnsupportedBoundary"
         ),
-    ),
+    },
 }
 
 
@@ -56,7 +80,9 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
         print(f"valid scenarios: {valid}", file=sys.stderr)
         return 2
 
-    description, test_selector = selected
+    description = selected["description"]
+    module = selected["module"]
+    test_selector = selected["tests"]
     print(f"Running Tweedle decode scenario: {description}")
     submodule_result = subprocess.run(
         ["git", "submodule", "update", "--init", "tweedle-lang"],
@@ -71,7 +97,7 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
         [
             "mvn",
             "-pl",
-            "core/ast",
+            module,
             "-am",
             "-DfailIfNoTests=false",
             "-Dsurefire.failIfNoSpecifiedTests=false",

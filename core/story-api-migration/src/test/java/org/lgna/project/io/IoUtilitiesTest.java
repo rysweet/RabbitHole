@@ -26,11 +26,15 @@ import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
 import org.lgna.project.Version;
 import org.lgna.project.ast.BlockStatement;
+import org.lgna.project.ast.BooleanExpressionBodyPair;
+import org.lgna.project.ast.ConditionalStatement;
 import org.lgna.project.ast.CrawlPolicy;
 import org.lgna.project.ast.Expression;
+import org.lgna.project.ast.ExpressionStatement;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalDeclarationStatement;
+import org.lgna.project.ast.MethodInvocation;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.ResourceExpression;
 import org.lgna.project.ast.UserField;
@@ -752,6 +756,41 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType() throws Exception {
+    File exportFile = temporaryFolder.newFile("json-simple-if-program.a3w");
+    writeJsonPlayerArchive(exportFile, "Program", """
+        class Program extends SProgram {
+          void run(Boolean ready) {
+            if (ready) { this.helper(); }
+          }
+          void helper() { }
+        }
+        """);
+
+    Project readProject = IoUtilities.readProject(exportFile);
+
+    NamedUserType programType = readProject.getProgramType();
+    assertNotNull("Player archive should decode the supported simple-if Tweedle slice.", programType);
+    UserMethod run = userMethodNamed(programType, "run");
+    UserMethod helper = userMethodNamed(programType, "helper");
+    assertEquals(1, run.body.getValue().statements.size());
+    assertTrue(run.body.getValue().statements.get(0) instanceof ConditionalStatement);
+    ConditionalStatement conditional = (ConditionalStatement) run.body.getValue().statements.get(0);
+    assertEquals(1, conditional.booleanExpressionBodyPairs.size());
+    BooleanExpressionBodyPair pair = conditional.booleanExpressionBodyPairs.get(0);
+    assertEquals(1, pair.body.getValue().statements.size());
+    assertTrue(pair.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement statement = (ExpressionStatement) pair.body.getValue().statements.get(0);
+    assertTrue(statement.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+    assertEquals(0, conditional.elseBody.getValue().statements.size());
+  }
+
+  @Test
   public void jsonPlayerTweedleFieldDecodesProgramType() throws Exception {
     File exportFile = temporaryFolder.newFile("json-field-program.a3w");
     writeJsonPlayerArchive(exportFile, "Program", "class Program { WholeNumber count; }");
@@ -1460,6 +1499,16 @@ public class IoUtilitiesTest {
     Expression initializer = type.getDeclaredFields().get(0).initializer.getValue();
     assertTrue(initializer instanceof IntegerLiteral);
     assertEquals(expectedValue, ((IntegerLiteral) initializer).value.getValue().intValue());
+  }
+
+  private static UserMethod userMethodNamed(NamedUserType type, String name) {
+    for (UserMethod method : type.getDeclaredMethods()) {
+      if (name.equals(method.getName())) {
+        return method;
+      }
+    }
+    fail("Missing method " + name);
+    return null;
   }
 
   private static Resource firstResourceExpressionResource(NamedUserType type) {
