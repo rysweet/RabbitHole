@@ -189,6 +189,9 @@ current PR, changed-file, check, and PR-description fields from GitHub.
     "branch": "feat/issue-407-rabbithole-wave7-save-negative-contract-lane-follo",
     "remote_head_sha": "0123456789abcdef0123456789abcdef01234567",
     "evaluated_head_sha": "0123456789abcdef0123456789abcdef01234567",
+    "state": "OPEN",
+    "is_draft": false,
+    "merge_state_status": "CLEAN",
     "manual_merge": false
   },
   "workflow": {
