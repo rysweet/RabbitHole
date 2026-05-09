@@ -49,11 +49,13 @@ The matching Java validation belongs in `IoUtilitiesTest` and checks the zip
 entries directly:
 
 ```shell
-mvn -pl core/story-api-migration -am -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+git submodule update --init tweedle-lang
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-The Surefire flag keeps upstream modules without the focused test class from
-failing the run.
+Initialize the Tweedle grammar submodule before Maven validation. The
+`failIfNoTests` and Surefire flags keep upstream modules without tests or without
+the focused test class from failing the run.
 
 ## Update backup recovery behavior
 
@@ -84,21 +86,22 @@ candidate selection and `ProjectBackupRecoveryIoTest` when the path should load
 or fail real temporary project archives:
 
 ```shell
-mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
+git submodule update --init tweedle-lang
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
+  -DfailIfNoTests=false \
   -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 ```
 
-The Surefire flag is required when running with `-am` and a specific `-Dtest`
-value.
+Initialize the Tweedle grammar submodule before Maven validation. The
+`failIfNoTests` and Surefire flags are required when running with `-am` and a
+specific `-Dtest` value.
 
 ## Check the TLA+ model locally
 
 The repository stores the TLA+ module and config but does not require a Maven
-TLC integration. TLC was not run for this PR validation because no local `tlc`,
-`tla2tools`, or `tla2tools.jar` was found. When TLC is installed locally, run it
-from the model directory:
+TLC integration. When TLC is installed locally, run it from the model directory:
 
 ```shell
 cd eatme/formal/backup-load-recovery

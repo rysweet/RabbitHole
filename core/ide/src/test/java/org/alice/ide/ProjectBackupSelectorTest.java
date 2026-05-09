@@ -275,8 +275,33 @@ public class ProjectBackupSelectorTest {
     assertNull(backup);
   }
 
+  @Test
+  public void pr426BackupContractSelectsNewestSafeCandidateAndNeverReselectsFailedOrUnsafe()
+      throws IOException {
+    Path backupDirectory = temporaryFolder.newFolder("world.bak").toPath();
+    File failedNewest = backup(backupDirectory, "auto20240102_150000.a3p");
+    Path outsideBackup = temporaryFolder.newFile("auto20240102_140000.a3p").toPath();
+    Files.writeString(outsideBackup, "outside backup", StandardCharsets.UTF_8);
+    Path escapingBackup = backupDirectory.resolve("auto20240102_140000.a3p");
+    Files.createSymbolicLink(escapingBackup, outsideBackup);
+    File previouslyFailed = backup(backupDirectory, "auto20240102_130000.a3p");
+    File safeBackup = backup(backupDirectory, "auto20240102_120000.a3p");
+    ProjectBackupSelector selector = new ProjectBackupSelector(file -> {
+      throw new AssertionError("corrupted main project should select by order without probing timestamps");
+    });
+
+    File backup = selector.getNextBackup(
+        PROJECT_MODIFIED_TIME,
+        backupDirectory.toFile(),
+        new File[] {failedNewest, escapingBackup.toFile(), previouslyFailed, safeBackup},
+        true,
+        Set.of(failedNewest.getName(), previouslyFailed.getName()));
+
+    assertEquals(safeBackup, backup);
+  }
+
   private File getNextBackup(ProjectBackupSelector selector, LocalDateTime modifiedTime, File[] backups,
-                             boolean isMainProjectCorrupted, Set<String> unloadableFiles) {
+                              boolean isMainProjectCorrupted, Set<String> unloadableFiles) {
     return selector.getNextBackup(
         modifiedTime,
         backupDirectory(backups),
@@ -295,7 +320,11 @@ public class ProjectBackupSelectorTest {
   }
 
   private File backup(String name) throws IOException {
-    File backup = new File(temporaryFolder.getRoot(), name);
+    return backup(temporaryFolder.getRoot().toPath(), name);
+  }
+
+  private File backup(Path directory, String name) throws IOException {
+    File backup = directory.resolve(name).toFile();
     Files.writeString(backup.toPath(), "backup", StandardCharsets.UTF_8);
     return backup;
   }
