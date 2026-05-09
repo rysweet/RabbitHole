@@ -12,7 +12,7 @@ Scope:
   focused NetBeans ProjectCodeGeneratorTest.
 - The validated source tree includes the review-blocker fixes:
   - durable reference docs no longer carry point-in-time PR status wording;
-  - pyproject.toml is at alice3-modernization-qa version 0.9.0 from current
+  - pyproject.toml is at alice3-modernization-qa version 0.9.1 from current
     develop, avoiding a package-version downgrade during conflict resolution;
   - the source-code-generator tutorial assignment snippet matches the
      characterized AssignmentExpression constructor shape.
@@ -43,7 +43,7 @@ Result:
 - Diff whitespace validation passed for the source-generator documentation,
    package metadata, evidence log, and ProjectCodeGenerator.java
    review-feedback path.
-- The QA package metadata resolves to version 0.9.0 from current develop.
+- The QA package metadata resolves to version 0.9.1 from current develop.
 - PR-specific wording was removed from durable docs and retained only in
    workflow-owned evidence or PR discussion.
 - SourceCodeGeneratorTest now characterizes expression-statement assignment,
