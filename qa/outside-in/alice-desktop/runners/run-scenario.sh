@@ -405,31 +405,6 @@ print(resolved)
 PY
 }
 
-validate_scenario_automation_cwd() {
-  local scenario_json=$1
-  local cwd
-
-  cwd=$(SCENARIO_JSON="$scenario_json" python3 - <<'PY'
-import json
-import os
-import sys
-
-scenario = json.loads(os.environ["SCENARIO_JSON"])
-automation = scenario.get("automation")
-if not isinstance(automation, dict):
-    sys.exit(0)
-
-cwd = automation.get("cwd")
-if not isinstance(cwd, str) or not cwd.strip():
-    print("automation.cwd must be a non-empty string", file=sys.stderr)
-    sys.exit(2)
-
-print(cwd)
-PY
-  )
-  [ -z "$cwd" ] || resolve_automation_cwd "$cwd" >/dev/null
-}
-
 resolve_scenario_id() {
   local request=$1
   local scenario_dir=${ALICE_QA_SCENARIO_DIR:-$BASE_DIR/scenarios}
@@ -3793,7 +3768,6 @@ main() {
 
       scenario_id=$(resolve_scenario_id "$scenario_request")
       scenario_json=$("$VALIDATOR" --dump-json "$scenario_id")
-      validate_scenario_automation_cwd "$scenario_json"
       timestamp=$(date -u +%Y%m%dT%H%M%SZ)
       run_dir="$evidence_base/$scenario_id/$timestamp"
       mkdir -p "$run_dir"

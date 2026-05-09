@@ -7,7 +7,9 @@ import org.lgna.project.ast.NamedUserType;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 public final class EatmeRunWindowEvidence {
   public static final String EVIDENCE_DIR_PROPERTY = "org.alice.eatme.runWindowEvidenceDir";
@@ -24,6 +26,8 @@ public final class EatmeRunWindowEvidence {
       "grading",
       "full-ui-automation"
   };
+  private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
+  private static final String DOES_NOT_CLAIM_JSON = doesNotClaimJson();
 
   private EatmeRunWindowEvidence() {
   }
@@ -41,8 +45,8 @@ public final class EatmeRunWindowEvidence {
   }
 
   static Path writeRunWindowCreated(Path evidenceDir, String frameTitle, String programTypeName) throws IOException {
-    Files.createDirectories(evidenceDir);
-    Path artifact = artifactPath(evidenceDir, RUN_WINDOW_CREATED_ARTIFACT);
+    Path evidenceRoot = validateEvidenceDir(evidenceDir);
+    Path artifact = artifactPath(evidenceRoot, RUN_WINDOW_CREATED_ARTIFACT);
     Files.writeString(
         artifact,
         "{\n"
@@ -61,13 +65,25 @@ public final class EatmeRunWindowEvidence {
             + "  \"save_claimed\": false,\n"
             + "  \"grading_claimed\": false,\n"
             + "  \"full_ui_automation_claimed\": false,\n"
-            + doesNotClaimJson()
+            + DOES_NOT_CLAIM_JSON
             + "}\n",
-        StandardCharsets.UTF_8);
-    if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
+        StandardCharsets.UTF_8,
+        StandardOpenOption.CREATE,
+        StandardOpenOption.TRUNCATE_EXISTING,
+        StandardOpenOption.WRITE,
+        LinkOption.NOFOLLOW_LINKS);
+    if (!Files.isRegularFile(artifact, LinkOption.NOFOLLOW_LINKS) || Files.size(artifact) == 0) {
       throw new IOException("Run-window evidence artifact was not written: " + artifact);
     }
     return artifact;
+  }
+
+  private static Path validateEvidenceDir(Path evidenceDir) throws IOException {
+    Path evidenceRoot = evidenceDir.toRealPath();
+    if (!Files.isDirectory(evidenceRoot)) {
+      throw new IOException("Run-window evidence path is not a directory: " + evidenceDir);
+    }
+    return evidenceRoot;
   }
 
   static Path artifactPath(Path evidenceDir, String relativePath) {
@@ -114,7 +130,7 @@ public final class EatmeRunWindowEvidence {
         case '\t' -> escaped.append("\\t");
         default -> {
           if (ch < 0x20) {
-            escaped.append(String.format("\\u%04x", (int) ch));
+            appendControlCharacterEscape(escaped, ch);
           } else {
             escaped.append(ch);
           }
@@ -122,6 +138,12 @@ public final class EatmeRunWindowEvidence {
       }
     }
     return escaped.toString();
+  }
+
+  private static void appendControlCharacterEscape(StringBuilder escaped, char ch) {
+    escaped.append("\\u00")
+        .append(HEX_DIGITS[(ch >> 4) & 0xF])
+        .append(HEX_DIGITS[ch & 0xF]);
   }
 
   private static String title(Frame frame) {

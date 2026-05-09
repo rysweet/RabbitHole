@@ -500,8 +500,9 @@ Enabled gated command smoke execution also includes:
 The Run-window contract lane is centered on one opt-in product seam:
 `EatmeRunWindowEvidence`. The seam is enabled only by the JVM property
 `org.alice.eatme.runWindowEvidenceDir`. When the property is unset, no artifact
-is written. When it is set, the seam writes only the fixed artifact
-`run-window-created.json` inside the configured evidence directory.
+is written. When it is set, the configured directory must already exist, and the
+seam writes only the fixed artifact `run-window-created.json` inside that
+directory without following a pre-existing artifact symlink.
 
 The artifact is a creation/wiring metadata record. It is not a render-affordance
 artifact, runtime result, Save artifact, grading artifact, screenshot, pixel

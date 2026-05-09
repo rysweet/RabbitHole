@@ -5,12 +5,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class EatmeRunWindowEvidenceTest {
   @Rule
@@ -84,7 +86,34 @@ public class EatmeRunWindowEvidenceTest {
   }
 
   @Test
-  public void recordRunWindowCreatedDoesNotAbortRunWhenConfiguredPathIsInvalid() {
+  public void rejectsMissingEvidenceDirectoryWithoutCreatingIt() throws Exception {
+    Path missingEvidenceDir = temporaryFolder.getRoot().toPath().resolve("missing-evidence");
+
+    try {
+      EatmeRunWindowEvidence.writeRunWindowCreated(missingEvidenceDir, "Run Alice", "Program");
+      fail("missing evidence directory should be rejected");
+    } catch (IOException expected) {
+      assertTrue(Files.notExists(missingEvidenceDir));
+    }
+  }
+
+  @Test
+  public void refusesToFollowArtifactSymlinkOutsideEvidenceDirectory() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("symlink-evidence").toPath();
+    Path outsideArtifact = temporaryFolder.newFile("outside-run-window-created.json").toPath();
+    Files.writeString(outsideArtifact, "outside");
+    Files.createSymbolicLink(evidenceDir.resolve(EatmeRunWindowEvidence.RUN_WINDOW_CREATED_ARTIFACT), outsideArtifact);
+
+    try {
+      EatmeRunWindowEvidence.writeRunWindowCreated(evidenceDir, "Run Alice", "Program");
+      fail("artifact symlink should be rejected");
+    } catch (IOException expected) {
+      assertEquals("outside", Files.readString(outsideArtifact));
+    }
+  }
+
+  @Test
+  public void recordRunWindowCreatedDoesNotAbortWindowCreationWhenConfiguredPathIsInvalid() {
     String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
     Level previousLevel = Logger.getLevel();
     try {

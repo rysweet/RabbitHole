@@ -305,9 +305,9 @@ mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIf
 ```
 
 The product seam is opt-in through the JVM property
-`org.alice.eatme.runWindowEvidenceDir`. When set, the seam writes only
-`run-window-created.json` under that directory. A representative
-artifact is:
+`org.alice.eatme.runWindowEvidenceDir`. When set, the directory must already
+exist, and the seam writes only `run-window-created.json` under that directory
+without following a pre-existing artifact symlink. A representative artifact is:
 
 ```json
 {
