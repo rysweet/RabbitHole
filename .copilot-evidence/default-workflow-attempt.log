@@ -1,6 +1,6 @@
 Default-workflow readiness evidence for PR #423
-Recorded at: 2026-05-09T11:37:53Z
-Validated source tree commit: 50fbbcabc2fce389a2a158f8ffd3be8b49b16802
+Recorded at: 2026-05-09T11:57:20Z
+Validated source tree commit: 7673b7bdcdb054e94d4de4cdd7748defacf11a80
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
@@ -13,10 +13,10 @@ Scope:
   - durable reference docs no longer carry point-in-time PR status wording;
   - pyproject.toml remains at alice3-modernization-qa version 0.7.0 because no
     QA package release is part of this source-generator characterization lane.
-- This evidence refresh changes only this workflow log. If this log is committed
-  after the validated source tree commit above, the only later delta is this
-  evidence artifact; no source, test, docs, or package metadata changed after
-  validation.
+- This evidence refresh validates the PR head that was current when this log was
+  rewritten. If this log is committed after the validated source tree commit
+  above, the only later delta is this evidence artifact; no source, test, docs,
+  or package metadata changed after validation.
 - This log is retained as PR-specific review evidence for PR #423. Durable
   repository docs describe stable contracts and do not carry point-in-time PR
   status.
@@ -31,7 +31,7 @@ Validated commands for the source tree recorded here:
 - git submodule update --init tweedle-lang
 - NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SourceCodeGeneratorTest test -q
 - NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest test -q
-- git --no-pager diff --check -- docs/index.md docs/reference/generated-story-api-listener-source-characterization.md docs/howto/characterize-source-code-generator.md docs/tutorials/trace-source-code-generator-characterization.md .copilot-evidence/default-workflow-attempt.log netbeans/src/main/java/org/alice/netbeans/project/ProjectCodeGenerator.java
+- git --no-pager diff --check -- docs/index.md docs/reference/generated-story-api-listener-source-characterization.md docs/howto/characterize-source-code-generator.md docs/tutorials/trace-source-code-generator-characterization.md .copilot-evidence/default-workflow-attempt.log netbeans/src/main/java/org/alice/netbeans/project/ProjectCodeGenerator.java pyproject.toml
 
 Result:
 - Tweedle grammar submodule initialized successfully.
