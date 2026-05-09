@@ -18,6 +18,8 @@ POST_OPEN_RUNTIME_DISPLAY_SCENARIO=alice-desktop-post-open-runtime-display-acces
 POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
 VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER=visible-rendering-pixel-target-blocker.json
 VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER=visible-rendering-pixel-sampling-blocker.json
+VISIBLE_RENDERING_PIXEL_OBSERVATION=visible-rendering-pixel-observation.json
+WORLD_CANVAS_PIXEL_SAMPLER="$SCRIPT_DIR/world-canvas-pixel-sampler.py"
 FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
 FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
 FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
@@ -657,6 +659,214 @@ validate_positive_integer() {
   fi
 }
 
+validate_save_proof_evidence() {
+  local artifact_path=$1
+  shift
+  local scenario= workflow= run_id= started_at_epoch=
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --scenario)
+        scenario=${2:-}
+        shift 2
+        ;;
+      --workflow)
+        workflow=${2:-}
+        shift 2
+        ;;
+      --run-id)
+        run_id=${2:-}
+        shift 2
+        ;;
+      --started-at-epoch)
+        started_at_epoch=${2:-}
+        shift 2
+        ;;
+      *)
+        printf 'unknown validate-save-proof-evidence argument: %s\n' "$1" >&2
+        return 2
+        ;;
+    esac
+  done
+
+  python3 - "$artifact_path" "$scenario" "$workflow" "$run_id" "$started_at_epoch" <<'PY'
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+artifact = Path(sys.argv[1])
+expected_scenario = sys.argv[2]
+expected_workflow = sys.argv[3]
+expected_run_id = sys.argv[4]
+started_at_epoch = int(sys.argv[5] or "0")
+
+SCHEMA_VERSION = "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1"
+MARKER = "robotSaveMenuRoundTripMarker"
+EXPECTED_CLAIM = (
+    "AWT Robot opened File, clicked the production Save menu item, controlled the rendered "
+    "Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified "
+    "robotSaveMenuRoundTripMarker"
+)
+REQUIRED_NON_CLAIMS = {
+    "Save As coverage",
+    "all Save variants",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage",
+}
+KNOWN_BLOCKERS = {
+    "headless_awt",
+    "robot_unavailable",
+    "file_menu_not_showing",
+    "save_item_not_attributed",
+    "dialog_not_observed",
+    "ambiguous_chooser_discovery",
+    "chooser_control_failed",
+    "target_path_rejected",
+    "write_not_observed",
+    "readback_failed",
+    "marker_missing",
+}
+
+def fail(message):
+    print(message, file=sys.stderr)
+    sys.exit(1)
+
+if artifact.name != "robot-save-menu-dialog-write-readback-proof.json":
+    fail("Save proof evidence path must use canonical filename robot-save-menu-dialog-write-readback-proof.json")
+if artifact.is_symlink():
+    fail("Save proof evidence artifact must not be a symlink")
+if not artifact.is_file():
+    fail(f"missing Save proof evidence artifact robot-save-menu-dialog-write-readback-proof.json: {artifact}")
+
+try:
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+except json.JSONDecodeError as exc:
+    fail(f"invalid Save proof evidence JSON at line {exc.lineno}: {exc.msg}")
+
+if not isinstance(payload, dict):
+    fail("Save proof evidence must be a JSON object")
+
+for key, expected in {
+    "schemaVersion": SCHEMA_VERSION,
+    "scenario": expected_scenario,
+    "workflow": expected_workflow,
+    "runId": expected_run_id,
+}.items():
+    value = payload.get(key)
+    if value != expected:
+        fail(f"Save proof evidence {key} mismatch: expected {expected!r}, got {value!r}")
+
+if not re.fullmatch(r"[A-Za-z0-9._-]+", expected_run_id or ""):
+    fail("Save proof runId must be a non-empty safe token")
+
+status = payload.get("status")
+if status not in {"proven", "blocked"}:
+    fail("Save proof evidence status must be proven or blocked")
+
+blocker = payload.get("blocker")
+if status == "blocked":
+    if not isinstance(blocker, dict):
+        fail("blocked Save proof evidence must include blocker object")
+    kind = blocker.get("kind")
+    if kind not in KNOWN_BLOCKERS:
+        fail(f"unknown unsupported blocker kind: {kind}")
+    for field in ("observed", "required"):
+        if not isinstance(blocker.get(field), str) or not blocker.get(field).strip():
+            fail(f"blocked Save proof evidence blocker.{field} must be a non-empty string")
+    fail(f"blocked Save proof evidence is non-proven status: {kind}")
+elif blocker is not None:
+    fail("proven Save proof evidence must have blocker null")
+
+if payload.get("claim") != EXPECTED_CLAIM:
+    fail("missing bounded proven Save proof claim")
+does_not_claim = payload.get("doesNotClaim")
+if not isinstance(does_not_claim, list) or not all(isinstance(item, str) for item in does_not_claim):
+    fail("missing bounded Save proof doesNotClaim list")
+missing_non_claims = sorted(REQUIRED_NON_CLAIMS - set(does_not_claim))
+if missing_non_claims:
+    fail("missing bounded Save proof non-claim(s): " + ", ".join(missing_non_claims))
+
+def required_object(name):
+    value = payload.get(name)
+    if not isinstance(value, dict):
+        fail(f"missing required {name} object")
+    return value
+
+menu = required_object("menu")
+dialog = required_object("dialog")
+control = required_object("control")
+write = required_object("write")
+readback = required_object("readback")
+
+required_true = [
+    ("menu.fileMenuOpened", menu.get("fileMenuOpened")),
+    ("menu.saveMenuItemInvoked", menu.get("saveMenuItemInvoked")),
+    ("menu.saveActionIdentityMatched", menu.get("saveActionIdentityMatched")),
+    ("dialog.saveDialogObserved", dialog.get("saveDialogObserved")),
+    ("dialog.dialogShowing", dialog.get("dialogShowing")),
+    ("control.selectedPathSet", control.get("selectedPathSet")),
+    ("control.approvedSelection", control.get("approvedSelection")),
+    ("control.selectedPathMatchesExpected", control.get("selectedPathMatchesExpected")),
+    ("control.targetInsideProofRoot", control.get("targetInsideProofRoot")),
+    ("write.fileWritten", write.get("fileWritten")),
+    ("write.fileNonempty", write.get("fileNonempty")),
+    ("write.fileHasExpectedExtension", write.get("fileHasExpectedExtension")),
+    ("readback.projectReadable", readback.get("projectReadable")),
+    ("readback.markerPresent", readback.get("markerPresent")),
+]
+missing_or_false = [name for name, value in required_true if value is not True]
+if missing_or_false:
+    fail("missing required proven Save proof flag(s): " + ", ".join(missing_or_false))
+
+if dialog.get("dialogType") != "Swing JFileChooser":
+    fail("Save proof evidence dialog.dialogType must be Swing JFileChooser")
+if dialog.get("ambiguousChooserDiscovery") is not False:
+    fail("inconsistent proven Save proof evidence: dialog.ambiguousChooserDiscovery must be false")
+if readback.get("marker") != MARKER:
+    fail("Save proof evidence readback.marker mismatch")
+
+generated_at = payload.get("generatedAtUtc")
+if not isinstance(generated_at, str) or not generated_at:
+    fail("Save proof evidence generatedAtUtc must be a non-empty timestamp")
+try:
+    generated_epoch = datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
+except ValueError:
+    fail("Save proof evidence generatedAtUtc is not an ISO timestamp")
+mtime_epoch = artifact.stat().st_mtime
+if started_at_epoch and (generated_epoch + 1 < started_at_epoch or mtime_epoch + 1 < started_at_epoch):
+    fail("stale Save proof evidence: generatedAtUtc/mtime predates command start")
+
+output_size = write.get("outputSizeBytes")
+if not isinstance(output_size, int) or output_size <= 0:
+    fail("inconsistent proven Save proof evidence: outputSizeBytes must be a positive integer")
+output_path_value = write.get("outputPath")
+if not isinstance(output_path_value, str) or not output_path_value.strip():
+    fail("missing required write.outputPath")
+output_path = Path(output_path_value)
+if output_path.is_absolute():
+    resolved_output = output_path.resolve()
+else:
+    resolved_output = (artifact.parent / output_path).resolve()
+artifact_parent = artifact.parent.resolve()
+try:
+    resolved_output.relative_to(artifact_parent)
+except ValueError:
+    fail("inconsistent proven Save proof evidence: outputPath escapes the evidence directory")
+if not resolved_output.is_file():
+    fail(f"inconsistent proven Save proof evidence: output file is missing: {resolved_output}")
+actual_size = resolved_output.stat().st_size
+if actual_size != output_size:
+    fail(f"inconsistent proven Save proof evidence: outputSizeBytes {output_size} does not match actual size {actual_size}")
+print("Save proof evidence proven")
+PY
+}
+
 write_environment() {
   local run_dir=$1
   local display=${2:-${DISPLAY:-}}
@@ -665,11 +875,11 @@ write_environment() {
     printf 'repo_root=%s\n' "$REPO_ROOT"
     printf 'display=%s\n' "$display"
     printf '\n[java]\n'
-    java -version 2>&1
+    java -version 2>&1 || printf 'java version unavailable (exit %s)\n' "$?"
     printf '\n[maven]\n'
-    mvn -version 2>&1
+    mvn -version 2>&1 || printf 'maven version unavailable (exit %s)\n' "$?"
     printf '\n[uname]\n'
-    uname -a 2>&1
+    uname -a 2>&1 || printf 'uname unavailable (exit %s)\n' "$?"
   } > "$run_dir/environment.txt"
 }
 
@@ -1206,14 +1416,14 @@ if isinstance(controlled, dict) and isinstance(controlled.get("worldCanvasPixelT
 
 target_ready = target.get("identified") is True and target.get("status") == "target-ready"
 if target_ready:
-    blocker = "world-canvas-pixel-sampling-not-implemented"
+    blocker = "world-canvas-pixel-sampler-unavailable"
     blocker_detail = (
-        "A single world-canvas pixel target is ready, but this runner does not yet "
-        "sample pixels inside screenExtents or compare sampled pixels to rendered-world expectations."
+        "A single world-canvas pixel target is ready, but no usable target-scoped "
+        "world-canvas pixel sampler is available for this run."
     )
     claim_scope_detail = "target-ready-sampling-not-observed"
     prerequisite_status = "target-ready"
-    exact_next_unblocker = "sample-run-window-world-canvas-pixels"
+    exact_next_unblocker = "provide-world-canvas-pixel-sampler"
 else:
     blocker = "world-canvas-pixel-target-not-ready"
     blocker_detail = (
@@ -1237,6 +1447,7 @@ payload = {
     "prerequisiteTargetStatus": prerequisite_status,
     "exactNextUnblocker": exact_next_unblocker,
     "renderedWorldPixelsObserved": False,
+    "visibleRenderingCorrectnessEstablished": False,
     "sampleCount": 0,
     "screenshotPath": screenshot_path(controlled),
     "screenshotStatus": controlled.get("screenshotStatus") if isinstance(controlled, dict) else "",
@@ -1255,6 +1466,415 @@ payload = {
 with output_path.open("w", encoding="utf-8") as stream:
     json.dump(payload, stream, indent=2, sort_keys=True)
     stream.write("\n")
+PY
+}
+
+write_visible_rendering_pixel_sampling_evidence() {
+  local run_dir=$1
+  local controlled_display_artifact=${2:-}
+  local sampler=${ALICE_QA_WORLD_CANVAS_PIXEL_SAMPLER:-$WORLD_CANVAS_PIXEL_SAMPLER}
+
+  VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT="$controlled_display_artifact" \
+  VISIBLE_RENDERING_WORLD_CANVAS_PIXEL_SAMPLER="$sampler" \
+  VISIBLE_RENDERING_OBSERVATION_PATH="$run_dir/$VISIBLE_RENDERING_PIXEL_OBSERVATION" \
+  VISIBLE_RENDERING_BLOCKER_PATH="$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" \
+  python3 - <<'PY'
+import json
+import math
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+SOURCE_ARTIFACT = "controlled-display-pixel-observation.json"
+TARGET_SOURCE_ARTIFACT = "post-open-runtime-display-accessibility-evidence.json"
+CONTROLLED_DISPLAY_CLAIM_SCOPE = "controlled-display-screenshot-consistency"
+SELECTION_RULE = "single-visible-showing-runtime-display-candidate-with-valid-screen-extents"
+CLAIM_SCOPE = "visible-rendering-world-canvas-pixel-sampling"
+unsupported_claims = [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion",
+]
+forbidden_claim_phrases = (
+    "visible rendering correctness established",
+    "visible rendering correctness passed",
+    "rendered-world correctness established",
+    "world canvas pixel correctness passed",
+)
+
+controlled_display_path = Path(os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT", ""))
+sampler_path = Path(os.environ.get("VISIBLE_RENDERING_WORLD_CANVAS_PIXEL_SAMPLER", ""))
+observation_path = Path(os.environ["VISIBLE_RENDERING_OBSERVATION_PATH"])
+blocker_path = Path(os.environ["VISIBLE_RENDERING_BLOCKER_PATH"])
+
+
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as stream:
+        json.dump(payload, stream, indent=2, sort_keys=True)
+        stream.write("\n")
+
+
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def read_controlled_display(path):
+    if path.name != SOURCE_ARTIFACT:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact must use the fixed artifact name."
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, "world-canvas-pixel-source-artifact-invalid", f"Controlled-display source artifact is unreadable: {exc}"
+    if not isinstance(payload, dict):
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact must be a JSON object."
+    if payload.get("schemaVersion") != 1:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact must use schemaVersion=1."
+    if payload.get("claimScope") != CONTROLLED_DISPLAY_CLAIM_SCOPE:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact has an unsupported claim scope."
+    if payload.get("status") not in {"observed", "blocked"}:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact has an unsupported status."
+    return payload, "", ""
+
+
+def screenshot_path(payload):
+    if not isinstance(payload, dict):
+        return None
+    screenshot = payload.get("screenshot")
+    if isinstance(screenshot, dict) and screenshot.get("path"):
+        return Path(str(screenshot["path"])).name
+    raw_path = payload.get("screenshotFile")
+    return Path(str(raw_path)).name if raw_path else None
+
+
+def target_extents(target):
+    extents = target.get("screenExtents") if isinstance(target, dict) else None
+    if not isinstance(extents, dict) or extents.get("coordinateType") != "screen":
+        return None
+    for key in ("x", "y", "width", "height"):
+        if not is_number(extents.get(key)):
+            return None
+    if extents["width"] <= 0 or extents["height"] <= 0:
+        return None
+    return {
+        "coordinateType": "screen",
+        "x": extents["x"],
+        "y": extents["y"],
+        "width": extents["width"],
+        "height": extents["height"],
+    }
+
+
+def target_has_visible_showing_state(target):
+    states = target.get("candidateStates") if isinstance(target, dict) else None
+    if not isinstance(states, list):
+        return False
+    normalized = {str(state).lower() for state in states}
+    return "visible" in normalized and "showing" in normalized
+
+
+def validated_target(controlled):
+    target = controlled.get("worldCanvasPixelTarget") if isinstance(controlled, dict) else None
+    if not isinstance(target, dict):
+        return None, {}
+    extents = target_extents(target)
+    if (
+        target.get("identified") is True
+        and target.get("status") == "target-ready"
+        and target.get("sourceArtifact") == TARGET_SOURCE_ARTIFACT
+        and target.get("geometryStatus") == "available"
+        and target.get("selectionRule") == SELECTION_RULE
+        and target_has_visible_showing_state(target)
+        and extents is not None
+    ):
+        sanitized = dict(target)
+        sanitized["screenExtents"] = extents
+        return sanitized, sanitized
+    return None, target
+
+
+def base_blocker(blocker, blocker_detail, claim_scope_detail, prerequisite_status, exact_next_unblocker, controlled=None, target=None, sampling=None):
+    target_payload = target if isinstance(target, dict) and prerequisite_status == "target-ready" else {}
+    if isinstance(target, dict) and target.get("status") == "blocked":
+        target_payload = target
+    payload = {
+        "schemaVersion": 1,
+        "status": "blocked",
+        "blocker": blocker,
+        "blockerDetail": blocker_detail,
+        "claimScope": CLAIM_SCOPE,
+        "claimScopeDetail": claim_scope_detail,
+        "sourceArtifact": SOURCE_ARTIFACT,
+        "prerequisiteTargetStatus": prerequisite_status,
+        "exactNextUnblocker": exact_next_unblocker,
+        "renderedWorldPixelsObserved": False,
+        "visibleRenderingCorrectnessEstablished": False,
+        "sampleCount": 0,
+        "screenshotPath": screenshot_path(controlled),
+        "screenshotStatus": controlled.get("screenshotStatus") if isinstance(controlled, dict) else "",
+        "screenshotPixelStatus": controlled.get("screenshotPixelStatus") if isinstance(controlled, dict) else "",
+        "worldCanvasPixelTarget": target_payload,
+        "pixelSampling": sampling
+        or {
+            "status": "blocked",
+            "blocker": blocker,
+            "pixelsSampled": False,
+            "sampleCount": 0,
+            "samplingMethod": None,
+        },
+        "unsupportedClaims": unsupported_claims,
+    }
+    return payload
+
+
+def write_blocker(blocker, blocker_detail, claim_scope_detail, prerequisite_status, exact_next_unblocker, controlled=None, target=None, sampling=None):
+    if observation_path.exists():
+        observation_path.unlink()
+    write_json(
+        blocker_path,
+        base_blocker(
+            blocker,
+            blocker_detail,
+            claim_scope_detail,
+            prerequisite_status,
+            exact_next_unblocker,
+            controlled=controlled,
+            target=target,
+            sampling=sampling,
+        ),
+    )
+
+
+def string_values(value):
+    if isinstance(value, dict):
+        for child in value.values():
+            yield from string_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from string_values(child)
+    elif isinstance(value, str):
+        yield value
+
+
+def sampler_overclaims(payload):
+    if payload.get("visibleRenderingCorrectnessEstablished") is True:
+        return True
+    return any(phrase in value.lower() for value in string_values(payload) for phrase in forbidden_claim_phrases)
+
+
+def point_inside(point, extents):
+    return (
+        is_number(point.get("x"))
+        and is_number(point.get("y"))
+        and extents["x"] <= point["x"] < extents["x"] + extents["width"]
+        and extents["y"] <= point["y"] < extents["y"] + extents["height"]
+    )
+
+
+def normalize_samples(payload, extents):
+    samples = payload.get("samples")
+    if not isinstance(samples, list) or not samples:
+        return None, "world-canvas-pixel-sampling-incomplete", "Sampler output did not include a non-empty samples list."
+    declared_count = payload.get("sampleCount")
+    if declared_count != len(samples):
+        return None, "world-canvas-pixel-sampling-incomplete", "Sampler sampleCount did not match the sample list length."
+    normalized = []
+    for index, sample in enumerate(samples):
+        if not isinstance(sample, dict):
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} is not an object."
+        if sample.get("checked") is not True:
+            return None, "world-canvas-pixel-samples-unchecked", f"Sampler sample {index} was not checked."
+        point = sample.get("point")
+        rgba = sample.get("rgba")
+        if not isinstance(point, dict) or not point_inside(point, extents):
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} point is outside the validated target."
+        if not isinstance(rgba, list) or len(rgba) != 4:
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} does not include an RGBA value."
+        if any(not isinstance(channel, int) or isinstance(channel, bool) or channel < 0 or channel > 255 for channel in rgba):
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} RGBA channels must be integers from 0 through 255."
+        normalized_sample = {
+            "point": {"x": point["x"], "y": point["y"]},
+            "rgba": list(rgba),
+            "checked": True,
+        }
+        if sample.get("name"):
+            normalized_sample["name"] = str(sample["name"])
+        normalized.append(normalized_sample)
+    return normalized, "", ""
+
+
+controlled, source_blocker, source_detail = read_controlled_display(controlled_display_path)
+if controlled is None:
+    write_blocker(
+        "world-canvas-pixel-target-not-ready",
+        source_detail,
+        "target-selection-blocked",
+        "unavailable",
+        "valid-controlled-display-pixel-observation-source-artifact",
+    )
+    raise SystemExit(0)
+
+valid_target, source_target = validated_target(controlled)
+if valid_target is None:
+    prerequisite_status = str(source_target.get("status") or "unavailable") if isinstance(source_target, dict) else "unavailable"
+    write_blocker(
+        "world-canvas-pixel-target-not-ready",
+        "Target-scoped pixel sampling requires exactly one visible/showing target with valid positive screen-coordinate extents.",
+        "target-selection-blocked",
+        prerequisite_status,
+        str(source_target.get("exactNextUnblocker") or "reliable-run-window-world-canvas-pixel-sampling-target") if isinstance(source_target, dict) else "reliable-run-window-world-canvas-pixel-sampling-target",
+        controlled=controlled,
+        target=source_target if isinstance(source_target, dict) else {},
+    )
+    raise SystemExit(0)
+
+if not sampler_path.is_file() or not os.access(sampler_path, os.X_OK):
+    write_blocker(
+        "world-canvas-pixel-sampler-unavailable",
+        "A valid world-canvas target was identified, but the target-scoped pixel sampler is unavailable or not executable.",
+        "target-ready-sampling-not-observed",
+        "target-ready",
+        "provide-world-canvas-pixel-sampler",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+with tempfile.TemporaryDirectory(prefix="alice-world-canvas-pixels-") as temp_dir:
+    target_path = Path(temp_dir) / "world-canvas-target.json"
+    sampler_output_path = Path(temp_dir) / "sampler-output.json"
+    write_json(target_path, valid_target)
+    try:
+        completed = subprocess.run(
+            [str(sampler_path), "--target-json", str(target_path), "--output", str(sampler_output_path)],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        write_blocker(
+            "world-canvas-pixel-sampling-failed",
+            f"Sampler could not run: {exc}",
+            "sampling-failed",
+            "target-ready",
+            "sample-run-window-world-canvas-pixels",
+            controlled=controlled,
+            target=valid_target,
+        )
+        raise SystemExit(0)
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or "Sampler exited non-zero.").strip()
+        write_blocker(
+            "world-canvas-pixel-sampling-failed",
+            detail[:500],
+            "sampling-failed",
+            "target-ready",
+            "sample-run-window-world-canvas-pixels",
+            controlled=controlled,
+            target=valid_target,
+        )
+        raise SystemExit(0)
+    try:
+        sampler_payload = json.loads(sampler_output_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        write_blocker(
+            "world-canvas-pixel-sampling-incomplete",
+            f"Sampler output was unreadable: {exc}",
+            "sampling-output-invalid",
+            "target-ready",
+            "complete-run-window-world-canvas-pixel-sample-set",
+            controlled=controlled,
+            target=valid_target,
+        )
+        raise SystemExit(0)
+
+if not isinstance(sampler_payload, dict) or sampler_payload.get("status") != "observed":
+    write_blocker(
+        "world-canvas-pixel-sampling-failed",
+        "Sampler output did not report status=observed.",
+        "sampling-failed",
+        "target-ready",
+        "sample-run-window-world-canvas-pixels",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+if sampler_overclaims(sampler_payload):
+    write_blocker(
+        "world-canvas-pixel-sampler-overclaimed",
+        "Sampler output attempted to assert a correctness claim instead of bounded raw pixel observation.",
+        "sampler-output-overclaimed",
+        "target-ready",
+        "remove-correctness-claims-from-sampler-output",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+samples, sample_blocker, sample_detail = normalize_samples(sampler_payload, valid_target["screenExtents"])
+if samples is None:
+    write_blocker(
+        sample_blocker,
+        sample_detail,
+        "sampling-output-invalid",
+        "target-ready",
+        "check-target-scoped-pixel-samples-before-claiming-observation"
+        if sample_blocker == "world-canvas-pixel-samples-unchecked"
+        else "complete-run-window-world-canvas-pixel-sample-set",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+sampling_method = str(sampler_payload.get("samplingMethod") or "target-scoped-controlled-display-raw-rgba")
+payload = {
+    "schemaVersion": 1,
+    "status": "observed",
+    "blocker": "none",
+    "blockerDetail": "",
+    "claim": "run-window-world-canvas-target-sampled-rendering-correctness-not-asserted",
+    "claimScope": CLAIM_SCOPE,
+    "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
+    "boundedClaim": "The run-window/world-canvas target was identified and sampled under controlled conditions.",
+    "sourceArtifact": SOURCE_ARTIFACT,
+    "targetSourceArtifact": TARGET_SOURCE_ARTIFACT,
+    "visibleRenderingCorrectnessEstablished": False,
+    "renderedWorldPixelsObserved": True,
+    "prerequisiteTargetStatus": "target-ready",
+    "sampleCount": len(samples),
+    "samplingMethod": sampling_method,
+    "samples": samples,
+    "worldCanvasPixelTarget": valid_target,
+    "pixelSampling": {
+        "status": "observed",
+        "pixelsSampled": True,
+        "samplesChecked": True,
+        "sampleCount": len(samples),
+        "samplingMethod": sampling_method,
+        "sampler": sampler_path.name,
+        "samplePoints": samples,
+        "samplePointRule": "inside-target-bounds-only",
+        "correctnessCheck": "not-performed",
+    },
+    "limitations": [
+        "Raw RGBA samples are bounded observation data only.",
+        "No color expectation, image baseline, visual diff, world execution assertion, or rendered-world oracle was applied.",
+    ],
+    "unsupportedClaims": unsupported_claims,
+}
+if blocker_path.exists():
+    blocker_path.unlink()
+write_json(observation_path, payload)
 PY
 }
 
@@ -1717,6 +2337,7 @@ PY
     printf 'visibleRenderingPixelSamplingStatus=blocked\n'
     printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
     printf 'visibleRenderingPixelSamplingBlocker=world-canvas-pixel-target-not-ready\n'
+    printf 'visibleRenderingCorrectnessEstablished=false\n'
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -2849,13 +3470,17 @@ JSON
         "$screenshot_pixel_status" \
         "$runtime_display_artifact_path"
     fi
-    write_visible_rendering_pixel_sampling_blocker \
+    write_visible_rendering_pixel_sampling_evidence \
       "$run_dir" \
       "$run_dir/controlled-display-pixel-observation.json"
     local -a visible_rendering_pixel_sampling_fields
-    read_inventory_json_fields visible_rendering_pixel_sampling_fields "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" status blocker
+    if [ -f "$run_dir/$VISIBLE_RENDERING_PIXEL_OBSERVATION" ]; then
+      visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_OBSERVATION"
+    else
+      visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
+    fi
+    read_inventory_json_fields visible_rendering_pixel_sampling_fields "$run_dir/$visible_rendering_pixel_sampling_artifact" status blocker
     visible_rendering_pixel_sampling_status=${visible_rendering_pixel_sampling_fields[0]}
-    visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
     visible_rendering_pixel_sampling_blocker=${visible_rendering_pixel_sampling_fields[1]}
     scenario_outcome=blocked
     if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ] && [ "$visible_rendering_pixel_sampling_status" = observed ]; then
@@ -2874,6 +3499,7 @@ JSON
       printf 'visibleRenderingPixelSamplingStatus=%s\n' "$visible_rendering_pixel_sampling_status"
       printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$visible_rendering_pixel_sampling_artifact"
       printf 'visibleRenderingPixelSamplingBlocker=%s\n' "$visible_rendering_pixel_sampling_blocker"
+      printf 'visibleRenderingCorrectnessEstablished=false\n'
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi
@@ -2938,8 +3564,20 @@ run_gated_command_smoke() {
   local prepare_only=$4
 
   local automation_fields cwd configured_timeout scenario_id automation_mode run_timeout checklist exit_code outcome resolved_cwd
-  local -a argv
-  mapfile -t automation_fields < <(json_fields "$scenario_json" "automation.cwd" "automation.timeoutSeconds" "id" "automationMode")
+  local save_proof_artifact save_proof_run_id save_proof_validation_status save_proof_validation_exit command_start_epoch
+  local -a argv command_argv
+  mapfile -t automation_fields < <(SCENARIO_JSON="$scenario_json" python3 - <<'PY'
+import json
+import os
+
+scenario = json.loads(os.environ["SCENARIO_JSON"])
+automation = scenario["automation"]
+print(automation["cwd"])
+print(automation.get("timeoutSeconds", ""))
+print(scenario["id"])
+print(scenario["automationMode"])
+PY
+  )
   cwd=${automation_fields[0]}
   configured_timeout=${automation_fields[1]}
   scenario_id=${automation_fields[2]}
@@ -2950,6 +3588,20 @@ run_gated_command_smoke() {
   validate_allowed_automation "$cwd" "${argv[@]}"
   resolved_cwd=$(resolve_automation_cwd "$cwd")
   write_environment "$run_dir"
+  save_proof_artifact=
+  save_proof_run_id=
+  if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+    if [ -n "$timeout_override" ]; then
+      printf 'Save proof workflow does not accept --timeout-seconds\n' >&2
+      return 2
+    fi
+    save_proof_artifact="$(CDPATH= cd -- "$run_dir" && pwd)/robot-save-menu-dialog-write-readback-proof.json"
+    save_proof_run_id=$(basename "$run_dir")
+    if [[ ! "$save_proof_run_id" =~ ^[A-Za-z0-9._-]+$ ]]; then
+      printf 'generated Save proof runId is not a safe token: %s\n' "$save_proof_run_id" >&2
+      return 2
+    fi
+  fi
 
   if [ "$prepare_only" = "1" ] || [ "${ALICE_QA_RUN_GATED_SMOKES:-}" != "1" ]; then
     checklist=$(write_checklist "$scenario_json" "$run_dir")
@@ -2966,7 +3618,12 @@ run_gated_command_smoke() {
       printf 'checklist=%s\n' "$(basename "$checklist")"
       printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
       printf 'cwd=%s\n' "$cwd"
-      printf 'timeoutSeconds=%s\n' "$run_timeout"
+      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+        printf 'timeoutPolicy=none\n'
+        printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
+      else
+        printf 'timeoutSeconds=%s\n' "$run_timeout"
+      fi
     } > "$run_dir/status.txt"
     if [ "$prepare_only" = "1" ]; then
       printf 'Gated command scenario prepared without execution: %s\n' "$scenario_id"
@@ -2976,13 +3633,53 @@ run_gated_command_smoke() {
     return 3
   fi
 
+  command_argv=("${argv[@]}")
+  if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+    command_argv=(
+      "${argv[0]}"
+      "-Dorg.alice.eatme.saveProof.scenario=$scenario_id"
+      "-Dorg.alice.eatme.saveProof.runId=$save_proof_run_id"
+      "-Dorg.alice.eatme.saveProof.evidencePath=$save_proof_artifact"
+      "${argv[@]:1}"
+    )
+  fi
+
+  command_start_epoch=$(date -u +%s)
   set +e
   (
     cd "$resolved_cwd"
-    timeout --foreground -k 10s "${run_timeout}s" "${argv[@]}" < /dev/null
+    export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=32768}"
+    if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+      export ALICE_SAVE_PROOF_SCENARIO="$scenario_id"
+      export ALICE_SAVE_PROOF_RUN_ID="$save_proof_run_id"
+      export ALICE_SAVE_PROOF_EVIDENCE_PATH="$save_proof_artifact"
+      "${command_argv[@]}" < /dev/null
+    else
+      timeout --foreground -k 10s "${run_timeout}s" "${command_argv[@]}" < /dev/null
+    fi
   ) > "$run_dir/command.log" 2>&1
   exit_code=$?
   set -e
+  save_proof_validation_status=not-requested
+  if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+    set +e
+    validate_save_proof_evidence "$save_proof_artifact" \
+      --scenario "$scenario_id" \
+      --workflow save-menu-dialog-write-proof \
+      --run-id "$save_proof_run_id" \
+      --started-at-epoch "$command_start_epoch" \
+      > "$run_dir/save-proof-validation.log" 2>&1
+    save_proof_validation_exit=$?
+    set -e
+    if [ "$save_proof_validation_exit" -eq 0 ]; then
+      save_proof_validation_status=proven
+    else
+      save_proof_validation_status=failed
+      if [ "$exit_code" -eq 0 ]; then
+        exit_code=$save_proof_validation_exit
+      fi
+    fi
+  fi
 
   outcome=failed
   if [ "$exit_code" -eq 0 ]; then
@@ -2994,10 +3691,17 @@ run_gated_command_smoke() {
     printf 'automationMode=%s\n' "$automation_mode"
     printf 'outcome=%s\n' "$outcome"
     printf 'exitCode=%s\n' "$exit_code"
-    printf 'commandLog=command.log\n'
-    printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
-    printf 'cwd=%s\n' "$cwd"
-    printf 'timeoutSeconds=%s\n' "$run_timeout"
+      printf 'commandLog=command.log\n'
+      printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
+      printf 'cwd=%s\n' "$cwd"
+      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+        printf 'timeoutPolicy=none\n'
+        printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
+        printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
+        printf 'saveProofValidationLog=%s\n' save-proof-validation.log
+      else
+        printf 'timeoutSeconds=%s\n' "$run_timeout"
+      fi
   } > "$run_dir/status.txt"
 
   if [ "$exit_code" -ne 0 ]; then
@@ -3008,7 +3712,7 @@ run_gated_command_smoke() {
   printf 'Evidence written to %s\n' "$run_dir"
 }
 main() {
-  local command_name scenario_request evidence_base timeout_override prepare_only
+  local command_name scenario_request evidence_base timeout_override prepare_only artifact_path
   local scenario_id scenario_json timestamp run_dir automation_mode checklist
 
   command_name=${1:-}
@@ -3018,6 +3722,16 @@ main() {
       ;;
     validate)
       "$VALIDATOR"
+      ;;
+    validate-save-proof-evidence)
+      shift
+      if [ "$#" -lt 1 ]; then
+        printf '%s\n' 'validate-save-proof-evidence requires an artifact path' >&2
+        exit 2
+      fi
+      artifact_path=$1
+      shift
+      validate_save_proof_evidence "$artifact_path" "$@"
       ;;
     run)
       shift

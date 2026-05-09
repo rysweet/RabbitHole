@@ -171,7 +171,10 @@ def accessible_summary(accessible: Any, path: str) -> dict[str, Any]:
 
 def add_state_summary(summary: dict[str, Any], accessible: Any) -> dict[str, Any]:
     candidate = dict(summary)
-    candidate["states"] = state_names(accessible)
+    states = state_names(accessible)
+    candidate["states"] = states
+    candidate["visible"] = "visible" in states
+    candidate["showing"] = "showing" in states
     return candidate
 
 

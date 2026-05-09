@@ -274,6 +274,8 @@ assert_contains "$observed_out" '"postOpenRuntimeDisplayAccessibilityObserved": 
 assert_contains "$observed_out" '"runtimeDisplayCandidateCount": 1' "observed artifact counts one runtime/display candidate"
 assert_contains "$observed_out" '"name": "Scene display"' "observed artifact names the accessible display candidate"
 assert_contains "$observed_out" '"role": "canvas"' "observed artifact records the display candidate role"
+assert_contains "$observed_out" '"showing": true' "observed artifact records showing state as a candidate field"
+assert_contains "$observed_out" '"visible": true' "observed artifact records visible state as a candidate field"
 assert_contains "$observed_out" '"geometryStatus": "available"' "observed artifact records available candidate geometry"
 assert_contains "$observed_out" '"coordinateType": "screen"' "observed artifact records screen-coordinate candidate extents"
 assert_contains "$observed_out" '"width": 320' "observed artifact records positive candidate extent width"

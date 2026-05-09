@@ -553,7 +553,7 @@ if errors:
     raise AssertionError("\n".join(errors))
 PY
   target_ready_status=$?
-  assert_success "$target_ready_status" "target-ready writer output matches future pixel-sampling target contract"
+  assert_success "$target_ready_status" "target-ready writer output matches pixel-sampling target contract"
 fi
 
 target_ready_sampling_dir="$tmp_root/target-ready-sampling-fixture"
@@ -620,14 +620,14 @@ def require(condition, message):
 
 require(payload.get("schemaVersion") == 1, "pixel sampling blocker must have schemaVersion=1")
 require(payload.get("status") == "blocked", "pixel sampling seam must be blocked without sampled pixels")
-require(payload.get("blocker") == "world-canvas-pixel-sampling-not-implemented", "blocker must name unavailable world-canvas pixel sampling")
+require(payload.get("blocker") == "world-canvas-pixel-sampler-unavailable", "blocker must name unavailable world-canvas pixel sampler")
 require(payload.get("claimScope") == "visible-rendering-world-canvas-pixel-sampling", "claim scope must be the next pixel-sampling seam")
 require(payload.get("claimScopeDetail") == "target-ready-sampling-not-observed", "claim scope detail must not imply rendered-world correctness")
 require(payload.get("sourceArtifact") == "controlled-display-pixel-observation.json", "pixel sampling blocker must cite controlled-display source")
 require(payload.get("prerequisiteTargetStatus") == "target-ready", "pixel sampling blocker must require target-ready prerequisite")
 require(payload.get("renderedWorldPixelsObserved") is False, "pixel sampling blocker must not claim observed rendered-world pixels")
 require(payload.get("sampleCount") == 0, "pixel sampling blocker must have zero samples")
-require(payload.get("exactNextUnblocker") == "sample-run-window-world-canvas-pixels", "pixel sampling blocker must name the next unblocker")
+require(payload.get("exactNextUnblocker") == "provide-world-canvas-pixel-sampler", "pixel sampling blocker must name the next unblocker")
 require(isinstance(target, dict), "pixel sampling blocker must copy the target-ready metadata")
 if isinstance(target, dict):
     require(target.get("identified") is True, "pixel sampling blocker target must preserve target-ready identification")
@@ -636,6 +636,7 @@ if isinstance(target, dict):
 require(isinstance(sampling, dict), "pixel sampling blocker must include pixelSampling decision object")
 if isinstance(sampling, dict):
     require(sampling.get("status") == "blocked", "pixelSampling must be blocked")
+    require(sampling.get("blocker") == "world-canvas-pixel-sampler-unavailable", "pixelSampling must name unavailable sampler")
     require(sampling.get("pixelsSampled") is False, "pixelSampling must not claim sampled pixels")
     require(sampling.get("sampleCount") == 0, "pixelSampling sampleCount must be zero")
     require(sampling.get("samplingMethod") is None, "pixelSampling must not name a sampling method")
@@ -772,7 +773,7 @@ for source_case in ("missing", "malformed", "array", "scalar", "wrong-name-targe
 
     require(payload.get("schemaVersion") == 1, f"{source_case} blocker must use schemaVersion=1")
     require(payload.get("status") == "blocked", f"{source_case} blocker must stay blocked")
-    require(payload.get("blocker") == "world-canvas-pixel-target-not-ready", f"{source_case} blocker must not advance to sampling-not-implemented")
+    require(payload.get("blocker") == "world-canvas-pixel-target-not-ready", f"{source_case} blocker must not advance past target validation")
     require(payload.get("claimScope") == "visible-rendering-world-canvas-pixel-sampling", f"{source_case} blocker must keep pixel-sampling claim scope")
     require(payload.get("claimScopeDetail") == "target-selection-blocked", f"{source_case} blocker must report target-selection-blocked")
     require(payload.get("sourceArtifact") == "controlled-display-pixel-observation.json", f"{source_case} blocker must preserve fixed source artifact name")
