@@ -85,6 +85,15 @@ public class SourceCodeGeneratorTest {
   }
 
   @Test
+  public void stringLiteralEscapesSpecialCharactersInGeneratedJavaSource() {
+    StringLiteral literal = new StringLiteral("line1\n\t\"quote\"\\backslash");
+
+    assertEquals(
+        "\"line1\\n\\t\\\"quote\\\"\\\\backslash\"",
+        generate(literal));
+  }
+
+  @Test
   public void characterizesSpecialPrimitiveLiteralNames() {
     assertEquals("Integer.MAX_VALUE", generateInt(Integer.MAX_VALUE));
     assertEquals("Integer.MIN_VALUE", generateInt(Integer.MIN_VALUE));
