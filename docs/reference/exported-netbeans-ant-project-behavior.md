@@ -34,6 +34,7 @@ pixels, or visible window behavior.
 - [Validation commands](#validation-commands)
 - [Tutorial: verify exported launcher evidence](#tutorial-verify-exported-launcher-evidence)
 - [Tutorial: verify target exported Ant build evidence](#tutorial-verify-target-exported-ant-build-evidence)
+- [Recovery finalization](#recovery-finalization)
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
 
@@ -393,9 +394,9 @@ Command for the exported-project Ant build proof:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
   -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
@@ -525,9 +526,9 @@ Run:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
   -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
@@ -567,6 +568,20 @@ Do not treat this smoke as evidence that a user completed the GUI export flow,
 that an installer works, or that a JavaFX window rendered. Launcher handoff and
 scene/setup evidence belong to the launcher characterization tests; GUI export
 journey evidence belongs to a separate display-backed or manual outside-in lane.
+
+## Recovery finalization
+
+When a review branch already contains the exported NetBeans Ant smoke feature,
+finalize recovery through the bounded readiness, contract, and smoke checks in
+[Finalize exported NetBeans Ant smoke
+recovery](../howto/finalize-exported-netbeans-ant-smoke-recovery.md).
+
+Recovery finalization is accepted only as current-head evidence. It must name the
+branch and commit under review, confirm the Tweedle grammar submodule is present,
+validate the scenario catalog and shell contracts, and run the focused
+`Alice3ProjectTemplateAntSmokeTest` command. If those checks pass and no
+implementation patch is required, the handoff uses a current-head no-op
+justification instead of inventing a source change.
 
 ## Compatibility rules
 
