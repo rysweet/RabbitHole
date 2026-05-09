@@ -97,3 +97,18 @@ Before citing the result, confirm the canonical artifact:
 9. Keeps `doesNotClaim` boundaries for Save variants and non-Save desktop behavior.
 
 The complete artifact contract is documented in [Save Proof Evidence](../reference/save-proof-evidence.md). The scenario-level contract is documented in [Save Menu Dialog Write/Readback Proof](../reference/save-menu-dialog-write-proof.md).
+
+## Validate fail-closed artifact rejection
+
+Run the independent negative artifact contract beside this positive proof when
+reviewing the Save proof lane:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+```
+
+That contract proves only that bad Save proof artifacts are rejected with
+explicit diagnostics. It does not run the rendered Save path and does not expand
+the positive proof into full desktop Save completion. For details, see [Run the
+Save Menu Dialog Negative Artifact Contract](./run-save-menu-dialog-negative-artifact-contract.md).

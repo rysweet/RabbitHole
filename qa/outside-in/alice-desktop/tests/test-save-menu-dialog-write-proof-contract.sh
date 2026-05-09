@@ -29,6 +29,7 @@ assert_validation_failure_contains() {
   local artifact_path=$1
   local label=$2
   local expected_pattern=$3
+  local started_at_epoch=${4:-4102444800}
   local stdout_path="$tmp_root/$label.out"
   local stderr_path="$tmp_root/$label.err"
 
@@ -36,7 +37,7 @@ assert_validation_failure_contains() {
     --scenario "$SCENARIO_ID" \
     --workflow "$WORKFLOW" \
     --run-id contract-run-1 \
-    --started-at-epoch 4102444800 \
+    --started-at-epoch "$started_at_epoch" \
     >"$stdout_path" 2>"$stderr_path"
   local status=$?
   assert_failure "$status" "$label is rejected by fail-closed Save proof evidence validation"
@@ -352,6 +353,16 @@ missing_dir="$tmp_root/missing-evidence-dir"
 mkdir -p "$missing_dir"
 assert_validation_failure_contains "$missing_dir/$ARTIFACT" "missing-evidence" 'missing.*robot-save-menu-dialog-write-readback-proof|No such file|not found'
 
+"$RUNNER" validate-save-proof-evidence "$valid_artifact" \
+  --scenario "$SCENARIO_ID" \
+  --workflow "$WORKFLOW" \
+  --run-id contract-run-1 \
+  --started-at-epoch not-an-epoch \
+  >"$tmp_root/invalid-started-at.out" 2>"$tmp_root/invalid-started-at.err"
+status=$?
+assert_failure "$status" "invalid started-at-epoch is rejected before evidence validation"
+assert_contains "$tmp_root/invalid-started-at.err" 'started-at-epoch must be an integer' "invalid started-at-epoch rejection is explicit"
+
 stale_dir="$tmp_root/stale-evidence-dir"
 mkdir -p "$stale_dir"
 stale_artifact="$stale_dir/$ARTIFACT"
@@ -367,6 +378,22 @@ payload["generatedAtUtc"] = "2000-01-01T00:00:00Z"
 path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 assert_validation_failure_contains "$stale_artifact" "stale-evidence" 'stale|generatedAtUtc|mtime'
+
+future_dir="$tmp_root/future-evidence-dir"
+mkdir -p "$future_dir"
+future_artifact="$future_dir/$ARTIFACT"
+cp "$valid_artifact" "$future_artifact"
+python3 - "$future_artifact" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["generatedAtUtc"] = "2099-01-01T00:00:00Z"
+path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+assert_validation_failure_contains "$future_artifact" "future-evidence" 'future Save proof evidence|clock skew' 0
 
 partial_dir="$tmp_root/partial-evidence-dir"
 mkdir -p "$partial_dir"

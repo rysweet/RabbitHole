@@ -25,6 +25,15 @@ assert_contains "$tmp_root/list.out" 'alice-desktop-save-load[[:space:]]+manual-
 
 (
   cd "$REPO_ROOT" &&
+    PYTHONDONTWRITEBYTECODE=1 python3 -m alice_qa_amplihack alice-qa save-negative-contract
+) >"$tmp_root/save-negative-contract.out" 2>"$tmp_root/save-negative-contract.err"
+status=$?
+assert_success "$status" "amplihack wrapper runs the Save negative artifact contract"
+assert_contains "$tmp_root/save-negative-contract.out" 'missing-artifact is rejected' "amplihack Save negative contract reports missing artifact rejection"
+assert_contains "$tmp_root/save-negative-contract.out" 'blocked-unknown-kind is rejected' "amplihack Save negative contract reports unknown blocker rejection"
+
+(
+  cd "$REPO_ROOT" &&
     PYTHONDONTWRITEBYTECODE=1 python3 -m alice_qa_amplihack alice-qa run alice-desktop-save-load --evidence-dir "$tmp_root/evidence"
 ) >"$tmp_root/run.out" 2>"$tmp_root/run.err"
 status=$?

@@ -9,6 +9,7 @@ repository.
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, and characterization seams.
 - [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Implemented contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.
 - [Save Proof Evidence](./reference/save-proof-evidence.md) - Canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
+- [Save Menu Dialog Negative Artifact Contract](./reference/save-menu-dialog-negative-artifact-contract.md) - Independent negative contract proving the Save proof evidence validator rejects missing, malformed, stale, blocked, partial, unknown-blocker, and inconsistent artifacts.
 - [Robot Save Menu Dialog Write/Readback Proof](./reference/robot-save-menu-dialog-write-readback-proof.md) - Reference for the Robot File-menu Save activation, Swing chooser control, `.a3p` write, readback, marker, and blocker artifact contract.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
 - [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
@@ -17,6 +18,7 @@ repository.
 - [Generated Story API Listener Source Characterization](./reference/generated-story-api-listener-source-characterization.md) - Reference for the headless generated-source evidence lane for synthetic listener registration calls, compilation, and no-GUI boundaries.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to add or review compatibility tests for save/export operations.
 - [Run the Save Menu Dialog Write/Readback Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused Robot Save menu/dialog/write/readback QA scenario with Xvfb when needed.
+- [Run the Save Menu Dialog Negative Artifact Contract](./howto/run-save-menu-dialog-negative-artifact-contract.md) - How to run the independent fail-closed Save proof artifact validation contract.
 - [Run the Robot Save Menu Dialog Write/Readback Proof](./howto/run-robot-save-menu-dialog-write-readback-proof.md) - Guide for running the focused Robot Save menu/dialog/write/readback proof and reviewing the canonical artifact contract.
 - [Characterize Project IO Corpus Behavior](./howto/characterize-project-io-corpus.md) - How to add deterministic LFS-free IO corpus characterization around Alice archive readers and writers.
 - [Tutorial: Add a Save Operation Characterization Test](./tutorials/save-operation-characterization-test.md) - A guided example for the first direct Save operation characterization test.

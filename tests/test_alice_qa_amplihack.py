@@ -26,6 +26,10 @@ def write_wrapper_repo(root: Path) -> None:
     write_file(root / "qa/outside-in/alice-desktop/runners/validate-scenarios.sh", "#!/usr/bin/env bash\n")
     write_file(root / "qa/outside-in/alice-desktop/runners/run-scenario.sh", "#!/usr/bin/env bash\n")
     write_file(
+        root / "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh",
+        "#!/usr/bin/env bash\n",
+    )
+    write_file(
         root / "scripts/generate-modernization-scorecard.py",
         textwrap.dedent(
             """\
@@ -52,6 +56,7 @@ class AmplihackWrapperTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
+        self.assertIn("amplihack alice-qa save-negative-contract", result.stdout)
         self.assertIn("amplihack tweedle-decode verify", result.stdout)
         self.assertIn("simple-if-method-call", result.stdout)
 
@@ -80,6 +85,37 @@ class AmplihackWrapperTest(unittest.TestCase):
         payload = json.loads(result.stdout)
         self.assertEqual(str(root), payload["cwd"])
         self.assertEqual(["--output", "scorecard.md"], payload["argv"])
+
+    def test_save_negative_contract_delegates_to_repo_shell_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            contract = root / "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh"
+            contract.write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env bash
+                    printf 'save-negative-contract cwd=%s\\n' "$PWD"
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "alice-qa",
+                    "save-negative-contract",
+                ],
+                cwd=root / "qa" / "outside-in",
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn(f"save-negative-contract cwd={root}", result.stdout)
 
     def test_tweedle_decode_verify_delegates_to_focused_maven_test(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

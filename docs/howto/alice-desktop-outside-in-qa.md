@@ -98,6 +98,9 @@ uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa list
 
 uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+  amplihack alice-qa save-negative-contract
+
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 

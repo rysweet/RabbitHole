@@ -667,18 +667,34 @@ validate_save_proof_evidence() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --scenario)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         scenario=${2:-}
         shift 2
         ;;
       --workflow)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         workflow=${2:-}
         shift 2
         ;;
       --run-id)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         run_id=${2:-}
         shift 2
         ;;
       --started-at-epoch)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         started_at_epoch=${2:-}
         shift 2
         ;;
@@ -700,7 +716,7 @@ artifact = Path(sys.argv[1])
 expected_scenario = sys.argv[2]
 expected_workflow = sys.argv[3]
 expected_run_id = sys.argv[4]
-started_at_epoch = int(sys.argv[5] or "0")
+started_at_epoch_value = sys.argv[5] or "0"
 
 SCHEMA_VERSION = "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1"
 MARKER = "robotSaveMenuRoundTripMarker"
@@ -719,6 +735,7 @@ REQUIRED_NON_CLAIMS = {
     "broad UI automation coverage",
     "native dialog coverage",
 }
+MAX_FUTURE_SKEW_SECONDS = 300
 KNOWN_BLOCKERS = {
     "headless_awt",
     "robot_unavailable",
@@ -736,6 +753,13 @@ KNOWN_BLOCKERS = {
 def fail(message):
     print(message, file=sys.stderr)
     sys.exit(1)
+
+try:
+    started_at_epoch = int(started_at_epoch_value)
+except ValueError:
+    fail("Save proof started-at-epoch must be an integer")
+if started_at_epoch < 0:
+    fail("Save proof started-at-epoch must be non-negative")
 
 if artifact.name != "robot-save-menu-dialog-write-readback-proof.json":
     fail("Save proof evidence path must use canonical filename robot-save-menu-dialog-write-readback-proof.json")
@@ -838,9 +862,12 @@ try:
     generated_epoch = datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
 except ValueError:
     fail("Save proof evidence generatedAtUtc is not an ISO timestamp")
+now_epoch = datetime.now(timezone.utc).timestamp()
 mtime_epoch = artifact.stat().st_mtime
 if started_at_epoch and (generated_epoch + 1 < started_at_epoch or mtime_epoch + 1 < started_at_epoch):
     fail("stale Save proof evidence: generatedAtUtc/mtime predates command start")
+if generated_epoch > now_epoch + MAX_FUTURE_SKEW_SECONDS or mtime_epoch > now_epoch + MAX_FUTURE_SKEW_SECONDS:
+    fail("future Save proof evidence: generatedAtUtc/mtime exceeds validator clock skew")
 
 output_size = write.get("outputSizeBytes")
 if not isinstance(output_size, int) or output_size <= 0:

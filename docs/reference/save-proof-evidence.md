@@ -78,9 +78,31 @@ The blocker object must include non-empty `kind`, `observed`, and `required` fie
 
 ## Fail-closed validation
 
-`run-scenario.sh validate-save-proof-evidence` rejects missing, invalid, stale, partial, blocked, or internally inconsistent artifacts. It checks scenario/workflow/runId, freshness, required proven flags, output file existence and size, readback marker fields, and blocker shape.
+`run-scenario.sh validate-save-proof-evidence` rejects missing, invalid, stale, future-dated, partial, blocked, unknown-blocker, or internally inconsistent artifacts. It checks scenario/workflow/runId, freshness, required proven flags, output file existence and size, readback marker fields, and blocker shape.
 
 The Save proof scenario has no workflow-level timeout: `automation.timeoutSeconds` is invalid for `save-menu-dialog-write-proof`, and the runner does not wrap this Maven command with shell `timeout`.
+
+## Negative artifact contract
+
+The independent negative contract is:
+
+```text
+qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+```
+
+It calls `run-scenario.sh validate-save-proof-evidence` directly and proves the
+validator fails closed for missing, malformed, stale, incomplete, blocked,
+unknown-blocker, and internally inconsistent artifacts. Each case must exit
+non-zero and print a diagnostic that names the rejected Save proof artifact
+condition.
+
+The negative contract does not run the desktop Save path and must not be cited as
+Save completion evidence. It exists to prove that only a fresh, canonical,
+internally consistent `status: "proven"` artifact can satisfy the positive Save
+write/readback proof contract.
+
+For usage, API arguments, configuration, and examples, see
+[Save Menu Dialog Negative Artifact Contract](./save-menu-dialog-negative-artifact-contract.md).
 
 ## Runner properties
 

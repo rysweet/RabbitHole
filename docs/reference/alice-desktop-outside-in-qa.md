@@ -146,12 +146,14 @@ Run commands from the repository root.
 | `validate-scenarios.sh --list` | List normalized scenario records. | Prints scenario ID, automation mode, and title. |
 | `validate-scenarios.sh --dump-json` | Dump the full normalized catalog. | Prints a JSON array sorted by scenario file path. |
 | `validate-scenarios.sh --dump-json <scenario-id>` | Dump one normalized scenario. | Prints a JSON object for the requested scenario ID. |
+| `run-scenario.sh validate-save-proof-evidence <artifact> --scenario <id> --workflow <workflow> --run-id <run-id> --started-at-epoch <epoch>` | Validate one Save proof artifact at the existing evidence-validation seam. | Exits zero only for a fresh, canonical, internally consistent `status: "proven"` Save proof artifact; all missing, malformed, stale, blocked, partial, or inconsistent artifacts exit non-zero with explicit diagnostics. |
 | `run-scenario.sh list` | List runnable scenarios. | Prints the same user-facing list as the validator. |
 | `run-scenario.sh validate` | Validate the active catalog through the runner. | Delegates to `validate-scenarios.sh`. |
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa list` | Install the QA wrapper from a branch and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
+| `uvx --from git+<repo>@<branch> amplihack alice-qa save-negative-contract` | Install the QA wrapper from a branch and run the Save negative artifact contract in the current checkout. | Proves invalid Save proof artifacts fail closed with explicit diagnostics; it is not desktop Save completion evidence. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa run <scenario-id-or-path>` | Install the QA wrapper from a branch and create evidence in the current checkout. | Delegates to `run-scenario.sh run`. |
 
 ### Validate all scenarios
@@ -196,6 +198,9 @@ This path form resolves the top-level `id` in the YAML file, validates that ID t
 ```bash
 uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa list
+
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+  amplihack alice-qa save-negative-contract
 
 uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
   amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
@@ -557,6 +562,7 @@ reviewed assessment contract and evidence mapping exist.
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
 | Save menu dialog write/readback proof | Evidence contract: `status.txt`, `command.log`, focused Robot Save menu/dialog/write/readback proof test output naming `RobotSaveMenuDialogWriteReadbackProofTest`, and fresh canonical `robot-save-menu-dialog-write-readback-proof.json` evidence with `schemaVersion=eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1`, matching `scenario` and `runId`, `status=proven`, all required menu/dialog/control/write/readback marker flags true, an existing `.a3p` output with matching size, and marker readback verified. Missing, stale, blocked, partial, internally inconsistent, or unknown-blocker artifacts fail closed. Stale `StageIdeSaveMenuDoClickToWriteProofTest` output or `save-menu-dialog-write-proof.json` artifacts do not satisfy this scenario. See [Save Proof Evidence](./save-proof-evidence.md). |
+| Save menu dialog negative artifact contract | `test-save-menu-dialog-negative-artifact-contract.sh` output proving the existing `validate-save-proof-evidence` seam rejects missing, malformed, stale, blocked, unknown-blocker, partial, and inconsistent Save proof artifacts with explicit diagnostics. This is not a scenario/workflow and is not Save completion evidence. See [Save Menu Dialog Negative Artifact Contract](./save-menu-dialog-negative-artifact-contract.md). |
 | Wizard/palette/completion smoke | `status.txt`, `command.log`, focused test output for wizard validation, palette wiring, and completion resources; manual screenshot notes when desktop evidence is added. |
 
 ## Scenario authoring rules

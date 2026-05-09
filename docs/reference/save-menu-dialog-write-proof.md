@@ -85,6 +85,13 @@ A passing scenario requires `status: "proven"` and all required menu, dialog, co
 
 For the complete machine-readable field contract, see [Save Proof Evidence](./save-proof-evidence.md).
 
+The companion negative artifact contract is separate from this positive
+write/readback proof. It exercises
+`run-scenario.sh validate-save-proof-evidence` with intentionally bad artifacts
+and requires explicit non-zero failures for missing, malformed, stale, blocked,
+partial, unknown-blocker, and inconsistent evidence. See [Save Menu Dialog Negative Artifact
+Contract](./save-menu-dialog-negative-artifact-contract.md).
+
 ## Executable blocker behavior
 
 When the rendered path cannot complete safely, the proof writes the same canonical artifact with `status: "blocked"` and exactly one known `blocker.kind`. The runner still fails the scenario. That failing artifact is the executable blocker for the missing step.
