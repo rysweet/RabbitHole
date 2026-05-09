@@ -35,7 +35,7 @@ NODE_OPTIONS=--max-old-space-size=32768 \
 bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
 ```
 
-Run the full Alice desktop QA contract suite when reviewing the lane in context:
+Run the Alice desktop QA contract suite when reviewing the lane in context:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -209,7 +209,7 @@ Use this command for a fast review of checked-in launch, run/runtime, and Select
 Project target discovery contracts. It does not launch Alice or generate fresh
 desktop evidence.
 
-### Validate the full Alice desktop QA contract suite
+### Validate the Alice desktop QA contract suite
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
