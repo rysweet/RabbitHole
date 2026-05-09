@@ -141,7 +141,7 @@ Review `control`, `write`, and `readback` together:
 }
 ```
 
-The runner validates that the output path resolves under the proof root, the file exists, `write.outputSizeBytes` matches the filesystem size, the file reads back, and the marker is present.
+The runner validates that the output path resolves under the proof root, the file exists, `write.outputSizeBytes` matches the filesystem size, and the artifact records `readback.projectReadable: true` plus `readback.markerPresent: true`.
 
 ## 7. Check boundaries
 
@@ -151,14 +151,13 @@ Finish by reading `doesNotClaim`. A correct proven artifact still excludes Save 
 {
   "doesNotClaim": [
     "Save As coverage",
-    "overwrite prompt coverage",
-    "cancellation coverage",
-    "retry coverage",
-    "native file dialog coverage",
     "all Save variants",
-    "lesson completion",
+    "full lesson completion",
+    "visible rendering correctness",
     "grading correctness",
-    "broad desktop automation"
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage"
   ]
 }
 ```

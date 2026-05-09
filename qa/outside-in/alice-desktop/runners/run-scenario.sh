@@ -713,6 +713,7 @@ REQUIRED_NON_CLAIMS = {
     "full lesson completion",
     "visible rendering correctness",
     "grading correctness",
+    "physical user click",
     "broad UI automation coverage",
     "native dialog coverage",
 }

@@ -10,6 +10,9 @@ SCENARIO_ID=alice-desktop-save-menu-dialog-write-proof
 WORKFLOW=save-menu-dialog-write-proof
 ARTIFACT=robot-save-menu-dialog-write-readback-proof.json
 FIXTURE_DIR="$SCRIPT_DIR/fixtures/save-proof-evidence"
+HOWTO_DOC="$BASE_DIR/../../../docs/howto/run-robot-save-menu-dialog-write-readback-proof.md"
+REFERENCE_DOC="$BASE_DIR/../../../docs/reference/robot-save-menu-dialog-write-readback-proof.md"
+TUTORIAL_DOC="$BASE_DIR/../../../docs/tutorials/trace-robot-save-menu-dialog-write-readback-proof.md"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 
@@ -91,6 +94,54 @@ if errors:
 PY
 status=$?
 assert_success "$status" "Robot Save proof Java test has no method timeout and retains proven/blocked artifact contract"
+
+python3 - "$HOWTO_DOC" "$REFERENCE_DOC" "$TUTORIAL_DOC" >"$tmp_root/doc-field-contract.out" 2>"$tmp_root/doc-field-contract.err" <<'PY'
+import sys
+from pathlib import Path
+
+howto_text = Path(sys.argv[1]).read_text(encoding="utf-8")
+reference_text = Path(sys.argv[2]).read_text(encoding="utf-8")
+tutorial_text = Path(sys.argv[3]).read_text(encoding="utf-8")
+combined_text = "\n".join((howto_text, reference_text, tutorial_text))
+errors = []
+
+for required in (
+    "`dialog.saveDialogObserved`",
+    "`dialog.ambiguousChooserDiscovery`",
+    "`control.targetInsideProofRoot`",
+    "`control.selectedPathMatchesExpected`",
+):
+    if required not in howto_text:
+        errors.append(f"Save proof how-to must document canonical field {required}")
+
+for stale in ("dialog.chooserObserved", "selection.targetInsideProofRoot", "selection.selectedFileMatchesExpected"):
+    if stale in howto_text:
+        errors.append(f"Save proof how-to must not document stale field {stale}")
+
+if "implementation target rather than a statement" in reference_text:
+    errors.append("Save proof reference must not describe the implemented proof as a future implementation target")
+
+for required_non_claim in (
+    "full lesson completion",
+    "visible rendering correctness",
+    "physical user click",
+    "broad UI automation coverage",
+):
+    if required_non_claim not in tutorial_text:
+        errors.append(f"Save proof tutorial doesNotClaim example must include {required_non_claim}")
+
+for stale_non_claim in ("overwrite prompt coverage", "cancellation coverage", "retry coverage"):
+    if stale_non_claim in tutorial_text:
+        errors.append(f"Save proof tutorial must not use stale non-claim wording {stale_non_claim}")
+
+if "the file reads back, and the marker is present" in combined_text:
+    errors.append("Save proof docs must distinguish runner JSON validation from Java readback execution")
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+status=$?
+assert_success "$status" "Save proof docs document canonical artifact field names"
 
 timeout_catalog="$tmp_root/timeout-catalog"
 copy_catalog "$timeout_catalog"
@@ -206,6 +257,7 @@ payload = {
         "full lesson completion",
         "visible rendering correctness",
         "grading correctness",
+        "physical user click",
         "broad UI automation coverage",
         "native dialog coverage",
     ],
@@ -271,6 +323,7 @@ payload = {
         "full lesson completion",
         "visible rendering correctness",
         "grading correctness",
+        "physical user click",
         "broad UI automation coverage",
         "native dialog coverage",
     ],

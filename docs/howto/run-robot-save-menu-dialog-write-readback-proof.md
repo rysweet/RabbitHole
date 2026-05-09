@@ -69,8 +69,8 @@ Before citing the artifact as proof, confirm:
 3. `runId` matches the value passed to Maven.
 4. `status` is `proven`.
 5. Every required `menu`, `dialog`, `control`, `write`, and `readback` flag is true.
-6. `dialog.chooserObserved` is `true` and `dialog.ambiguousChooserDiscovery` is `false`.
-7. `selection.targetInsideProofRoot` and `selection.selectedFileMatchesExpected` are `true`.
+6. `dialog.saveDialogObserved` is `true` and `dialog.ambiguousChooserDiscovery` is `false`.
+7. `control.targetInsideProofRoot` and `control.selectedPathMatchesExpected` are `true`.
 8. `write.outputPath` resolves to an existing proof-root `.a3p`.
 9. `write.outputSizeBytes` matches the filesystem size.
 10. `readback.projectReadable` and `readback.markerPresent` are `true`.
