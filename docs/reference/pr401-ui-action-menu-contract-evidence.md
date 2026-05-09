@@ -14,6 +14,7 @@ request body, CI logs, or attached review evidence.
 - [Scope](#scope)
 - [Feature boundary](#feature-boundary)
 - [Evidence basis](#evidence-basis)
+- [Current-head recovery review](#current-head-recovery-review)
 - [Merge-ready gate](#merge-ready-gate)
 - [Usage](#usage)
 - [Configuration](#configuration)
@@ -87,6 +88,36 @@ gh pr view 401 --json headRefName,headRefOid,statusCheckRollup,mergeStateStatus
 Both commands must identify branch `wave6-ui-action-menu-contract-1778302300`
 and the same PR head. If a later push changes the PR head, rerun the evidence
 and update the PR body instead of carrying forward old exact-head claims.
+
+## Current-head recovery review
+
+Use the PR head returned by GitHub as the only source of truth for recovery
+finalization. Earlier failed workflow evidence, owner-bound runs, or stale
+review notes do not block PR #401 once the current PR head has complete
+same-head evidence.
+
+The recovery review is complete only when these current-head checks pass:
+
+| Review item | Required current-head evidence |
+| --- | --- |
+| Head source of truth | `gh pr view 401 --json headRefOid` returns the head recorded in the PR body, and local `git rev-parse HEAD` matches it. |
+| Required check rollup | `build`, `coverage`, `package-netbeans`, `test`, and `GitGuardian Security Checks` are complete and successful for the current PR head. |
+| Previous failure areas | `workflow-publish`, `pre-commit`, and finalization failures are treated as stale unless a current-head check run, status, or required gate still reports them as failing. |
+| Default-workflow review | The current-head review records focused diff scope, docs impact, bounded claims, and three `SEEK -> VALIDATE -> FIX` cycles with a clean final cycle. |
+| Window menu scope | The diff and review evidence stay limited to `WindowMenuModel` registration, stable identity, menu-bar membership lookup, bounded QA scenario wiring, and PR-specific evidence docs/gates. |
+| No-op source decision | If the implementation and evidence are already correct, the final handoff explicitly says no Java, runner, schema, validator, scenario, test, workflow, or CI source change is required. |
+
+Use this literal no-op finalization shape in the PR handoff when no source fix
+is required:
+
+```text
+No-op source finalization:
+Current PR head: <current-pr-head-sha>
+Checks: build, coverage, package-netbeans, test, and GitGuardian Security Checks are green for the current PR head; workflow-publish, pre-commit, and finalization failure areas are not failing on the current head.
+Scope: focused Window menu model registration recovery only; diff remains limited to menu registration contract, bounded QA wiring, evidence docs, PR-specific gates, and directly related test metadata.
+Review/finalization evidence: current-head PR metadata, focused diff review, docs impact review, and three default-workflow SEEK -> VALIDATE -> FIX cycles are refreshed; final cycle clean.
+Repository changes: none required.
+```
 
 ## Merge-ready gate
 
