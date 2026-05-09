@@ -27,6 +27,7 @@ SCOPED_DOCS = [
     REPO_ROOT / "docs" / "reference" / "project-migration-manager-characterization.md",
     REPO_ROOT / "docs" / "tutorials" / "project-migration-manager-characterization.md",
 ]
+# Allowlist, not exact manifest — a diff may touch a subset of these files.
 EXPECTED_PR_SCOPE = {
     "core/story-api-migration/src/test/java/org/lgna/project/migration/ProjectMigrationManagerTest.java",
     "docs/concepts/migration-hotspot-characterization.md",
