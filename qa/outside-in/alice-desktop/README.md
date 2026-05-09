@@ -169,11 +169,12 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-Passing evidence is limited to exported Ant project build behavior:
-generated classes, exported jar and manifest contents, resource packaging, Ant
-`jar`, `run`, `run-test-with-main`, `clean`, and probe markers. It is not
-installer validation, full GUI export journey coverage, visible rendering
-evidence, or Sims coverage. If target execution cannot complete, preserve
+Passing evidence is limited to exported Ant build/runtime metadata behavior:
+generated classes, exported jar and manifest contents, resource packaging,
+runtime JVM metadata propagation up to the GUI launch boundary, Ant `jar`,
+`run`, `run-test-with-main`, `clean`, and probe markers. It is not installer
+validation, full GUI export journey coverage, visible rendering evidence, Sims
+coverage, or grading behavior. If target execution cannot complete, preserve
 `status.txt` and `command.log` with the exact command, failure point, and missing
 condition.
 
