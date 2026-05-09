@@ -255,8 +255,9 @@ gh pr checks 389 --repo rysweet/RabbitHole --watch
 gh pr view 389 --repo rysweet/RabbitHole --json headRefOid,statusCheckRollup
 ```
 
-Every required check must be successful for the same `headRefOid`. A skipped,
-pending, stale, failed, missing, or SHA-mismatched check is a blocker:
+Every required check must be successful for the same `headRefOid`: `build`,
+`coverage`, `package-netbeans`, `test`, and `GitGuardian Security Checks`. A
+skipped, pending, stale, failed, missing, or SHA-mismatched check is a blocker:
 
 ```text
 NOT_MERGE_READY: github-actions-not-green

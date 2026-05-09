@@ -92,6 +92,15 @@ FORBIDDEN_PATH_FRAGMENTS = (
 )
 GREEN_CONCLUSIONS = frozenset(("success",))
 COMPLETED_CHECK_STATUSES = frozenset(("completed",))
+REQUIRED_STATUS_CHECK_NAMES = frozenset(
+    (
+        "build",
+        "coverage",
+        "package-netbeans",
+        "test",
+        "GitGuardian Security Checks",
+    )
+)
 TIMEOUT_WRAPPER_COMMANDS = frozenset(("timeout", "gtimeout"))
 
 
@@ -368,14 +377,20 @@ def verify_github_actions(evidence: dict[str, Any]) -> list[str]:
     checks = _as_list(actions.get("checks"))
     if not checks:
         blockers.append("missing-github-actions-checks")
+    seen_check_names: set[str] = set()
     for raw_check in checks:
         check = _as_mapping(raw_check)
+        check_name = _text(check.get("name")).strip()
+        if check_name:
+            seen_check_names.add(check_name)
         status = _normalized_text(check.get("status"))
         conclusion = _normalized_text(check.get("conclusion"))
         if status not in COMPLETED_CHECK_STATUSES:
             blockers.append("github-actions-not-complete")
         elif conclusion not in GREEN_CONCLUSIONS:
             blockers.append("github-actions-not-green")
+    if not REQUIRED_STATUS_CHECK_NAMES.issubset(seen_check_names):
+        blockers.append("github-actions-required-check-missing")
 
     return _dedupe(blockers)
 

@@ -227,8 +227,15 @@ def merge_ready_evidence() -> dict:
         "githubActions": {
             "headSha": HEAD_SHA,
             "checks": [
+                {"name": "build", "status": "completed", "conclusion": "success"},
+                {"name": "coverage", "status": "completed", "conclusion": "success"},
+                {"name": "package-netbeans", "status": "completed", "conclusion": "success"},
                 {"name": "test", "status": "completed", "conclusion": "success"},
-                {"name": "docs", "status": "completed", "conclusion": "success"},
+                {
+                    "name": "GitGuardian Security Checks",
+                    "status": "completed",
+                    "conclusion": "success",
+                },
             ],
         },
         "prDescription": {
@@ -406,11 +413,25 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
             ),
             "github-actions-not-complete",
         )
+        self.assert_has_blocker(
+            "verify_github_actions",
+            lambda evidence: evidence["githubActions"].update(
+                {"checks": [{"name": "test", "status": "completed", "conclusion": "success"}]}
+            ),
+            "github-actions-required-check-missing",
+        )
 
     def test_github_actions_verifier_accepts_gh_pr_view_status_check_rollup_casing(self) -> None:
         self.evidence["githubActions"]["checks"] = [
+            {"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "coverage", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "package-netbeans", "status": "COMPLETED", "conclusion": "SUCCESS"},
             {"name": "test", "status": "COMPLETED", "conclusion": "SUCCESS"},
-            {"name": "docs", "status": " COMPLETED ", "conclusion": " SUCCESS "},
+            {
+                "name": "GitGuardian Security Checks",
+                "status": " COMPLETED ",
+                "conclusion": " SUCCESS ",
+            },
         ]
 
         self.assert_no_blockers("verify_github_actions")
