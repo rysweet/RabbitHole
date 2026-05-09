@@ -38,6 +38,9 @@ The characterization feature protects existing migration behavior before
 `ProjectMigrationManager` is extracted or refactored. It does not rewrite the
 large migration table and does not add external archive fixtures.
 
+Production code is intentionally unchanged; this documents existing protected
+migration hotspots through characterization coverage.
+
 The covered surface is deliberately narrow:
 
 | Scope | Contract |
@@ -47,10 +50,11 @@ The covered surface is deliberately narrow:
 | Version gates | A migration applies only when the saved project version is older than that migration's result version. |
 | Test fixture shape | Characterization uses generated Java strings that look like Alice project XML fragments. |
 | Fixture storage | No `.a3p`, `.a3w`, `.a3c`, media, or Git LFS payload is required. |
-| Protected behavior | Known legacy story/resource names rewrite through all applicable text migrations to the current Alice class/resource names. |
+| Protected behavior | Selected legacy story/resource names rewrite through the existing text migrations that apply to their saved source versions. |
 | Refactor boundary | Extraction is safe only when the same source version produces the same final migrated text. |
 
-This feature is a compatibility guard, not a new migration framework.
+This feature is a compatibility guard, not a new migration framework or a
+complete characterization of every migration entry.
 
 ## Protected behavior
 
@@ -58,14 +62,18 @@ Alice project files can contain serialized class names in XML attributes such as
 `type` and `declaringClass`. Historical projects may refer to old resource
 packages and old resource class names.
 
-The characterization layer protects three kinds of behavior:
+The characterization layer protects four kinds of behavior:
 
 1. The migration tables remain sorted by increasing result version, and each
    result version can round-trip through `Version`.
 2. Text migrations remain version-gated; a migration with result version
    `3.1.20.0.0` applies to `3.1.19.0.0`, but not to `3.1.20.0.0` or later.
-3. Real legacy text rewrites still compose across migration versions in one
+3. Selected legacy text rewrites still compose across migration versions in one
    `migrate(String, Version)` call.
+4. One selected boundary rewrite remains source-version gated at
+   `3.2.111.0.0`: `BONE_PILE` on `BonesResource` migrates to `DEFAULT` on
+   `BonePileResource` only when the saved project version predates that
+   boundary.
 
 The focused dresser seam starts from Alice version `3.1.19.0.0` and protects
 this migration chain:
@@ -97,6 +105,20 @@ Both entries migrate to:
 <declaringClass name="org.lgna.story.resources.prop.DresserResource"/>
 ```
 
+The focused BonePile boundary starts from Alice version `3.2.110.0.0` and
+protects one existing rewrite in the `3.2.111.0.0` text migration:
+
+| Source version | Input | Output |
+| --- | --- | --- |
+| `3.2.110.0.0` | `name="BONE_PILE"` with `org.lgna.story.resources.prop.BonesResource` | `name="DEFAULT"` with `org.lgna.story.resources.prop.BonePileResource` |
+| `3.2.111.0.0` | Same source text | Unchanged for this selected rewrite |
+| `3.2.112.0.0` | Same source text | Unchanged for this selected rewrite |
+
+This boundary test verifies that one existing rewrite is gated by source
+version at the boundary or later. It does not claim that every migration is
+idempotent or that every boundary-later source is unchanged for unrelated
+rewrites.
+
 ## Usage
 
 Use this characterization when changing migration ordering, splitting the
@@ -117,6 +139,12 @@ before the package move to `org.lgna.story.resources.prop.DresserCentralAsian`.
 Starting at `3.1.20.0.0` deliberately does not back-apply that package move;
 Alice migration behavior is version-gated by the saved project version.
 
+For the BonePile boundary, the fixture starts at `3.2.110.0.0` to make the
+`3.2.111.0.0` rewrite applicable. Starting at `3.2.111.0.0` leaves the selected
+`BONE_PILE`/`BonesResource` source text unchanged because the project is already
+at the rewrite result version. Starting at `3.2.112.0.0` protects the same
+selected rewrite from being back-applied after the boundary.
+
 ## Characterized contracts
 
 The `ProjectMigrationManagerTest` suite covers these contracts:
@@ -128,7 +156,8 @@ The `ProjectMigrationManagerTest` suite covers these contracts:
 | Text migration applicability is strictly before the result version. | A saved project at the threshold version does not receive that threshold migration again. |
 | Known legacy story and resource names rewrite from `3.1.19.0.0`. | Representative existing mappings such as `Program`, `INDIA_BRICK_D`, mouse-click event classes, `STurnable`, and dresser resources still migrate. |
 | Legacy dresser XML fragments cascade to `DresserResource`. | The old package name moves through both intermediate prop names and reaches the current resource type. |
-| Already-at-threshold text is unchanged. | Version-gated behavior remains observable and prevents accidental back-application. |
+| Version `3.2.111.0.0` BonePile rewrite is source-version gated. | `BONE_PILE` on `BonesResource` rewrites to `DEFAULT` on `BonePileResource` from `3.2.110.0.0`, but the selected source text remains unchanged from `3.2.111.0.0`. |
+| At-threshold or later selected text is unchanged. | Version-gated behavior remains observable and prevents accidental back-application of the selected rewrite at `3.2.111.0.0` or `3.2.112.0.0`. |
 
 These contracts describe the feature boundary. They do not require a broad
 fixture corpus, binary project archives, or a rewrite of the migration manager.
@@ -199,6 +228,7 @@ test -d tweedle-lang/Grammar
 Focused migration characterization:
 
 ```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
@@ -209,12 +239,17 @@ mvn -pl core/story-api-migration -am \
 Full story API migration module validation:
 
 ```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   test
 ```
 
-Repository Python contract validation:
+Repository-level Python contract validation:
+
+This suite is useful for whole-repository policy checks. It is not
+migration-characterization evidence because it also covers branch, PR, and
+documentation contracts outside `ProjectMigrationManager`.
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest discover -s tests
@@ -230,10 +265,11 @@ Tests and refactors around `ProjectMigrationManager` preserve these rules:
 4. Legacy names can migrate through intermediate names in a single `migrate(String, Version)` call.
 5. A fixture that starts before the dresser package move reaches `org.lgna.story.resources.prop.DresserResource`.
 6. A fixture that starts at the package-move threshold does not back-apply older migrations.
-7. Characterization fixtures stay generated, lightweight, deterministic, and LFS-free.
-8. Refactors do not broaden regex replacements beyond known Alice legacy class and resource names.
-9. Tests assert both the expected final names and the absence of obsolete or intermediate names.
-10. Production migration behavior stays compatible with the current Alice 3 baseline unless a behavior change is explicitly documented and covered.
+7. The `3.2.111.0.0` BonePile rewrite applies to `3.2.110.0.0` source text and is not back-applied to the selected source text at `3.2.111.0.0` or `3.2.112.0.0`.
+8. Characterization fixtures stay generated, lightweight, deterministic, and LFS-free.
+9. Refactors do not broaden regex replacements beyond known Alice legacy class and resource names.
+10. Tests assert both the expected final names and the absence of obsolete or intermediate names when the selected seam has intermediate names.
+11. Production migration behavior stays compatible with the current Alice 3 baseline unless a behavior change is explicitly documented and covered.
 
 ## Examples
 
@@ -294,3 +330,36 @@ org.lgna.story.resources.dresser.DresserCentralAsian
 
 This preserves the current version-gated behavior: the `3.1.20.0.0` package move
 is not applied to a project that already claims version `3.1.20.0.0`.
+
+### BonePile `3.2.111.0.0` boundary
+
+Input:
+
+```text
+name="BONE_PILE">
+<declaringClass name="org.lgna.story.resources.prop.BonesResource"
+```
+
+Call before the boundary:
+
+```java
+String migrated = ProjectMigrationManager.getInstance()
+    .migrate(source, new Version("3.2.110.0.0"));
+```
+
+Expected output:
+
+```text
+name="DEFAULT"> <declaringClass name="org.lgna.story.resources.prop.BonePileResource"
+```
+
+Call at the boundary:
+
+```java
+String migrated = ProjectMigrationManager.getInstance()
+    .migrate(source, new Version("3.2.111.0.0"));
+```
+
+Expected output is the original source text for this selected rewrite. This
+documents only the `BONE_PILE`/`BonesResource` rewrite boundary, not every
+migration that may exist before or after `3.2.111.0.0`.

@@ -3,7 +3,7 @@ package org.lgna.project.migration;
 import org.lgna.project.Version;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 
 import static org.junit.Assert.*;
@@ -172,6 +172,16 @@ public class ProjectMigrationManagerTest {
   }
 
   @Test
+  public void textMigrationCharacterizesVersion3_2_111BonePileBoundary() {
+    String source = "name=\"BONE_PILE\">\n<declaringClass name=\"org.lgna.story.resources.prop.BonesResource\"";
+    String expected = "name=\"DEFAULT\"> <declaringClass name=\"org.lgna.story.resources.prop.BonePileResource\"";
+
+    assertEquals(expected, migrateWithoutTestLogNoise(source, "3.2.110.0.0"));
+    assertEquals(source, migrateWithoutTestLogNoise(source, "3.2.111.0.0"));
+    assertEquals(source, migrateWithoutTestLogNoise(source, "3.2.112.0.0"));
+  }
+
+  @Test
   public void managerReportsNoPendingMigrationsAtCurrentVersion() {
     Version currentVersion = manager.getCurrentVersion();
 
@@ -186,17 +196,18 @@ public class ProjectMigrationManagerTest {
         return migration;
       }
     }
-    fail("No text migration found for " + versionText);
-    return null;
+    throw new AssertionError("No text migration found for " + versionText);
   }
 
   private String migrateWithoutTestLogNoise(String source, String versionText) {
     PrintStream previousOut = System.out;
+    PrintStream mutedOut = new PrintStream(OutputStream.nullOutputStream());
     try {
-      System.setOut(new PrintStream(new ByteArrayOutputStream()));
+      System.setOut(mutedOut);
       return manager.migrate(source, new Version(versionText));
     } finally {
       System.setOut(previousOut);
+      mutedOut.close();
     }
   }
 }
