@@ -2,8 +2,10 @@
 
 This reference documents the negative artifact contract for the
 `save-menu-dialog-write-proof` QA lane. The contract proves that the existing
-Save proof evidence validator fails closed when evidence is missing, malformed,
-stale, future-dated, blocked, incomplete, or internally inconsistent.
+Save proof evidence validator fails closed when validator context is missing or
+evidence is missing, wrong-name, symlinked, malformed, non-object, stale,
+future-dated, identity-mismatched, blocked, incomplete, unknown-blocker, or
+internally inconsistent.
 
 The contract is intentionally separate from the positive Save write/readback
 proof. It does not run Alice, does not open the desktop, does not invoke Maven,
@@ -37,17 +39,19 @@ workflow: save-menu-dialog-write-proof
 artifact: robot-save-menu-dialog-write-readback-proof.json
 ```
 
-The negative contract is accepted only when every bad artifact case exits
-non-zero and prints an explicit Save proof artifact diagnostic.
+The negative contract is accepted only when every missing-context or bad
+artifact case exits non-zero and prints an explicit diagnostic.
 
 ## Contract cases
 
 | Case | Artifact condition | Required validator result |
 | --- | --- | --- |
+| Missing validator context | The direct validator call omits `--scenario`, `--workflow`, `--run-id`, or `--started-at-epoch`. | Non-zero exit and a diagnostic naming the missing required validator option. |
 | Missing artifact | Canonical artifact path does not exist. | Non-zero exit and a diagnostic naming the missing Save proof evidence artifact. |
 | Wrong artifact name | Artifact path uses any basename other than `robot-save-menu-dialog-write-readback-proof.json`. | Non-zero exit and a diagnostic naming the canonical artifact filename. |
 | Symlink artifact | Canonical artifact path is a symlink. | Non-zero exit and a diagnostic rejecting symlinked Save proof evidence. |
 | Malformed artifact | File exists but is not valid JSON. | Non-zero exit and a diagnostic naming invalid Save proof evidence JSON. |
+| Non-object artifact | File contains valid JSON that is not an object. | Non-zero exit and a diagnostic requiring a Save proof evidence JSON object. |
 | Stale artifact | `generatedAtUtc` or artifact mtime predates the supplied command start time. | Non-zero exit and a diagnostic naming stale Save proof evidence or the freshness fields. |
 | Future artifact | `generatedAtUtc` or artifact mtime exceeds the validator clock by more than the 300-second allowed skew. | Non-zero exit and a diagnostic naming future Save proof evidence or the freshness fields. |
 | Identity mismatch | Artifact `scenario`, `workflow`, or `runId` differs from the validator arguments. | Non-zero exit and a diagnostic naming the mismatched identity field. |
@@ -166,8 +170,9 @@ automation.
 Reviewers should cite the positive
 `robot-save-menu-dialog-write-readback-proof.json` artifact only when the
 positive scenario reports `status: "proven"` and passes fail-closed validation.
-Use this negative contract as evidence that missing, wrong-name, symlinked,
-stale, future-dated, identity-mismatched, blocked, partial, and inconsistent
+Use this negative contract as evidence that missing validator context, missing,
+wrong-name, symlinked, malformed, non-object, stale, future-dated,
+identity-mismatched, blocked, partial, unknown-blocker, and inconsistent
 artifacts cannot be accepted as that proof.
 
 ## Example diagnostics
@@ -176,7 +181,12 @@ Expected diagnostics include stable phrases such as:
 
 ```text
 missing Save proof evidence artifact robot-save-menu-dialog-write-readback-proof.json
+validate-save-proof-evidence requires --scenario
+validate-save-proof-evidence requires --workflow
+validate-save-proof-evidence requires --run-id
+validate-save-proof-evidence requires --started-at-epoch
 invalid Save proof evidence JSON
+Save proof evidence must be a JSON object
 stale Save proof evidence: generatedAtUtc/mtime predates command start
 future Save proof evidence: generatedAtUtc/mtime exceeds validator clock skew
 Save proof evidence scenario mismatch

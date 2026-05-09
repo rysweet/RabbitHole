@@ -457,12 +457,19 @@ test -d tweedle-lang/Grammar
 
 The Save negative artifact contract is not a scenario and does not add a
 workflow. It calls `run-scenario.sh validate-save-proof-evidence` directly to
-prove missing, malformed, stale, blocked, partial, unknown-blocker, and
-internally inconsistent Save proof artifacts fail closed with explicit
-diagnostics. It does not run the desktop Save path or claim full desktop Save
-completion. It also does not claim Save As behavior, visible rendering
-correctness, grading, lesson completion, learner assessment, broad UI
-automation, or native dialog automation.
+prove missing validator context and missing, wrong-name, symlinked, malformed
+JSON, non-object JSON, stale, future-dated, identity-mismatched, blocked,
+partial, unknown-blocker, and internally inconsistent Save proof artifacts fail
+closed with explicit diagnostics. It does not run the desktop Save path or
+claim full desktop Save completion. It also does not claim Save As behavior,
+visible rendering correctness, grading, lesson completion, learner assessment,
+broad UI automation, or native dialog automation.
+
+For runnable reviewer steps, see [Run the Save Menu Dialog Negative Artifact
+Contract](../../../docs/howto/run-save-menu-dialog-negative-artifact-contract.md).
+For the complete rejection matrix, validator API, wrapper behavior, and review
+rules, see [Save Menu Dialog Negative Artifact
+Contract](../../../docs/reference/save-menu-dialog-negative-artifact-contract.md).
 
 Run the focused contract directly or through the branch-installable wrapper:
 
@@ -470,3 +477,7 @@ Run the focused contract directly or through the branch-installable wrapper:
 NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
 uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
 ```
+
+Run the `uvx ... amplihack alice-qa save-negative-contract` command from the
+root, or a child directory, of the checkout under review so the installed
+wrapper delegates to that checkout's contract script.
