@@ -1,18 +1,18 @@
 id: alice-desktop-archive-fixture-smoke
-title: LFS-independent historical archive fixture boundary smoke
+title: LFS-independent generated legacy fixture boundary smoke
 workflow: archive-fixture-smoke
 automationMode: gated-command-smoke
 preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
-  - Historical archive round-trip characterization tests are available in the checkout.
+  - Generated legacy fixture round-trip characterization tests are available in the checkout.
 userActions:
-  - Run the focused historical archive fixture boundary characterization smoke from the command line.
+  - Run the focused generated legacy fixture boundary characterization smoke from the command line.
   - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries.
   - Confirm unsupported method calls, complex or mixed initializers, resource initializer binding gaps, and unresolved parent cases fail explicitly.
 expectedOutcomes:
-  - The historical archive fixture boundary smoke command exits successfully when the gate is enabled.
+  - The generated legacy fixture boundary smoke command exits successfully when the gate is enabled.
   - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
   - Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.
   - Generated XML fallback .a3c fixtures write, read, and preserve type resources through IoUtilities archive I/O.
@@ -35,7 +35,7 @@ automation:
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the historical archive fixture boundary smoke command.
+    - command.log from the generated legacy fixture boundary smoke command.
     - Test output or surefire report naming HistoricalArchiveRoundTripCharacterizationTest.
 fallback:
   mode: manual-evidence-required

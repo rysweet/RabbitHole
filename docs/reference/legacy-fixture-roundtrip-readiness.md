@@ -267,6 +267,9 @@ The command above is the canonical form for docs and PR evidence. Adding `-q` is
 only a Maven log-verbosity choice and does not change the evidence scope.
 Run the command directly from the shell or CI job. Do not wrap this focused gate
 in an external timeout helper; a timeout result is not fixture-readiness evidence.
+This does not conflict with the QA scenario `timeoutSeconds` field. That field is
+runner metadata for bounding gated-smoke execution, not a substitute for the
+canonical Maven result.
 
 For PR readiness evidence, record the commit SHA that was pushed and the exact
 focused command that ran at that SHA. Evidence gathered before the final commit
@@ -358,6 +361,17 @@ fully green, or all checks passed.
 The lane is merge-ready only when the PR head is up to date with the integration
 target, local evidence applies to the final pushed head, and the PR body carries
 the same bounded claims as the documentation.
+
+Before using final merge-ready wording, verify the GitHub PR state itself:
+
+| GitHub readiness check | Required result |
+| --- | --- |
+| Current head | `headRefOid` from GitHub matches local `git rev-parse HEAD`. |
+| PR state | The PR is open and not draft. |
+| Integration target | The PR base is the intended integration branch. |
+| Mergeability | `mergeStateStatus` is `CLEAN` for the current base. |
+| Required checks | Required entries in `statusCheckRollup` are `SUCCESS`; any queued, in-progress, pending, failing, cancelled, or skipped required check blocks strict merge-ready wording. |
+| Review decision | `reviewDecision` is `APPROVED` before the PR is described as approved. An empty value is not approval. |
 
 When the target branch changes, update the PR branch by merging the current
 integration target into it. Do not rebase, force-push, or merge the PR branch

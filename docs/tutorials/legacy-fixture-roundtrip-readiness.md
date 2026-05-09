@@ -199,6 +199,8 @@ The canonical evidence command uses `test`. Adding `-q` only reduces Maven log
 verbosity and should be called out as such if used in PR notes.
 Do not wrap the command in an external timeout helper. Reviewers need the Maven
 result for the final head, not a timeout wrapper status.
+The QA scenario can still use `timeoutSeconds` as runner metadata; that value
+only bounds gated-smoke execution and does not become the readiness result.
 
 Use the commit SHA that actually contains the final fixture and documentation
 changes when recording PR readiness evidence.
@@ -258,10 +260,12 @@ the evidence in this order:
 | Evidence | What the PR body should say |
 | --- | --- |
 | Current base | The PR branch has been updated by merging the named integration target into it, without rebasing or force-pushing. |
+| GitHub PR state | GitHub `headRefOid` matches local `HEAD`, the PR is open and non-draft, the base branch is the intended integration target, and `mergeStateStatus` is `CLEAN`. |
 | QA/scenario | `archive-fixture-smoke` is wired through scenario, runner, validator, schema, and schema-contract surfaces. |
 | Documentation | The reference, how-to, tutorial, and docs index describe the finished bounded lane. |
 | Quality audit | SEEK names the scoped fixture lane and non-claims, VALIDATE lists focused validation, and FIX names only scoped changes. |
 | CI | Required checks are listed by name with successful or pending states. |
+| Review decision | The PR is described as approved only when GitHub reports `reviewDecision: APPROVED`; an empty value is not approval. |
 | Focused scope | The note repeats that full historical migration, full Tweedle decode, full player decode, arbitrary user archive support, and desktop UI behavior are out of scope. |
 
 Use this finished-state wording when all required checks have completed:

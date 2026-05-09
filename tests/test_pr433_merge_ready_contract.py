@@ -6,6 +6,17 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PR_BRANCH = "feat/issue-411-rabbithole-wave7-legacy-fixture-roundtrip-lane-fol"
+EXPECTED_PR433_CHANGED_FILES = {
+    "core/story-api-migration/src/test/java/org/lgna/project/io/HistoricalArchiveRoundTripCharacterizationTest.java",
+    "docs/howto/characterize-legacy-fixture-roundtrip-readiness.md",
+    "docs/index.md",
+    "docs/reference/alice-desktop-outside-in-qa.md",
+    "docs/reference/legacy-fixture-roundtrip-readiness.md",
+    "docs/tutorials/legacy-fixture-roundtrip-readiness.md",
+    "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
+    "qa/outside-in/alice-desktop/tests/test-scenario-validation.sh",
+    "tests/test_pr433_merge_ready_contract.py",
+}
 REFERENCE_DOC = REPO_ROOT / "docs" / "reference" / "legacy-fixture-roundtrip-readiness.md"
 HOWTO_DOC = REPO_ROOT / "docs" / "howto" / "characterize-legacy-fixture-roundtrip-readiness.md"
 TUTORIAL_DOC = REPO_ROOT / "docs" / "tutorials" / "legacy-fixture-roundtrip-readiness.md"
@@ -39,6 +50,16 @@ FOCUSED_MAVEN_COMMAND = (
     "-pl core/story-api-migration -am "
     "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest test"
 )
+FINAL_GITHUB_READINESS_CHECKS = (
+    "headRefOid",
+    "git rev-parse HEAD",
+    "open and not draft",
+    "mergeStateStatus",
+    "CLEAN",
+    "statusCheckRollup",
+    "reviewDecision",
+    "An empty value is not approval.",
+)
 EVIDENCE_AREAS = (
     "QA/scenario",
     "Docs",
@@ -69,6 +90,29 @@ def git_output(*args: str, check: bool = True) -> subprocess.CompletedProcess[st
 
 
 class Pr433MergeReadyContractTest(unittest.TestCase):
+    def test_pr_branch_diff_stays_inside_legacy_fixture_round_trip_scope(self) -> None:
+        current_branch = git_output("branch", "--show-current").stdout.strip()
+        if current_branch != PR_BRANCH:
+            raise unittest.SkipTest(f"PR #433 diff-scope contract only runs on {PR_BRANCH}")
+
+        changed_files = set(
+            git_output("diff", "--name-only", "origin/develop...HEAD").stdout.splitlines()
+        )
+
+        self.assertEqual(
+            EXPECTED_PR433_CHANGED_FILES,
+            changed_files,
+            "PR #433 must stay limited to the legacy fixture round-trip test, docs, QA scenario, and contract surfaces.",
+        )
+        archive_fixtures = {
+            path for path in changed_files if path.endswith((".a3p", ".a3w", ".a3c"))
+        }
+        self.assertEqual(
+            set(),
+            archive_fixtures,
+            "PR #433 must not add checked-in binary Alice archive fixtures.",
+        )
+
     def test_pr_head_merges_cleanly_into_current_develop(self) -> None:
         current_branch = git_output("branch", "--show-current").stdout.strip()
         if current_branch != PR_BRANCH:
@@ -100,6 +144,9 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
             normalized,
         )
         self.assertIn("Do not wrap this focused gate in an external timeout helper", normalized)
+        self.assertIn("timeoutSeconds", text)
+        for check in FINAL_GITHUB_READINESS_CHECKS:
+            self.assertIn(check, text)
         self.assertIn(FOCUSED_MAVEN_COMMAND, normalized)
         for area in EVIDENCE_AREAS:
             self.assertRegex(
@@ -120,6 +167,7 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
                     text,
                 )
                 self.assertIn("Do not wrap the command in an external timeout helper", normalized)
+                self.assertIn("timeoutSeconds", text)
                 self.assertNotIn("merge or rebase", normalized.lower())
                 self.assertNotIn("merging or rebasing", normalized.lower())
 
@@ -145,6 +193,7 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
 
         for required in (
             "generated LFS-independent .a3p, .a3c, and .a3w archive boundaries",
+            "generated legacy fixture boundary smoke command exits successfully",
             "fail explicitly",
             "Generated XML fallback .a3p fixtures write, read, and preserve resources",
             "Generated XML fallback .a3c fixtures write, read, and preserve type resources",

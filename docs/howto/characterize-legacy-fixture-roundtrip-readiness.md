@@ -196,6 +196,9 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 is equivalent for scope when only quieter Maven logs are desired.
 Do not wrap the command in an external timeout helper. A timeout result is a
 separate infrastructure signal, not a successful characterization result.
+This rule does not prohibit the QA scenario's `timeoutSeconds` field; that field
+is harness metadata for bounded gated-smoke execution, not canonical readiness
+evidence.
 
 If the lane changes QA scenario files, also run the relevant desktop QA schema
 and contract scripts. If no QA files changed, this Maven command is the focused
@@ -240,6 +243,17 @@ git rev-parse HEAD
 
 The two SHAs must match before local validation is described as final-head
 evidence.
+
+Before writing strict merge-ready language, also verify the final GitHub PR
+state:
+
+| Check | Required result |
+| --- | --- |
+| PR state | Open and non-draft. |
+| Base branch | The PR targets the intended integration branch. |
+| Merge state | `mergeStateStatus` is `CLEAN`. |
+| Required checks | Required checks in `statusCheckRollup` are successful by name. |
+| Review decision | `reviewDecision` is `APPROVED` before describing the PR as approved; an empty value is not approval. |
 
 In PR notes, separate the state into:
 
