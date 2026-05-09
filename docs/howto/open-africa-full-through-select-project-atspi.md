@@ -111,10 +111,12 @@ bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 python3 -m unittest tests/test_pr437_select_project_recovery_contract.py
+python3 -m unittest tests/test_pr437_finalization_workflow.py
 python3 -m unittest tests/test_pr437_noop_recovery_report_contract.py
+python3 -m unittest tests/test_pr437_dirty_recovery_workflow.py
 ```
 
-These checks should cover the scenario target metadata, validator allowlists, runner promotion fields, target-specific tab-click evidence, blocked evidence shape, post-open gating, PR #437 recovery/finalization wording, and no-overclaim wording. They are not rendering, grading, lesson, Save, or full UI automation tests.
+These checks should cover the scenario target metadata, validator allowlists, runner promotion fields, target-specific tab-click evidence, blocked evidence shape, post-open gating, PR #437 recovery/finalization wording, dirty-recovery workflow, and no-overclaim wording. They are not rendering, grading, lesson, Save, or full UI automation tests.
 
 ### Live Select Project evidence run
 

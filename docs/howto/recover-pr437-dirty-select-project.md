@@ -141,7 +141,8 @@ bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 python3 -m unittest \
   tests/test_pr437_select_project_recovery_contract.py \
   tests/test_pr437_finalization_workflow.py \
-  tests/test_pr437_noop_recovery_report_contract.py
+  tests/test_pr437_noop_recovery_report_contract.py \
+  tests/test_pr437_dirty_recovery_workflow.py
 ```
 
 Run the live AT-SPI scenario when the repair changes the scenario, runner, probe, post-open gate, or documentation evidence for live Select Project success:

@@ -129,7 +129,7 @@ When a dirty conflict touches the Select Project scenario lane, these files chan
 | Validator | `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`. |
 | Runner | `qa/outside-in/alice-desktop/runners/run-scenario.sh`. |
 | Select Project proof tests | `qa/outside-in/alice-desktop/tests/test-select-project-proof.sh`, `test-tab-click-probe.sh`, `test-post-project-open-probe.sh`. |
-| PR #437 contracts | `tests/test_pr437_select_project_recovery_contract.py`, `tests/test_pr437_finalization_workflow.py`, `tests/test_pr437_noop_recovery_report_contract.py`. |
+| PR #437 contracts | `tests/test_pr437_select_project_recovery_contract.py`, `tests/test_pr437_finalization_workflow.py`, `tests/test_pr437_noop_recovery_report_contract.py`, `tests/test_pr437_dirty_recovery_workflow.py`. |
 
 The accepted target starter is always:
 
@@ -163,7 +163,7 @@ Run these commands before a dirty-recovery push:
 | `bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh` | Select Project window proof and non-claim boundaries. |
 | `bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh` | Target-specific Africa Full tab-click evidence and blocker shape. |
 | `bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh` | Post-open gate requires prior target-specific opened evidence. |
-| `python3 -m unittest tests/test_pr437_select_project_recovery_contract.py tests/test_pr437_finalization_workflow.py tests/test_pr437_noop_recovery_report_contract.py` | PR #437 recovery/finalization contracts, no-overclaim wording, and no-op separation. |
+| `python3 -m unittest tests/test_pr437_select_project_recovery_contract.py tests/test_pr437_finalization_workflow.py tests/test_pr437_noop_recovery_report_contract.py tests/test_pr437_dirty_recovery_workflow.py` | PR #437 recovery/finalization contracts, dirty-recovery workflow, no-overclaim wording, and no-op separation. |
 
 If the repair changes scenario schema or scenario catalog behavior, also run:
 
