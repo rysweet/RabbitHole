@@ -1667,8 +1667,78 @@ def string_values(value):
         yield value
 
 
+def positive_correctness_value(value):
+    if value is True:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {
+            "accepted",
+            "confirmed",
+            "correct",
+            "established",
+            "observed",
+            "passed",
+            "performed",
+            "success",
+            "valid",
+            "validated",
+            "verified",
+        }
+    if isinstance(value, dict):
+        return any(positive_correctness_value(child) for child in value.values())
+    if isinstance(value, list):
+        return any(positive_correctness_value(child) for child in value)
+    return False
+
+
+def key_implies_visible_correctness(key):
+    lower = key.lower()
+    return any(token in lower for token in ("correct", "validat", "validity")) and any(
+        token in lower
+        for token in ("visible", "visual", "rendered", "rendering", "world")
+    )
+
+
+def claim_value_implies_visible_correctness(key, value):
+    if key not in {"claim", "claimScope", "claimScopeDetail", "boundedClaim"} or not isinstance(value, str):
+        return False
+    lower = value.strip().lower()
+    if any(marker in lower for marker in ("cannot ", "does not ", "do not ", "must not ", "not ", "unsupported", "nonclaim", "not-asserted")):
+        return False
+    return any(
+        token in lower
+        for token in (
+            "full-visible-rendering-correctness",
+            "rendered-world-correctness",
+            "visible-rendering-correctness",
+            "visual-correctness",
+            "world-canvas-pixel-correctness",
+        )
+    )
+
+
+def contains_success_shaped_correctness_field(value):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "unsupportedClaims":
+                continue
+            if key == "correctnessCheck" and child != "not-performed":
+                return True
+            if claim_value_implies_visible_correctness(str(key), child):
+                return True
+            if key_implies_visible_correctness(str(key)) and positive_correctness_value(child):
+                return True
+            if contains_success_shaped_correctness_field(child):
+                return True
+    elif isinstance(value, list):
+        return any(contains_success_shaped_correctness_field(child) for child in value)
+    return False
+
+
 def sampler_overclaims(payload):
     if payload.get("visibleRenderingCorrectnessEstablished") is True:
+        return True
+    if contains_success_shaped_correctness_field(payload):
         return True
     return any(phrase in value.lower() for value in string_values(payload) for phrase in forbidden_claim_phrases)
 

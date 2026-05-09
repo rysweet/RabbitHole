@@ -246,6 +246,12 @@ payload = {
 if mode == "overclaim":
     payload["visibleRenderingCorrectnessEstablished"] = True
     payload["claim"] = "visible rendering correctness established"
+elif mode == "visual-validation-overclaim":
+    payload["visualValidationStatus"] = "passed"
+elif mode == "correctness-check-overclaim":
+    payload["correctnessCheck"] = "performed"
+elif mode == "claim-scope-overclaim":
+    payload["claimScope"] = "full-visible-rendering-correctness"
 
 Path(output_path).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -471,6 +477,75 @@ if [ -f "$overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" ]; then
   assert_no_forbidden_correctness_claims "$overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" >"$tmp_root/overclaim-forbidden.out" 2>"$tmp_root/overclaim-forbidden.err"
   status=$?
   assert_success "$status" "overclaim blocker contains no forbidden visible-rendering correctness phrase"
+fi
+
+visual_validation_overclaim_dir="$tmp_root/visual-validation-overclaim"
+mkdir -p "$visual_validation_overclaim_dir"
+write_runtime_display_artifact "$visual_validation_overclaim_dir" ready
+write_controlled_artifact "$visual_validation_overclaim_dir" 1 >"$tmp_root/visual-validation-overclaim-controlled.out" 2>"$tmp_root/visual-validation-overclaim-controlled.err"
+status=$?
+assert_success "$status" "visual-validation overclaim fixture creates target-ready controlled artifact"
+visual_validation_overclaim_sampler="$tmp_root/visual-validation-overclaim-sampler"
+visual_validation_overclaim_invocations="$tmp_root/visual-validation-overclaim-sampler.invocations"
+write_sampler_fixture "$visual_validation_overclaim_sampler" visual-validation-overclaim "$visual_validation_overclaim_invocations"
+run_sampling_evidence "$visual_validation_overclaim_dir" "$visual_validation_overclaim_sampler" >"$tmp_root/visual-validation-overclaim-sampling.out" 2>"$tmp_root/visual-validation-overclaim-sampling.err"
+status=$?
+assert_success "$status" "sampler output with success-shaped visual validation is rejected into a blocker artifact"
+assert_file_exists "$visual_validation_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" "visual-validation overclaiming sampler writes blocker instead of observation"
+if [ -f "$visual_validation_overclaim_dir/$PIXEL_OBSERVATION_ARTIFACT" ]; then
+  fail "visual-validation overclaiming sampler must not write a success-shaped pixel observation"
+else
+  pass "visual-validation overclaiming sampler does not write a success-shaped pixel observation"
+fi
+if [ -f "$visual_validation_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" ]; then
+  assert_contains "$visual_validation_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" '"blocker": "world-canvas-pixel-sampler-overclaimed"' "visual-validation overclaiming sampler names exact overclaim blocker"
+  assert_contains "$visual_validation_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" '"visibleRenderingCorrectnessEstablished": false' "visual-validation overclaim blocker explicitly does not establish correctness"
+fi
+
+correctness_check_overclaim_dir="$tmp_root/correctness-check-overclaim"
+mkdir -p "$correctness_check_overclaim_dir"
+write_runtime_display_artifact "$correctness_check_overclaim_dir" ready
+write_controlled_artifact "$correctness_check_overclaim_dir" 1 >"$tmp_root/correctness-check-overclaim-controlled.out" 2>"$tmp_root/correctness-check-overclaim-controlled.err"
+status=$?
+assert_success "$status" "correctness-check overclaim fixture creates target-ready controlled artifact"
+correctness_check_overclaim_sampler="$tmp_root/correctness-check-overclaim-sampler"
+correctness_check_overclaim_invocations="$tmp_root/correctness-check-overclaim-sampler.invocations"
+write_sampler_fixture "$correctness_check_overclaim_sampler" correctness-check-overclaim "$correctness_check_overclaim_invocations"
+run_sampling_evidence "$correctness_check_overclaim_dir" "$correctness_check_overclaim_sampler" >"$tmp_root/correctness-check-overclaim-sampling.out" 2>"$tmp_root/correctness-check-overclaim-sampling.err"
+status=$?
+assert_success "$status" "sampler output with correctnessCheck=performed is rejected into a blocker artifact"
+assert_file_exists "$correctness_check_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" "correctness-check overclaiming sampler writes blocker instead of observation"
+if [ -f "$correctness_check_overclaim_dir/$PIXEL_OBSERVATION_ARTIFACT" ]; then
+  fail "correctness-check overclaiming sampler must not write a success-shaped pixel observation"
+else
+  pass "correctness-check overclaiming sampler does not write a success-shaped pixel observation"
+fi
+if [ -f "$correctness_check_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" ]; then
+  assert_contains "$correctness_check_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" '"blocker": "world-canvas-pixel-sampler-overclaimed"' "correctness-check overclaiming sampler names exact overclaim blocker"
+  assert_contains "$correctness_check_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" '"visibleRenderingCorrectnessEstablished": false' "correctness-check overclaim blocker explicitly does not establish correctness"
+fi
+
+claim_scope_overclaim_dir="$tmp_root/claim-scope-overclaim"
+mkdir -p "$claim_scope_overclaim_dir"
+write_runtime_display_artifact "$claim_scope_overclaim_dir" ready
+write_controlled_artifact "$claim_scope_overclaim_dir" 1 >"$tmp_root/claim-scope-overclaim-controlled.out" 2>"$tmp_root/claim-scope-overclaim-controlled.err"
+status=$?
+assert_success "$status" "claim-scope overclaim fixture creates target-ready controlled artifact"
+claim_scope_overclaim_sampler="$tmp_root/claim-scope-overclaim-sampler"
+claim_scope_overclaim_invocations="$tmp_root/claim-scope-overclaim-sampler.invocations"
+write_sampler_fixture "$claim_scope_overclaim_sampler" claim-scope-overclaim "$claim_scope_overclaim_invocations"
+run_sampling_evidence "$claim_scope_overclaim_dir" "$claim_scope_overclaim_sampler" >"$tmp_root/claim-scope-overclaim-sampling.out" 2>"$tmp_root/claim-scope-overclaim-sampling.err"
+status=$?
+assert_success "$status" "sampler output with visible-correctness claimScope is rejected into a blocker artifact"
+assert_file_exists "$claim_scope_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" "claim-scope overclaiming sampler writes blocker instead of observation"
+if [ -f "$claim_scope_overclaim_dir/$PIXEL_OBSERVATION_ARTIFACT" ]; then
+  fail "claim-scope overclaiming sampler must not write a success-shaped pixel observation"
+else
+  pass "claim-scope overclaiming sampler does not write a success-shaped pixel observation"
+fi
+if [ -f "$claim_scope_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" ]; then
+  assert_contains "$claim_scope_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" '"blocker": "world-canvas-pixel-sampler-overclaimed"' "claim-scope overclaiming sampler names exact overclaim blocker"
+  assert_contains "$claim_scope_overclaim_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" '"visibleRenderingCorrectnessEstablished": false' "claim-scope overclaim blocker explicitly does not establish correctness"
 fi
 
 finish
