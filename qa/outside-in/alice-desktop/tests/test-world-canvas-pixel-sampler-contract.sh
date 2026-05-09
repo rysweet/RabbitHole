@@ -189,12 +189,12 @@ write_controlled_artifact() {
   ' _ "$RUNNER" "$case_dir" "$candidate_count"
 }
 
-write_sampler_stub() {
-  local stub=$1
+write_sampler_fixture() {
+  local fixture=$1
   local mode=$2
   local invocation_log=$3
 
-  cat >"$stub" <<'SH'
+  cat >"$fixture" <<'SH'
 #!/usr/bin/env bash
 set -u
 
@@ -240,7 +240,7 @@ samples = [
 payload = {
     "schemaVersion": 1,
     "status": "observed",
-    "samplingMethod": "stub-rgba-fixture",
+    "samplingMethod": "fixture-rgba-samples",
     "sampleCount": len(samples),
     "samples": samples,
 }
@@ -251,18 +251,18 @@ if mode == "overclaim":
 Path(output_path).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 SH
-  chmod +x "$stub"
+  chmod +x "$fixture"
 
   # Bind the mode and log path without relying on shell-specific array exports.
-  mv "$stub" "$stub.template"
+  mv "$fixture" "$fixture.template"
   {
     printf '#!/usr/bin/env bash\n'
     printf 'exec %s %s %s "$@"\n' \
-      "$(printf '%q' "$stub.template")" \
+      "$(printf '%q' "$fixture.template")" \
       "$(printf '%q' "$mode")" \
       "$(printf '%q' "$invocation_log")"
-  } >"$stub"
-  chmod +x "$stub"
+  } >"$fixture"
+  chmod +x "$fixture"
 }
 
 run_sampling_evidence() {
@@ -346,7 +346,7 @@ status=$?
 assert_success "$status" "success fixture creates controlled artifact with one target-ready world-canvas candidate"
 success_sampler="$tmp_root/success-sampler"
 success_invocations="$tmp_root/success-sampler.invocations"
-write_sampler_stub "$success_sampler" observed "$success_invocations"
+write_sampler_fixture "$success_sampler" observed "$success_invocations"
 run_sampling_evidence "$success_dir" "$success_sampler" >"$tmp_root/success-sampling.out" 2>"$tmp_root/success-sampling.err"
 status=$?
 assert_success "$status" "target-ready sampling seam invokes sampler and writes bounded observation"
@@ -388,7 +388,7 @@ require(payload.get("sourceArtifact") == source_artifact, "observation must cite
 require(payload.get("visibleRenderingCorrectnessEstablished") is False, "observation must explicitly not establish visible rendering correctness")
 require(payload.get("renderedWorldPixelsObserved") is True, "observation may only claim raw sampled pixels were observed")
 require(payload.get("sampleCount") == 3, "observation must preserve checked sample count")
-require(payload.get("samplingMethod") == "stub-rgba-fixture", "observation must preserve sampler method")
+require(payload.get("samplingMethod") == "fixture-rgba-samples", "observation must preserve sampler method")
 require(isinstance(target, dict), "observation must preserve validated worldCanvasPixelTarget")
 if isinstance(target, dict):
     require(target.get("identified") is True, "observation target must be identified")
@@ -458,7 +458,7 @@ for blocked_shape in missing ambiguous invalid; do
   write_controlled_artifact "$case_dir" "$candidate_count" >"$tmp_root/$blocked_shape-controlled.out" 2>"$tmp_root/$blocked_shape-controlled.err"
   status=$?
   assert_success "$status" "$blocked_shape target fixture creates controlled source artifact"
-  write_sampler_stub "$sampler" observed "$invocations"
+  write_sampler_fixture "$sampler" observed "$invocations"
   run_sampling_evidence "$case_dir" "$sampler" >"$tmp_root/$blocked_shape-sampling.out" 2>"$tmp_root/$blocked_shape-sampling.err"
   status=$?
   assert_success "$status" "$blocked_shape target writes fail-closed blocker without invoking sampler"
@@ -482,7 +482,7 @@ status=$?
 assert_success "$status" "overclaim fixture creates target-ready controlled artifact"
 overclaim_sampler="$tmp_root/overclaim-sampler"
 overclaim_invocations="$tmp_root/overclaim-sampler.invocations"
-write_sampler_stub "$overclaim_sampler" overclaim "$overclaim_invocations"
+write_sampler_fixture "$overclaim_sampler" overclaim "$overclaim_invocations"
 run_sampling_evidence "$overclaim_dir" "$overclaim_sampler" >"$tmp_root/overclaim-sampling.out" 2>"$tmp_root/overclaim-sampling.err"
 status=$?
 assert_success "$status" "sampler output with correctness overclaim is rejected into a blocker artifact"

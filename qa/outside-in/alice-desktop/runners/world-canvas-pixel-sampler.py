@@ -103,10 +103,13 @@ def parse_rgba(text: str) -> list[int] | None:
     channels: list[int] = []
     for raw_channel in match.group(1).split(","):
         raw_channel = raw_channel.strip()
-        if raw_channel.endswith("%"):
-            channels.append(round(float(raw_channel[:-1]) * 255 / 100))
-        else:
-            channels.append(normalize_channel(round(float(raw_channel))))
+        try:
+            if raw_channel.endswith("%"):
+                channels.append(round(float(raw_channel[:-1]) * 255 / 100))
+            else:
+                channels.append(normalize_channel(round(float(raw_channel))))
+        except ValueError:
+            return None
     if len(channels) == 3:
         channels.append(255)
     if len(channels) != 4:
@@ -145,6 +148,56 @@ def sample_pixel(point: dict[str, int | str]) -> list[int]:
     return rgba
 
 
+def read_target(
+    path: Path,
+) -> tuple[dict[str, Any] | None, dict[str, int] | None, dict[str, Any] | None]:
+    try:
+        target = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, None, blocker_payload("target-json-unreadable", str(exc))
+    if not isinstance(target, dict):
+        return None, None, blocker_payload("target-json-invalid", "Target JSON must be an object.")
+    extents = validated_extents(target)
+    if extents is None:
+        return None, None, blocker_payload(
+            "target-geometry-invalid",
+            "Target screenExtents must be positive screen coordinates.",
+        )
+    return target, extents, None
+
+
+def collect_samples(extents: dict[str, int]) -> list[dict[str, Any]]:
+    samples: list[dict[str, Any]] = []
+    for point in sample_points(extents):
+        samples.append(
+            {
+                "name": str(point["name"]),
+                "point": {"x": int(point["x"]), "y": int(point["y"])},
+                "rgba": sample_pixel(point),
+                "checked": True,
+            }
+        )
+    return samples
+
+
+def observation_payload(target: dict[str, Any], samples: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "status": "observed",
+        "blocker": "none",
+        "blockerDetail": "",
+        "claimScope": CLAIM_SCOPE,
+        "claimScopeDetail": CLAIM_SCOPE_DETAIL,
+        "renderedWorldPixelsObserved": True,
+        "visibleRenderingCorrectnessEstablished": False,
+        "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+        "sampleCount": len(samples),
+        "samples": samples,
+        "worldCanvasPixelTarget": target,
+        "unsupportedClaims": UNSUPPORTED_CLAIMS,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target-json", required=True)
@@ -152,62 +205,21 @@ def main() -> int:
     args = parser.parse_args()
 
     output_path = Path(args.output)
-    try:
-        target = json.loads(Path(args.target_json).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        write_json(output_path, blocker_payload("target-json-unreadable", str(exc)))
+    target, extents, blocker = read_target(Path(args.target_json))
+    if blocker is not None:
+        write_json(output_path, blocker)
         return 0
-    if not isinstance(target, dict):
-        write_json(
-            output_path,
-            blocker_payload("target-json-invalid", "Target JSON must be an object."),
-        )
-        return 0
-    extents = validated_extents(target)
-    if extents is None:
-        write_json(
-            output_path,
-            blocker_payload(
-                "target-geometry-invalid",
-                "Target screenExtents must be positive screen coordinates.",
-            ),
-        )
+    if target is None or extents is None:
+        write_json(output_path, blocker_payload("target-json-invalid", "Target JSON must be an object."))
         return 0
 
-    samples: list[dict[str, Any]] = []
     try:
-        for point in sample_points(extents):
-            rgba = sample_pixel(point)
-            samples.append(
-                {
-                    "name": str(point["name"]),
-                    "point": {"x": int(point["x"]), "y": int(point["y"])},
-                    "rgba": rgba,
-                    "checked": True,
-                }
-            )
+        samples = collect_samples(extents)
     except RuntimeError as exc:
         write_json(output_path, blocker_payload("pixel-sampling-failed", str(exc)))
         return 0
 
-    write_json(
-        output_path,
-        {
-            "schemaVersion": 1,
-            "status": "observed",
-            "blocker": "none",
-            "blockerDetail": "",
-            "claimScope": CLAIM_SCOPE,
-            "claimScopeDetail": CLAIM_SCOPE_DETAIL,
-            "renderedWorldPixelsObserved": True,
-            "visibleRenderingCorrectnessEstablished": False,
-            "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
-            "sampleCount": len(samples),
-            "samples": samples,
-            "worldCanvasPixelTarget": target,
-            "unsupportedClaims": UNSUPPORTED_CLAIMS,
-        },
-    )
+    write_json(output_path, observation_payload(target, samples))
     return 0
 
 
