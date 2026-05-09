@@ -124,11 +124,10 @@ public class ModelExportTest {
 
   @Test
   public void createResourceEnumNameCombinesModelAndNonDefaultTextureNames() {
-    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
-
-    String enumName = exporter.createResourceEnumName("VariantProp", "blueStripe");
-
-    assertEquals("VARIANT_PROP_BLUE_STRIPE", enumName);
+    assertEquals(
+        "VARIANT_PROP_BLUE_STRIPE",
+        new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA).createResourceEnumName("VariantProp", "blueStripe")
+    );
   }
 
   @Test
