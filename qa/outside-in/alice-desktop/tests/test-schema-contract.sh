@@ -266,6 +266,18 @@ expected_argv = {
         "-Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff",
         "test",
     ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/model-loading",
+        "-am",
+        "-Dtest=org.lgna.story.resourceutilities.ModelExportTest",
+        "test",
+    ),
 }
 if allowed_argv != expected_argv:
     raise AssertionError("automation.argv must be restricted to the allowed Alice QA argv set")

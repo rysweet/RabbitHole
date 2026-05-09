@@ -37,6 +37,7 @@
         "instructor-student-setup",
         "launch",
         "menu-action-smoke",
+        "model-export-boundary-smoke",
         "netbeans-package-smoke",
         "open-load-save",
         "package-install-smoke",
@@ -616,6 +617,43 @@
                 },
                 {
                   "const": "-Dtest=org.alice.tools.EatmeEditProcedureTest#chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/model-loading"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.lgna.story.resourceutilities.ModelExportTest"
                 },
                 {
                   "const": "test"
