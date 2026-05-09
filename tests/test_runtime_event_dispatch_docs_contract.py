@@ -11,7 +11,7 @@ CONTRACT_PATH = REPO_ROOT / "tests" / "test_runtime_event_dispatch_docs_contract
 REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "generated-story-api-listener-source-characterization.md"
 INDEX_PATH = REPO_ROOT / "docs" / "index.md"
 EXPECTED_BRANCH = "wave6-runtime-event-dispatch-1778302300"
-FORBIDDEN_CLAIMS = [
+NON_CLAIM_TERMS = [
     "desktop runtime execution",
     "full world playback",
     "visible correctness",
@@ -29,7 +29,7 @@ def git_command(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-def run_noop_guard(worktree: Path, expected_branch: str, check_only: bool) -> int:
+def resolve_git_root(worktree: Path) -> tuple[Path | None, int]:
     resolved = git_command("rev-parse", "--show-toplevel", cwd=worktree)
     if resolved.returncode != 0:
         print(
@@ -38,9 +38,12 @@ def run_noop_guard(worktree: Path, expected_branch: str, check_only: bool) -> in
         )
         if resolved.stderr:
             print(resolved.stderr.strip(), file=sys.stderr)
-        return resolved.returncode
+        return None, resolved.returncode
 
-    root = Path(resolved.stdout.strip()).resolve()
+    return Path(resolved.stdout.strip()).resolve(), 0
+
+
+def verify_expected_branch(root: Path, expected_branch: str) -> int:
     branch = git_command("branch", "--show-current", cwd=root)
     if branch.returncode != 0:
         print(f"Unable to determine branch for Git worktree {root}.", file=sys.stderr)
@@ -59,10 +62,10 @@ def run_noop_guard(worktree: Path, expected_branch: str, check_only: bool) -> in
 
     print(f"Resolved Git worktree root: {root}")
     print(f"Verified expected branch: {actual_branch}")
+    return 0
 
-    if check_only:
-        return 0
 
+def verify_no_pending_changes(root: Path) -> int:
     status = git_command("status", "--short", cwd=root)
     if status.returncode != 0:
         print(f"Unable to inspect Git status for worktree {root}.", file=sys.stderr)
@@ -80,6 +83,21 @@ def run_noop_guard(worktree: Path, expected_branch: str, check_only: bool) -> in
 
     print(f"Git worktree {root} has no pending changes.")
     return 0
+
+
+def run_noop_guard(worktree: Path, expected_branch: str, check_only: bool) -> int:
+    root, exit_code = resolve_git_root(worktree)
+    if exit_code != 0:
+        return exit_code
+
+    assert root is not None
+    exit_code = verify_expected_branch(root, expected_branch)
+    if exit_code != 0:
+        return exit_code
+    if check_only:
+        return 0
+
+    return verify_no_pending_changes(root)
 
 
 def parse_guard_args(argv: list[str]) -> argparse.Namespace:
@@ -134,15 +152,15 @@ class RuntimeEventDispatchDocsContractTest(unittest.TestCase):
         self.assertIn("git rev-parse --show-toplevel", reference)
         self.assertIn('git -C "$WORKTREE_ROOT"', reference)
         self.assertIn("fail closed", reference)
-        self.assertIn("verify the expected branch", reference)
+        self.assertIn("verifies the expected branch", reference)
         self.assertIn("not silently fall back", reference)
 
     def test_reference_keeps_claims_inside_headless_characterization_scope(self) -> None:
         reference = REFERENCE_PATH.read_text(encoding="utf-8")
 
-        for forbidden_claim in FORBIDDEN_CLAIMS:
-            with self.subTest(forbidden_claim=forbidden_claim):
-                self.assertIn(forbidden_claim, reference)
+        for non_claim in NON_CLAIM_TERMS:
+            with self.subTest(non_claim=non_claim):
+                self.assertIn(non_claim, reference)
         self.assertIn("claim desktop runtime execution", reference)
         self.assertIn("This characterization does not prove", reference)
 

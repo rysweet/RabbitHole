@@ -212,11 +212,11 @@ WORKTREE_ROOT="$(git rev-parse --show-toplevel)"
 git -C "$WORKTREE_ROOT" branch --show-current
 ```
 
-If this lane adds a Python TDD/no-op guard, the concrete guard path is
-`tests/test_runtime_event_dispatch_docs_contract.py`. That guard must fail
-closed when the checked path is not inside a Git worktree. It must use
+The Python TDD/no-op guard is
+`tests/test_runtime_event_dispatch_docs_contract.py`. It fails closed when the
+checked path is not inside a Git worktree, uses
 `git rev-parse --show-toplevel` to resolve the actual linked-worktree root,
-verify the expected branch, and run status or no-op checks with
+verifies the expected branch, and runs status or no-op checks with
 `git -C "$WORKTREE_ROOT" ...`. It must not silently fall back to a parent
 directory, a non-git path, or an unlinked workspace.
 
