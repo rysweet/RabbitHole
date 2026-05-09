@@ -180,11 +180,11 @@ grading, broad historical compatibility, or first-lesson completion changes.
 Run the canonical reopen/edit seam characterization from the repository root:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.IoUtilitiesTest \
+  -Dtest=IoUtilitiesTest \
   test
 ```
 
@@ -209,11 +209,11 @@ parsing, archive writing, XML fallback, JSON manifest handling, Tweedle decode,
 resource entries, or `.a3c`/`.a3w` compatibility:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  -Dtest=HistoricalArchiveRoundTripCharacterizationTest \
   test
 ```
 
@@ -317,7 +317,7 @@ Diff summary:
   Documentation: <paths or none>
   Guard scope: <paths or none>
 Validation:
-  NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test
+  NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=IoUtilitiesTest test
 Result: <passed with exit code 0 | failed with exit code N and blocker summary>
 Compatibility validation: <not run; no parser/writer/routing compatibility surface changed | command and result>
 Checks: <PR check names and states, with scoped blockers only>

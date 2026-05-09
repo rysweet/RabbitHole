@@ -209,11 +209,11 @@ checked-in binary archive corpus is required for this seam.
 Run the focused primary characterization from the repository root:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.IoUtilitiesTest \
+  -Dtest=IoUtilitiesTest \
   test
 ```
 
@@ -222,11 +222,11 @@ routing, XML fallback, JSON manifest handling, Tweedle decode boundaries, or
 `.a3c`/`.a3w` compatibility is touched:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  -Dtest=HistoricalArchiveRoundTripCharacterizationTest \
   test
 ```
 
@@ -297,7 +297,7 @@ Record:
 | Merge-base status | `merge-base equals origin/develop` when no integration is needed, or `merged origin/develop` when develop drift required a minimal merge. |
 | Worktree status | `clean`, or exact `git status --short` entries reviewed as recovery-scope changes before they are listed under `Files modified`. |
 | Diff summary | Grouped summary of `origin/develop...HEAD` by implementation, characterization test, QA metadata, documentation, and guard scope. |
-| Validation command | The focused `IoUtilitiesTest` command above, with `NODE_OPTIONS=--max-old-space-size=32768`. |
+| Validation command | The focused `IoUtilitiesTest` command above, with `NODE_OPTIONS=--max-old-space-size=32768`; do not substitute desktop Save, lesson, rendering, or grading validation for this seam. |
 | Validation result | Exit status and concise pass/fail outcome. |
 | Compatibility validation | Include the `HistoricalArchiveRoundTripCharacterizationTest` command and result when `.a3c`, `.a3w`, JSON/XML routing, parser, writer, Tweedle decode, or archive-resource behavior changed. Otherwise record why it is not required for the exact diff. |
 | Checks | PR check names and states, with blockers limited to archive reopen/edit readiness. |

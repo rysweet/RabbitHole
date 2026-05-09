@@ -53,7 +53,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-exported-project-smoke` | `exported-project-smoke` | `gated-command-smoke` | Covers generated Java project compile/launcher handoff evidence without running by default. |
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
-| `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
+| `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers archive-level `.a3p` write, reopen, edit, write, reopen, and `.a3w` export behavior through `IoUtilitiesTest`, without desktop Save-menu or rendering claims. |
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
 | `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Action-seam contract for observing the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and recording either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
@@ -190,6 +190,44 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 This path form resolves the top-level `id` in the YAML file, validates that ID through the active catalog, and then runs the normalized scenario.
+
+### Run the project archive reopen/edit smoke
+
+`alice-desktop-project-io-smoke` is a gated command smoke for the repository-owned
+archive seam. It validates the same behavior as
+[Project Archive Reopen/Edit Seam](./project-archive-reopen-edit-seam.md):
+write an editable `.a3p`, reopen it, edit project-owned state, write it again,
+reopen the edited archive, and export a structural `.a3w`.
+
+Enable gated command execution explicitly:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+export ALICE_QA_RUN_GATED_SMOKES=1
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-project-io-smoke
+```
+
+The scenario runner uses an allowlisted equivalent argv for catalog safety:
+it runs the same `IoUtilitiesTest` class, but keeps the runner allowlist's
+fully qualified test name plus `-DincludeSims=false` and `-Dinstall4j.skip`.
+Treat that scenario as a gated wrapper over the archive seam, not as a broader
+desktop workflow proof.
+
+The canonical direct validation command for the same archive seam is:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=IoUtilitiesTest \
+  test
+```
+
+Passing this smoke evidence supports only archive-level reopen/edit/export
+readiness. It does not support desktop Save-menu completion, full Save dialog
+automation, visible rendering correctness, grading, full lesson automation, or
+player runtime behavior.
 
 ### Run through the branch-installable wrapper
 
@@ -553,7 +591,7 @@ reviewed assessment contract and evidence mapping exist.
 | Package/install smoke | `status.txt`, `command.log`, package or installer artifact listing, disposable install log or explicit not-produced note. |
 | Archive fixture smoke | `status.txt`, `command.log`, archive fixture path or generated fixture notes, and focused test output proving the fixture seam. |
 | File loader smoke | `status.txt`, `command.log`, focused file-loader/recovery test output, and review notes for any generated fixture or failure-path metadata. |
-| Project save, reopen, edit, save again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for metadata and export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. |
+| Project archive write, reopen, edit, write again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for edited-state persistence, `.a3p` metadata, and `.a3w` export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. Do not use this evidence as desktop Save completion, visible rendering, grading, full lesson automation, or player runtime proof. |
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
 | Save menu dialog write/readback proof | Evidence contract: `status.txt`, `command.log`, focused Robot Save menu/dialog/write/readback proof test output naming `RobotSaveMenuDialogWriteReadbackProofTest`, and fresh canonical `robot-save-menu-dialog-write-readback-proof.json` evidence with `schemaVersion=eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1`, matching `scenario` and `runId`, `status=proven`, all required menu/dialog/control/write/readback marker flags true, an existing `.a3p` output with matching size, and marker readback verified. Missing, stale, blocked, partial, internally inconsistent, or unknown-blocker artifacts fail closed. Stale `StageIdeSaveMenuDoClickToWriteProofTest` output or `save-menu-dialog-write-proof.json` artifacts do not satisfy this scenario. See [Save Proof Evidence](./save-proof-evidence.md). |

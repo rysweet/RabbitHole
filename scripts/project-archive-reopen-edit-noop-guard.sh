@@ -105,6 +105,8 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
     fail 1 "no-op evidence file is missing: $allow_noop_evidence_file"
   fi
 
+  evidence_text="$(tr '[:upper:]' '[:lower:]' < "$allow_noop_evidence_file")"
+
   grep -Fq "No-op justification:" "$allow_noop_evidence_file" \
     || fail 1 "no-op evidence must include a No-op justification section"
 
@@ -119,6 +121,27 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
 
   if ! grep -A8 -F "No-op justification:" "$allow_noop_evidence_file" | grep -Fq "$expected_head"; then
     fail 1 "no-op justification must reference expected head $expected_head"
+  fi
+
+  grep -Fq "Scope exclusions:" "$allow_noop_evidence_file" \
+    || fail 1 "no-op evidence must include scope exclusions"
+  grep -Fq "Positive claim scope:" "$allow_noop_evidence_file" \
+    || fail 1 "no-op evidence must include positive claim scope"
+  grep -Fq "Stale evidence note:" "$allow_noop_evidence_file" \
+    || fail 1 "no-op evidence must include a stale evidence note"
+
+  for required_exclusion in \
+    "full desktop lesson automation" \
+    "visible rendering correctness" \
+    "grading" \
+    "full save completion"; do
+    if [[ "$evidence_text" != *"$required_exclusion"* ]]; then
+      fail 1 "no-op evidence scope exclusions must mention $required_exclusion"
+    fi
+  done
+
+  if grep -Eiq '^[[:space:]]*(full desktop lesson automation|visible rendering correctness|grading workflow|grading|full save completion)[[:space:]]*:[[:space:]]*(proven|validated|supported|complete|passed|ready)' "$allow_noop_evidence_file"; then
+    fail 1 "no-op evidence contains out-of-scope desktop, rendering, grading, or full Save claims"
   fi
 
   exit 0

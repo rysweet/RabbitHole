@@ -191,11 +191,11 @@ From the repository root:
 ```bash
 git submodule update --init tweedle-lang
 
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.IoUtilitiesTest \
+  -Dtest=IoUtilitiesTest \
   test
 ```
 

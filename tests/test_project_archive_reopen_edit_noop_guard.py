@@ -153,6 +153,79 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         combined_output = (result.stdout + result.stderr).lower()
         self.assertIn("modified files", combined_output)
 
+    def test_guard_rejects_clean_worktree_noop_evidence_without_scope_exclusions(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            evidence_file = linked_worktree.parent / "readiness-evidence.md"
+            evidence_file.write_text(
+                "\n".join(
+                    [
+                        "PR: 402",
+                        "Branch: wave6-project-reopen-edit-chain-1778302300",
+                        "Base: develop",
+                        f"PR head: {head}",
+                        f"Local HEAD: {head}",
+                        "Merge-base status: merge-base equals origin/develop",
+                        "Worktree status: clean",
+                        "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
+                        "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
+                        f"Validation result: exit 0 PASS at {head}",
+                        "Checks: no scoped PR check blocker",
+                        "Positive claim scope: repository-owned archive reopen/edit behavior only",
+                        "No-op justification:",
+                        "  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at",
+                        f"  {head}, local HEAD matches the PR head, merge-base equals origin/develop, the",
+                        "  origin/develop...HEAD diff is limited to project archive reopen/edit",
+                        "  characterization/readiness surfaces, focused archive reopen/edit validation",
+                        f"  passed at {head}, and no scoped PR check blocker requires a code or docs",
+                        "  change.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("scope exclusions", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_with_out_of_scope_claims(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            evidence_file = linked_worktree.parent / "readiness-evidence.md"
+            evidence_file.write_text(
+                self.exact_head_noop_evidence(head)
+                + "\n"
+                + "\n".join(
+                    [
+                        "Full desktop lesson automation: proven",
+                        "Visible rendering correctness: proven",
+                        "Grading workflow: proven",
+                        "Full Save completion: proven",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("out-of-scope", combined_output)
+
     def test_guard_rejects_noop_justification_without_expected_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
@@ -171,6 +244,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
                         "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
                         f"Validation result: exit 0 PASS at {head}",
                         "Checks: no scoped PR check blocker",
+                        "Positive claim scope: repository-owned archive reopen/edit behavior only",
+                        "Scope exclusions: no full desktop lesson automation, visible rendering correctness, grading, or full Save completion claims",
+                        "Stale evidence note: older evidence must not be reused for a different HEAD",
                         "No-op justification:",
                         "  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at",
                         "  the validated PR head, local HEAD matches the PR head, merge-base equals origin/develop, the",
@@ -261,6 +337,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
                 "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
                 f"Validation result: exit 0 PASS at {head}",
                 "Checks: no scoped PR check blocker",
+                "Positive claim scope: repository-owned archive reopen/edit behavior only",
+                "Scope exclusions: no full desktop lesson automation, visible rendering correctness, grading, or full Save completion claims",
+                "Stale evidence note: older evidence must not be reused for a different HEAD",
                 "No-op justification:",
                 "  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at",
                 f"  {head}, local HEAD matches the PR head, merge-base equals origin/develop, the",

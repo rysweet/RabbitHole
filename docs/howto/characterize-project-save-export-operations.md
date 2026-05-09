@@ -245,9 +245,14 @@ After adding the archive round-trip regression, run it with the focused story AP
 migration gate:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=IoUtilitiesTest \
   test
 ```
+
+This command validates archive-level reopen/edit behavior only. It does not
+validate desktop Save-menu completion, visible rendering correctness, grading,
+full lesson automation, or player runtime behavior.
