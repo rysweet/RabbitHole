@@ -10,6 +10,7 @@ repository.
 - [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Implemented contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.
 - [Save Proof Evidence](./reference/save-proof-evidence.md) - Canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
 - [Save Menu Dialog Negative Artifact Contract](./reference/save-menu-dialog-negative-artifact-contract.md) - Independent negative contract proving the Save proof evidence validator rejects missing context, missing, wrong-name, symlinked, malformed, non-object, stale, future-dated, identity-mismatched, blocked, partial, unknown-blocker, and inconsistent artifacts.
+- [PR #430 Merge-Ready Gate](./reference/pr430-merge-ready-gate.md) - Programmatic no-merge readiness gate for current-head PR #430 evidence, focused Save negative artifact scope, green checks, and no-op justification.
 - [Robot Save Menu Dialog Write/Readback Proof](./reference/robot-save-menu-dialog-write-readback-proof.md) - Reference for the Robot File-menu Save activation, Swing chooser control, `.a3p` write, readback, marker, and blocker artifact contract.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
 - [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
@@ -19,10 +20,12 @@ repository.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to add or review compatibility tests for save/export operations.
 - [Run the Save Menu Dialog Write/Readback Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused Robot Save menu/dialog/write/readback QA scenario with Xvfb when needed.
 - [Run the Save Menu Dialog Negative Artifact Contract](./howto/run-save-menu-dialog-negative-artifact-contract.md) - How to run the independent fail-closed Save proof artifact validation contract.
+- [Finalize PR #430 Recovery](./howto/finalize-pr430-recovery.md) - How to confirm current-head PR #430 readiness, keep scope limited to the Save negative artifact contract, and emit a valid no-op result.
 - [Run the Robot Save Menu Dialog Write/Readback Proof](./howto/run-robot-save-menu-dialog-write-readback-proof.md) - Guide for running the focused Robot Save menu/dialog/write/readback proof and reviewing the canonical artifact contract.
 - [Characterize Project IO Corpus Behavior](./howto/characterize-project-io-corpus.md) - How to add deterministic LFS-free IO corpus characterization around Alice archive readers and writers.
 - [Tutorial: Add a Save Operation Characterization Test](./tutorials/save-operation-characterization-test.md) - A guided example for the first direct Save operation characterization test.
 - [Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof](./tutorials/trace-robot-save-menu-dialog-write-readback-proof.md) - Guided review of Robot menu activation, chooser approval, `.a3p` write, readback, marker evidence, and non-claims.
+- [Tutorial: Trace PR #430 No-Op Finalization](./tutorials/pr430-save-negative-no-op-finalization.md) - Guided example tying clean current-head PR evidence, green checks, and scoped Save negative artifact evidence to a no-op finalization.
 - [Tutorial: Add a Project IO Corpus Characterization](./tutorials/project-io-corpus-characterization.md) - A guided example for protecting generated `.a3p` archive behavior.
 - [Tutorial: Add a ProjectMigrationManager Migration Characterization](./tutorials/project-migration-manager-characterization.md) - A guided example for protecting ordered text migration behavior without binary fixtures.
 
