@@ -12,10 +12,35 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+CLAIM_SCOPE = "visible-rendering-world-canvas-pixel-sampling"
+CLAIM_SCOPE_DETAIL = "target-scoped-raw-pixel-observation-only"
+UNSUPPORTED_CLAIMS = [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "world-execution",
+]
+
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def blocker_payload(blocker: str, blocker_detail: str) -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "status": "blocked",
+        "blocker": blocker,
+        "blockerDetail": blocker_detail,
+        "claimScope": CLAIM_SCOPE,
+        "claimScopeDetail": CLAIM_SCOPE_DETAIL,
+        "renderedWorldPixelsObserved": False,
+        "visibleRenderingCorrectnessEstablished": False,
+        "sampleCount": 0,
+        "samples": [],
+        "unsupportedClaims": UNSUPPORTED_CLAIMS,
+    }
 
 
 def is_number(value: Any) -> bool:
@@ -130,14 +155,23 @@ def main() -> int:
     try:
         target = json.loads(Path(args.target_json).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "target-json-unreadable", "blockerDetail": str(exc)})
+        write_json(output_path, blocker_payload("target-json-unreadable", str(exc)))
         return 0
     if not isinstance(target, dict):
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "target-json-invalid", "blockerDetail": "Target JSON must be an object."})
+        write_json(
+            output_path,
+            blocker_payload("target-json-invalid", "Target JSON must be an object."),
+        )
         return 0
     extents = validated_extents(target)
     if extents is None:
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "target-geometry-invalid", "blockerDetail": "Target screenExtents must be positive screen coordinates."})
+        write_json(
+            output_path,
+            blocker_payload(
+                "target-geometry-invalid",
+                "Target screenExtents must be positive screen coordinates.",
+            ),
+        )
         return 0
 
     samples: list[dict[str, Any]] = []
@@ -153,7 +187,7 @@ def main() -> int:
                 }
             )
     except RuntimeError as exc:
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "pixel-sampling-failed", "blockerDetail": str(exc)})
+        write_json(output_path, blocker_payload("pixel-sampling-failed", str(exc)))
         return 0
 
     write_json(
@@ -161,9 +195,17 @@ def main() -> int:
         {
             "schemaVersion": 1,
             "status": "observed",
+            "blocker": "none",
+            "blockerDetail": "",
+            "claimScope": CLAIM_SCOPE,
+            "claimScopeDetail": CLAIM_SCOPE_DETAIL,
+            "renderedWorldPixelsObserved": True,
+            "visibleRenderingCorrectnessEstablished": False,
             "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
             "sampleCount": len(samples),
             "samples": samples,
+            "worldCanvasPixelTarget": target,
+            "unsupportedClaims": UNSUPPORTED_CLAIMS,
         },
     )
     return 0

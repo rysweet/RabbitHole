@@ -18,6 +18,7 @@ general accessibility compliance.
 
 - [Usage](#usage)
 - [Evidence lanes](#evidence-lanes)
+- [Readiness evidence record](#readiness-evidence-record)
 - [Artifact API](#artifact-api)
 - [Configuration](#configuration)
 - [Examples](#examples)
@@ -66,6 +67,37 @@ must distinguish ready launch evidence from splash-only, crashed, blocked, or
 manual fallback states; run/debug must remain scoped manual evidence unless a
 separate automation contract exists. The runtime and Select Project lanes provide
 the target-specific accessibility discovery records.
+
+## Readiness evidence record
+
+PR readiness evidence for this lane lives outside generated QA artifacts:
+
+```text
+.copilot-evidence/default-workflow-attempt.log
+```
+
+The record is a bounded review handoff, not product behavior and not generated
+desktop evidence. It records the final PR419 exact-head readiness handoff with
+the exact PR, branch, base, checked HEAD SHA, `origin/develop` SHA, merge-base,
+commands, outcomes, and claim boundaries for the accessibility target discovery
+lane under review. Refresh it after changing recovery files so the checked HEAD,
+validation outcomes, and claim boundaries remain aligned.
+
+Every readiness record for this lane must include:
+
+| Field | Required content |
+| --- | --- |
+| PR identity | Existing PR number and URL. Do not create a new PR or issue for this lane. |
+| Branch identity | Existing branch name and point-in-time checked `HEAD` SHA. |
+| Base reconciliation | `origin/develop` SHA plus merge status. Use merge, not rebase, when the PR branch must be reconciled with `develop`. |
+| Validation commands | Focused scenario/schema, docs, probe, sampler, and silver-thread commands run with `NODE_OPTIONS=--max-old-space-size=32768`. |
+| Outcomes | Pass or blocked result for each focused command. Blocked results name the missing dependency, target, or next unblocker. |
+| Scope | Discovered accessibility/runtime display target readiness and silver-thread review readiness only. |
+| Non-claims | Explicit exclusions for full UI automation, visible rendering correctness, full world execution, grading, Save completion, Sims validation, installer/deployment success, and broad accessibility compliance. |
+
+Do not use a readiness record to preserve screenshots, broad environment dumps,
+access tokens, unrelated desktop state, generated project data, or private user
+state. Generated run artifacts remain local QA output and stay uncommitted.
 
 ## Artifact API
 
@@ -262,6 +294,9 @@ The implemented contract may claim only:
   project-open, and blocker fields.
 - Documentation and scenarios keep the scope bounded to target discovery
   evidence.
+- PR readiness evidence in `.copilot-evidence/default-workflow-attempt.log`,
+  when present, records only point-in-time silver-thread target discovery
+  readiness for the existing PR branch.
 
 The implemented contract must not claim:
 

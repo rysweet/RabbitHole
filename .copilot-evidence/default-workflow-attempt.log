@@ -1,58 +1,104 @@
-Default-workflow recovery evidence for PR #388
-Recorded at: 2026-05-09T03:33:47Z
-Starting PR head verified: 6838fdf73a7fb2fe329e56563e6de37cdaf003b5
-Base branch verified: develop
+Default-workflow recovery evidence for PR #419
+Recorded at: 2026-05-09T06:22:00Z
+PR: https://github.com/rysweet/RabbitHole/pull/419
+Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
+Base branch: develop
+Evidence stage: final PR419 exact-head readiness handoff
+Exact checked HEAD at final validation: 80901a1401e85bed9a7fa58779de7932cb215ad2
+origin/develop at recovery: ea27623ec93673fe1e2f7937783926bce10ae69e
+merge-base(HEAD, origin/develop): ea27623ec93673fe1e2f7937783926bce10ae69e
+
+Merge status:
+- The branch already contains current origin/develop at the checked recovery
+  point; no rebase was performed and no shared PR history was rewritten.
+- PR #419 points at the validated exact HEAD
+  80901a1401e85bed9a7fa58779de7932cb215ad2 on the existing branch.
+
+Worktree end state:
+- Final handoff targets a clean worktree after the recovery commit is pushed.
+
+Intentional changes:
+- Runtime/display accessibility probe artifacts now state the target-discovery
+  scope and unsupported claim classes on both observed and blocked outputs.
+- Standalone world-canvas pixel sampler blocker and observation artifacts now
+  carry bounded sampling scope, non-correctness flags, and unsupported claim
+  classes.
+- Readiness evidence and silver-thread documentation now name the final PR419
+  exact-head handoff and remove unrelated stale readiness language.
 
 Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope at starting head was test-only:
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The generated-source characterization asserts that generated Scene.java forwards
-  SceneActivationEvent through the generated scene activation listener lambda.
+- Full origin/develop...HEAD diff reviewed for the existing PR #419 branch.
+- The recovery scope is limited to the RabbitHole accessibility target discovery
+  silver thread and the post-open runtime/display accessibility evidence lane.
+- Durable surfaces in scope:
+  docs/reference/accessibility-target-discovery-silver-thread.md
+  docs/reference/post-open-runtime-display-accessibility-evidence.md
+  docs/reference/alice-desktop-outside-in-qa.md
+  docs/howto/alice-desktop-outside-in-qa.md
+  qa/outside-in/alice-desktop/README.md
+  qa/outside-in/alice-desktop/scenarios/post-open-runtime-display-accessibility-evidence.yaml
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+  qa/outside-in/alice-desktop/runners/run-scenario.sh
+  qa/outside-in/alice-desktop/runners/post-open-runtime-display-probe.py
+  qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py
+  qa/outside-in/alice-desktop/schema/scenario.schema.json
 
-Validation completed at starting head:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
+Focused validation completed:
+- git fetch origin --quiet
+- git rev-parse HEAD
+- git rev-parse origin/develop
+- git merge-base HEAD origin/develop
+- gh pr view 419 --json number,headRefName,headRefOid,baseRefName,url,state
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-docs-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-probe.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-world-canvas-pixel-sampler-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-readiness-evidence-contract.sh
 
-Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result e0242ceec159d25644aedff8a77e62de70e0b8e9.
-- Prior fallback ownership marker is superseded by this default-workflow-owned evidence.
+Observed validation outcomes:
+- Scenario validation accepted 29 checked-in scenarios, including the post-open
+  runtime/display accessibility evidence workflow.
+- The schema contract passed and keeps workflow and argv allowlists synchronized
+  across the JSON schema, dependency-free validator, runner, and contract tests.
+- The runtime/display docs contract passed and keeps documentation and scenario
+  wording bounded to observed or blocked accessibility target discovery evidence.
+- The runtime/display contract passed and verifies the scenario ID, workflow,
+  AT-SPI Maven argv, target starter metadata, supporting evidence, and
+  fail-closed blocker artifacts.
+- The runtime/display probe contract passed and verifies observed candidate
+  summaries, missing-target blockers, geometry status fields, and safe artifact
+  shape.
+- The world-canvas pixel sampler contract passed and verifies target-scoped raw
+  RGBA sample artifacts and explicit sampler blockers without promoting samples
+  into rendering-correctness proof.
+- The accessibility target discovery silver-thread contract passed and verifies
+  checked-in launch, run/runtime, and Select Project target discovery markers,
+  structured blockers, and bounded scope wording.
+- The PR419 readiness evidence contract passed and verifies exact-head evidence
+  fields, stale-evidence removal, validation commands, worktree state, and
+  explicit non-claims.
 
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
+Readiness claim:
+- PR #419 is ready only as a silver-thread accessibility target discovery
+  contract for discovered launch, runtime/display, world-canvas sampling-target,
+  and Select Project accessibility/runtime display targets.
+- Passing focused validation supports only this statement: the repository-owned
+  scenario, schema, runner, probe, sampler, and docs surfaces expose bounded
+  target discovery evidence and fail-closed blocker artifacts for review.
 
-Default-workflow finalization refresh for PR #388
-Recorded at: 2026-05-09T03:49:48Z
-Current PR head verified before this evidence-only update:
-cec7b96debc2fda4f711069e0ba781d6224fb952
-Base branch verified: develop
-
-Scope re-inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope remains limited to:
-  .copilot-evidence/default-workflow-attempt.exit
-  .copilot-evidence/default-workflow-attempt.log
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The test characterization remains focused on generated Scene.java forwarding
-  SceneActivationEvent through the generated scene activation listener lambda.
-
-Validation completed at current PR head before this evidence-only update:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
-
-Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result 52938664ddb5a815cbc06e1940711161baf7f5c1.
-- No unresolved fallback ownership marker remains in tracked evidence.
-
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
+Explicit non-claims:
+- This evidence does not claim full UI automation.
+- This evidence does not claim visible rendering correctness or world-canvas
+  pixel correctness.
+- This evidence does not claim full world execution or world execution
+  correctness.
+- This evidence does not claim learner grading, rubric scoring, lesson
+  completion, or creative assessment.
+- This evidence does not claim Save completion or Save behavior.
+- This evidence does not claim Sims validation.
+- This evidence does not claim deployed installer success or deployment
+  readiness.
+- This evidence does not claim broad accessibility compliance.

@@ -318,6 +318,26 @@ PY
 
 assert_file_exists "$SAMPLER" "world-canvas pixel sampler script is checked in at the documented path"
 
+unreadable_target_out="$tmp_root/unreadable-target-sampler.json"
+python3 "$SAMPLER" \
+  --target-json "$tmp_root/missing-target.json" \
+  --output "$unreadable_target_out" \
+  >"$tmp_root/unreadable-target-sampler.out" \
+  2>"$tmp_root/unreadable-target-sampler.err"
+status=$?
+assert_success "$status" "standalone sampler exits 0 with structured blocker for unreadable target JSON"
+assert_file_exists "$unreadable_target_out" "standalone sampler writes blocker JSON for unreadable target JSON"
+assert_contains "$unreadable_target_out" '"status": "blocked"' "standalone sampler records blocked status for unreadable target JSON"
+assert_contains "$unreadable_target_out" '"blocker": "target-json-unreadable"' "standalone sampler names unreadable target blocker"
+assert_contains "$unreadable_target_out" '"claimScope": "visible-rendering-world-canvas-pixel-sampling"' "standalone sampler keeps bounded pixel-sampling claim scope on blockers"
+assert_contains "$unreadable_target_out" '"claimScopeDetail": "target-scoped-raw-pixel-observation-only"' "standalone sampler keeps raw-observation-only scope detail on blockers"
+assert_contains "$unreadable_target_out" '"renderedWorldPixelsObserved": false' "standalone sampler blocker does not claim sampled rendered-world pixels"
+assert_contains "$unreadable_target_out" '"visibleRenderingCorrectnessEstablished": false' "standalone sampler blocker does not claim visible rendering correctness"
+assert_contains "$unreadable_target_out" '"unsupportedClaims":' "standalone sampler blocker lists unsupported claim classes"
+assert_contains "$unreadable_target_out" '"full-visible-rendering-correctness"' "standalone sampler blocker explicitly excludes full visible rendering correctness"
+assert_contains "$unreadable_target_out" '"rendered-world-correctness"' "standalone sampler blocker explicitly excludes rendered-world correctness"
+assert_contains "$unreadable_target_out" '"world-execution"' "standalone sampler blocker explicitly excludes world execution"
+
 success_dir="$tmp_root/success"
 mkdir -p "$success_dir"
 write_runtime_display_artifact "$success_dir" ready

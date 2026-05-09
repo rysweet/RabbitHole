@@ -18,8 +18,19 @@ from pathlib import Path
 from typing import Any
 
 CLAIM = "post-open-runtime-display-accessibility-evidence"
+TARGET_DISCOVERY_SCOPE = "accessibility-runtime-display-targets-only"
 SELECT_PROJECT_TITLE = "Select Project"
 ARTIFACT_NAME = "post-open-runtime-display-accessibility-evidence.json"
+UNSUPPORTED_CLAIMS = [
+    "full-ui-automation",
+    "visible-rendering-correctness",
+    "full-world-execution",
+    "grading",
+    "save-completion",
+    "sims-validation",
+    "installer-deployment-success",
+    "broad-accessibility-compliance",
+]
 RUNTIME_NAME_TOKENS = (
     "scene",
     "display",
@@ -97,6 +108,7 @@ def base_payload(
         "blocker": blocker,
         "blockerDetail": blocker_detail,
         "claim": CLAIM,
+        "targetDiscoveryScope": TARGET_DISCOVERY_SCOPE,
         "scenario": scenario_id,
         "automationMode": automation_mode,
         "javaPid": java_pid,
@@ -105,6 +117,7 @@ def base_payload(
         "runtimeDisplayCandidateCount": len(runtime_candidates),
         "runtimeDisplayCandidates": runtime_candidates,
         "traversalErrors": traversal_errors or [],
+        "unsupportedClaims": UNSUPPORTED_CLAIMS,
     }
 
 
