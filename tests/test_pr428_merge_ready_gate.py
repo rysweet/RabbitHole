@@ -3,7 +3,7 @@ import unittest
 
 
 REQUIRED_REMOTE_REF = "origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa"
-HEAD_SHA = "2b8a961d67f2365d38b9f6ea833e700e99e351a2"
+FIXTURE_HEAD_SHA = "2b8a961d67f2365d38b9f6ea833e700e99e351a2"
 STALE_HEAD_SHA = "ffffffffffffffffffffffffffffffffffffffff"
 BASE_SHA = "2e1e43c3937a7d163bcc76f1882903a8ad31f1cc"
 STALE_BASE_SHA = "0366dfa17f0f41e2d878c293a6c33fb1f841993a"
@@ -29,8 +29,8 @@ def complete_evidence_package():
     return {
         "branch": {
             "current_ref": REQUIRED_REMOTE_REF,
-            "local_head": HEAD_SHA,
-            "remote_head": HEAD_SHA,
+            "local_head": FIXTURE_HEAD_SHA,
+            "remote_head": FIXTURE_HEAD_SHA,
             "manual_merge_seen": False,
         },
         "base": {
@@ -39,7 +39,7 @@ def complete_evidence_package():
         },
         "expected_base_sha": BASE_SHA,
         "diff_files": REAL_PR_DIFF_FILES,
-        "runnable_evidence": [{"command": FOCUSED_COMMAND, "passed": True, "head_sha": HEAD_SHA}],
+        "runnable_evidence": [{"command": FOCUSED_COMMAND, "passed": True, "head_sha": FIXTURE_HEAD_SHA}],
         "docs_impact": {"assessed": True, "files": ["docs/reference/issue-submission-progress-worker.md"]},
         "scenario_evidence": {
             "applicability": "not_applicable",
@@ -53,9 +53,9 @@ def complete_evidence_package():
             {"seek": "docs claims", "validate": "bounded-claim scan", "fix": "none", "clean": True},
             {"seek": "evidence gates", "validate": "PR body review", "fix": "none", "clean": True},
         ],
-        "github_checks": [{"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": HEAD_SHA}],
+        "github_checks": [{"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": FIXTURE_HEAD_SHA}],
         "pr_description": f"""
-        Head validated: {HEAD_SHA}
+        Head validated: {FIXTURE_HEAD_SHA}
         Base validated: {BASE_SHA}
         Focused validation: {FOCUSED_COMMAND} passed.
         Module validation: core/issue-reporting passed.
@@ -63,12 +63,12 @@ def complete_evidence_package():
         Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
         Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.
         Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
-        GitHub Actions: all current-head checks completed successfully for {HEAD_SHA}.
+        GitHub Actions: all current-head checks completed successfully for {FIXTURE_HEAD_SHA}.
         Does not claim full UI automation, visible rendering correctness, grading,
         creative assessment, full lesson completion, project archive attachment contents,
         real issue-service submission, or full Tweedle/player decode.
         """,
-        "expected_head_sha": HEAD_SHA,
+        "expected_head_sha": FIXTURE_HEAD_SHA,
     }
 
 
@@ -89,20 +89,20 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
 
         synced = gate.validate_branch_sync(
             current_ref=REQUIRED_REMOTE_REF,
-            local_head=HEAD_SHA,
-            remote_head=HEAD_SHA,
+            local_head=FIXTURE_HEAD_SHA,
+            remote_head=FIXTURE_HEAD_SHA,
             manual_merge_seen=False,
         )
         drifted = gate.validate_branch_sync(
             current_ref=REQUIRED_REMOTE_REF,
             local_head=STALE_HEAD_SHA,
-            remote_head=HEAD_SHA,
+            remote_head=FIXTURE_HEAD_SHA,
             manual_merge_seen=False,
         )
         manually_merged = gate.validate_branch_sync(
             current_ref=REQUIRED_REMOTE_REF,
-            local_head=HEAD_SHA,
-            remote_head=HEAD_SHA,
+            local_head=FIXTURE_HEAD_SHA,
+            remote_head=FIXTURE_HEAD_SHA,
             manual_merge_seen=True,
         )
         malformed = gate.validate_branch_sync(
@@ -206,17 +206,17 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                 {
                     "command": FOCUSED_COMMAND,
                     "passed": True,
-                    "head_sha": HEAD_SHA,
+                    "head_sha": FIXTURE_HEAD_SHA,
                 }
             ],
-            expected_head_sha=HEAD_SHA,
+            expected_head_sha=FIXTURE_HEAD_SHA,
         )
         timeout_wrapped = gate.validate_runnable_evidence(
             [
                 {
                     "command": "timeout 300 " + FOCUSED_COMMAND,
                     "passed": True,
-                    "head_sha": HEAD_SHA,
+                    "head_sha": FIXTURE_HEAD_SHA,
                 }
             ]
         )
@@ -228,7 +228,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                     "head_sha": STALE_HEAD_SHA,
                 }
             ],
-            expected_head_sha=HEAD_SHA,
+            expected_head_sha=FIXTURE_HEAD_SHA,
         )
         malformed_head = gate.validate_runnable_evidence(
             [
@@ -246,10 +246,10 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                 {
                     "command": command_with_secret,
                     "passed": True,
-                    "head_sha": HEAD_SHA,
+                    "head_sha": FIXTURE_HEAD_SHA,
                 }
             ],
-            expected_head_sha=HEAD_SHA,
+            expected_head_sha=FIXTURE_HEAD_SHA,
         )
 
         self.assertTrue(focused.ready)
@@ -313,7 +313,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
     def test_pr_description_must_contain_current_head_evidence_and_bounded_non_claims(self) -> None:
         gate = gate_module()
         body = f"""
-        Head validated: {HEAD_SHA}
+        Head validated: {FIXTURE_HEAD_SHA}
         Base validated: {BASE_SHA}
         Focused validation: {FOCUSED_COMMAND} passed.
         Module validation: core/issue-reporting passed.
@@ -321,13 +321,13 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
         Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.
         Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
-        GitHub Actions: all current-head checks completed successfully for {HEAD_SHA}.
+        GitHub Actions: all current-head checks completed successfully for {FIXTURE_HEAD_SHA}.
         Does not claim full UI automation, visible rendering correctness, grading,
         creative assessment, full lesson completion, project archive attachment contents,
         real issue-service submission, or full Tweedle/player decode.
         """
         headings_only_body = f"""
-        Head validated: {HEAD_SHA}
+        Head validated: {FIXTURE_HEAD_SHA}
         Focused validation:
         Docs impact:
         Scenario evidence:
@@ -341,21 +341,24 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         self.assertTrue(
             gate.validate_pr_description(
                 body,
-                expected_head_sha=HEAD_SHA,
+                expected_head_sha=FIXTURE_HEAD_SHA,
                 expected_base_sha=BASE_SHA,
             ).ready
         )
-        self.assertBlocked(gate.validate_pr_description(body.replace(HEAD_SHA, STALE_HEAD_SHA), HEAD_SHA), "head")
+        self.assertBlocked(
+            gate.validate_pr_description(body.replace(FIXTURE_HEAD_SHA, STALE_HEAD_SHA), FIXTURE_HEAD_SHA),
+            "head",
+        )
         self.assertBlocked(
             gate.validate_pr_description(
                 body.replace(BASE_SHA, STALE_BASE_SHA),
-                expected_head_sha=HEAD_SHA,
+                expected_head_sha=FIXTURE_HEAD_SHA,
                 expected_base_sha=BASE_SHA,
             ),
             "base",
         )
-        self.assertBlocked(gate.validate_pr_description(headings_only_body, HEAD_SHA), "exact focused")
-        self.assertBlocked(gate.validate_pr_description(overclaiming_body, HEAD_SHA), "overclaim")
+        self.assertBlocked(gate.validate_pr_description(headings_only_body, FIXTURE_HEAD_SHA), "exact focused")
+        self.assertBlocked(gate.validate_pr_description(overclaiming_body, FIXTURE_HEAD_SHA), "overclaim")
 
     def test_owner_free_exit_with_rate_limit_text_is_classified_as_rate_limit_not_ready(self) -> None:
         gate = gate_module()
