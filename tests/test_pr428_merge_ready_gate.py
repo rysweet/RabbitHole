@@ -10,6 +10,17 @@ FOCUSED_COMMAND = (
     "-Dsurefire.failIfNoSpecifiedTests=false "
     "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test"
 )
+REAL_PR_DIFF_FILES = [
+    "core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java",
+    "core/issue-reporting/src/test/java/org/lgna/issue/IssueSubmissionProgressWorkerTest.java",
+    "docs/howto/characterize-issue-submission-progress-worker.md",
+    "docs/index.md",
+    "docs/reference/issue-submission-progress-worker.md",
+    "docs/tutorials/trace-issue-submission-progress-worker.md",
+    "pyproject.toml",
+    "scripts/pr428_merge_ready_gate.py",
+    "tests/test_pr428_merge_ready_gate.py",
+]
 
 
 def gate_module():
@@ -53,19 +64,24 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
 
     def test_diff_scope_allows_only_worker_tests_docs_and_justified_metadata(self) -> None:
         gate = gate_module()
-        allowed_files = [
-            "core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java",
-            "core/issue-reporting/src/test/java/org/lgna/issue/IssueSubmissionProgressWorkerTest.java",
-            "docs/reference/issue-submission-progress-worker.md",
-            "docs/howto/characterize-issue-submission-progress-worker.md",
-            "docs/tutorials/trace-issue-submission-progress-worker.md",
-            "docs/index.md",
-            "pyproject.toml",
-        ]
-        unrelated_files = allowed_files + ["core/ide/src/main/java/org/alice/ide/Unrelated.java"]
+        unrelated_files = REAL_PR_DIFF_FILES + ["core/ide/src/main/java/org/alice/ide/Unrelated.java"]
 
-        self.assertTrue(gate.audit_diff_scope(allowed_files).ready)
+        self.assertTrue(gate.audit_diff_scope(REAL_PR_DIFF_FILES).ready)
         self.assertBlocked(gate.audit_diff_scope(unrelated_files), "diff scope")
+
+    def test_scenario_non_applicability_requires_specific_non_ui_worker_rationale(self) -> None:
+        gate = gate_module()
+        specific = {
+            "applicability": "not_applicable",
+            "reason": (
+                "No Alice desktop workflow impact because IssueSubmissionProgressWorker "
+                "is a non-UI issue-reporting worker seam."
+            ),
+        }
+        vague = {"applicability": "not_applicable", "reason": "scenario skipped"}
+
+        self.assertTrue(gate.validate_scenario_evidence(specific).ready)
+        self.assertBlocked(gate.validate_scenario_evidence(vague), "non-UI issue-reporting worker seam")
 
     def test_validation_commands_reject_timeout_wrappers_and_require_focused_worker_evidence(self) -> None:
         gate = gate_module()
@@ -161,18 +177,29 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         Focused validation: {FOCUSED_COMMAND} passed.
         Module validation: core/issue-reporting passed.
         Docs impact: reference, how-to, tutorial, and index reviewed.
-        Scenario evidence: not applicable; no existing Alice desktop scenario directly exercises this worker seam.
-        Diff scope: worker, focused test, direct docs, and justified metadata only.
+        Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
+        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, test, and metadata files.
         Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
         GitHub Actions: all current-head checks completed successfully.
         Does not claim full UI automation, visible rendering correctness, grading,
         creative assessment, full lesson completion, project archive attachment contents,
         real issue-service submission, or full Tweedle/player decode.
         """
+        headings_only_body = f"""
+        Head validated: {HEAD_SHA}
+        Focused validation:
+        Docs impact:
+        Scenario evidence:
+        Diff scope:
+        Quality audit: SEEK / VALIDATE / FIX clean final cycle.
+        GitHub Actions:
+        Does not claim:
+        """
         overclaiming_body = body + "\nThis proves full UI automation and visible rendering correctness."
 
         self.assertTrue(gate.validate_pr_description(body, expected_head_sha=HEAD_SHA).ready)
         self.assertBlocked(gate.validate_pr_description(body.replace(HEAD_SHA, "deadbeef"), HEAD_SHA), "head")
+        self.assertBlocked(gate.validate_pr_description(headings_only_body, HEAD_SHA), "exact focused")
         self.assertBlocked(gate.validate_pr_description(overclaiming_body, HEAD_SHA), "overclaim")
 
     def test_owner_free_exit_with_rate_limit_text_is_classified_as_rate_limit_not_ready(self) -> None:
@@ -197,20 +224,15 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                 "remote_head": HEAD_SHA,
                 "manual_merge_seen": False,
             },
-            "diff_files": [
-                "core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java",
-                "core/issue-reporting/src/test/java/org/lgna/issue/IssueSubmissionProgressWorkerTest.java",
-                "docs/reference/issue-submission-progress-worker.md",
-                "docs/howto/characterize-issue-submission-progress-worker.md",
-                "docs/tutorials/trace-issue-submission-progress-worker.md",
-                "docs/index.md",
-                "pyproject.toml",
-            ],
+            "diff_files": REAL_PR_DIFF_FILES,
             "runnable_evidence": [{"command": FOCUSED_COMMAND, "passed": True, "head_sha": HEAD_SHA}],
             "docs_impact": {"assessed": True, "files": ["docs/reference/issue-submission-progress-worker.md"]},
             "scenario_evidence": {
                 "applicability": "not_applicable",
-                "reason": "no existing scenario directly exercises IssueSubmissionProgressWorker",
+                "reason": (
+                    "No Alice desktop workflow impact because IssueSubmissionProgressWorker "
+                    "is a non-UI issue-reporting worker seam."
+                ),
             },
             "quality_audit_cycles": [
                 {"seek": "worker seam", "validate": "source review", "fix": "none", "clean": True},
@@ -223,8 +245,8 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
             Focused validation: {FOCUSED_COMMAND} passed.
             Module validation: core/issue-reporting passed.
             Docs impact: reference docs reviewed.
-            Scenario evidence: not applicable; no existing Alice desktop scenario directly exercises this worker seam.
-            Diff scope: worker, focused test, direct docs, and justified metadata only.
+            Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
+            Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, test, and metadata files.
             Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
             GitHub Actions: all current-head checks completed successfully.
             Does not claim full UI automation, visible rendering correctness, grading,
