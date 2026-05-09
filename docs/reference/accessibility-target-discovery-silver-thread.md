@@ -19,10 +19,12 @@ general accessibility compliance.
 - [Usage](#usage)
 - [Evidence lanes](#evidence-lanes)
 - [Readiness evidence record](#readiness-evidence-record)
+- [Current-head readiness gate](#current-head-readiness-gate)
 - [Artifact API](#artifact-api)
 - [Configuration](#configuration)
 - [Examples](#examples)
 - [Tutorial: review the silver thread](#tutorial-review-the-silver-thread)
+- [Merge-ready decision model](#merge-ready-decision-model)
 - [Claim boundaries](#claim-boundaries)
 - [Extension rules](#extension-rules)
 
@@ -103,19 +105,49 @@ Every readiness record for this lane must include:
 | Scope | Discovered accessibility/runtime display target readiness and silver-thread review readiness only. |
 | Non-claims | Explicit exclusions for full UI automation, visible rendering correctness, full world execution, grading, Save completion, Sims validation, installer/deployment success, and broad accessibility compliance. |
 
-For PR419, `test-pr419-current-head-readiness-gate-contract.sh` is the
-current-head merge-ready gate. It generates transient current-head proof at
-runtime from `git rev-parse HEAD` and one cached `gh pr view 419 --json
-number,url,headRefName,headRefOid,statusCheckRollup,body` response. It checks PR
-number and URL, branch alignment, local HEAD versus PR head, PR body evidence
-for the live head SHA, green completed GitHub Actions, focused QA/scenario
-evidence, documentation impact evidence, diff/review evidence, bounded claims,
-and three SEEK/VALIDATE/FIX audit cycles. Tracked evidence must not store or
-predict the current PR head SHA.
-
 Do not use a readiness record to preserve screenshots, broad environment dumps,
 access tokens, unrelated desktop state, generated project data, or private user
 state. Generated run artifacts remain local QA output and stay uncommitted.
+
+## Current-head readiness gate
+
+For PR419, `test-pr419-current-head-readiness-gate-contract.sh` is the
+current-head merge-ready gate. It is run only after the final branch commit is
+pushed and the PR body names that live head SHA plus the focused gate evidence.
+It generates transient current-head proof at runtime from `git rev-parse HEAD`
+and one cached `gh pr view 419 --json
+number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body`
+response. Tracked evidence must not store or predict the current PR head SHA.
+
+The gate checks these live inputs:
+
+| Input | Required condition |
+| --- | --- |
+| Local branch | The current branch is `feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow`. |
+| PR identity | `gh pr view 419` returns PR number `419`, URL `https://github.com/rysweet/RabbitHole/pull/419`, and the expected head branch. |
+| Head alignment | `git rev-parse HEAD` exactly matches the PR `headRefOid`. |
+| PR body evidence | The PR body contains the live head SHA and names `test-pr419-current-head-readiness-gate-contract.sh`. |
+| Conflict state | `git diff --name-only --diff-filter=U` returns no unmerged paths, and the docs/QA conflict-marker scan finds no merge markers. |
+| Mergeability | The PR metadata reports `mergeStateStatus=CLEAN` and `mergeable=MERGEABLE`. |
+| Checks | The PR check rollup is readable, completed, and successful. |
+| Evidence log | `.copilot-evidence/default-workflow-attempt.log` records the focused validation commands, current-head gate model, quality-audit cycles, bounded claims, no-timeout-wrapper posture, and no manual PR merge. |
+| Documentation | This reference names the transient current-head proof model and both readiness outcomes. |
+
+Final PR readiness requires live GitHub mergeability. The current-head gate
+queries `mergeStateStatus` and `mergeable` directly and fails unless both prove
+that PR419 is cleanly mergeable.
+
+The gate is a readiness decision contract, not a merge command. It never runs
+`gh pr merge`, never merges PR419 into `develop`, never rebases, never
+force-pushes, and never treats green checks alone as sufficient.
+
+The shell gate reports readiness through normal assertion output and exit code,
+not by printing a machine-readable decision token. Reviewers may interpret a
+passing gate, including the live GitHub mergeability assertion, as
+`MERGE_READY`. Any failing gate, stale evidence, pending or failed check, dirty
+mergeability, or claim broader than the bounded accessibility target discovery scope is
+`NOT_MERGE_READY`, and the failing assertion or review note must name the
+remaining blocker instead of implying partial readiness.
 
 ## Artifact API
 
@@ -214,6 +246,17 @@ Alice license dialogs in an isolated QA run. Set `ALICE_QA_SCENARIO_DIR` only
 when validating a custom local scenario catalog before moving it into
 `qa/outside-in/alice-desktop/scenarios/`.
 
+The PR419 current-head readiness gate has a separate review configuration:
+
+| Setting | Value |
+| --- | --- |
+| Working directory | Repository root on `feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow`. |
+| `NODE_OPTIONS` | `--max-old-space-size=32768`. |
+| GitHub access | Existing authenticated `gh` access capable of reading PR419 metadata and checks. |
+| Arguments | None. |
+| Timeout wrappers | Not used. Run the gate directly. |
+| Merge behavior | The gate reports readiness only; it does not merge the PR. |
+
 ## Examples
 
 ### Validate only the target discovery contract
@@ -263,10 +306,31 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
+`--timeout-seconds` is runner configuration for collecting fresh scenario
+evidence. It is not a timeout wrapper around the focused PR419 validation or
+readiness gate, which must be run directly.
+
 Review `post-open-runtime-display-accessibility-evidence.json` first. If the
 runtime target is blocked, review `visible-rendering-pixel-target-blocker.json`
 for the exact missing target and next unblocker. If the target is ready, review
 the target-scoped observation as accessibility discovery evidence only.
+
+### Decide PR419 current-head readiness
+
+Run the current-head gate after the final branch commit is pushed and the PR body
+references that exact live head SHA:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-pr419-current-head-readiness-gate-contract.sh
+```
+
+Interpret the result strictly:
+
+| Result | Meaning |
+| --- | --- |
+| `MERGE_READY` | Reviewer interpretation of a passing current-head gate, including live GitHub mergeability. The local final head, PR head, PR body evidence, focused evidence log, conflict checks, documentation contract, completed green GitHub Actions, and mergeability all agree for PR419. |
+| `NOT_MERGE_READY` | Reviewer interpretation of any failing gate, missing mergeability confirmation, stale evidence, blocked check, conflict, or claim outside the bounded target-discovery scope. The named blocker must be resolved before reviewers treat the branch as merge-ready. |
 
 ## Tutorial: review the silver thread
 
@@ -297,6 +361,30 @@ the target-scoped observation as accessibility discovery evidence only.
    statement: the repository contains executable validation that the launch,
    run/runtime, and Select Project lanes expose the expected accessibility target
    discovery evidence and structured blockers.
+
+6. For PR419 finalization, push the final branch head, update the PR body with
+   that exact head SHA and the current-head gate evidence, then run
+   `test-pr419-current-head-readiness-gate-contract.sh`. Treat a passing gate
+   plus confirmed live GitHub mergeability as `MERGE_READY`; treat any failure,
+   stale evidence, or missing mergeability confirmation as `NOT_MERGE_READY` and
+   document the exact failing condition.
+
+## Merge-ready decision model
+
+The accessibility target discovery lane uses two different proof levels:
+
+| Proof level | Source | Valid claim |
+| --- | --- | --- |
+| Static silver-thread contract | `test-accessibility-target-discovery-silver-thread.sh` | Checked-in launch, run/runtime, and Select Project artifacts expose the expected target discovery fields, structured blockers, and bounded wording. |
+| PR419 current-head gate | `test-pr419-current-head-readiness-gate-contract.sh` | The final live PR419 head is aligned with the local worktree, PR body evidence, completed green checks, focused evidence log, bounded documentation, and GitHub mergeability. |
+
+`MERGE_READY` is available only as a reviewer decision after the current-head
+gate passes on the final pushed PR419 head, including the live GitHub
+mergeability assertion. `NOT_MERGE_READY` is the correct result for stale PR body evidence,
+different local and remote heads, pending or failed checks, unresolved conflicts,
+missing focused validation evidence, missing audit cycles, missing mergeability
+confirmation, or any claim that expands beyond accessibility target discovery
+and structured blockers.
 
 ## Claim boundaries
 

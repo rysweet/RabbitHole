@@ -619,6 +619,12 @@ public class Alice3ProjectTemplateAntSmokeTest {
         }
       }
       String output = Files.readString(outputFile, StandardCharsets.UTF_8);
+      System.out.println("----- BEGIN " + targetName + " Ant log: " + logFileName + " -----");
+      System.out.print(output);
+      if (!output.endsWith(System.lineSeparator())) {
+        System.out.println();
+      }
+      System.out.println("----- END " + targetName + " Ant log: " + logFileName + " -----");
       if (!exited) {
         throw new AssertionError("Ant smoke timed out running " + targetName + "\n" + output);
       }

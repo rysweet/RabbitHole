@@ -29,10 +29,12 @@ pr_number=
 pr_url=
 pr_branch=
 pr_head=
+pr_merge_state=
+pr_mergeable=
 pr_body_has_current_head=
 pr_body_has_gate_evidence=
 GH_NO_UPDATE_NOTIFIER=1 gh pr view "$PR_NUMBER" \
-  --json number,url,headRefName,headRefOid,statusCheckRollup,body \
+  --json number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body \
   >"$pr_metadata" \
   2>"$tmp_root/pr-metadata.err"
 pr_metadata_status=$?
@@ -55,6 +57,8 @@ field_values = (
     metadata.get("url") or "",
     metadata.get("headRefName") or "",
     metadata.get("headRefOid") or "",
+    metadata.get("mergeStateStatus") or "",
+    metadata.get("mergeable") or "",
     "true" if local_head in body else "false",
     "true" if "test-pr419-current-head-readiness-gate-contract.sh" in body else "false",
 )
@@ -75,7 +79,7 @@ PY
   pr_parse_status=$?
   if [ "$pr_parse_status" -eq 0 ]; then
     tab=$(printf '\t')
-    IFS=$tab read -r pr_number pr_url pr_branch pr_head pr_body_has_current_head pr_body_has_gate_evidence <"$pr_fields"
+    IFS=$tab read -r pr_number pr_url pr_branch pr_head pr_merge_state pr_mergeable pr_body_has_current_head pr_body_has_gate_evidence <"$pr_fields"
   fi
 else
   pr_parse_status=1
@@ -126,6 +130,12 @@ else
   fail "local HEAD matches PR419 headRefOid before readiness evaluation (local $local_head, PR $pr_head)"
 fi
 
+if [ "$pr_merge_state" = "CLEAN" ] && [ "$pr_mergeable" = "MERGEABLE" ]; then
+  pass "PR419 live GitHub mergeability is clean"
+else
+  fail "PR419 live GitHub mergeability is clean (mergeStateStatus=$pr_merge_state, mergeable=$pr_mergeable)"
+fi
+
 if [ "$pr_body_has_current_head" = "true" ]; then
   pass "PR419 body contains current-head evidence for the live PR head"
 else
@@ -169,6 +179,8 @@ fi
 
 assert_literal_in_file "$EVIDENCE_LOG" "Current-head merge-ready gate model:" "evidence log has current-head gate model section"
 assert_literal_in_file "$EVIDENCE_LOG" "Live current-head proof is generated transiently by test-pr419-current-head-readiness-gate-contract.sh at runtime" "evidence log keeps live proof transient"
+assert_literal_in_file "$EVIDENCE_LOG" "mergeStateStatus,mergeable" "evidence log records live mergeability fields"
+assert_literal_in_file "$EVIDENCE_LOG" "live GitHub mergeability" "evidence log records live mergeability requirement"
 assert_literal_in_file "$EVIDENCE_LOG" "Tracked evidence must not store or predict the current PR head SHA." "evidence log rejects static current-head SHA proof"
 assert_literal_in_file "$EVIDENCE_LOG" "The PR body must be updated after the final commit to name the live head SHA and focused gate evidence." "evidence log records PR body live-head requirement"
 assert_literal_in_file "$EVIDENCE_LOG" "green checks are necessary but not sufficient" "evidence log does not infer readiness from green checks alone"
@@ -210,6 +222,8 @@ done
 
 assert_literal_in_file "$SILVER_THREAD_DOC" "test-pr419-current-head-readiness-gate-contract.sh" "reference doc names current-head gate contract"
 assert_literal_in_file "$SILVER_THREAD_DOC" "transient current-head proof" "reference doc describes transient current-head proof"
+assert_literal_in_file "$SILVER_THREAD_DOC" "mergeStateStatus,mergeable" "reference doc names live mergeability fields"
+assert_literal_in_file "$SILVER_THREAD_DOC" "live GitHub mergeability" "reference doc requires live mergeability"
 assert_literal_in_file "$SILVER_THREAD_DOC" "MERGE_READY" "reference doc names merge-ready decision"
 assert_literal_in_file "$SILVER_THREAD_DOC" "NOT_MERGE_READY" "reference doc names not-merge-ready decision"
 
