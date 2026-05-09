@@ -20,6 +20,7 @@ REAL_PR_DIFF_FILES = [
     "docs/index.md",
     "docs/reference/issue-submission-progress-worker.md",
     "docs/tutorials/trace-issue-submission-progress-worker.md",
+    "pyproject.toml",
     "scripts/pr428_merge_ready_gate.py",
     "tests/test_pr428_merge_ready_gate.py",
 ]
@@ -61,7 +62,7 @@ def complete_evidence_package():
         Module validation: core/issue-reporting passed.
         Docs impact: reference docs reviewed.
         Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
-        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.
+        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, version metadata, gate, and test files.
         Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
         GitHub Actions: all current-head checks completed successfully for {FIXTURE_HEAD_SHA}.
         Does not claim full UI automation, visible rendering correctness, grading,
@@ -125,7 +126,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
 
         self.assertTrue(gate.audit_diff_scope(REAL_PR_DIFF_FILES).ready)
         self.assertBlocked(gate.audit_diff_scope(unrelated_files), "diff scope")
-        self.assertBlocked(gate.audit_diff_scope(REAL_PR_DIFF_FILES + ["pyproject.toml"]), "pyproject.toml")
+        self.assertBlocked(gate.audit_diff_scope(REAL_PR_DIFF_FILES + ["pom.xml"]), "pom.xml")
         invalid_path_result = gate.audit_diff_scope([absolute_path])
         self.assertBlocked(invalid_path_result, "repository-relative")
         self.assertFalse(any(absolute_path in blocker for blocker in invalid_path_result.blockers))
@@ -319,7 +320,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         Module validation: core/issue-reporting passed.
         Docs impact: reference, how-to, tutorial, and index reviewed.
         Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
-        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.
+        Diff scope checked: origin/develop...HEAD includes only allowed worker, docs, version metadata, gate, and test files.
         Quality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.
         GitHub Actions: all current-head checks completed successfully for {FIXTURE_HEAD_SHA}.
         Does not claim full UI automation, visible rendering correctness, grading,

@@ -35,6 +35,7 @@ ALLOWED_DIFF_FILES = {
     "docs/howto/characterize-issue-submission-progress-worker.md",
     "docs/tutorials/trace-issue-submission-progress-worker.md",
     "docs/index.md",
+    "pyproject.toml",
     "scripts/pr428_merge_ready_gate.py",
     "tests/test_pr428_merge_ready_gate.py",
 }

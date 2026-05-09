@@ -173,7 +173,7 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 
 | Evidence | Accepted current-head evidence |
 | --- | --- |
-| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, directly related docs, and the PR #428 gate/test files. Record the full 40-character `origin/develop` SHA in handoff evidence; the gate requires matching base evidence and PR-body evidence. |
+| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, directly related docs, the mandatory `pyproject.toml` version bump, and the PR #428 gate/test files. Record the full 40-character `origin/develop` SHA in handoff evidence; the gate requires matching base evidence and PR-body evidence. |
 | Readiness | The focused `IssueSubmissionProgressWorkerTest` command above passes with `NODE_OPTIONS=--max-old-space-size=32768`. Run the full `core/issue-reporting` module command when handing off the PR or when any issue-reporting production code changes. |
 | Scenario applicability | Alice desktop outside-in scenarios are non-applicable unless an existing scenario directly exercises this bug-report worker seam. Do not substitute unrelated launch, Save, lesson, render, or wrapper-smoke scenarios as evidence for this worker. |
 | Review | Source review confirms `createIssueBuilder()` still delegates to `JSubmitPane.createIssueBuilder()`, the progress pane remains lazy through `getProgressPane()`, and `do_onBackgroundThread()` still publishes start, delegates submission work, then publishes completion only after a normal delegate return. |
@@ -188,7 +188,7 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 
 The executable gate validates full 40-character commit SHAs for `branch.local_head`, `branch.remote_head`, `expected_head_sha` or `branch.remote_head`, `base.base_sha`, and `expected_base_sha`. Record the fetched `origin/develop` SHA in the evidence package and PR body next to the `origin/develop...HEAD` diff evidence so reviewers can see which base was used.
 
-The current recovered PR diff does not include project-version metadata. `pyproject.toml` is not part of the worker feature contract and is not allowed by the PR #428 gate for this head.
+The current recovered PR diff may include the mandatory project-version metadata bump in `pyproject.toml`. That file is allowed only as release metadata alongside the worker, docs, gate, and test files.
 
 GitHub check entries are normalized from `gh pr checks` or check-run JSON and must be completed with a success, neutral, or skipped conclusion. Record the verified current head SHA with each check entry before running the gate.
 
@@ -301,7 +301,7 @@ The evidence package is an object with these fields:
       "head_sha": "<current-pr-head-sha>"
     }
   ],
-  "pr_description": "Head validated: <current-pr-head-sha>\nBase validated: origin/develop at <current-develop-sha>.\nFocused validation: NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/issue-reporting -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test passed.\nDocs impact: reference, how-to, tutorial, and index reviewed.\nScenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.\nDiff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.\nQuality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.\nGitHub Actions: all current-head checks completed successfully after branch/head verification.\nDoes not claim full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, project archive attachment contents, real issue-service submission, or full Tweedle/player decode.",
+  "pr_description": "Head validated: <current-pr-head-sha>\nBase validated: origin/develop at <current-develop-sha>.\nFocused validation: NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/issue-reporting -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test passed.\nDocs impact: reference, how-to, tutorial, and index reviewed.\nScenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.\nDiff scope checked: origin/develop...HEAD includes only allowed worker, docs, version metadata, gate, and test files.\nQuality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.\nGitHub Actions: all current-head checks completed successfully after branch/head verification.\nDoes not claim full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, project archive attachment contents, real issue-service submission, or full Tweedle/player decode.",
   "expected_head_sha": "<current-pr-head-sha>"
 }
 ```
