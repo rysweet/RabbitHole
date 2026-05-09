@@ -15,6 +15,7 @@ repository.
 - [ProjectMigrationManager Migration Characterization](./reference/project-migration-manager-characterization.md) - Reference for generated XML-string characterization around versioned Alice project text migrations.
 - [Exported NetBeans Ant Project Behavior](./reference/exported-netbeans-ant-project-behavior.md) - Reference for exported launcher evidence, deterministic display no-go behavior, Ant `run` metadata, and no-Sims characterization.
 - [Generated Story API and AST Source Characterization](./reference/generated-story-api-listener-source-characterization.md) - Reference for AST/source-code-generator snippets, generated NetBeans project source, headless Story API listener seams, compilation, and no-GUI boundaries.
+- [Characterize Source-Code-Generator Behavior](./howto/characterize-source-code-generator.md) - How to add or review focused AST, generated NetBeans source, Story API listener, and launcher evidence characterization.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to add or review compatibility tests for save/export operations.
 - [Run the Save Menu Dialog Write/Readback Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused Robot Save menu/dialog/write/readback QA scenario with Xvfb when needed.
 - [Run the Robot Save Menu Dialog Write/Readback Proof](./howto/run-robot-save-menu-dialog-write-readback-proof.md) - Guide for running the focused Robot Save menu/dialog/write/readback proof and reviewing the canonical artifact contract.
@@ -23,6 +24,7 @@ repository.
 - [Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof](./tutorials/trace-robot-save-menu-dialog-write-readback-proof.md) - Guided review of Robot menu activation, chooser approval, `.a3p` write, readback, marker evidence, and non-claims.
 - [Tutorial: Add a Project IO Corpus Characterization](./tutorials/project-io-corpus-characterization.md) - A guided example for protecting generated `.a3p` archive behavior.
 - [Tutorial: Add a ProjectMigrationManager Migration Characterization](./tutorials/project-migration-manager-characterization.md) - A guided example for protecting ordered text migration behavior without binary fixtures.
+- [Tutorial: Trace Source-Code-Generator Characterization](./tutorials/trace-source-code-generator-characterization.md) - Guided review from core AST snippets to generated NetBeans source, Story API listener seams, launcher evidence, and bounded non-claims.
 
 ## QA and acceptance testing
 

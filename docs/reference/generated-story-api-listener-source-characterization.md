@@ -1,7 +1,7 @@
 # Generated Story API and AST Source Characterization
 
-This reference documents the RabbitHole PR 423 source-code-generator
-characterization lane. The lane proves deterministic Java source generation from
+This reference documents the RabbitHole source-code-generator characterization
+lane. The lane proves deterministic Java source generation from
 synthetic Alice AST fixtures, generated NetBeans project source compileability,
 and a small set of headless listener/event seams. It does not prove full Alice UI
 automation, full world execution, visible rendering correctness, Save
@@ -17,7 +17,7 @@ completion.
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
-- [Recorded PR 423 source-generator evidence](#recorded-pr-423-source-generator-evidence)
+- [Review evidence handoff](#review-evidence-handoff)
 - [Generated-source specimen reference](#generated-source-specimen-reference)
 - [Review checklist: source generation](#review-checklist-source-generation)
 - [Compatibility rules](#compatibility-rules)
@@ -30,7 +30,9 @@ generator:
 
 ```text
 core/ast/src/test/java/org/lgna/project/ast/SourceCodeGeneratorTest.java
+netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorTest.java
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorGeneratedSourceTest.java
+netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandaloneProjectTest.java
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
 ```
 
@@ -134,9 +136,14 @@ The focused executable tests are:
 
 ```text
 SourceCodeGeneratorTest
+ProjectCodeGeneratorTest
 ProjectCodeGeneratorGeneratedSourceTest
 ProjectCodeGeneratorStoryApiGeneratedSourceTest
 ```
+
+The generated-source suite used for changes that reach generated `Program.java`,
+`Scene.java`, listener payloads, or source compileability also includes
+`ProjectCodeGeneratorStandaloneProjectTest`.
 
 The tests create only temporary files. Generated `.a3p` inputs, source
 directories, compiled classes, and marker files are managed by JUnit temporary
@@ -208,6 +215,18 @@ NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest \
+  test
+```
+
+When a change touches generated `Program.java`, `Scene.java`, or Story API
+listener fixtures, run the generated-source suite as well:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl netbeans -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest,org.alice.netbeans.project.ProjectCodeGeneratorGeneratedSourceTest,org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest,org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest \
   test
 ```
@@ -220,54 +239,36 @@ git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-## Recorded PR 423 source-generator evidence
+## Review evidence handoff
 
-The recorded source-code-generator characterization evidence is documented by
-the repository-owned evidence file:
+Repository documentation defines the stable source-generator contract. It is not
+the place for point-in-time PR status, timestamps, commit SHAs, or copied CI
+logs.
+
+When a review workflow requires source-generator readiness evidence, record that
+evidence in the workflow-owned evidence file:
 
 ```text
 .copilot-evidence/default-workflow-attempt.log
 ```
 
-For the exact validated commit, timestamp, PR state, and check state, use the
-latest contents of that evidence file rather than copying commit-specific values
-into this durable reference page.
-
-The recorded focused validation includes:
-
-```bash
-git submodule update --init tweedle-lang
-
-NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -pl core/ast -am \
-  -DfailIfNoTests=false \
-  -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=SourceCodeGeneratorTest \
-  test -q
-
-NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -pl core/ast -am \
-  -DfailIfNoTests=false \
-  test -q
-```
-
-At the evidence-recorded commit, the focused `SourceCodeGeneratorTest` command
-and the focused `core/ast` reactor command pass. Any Maven parser diagnostic
-text emitted during those commands is treated as non-blocking only when the
-command exits successfully.
-
-PR 423 source-generator evidence is bounded to the generated-source lane:
+Accepted review evidence for this lane is bounded to current-head executable
+facts:
 
 | Surface | Evidence note |
 | --- | --- |
-| `SourceCodeGeneratorTest` | Completed characterization of representative statement, expression statement, assignment, field access, static and instance method calls, disabled statement, literal, operator, array access/length, class/member, loop/foreach, `DoTogether`, stale item repair, and observable formatting snippets. |
-| `.copilot-evidence/default-workflow-attempt.log` | Current PR 423 evidence replaces stale PR 388 fallback text and records why the log remains in the review set. |
-| GitHub checks | Visible checks at the evidence-recorded head are passing when the evidence is recorded. |
-| Draft state | A draft flag is a PR review-state blocker, not a failing source-code-generator characterization result. |
+| Branch and PR metadata | Read-only `git` and `gh pr view` output for the current branch, PR state, draft state, merge state, and visible checks. |
+| Changed-file scope | `git diff --name-only origin/develop...HEAD` or the workflow's equivalent current-head diff scope. |
+| Core AST validation | The focused `SourceCodeGeneratorTest` command from [Validation commands](#validation-commands). |
+| NetBeans generator validation | The focused `ProjectCodeGeneratorTest` command from [Validation commands](#validation-commands), plus the generated-source suite when those fixtures changed. |
+| Evidence log | The workflow-owned log records what was executed and what exited successfully; durable docs link to the contract instead of copying transient results. |
+| Bounded non-claims | Explicit exclusion of full UI automation, visible rendering correctness, grading, creative assessment, lesson completion, broad Tweedle/player decode, and full world execution. |
 
-These evidence notes are intentionally not a full Alice behavior certification.
-They exclude full Tweedle/player decode, full UI automation, visible rendering
-correctness, grading correctness, and lesson completion.
+Treat failed commands, dirty unexpected implementation changes, merge conflicts,
+or failed required checks as review blockers that need a focused fix or a
+documented workflow no-op decision. Do not convert those blockers into
+repository documentation unless the stable source-generator contract itself
+changes.
 
 ## Generated-source specimen reference
 

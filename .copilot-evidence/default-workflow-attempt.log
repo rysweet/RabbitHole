@@ -1,49 +1,51 @@
 Default-workflow readiness evidence for PR #423
-Recorded at: 2026-05-09T07:58:26Z
-Validated source tree base HEAD: 9b1130812b1e15744c472ae024dcce90857bc29c
+Recorded at: 2026-05-09T10:26:04Z
+Validated source tree HEAD: 7aca4f15d41848fbc1d07a04964361ff2bc107d3
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
 
 Scope:
 - PR #423 readiness recovery is bounded to the source-code-generator
-  characterization lane, centered on core/ast SourceCodeGeneratorTest.
+  characterization lane, centered on core/ast SourceCodeGeneratorTest and the
+  focused NetBeans ProjectCodeGeneratorTest.
 - The current diff against origin/develop contains source-generator
   characterization changes, bounded launcher/source-generation documentation,
   and generated-project code paths already in the PR branch.
-- Validation included the current working tree additions to
-  SourceCodeGeneratorTest, docs/index.md,
-  docs/reference/generated-story-api-listener-source-characterization.md, and
-  this evidence file.
+- Validation included the current working tree additions to source-generator
+  documentation and this evidence file.
 - This log is retained as review evidence for PR #423. The prior PR #388
   fallback evidence was stale and has been replaced.
 - .copilot-evidence/default-workflow-attempt.exit remains a zero-exit marker.
 
 Validated commands for the source tree recorded here:
+- git --no-pager status --short --branch
+- git rev-parse --abbrev-ref HEAD
+- git rev-parse HEAD
+- gh pr view 423 --json number,url,state,isDraft,headRefName,baseRefName,headRepositoryOwner,mergeStateStatus,reviewDecision,statusCheckRollup,updatedAt
+- git --no-pager diff --name-only origin/develop...HEAD
 - git submodule update --init tweedle-lang
 - NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=SourceCodeGeneratorTest test -q
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false test -q
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest test -q
+- git --no-pager diff --check -- docs/index.md docs/reference/generated-story-api-listener-source-characterization.md docs/howto/characterize-source-code-generator.md docs/tutorials/trace-source-code-generator-characterization.md
 
 Result:
 - Tweedle grammar submodule initialized successfully.
 - Focused SourceCodeGeneratorTest validation passed.
-- Focused core/ast reactor validation passed.
-- Maven emitted existing parser diagnostic text during the run, but the focused
-  commands exited successfully.
+- Focused ProjectCodeGeneratorTest validation passed.
 - SourceCodeGeneratorTest now characterizes expression-statement assignment,
   field access, static and instance method invocation, iterable for-each source,
   and the current DoTogether runnable fallback in addition to the existing
   literal, operator, array, class/member, disabled-statement, loop, and stale
   item repair snippets.
 
-Visible GitHub status at the base head before publishing this recovery evidence:
+Visible GitHub status at the recorded head:
 - PR #423 is open against develop.
 - PR #423 is merge-clean.
 - Visible checks reported success for Alice Checkstyle CI, Alice Coverage
   Reports, Alice NetBeans Package CI, Alice Test CI, and GitGuardian Security
   Checks.
-- PR #423 was still marked draft when this evidence was recorded; this is a
-  review-state blocker, not a source-code-generator characterization failure.
+- PR #423 is not marked draft.
 
 Bounded non-claims:
 - This evidence does not claim full Tweedle/player decode.
