@@ -78,9 +78,6 @@ REQUIRED_PR_BODY_FRAGMENTS = (
     "GitHub Actions",
     "Does not claim",
 )
-REQUIRED_PR_BODY_FRAGMENT_CHECKS = tuple(
-    (fragment, fragment.lower()) for fragment in REQUIRED_PR_BODY_FRAGMENTS
-)
 FOCUSED_COMMAND_FRAGMENTS = (
     REQUIRED_NODE_OPTIONS,
     FOCUSED_MAVEN_FRAGMENT,
@@ -221,7 +218,7 @@ def audit_diff_scope(
 ) -> GateResult:
     """Require the PR diff to stay within the documented worker lane."""
 
-    allowed = allowed_files or ALLOWED_DIFF_FILES
+    allowed = ALLOWED_DIFF_FILES if allowed_files is None else allowed_files
     unexpected: list[str] = []
     for path in changed_files:
         normalized = _normalize_diff_path(path)
@@ -450,9 +447,9 @@ def validate_github_actions(
     return result_from_blockers(blockers)
 
 
-def _missing_lower_fragments(text: str, fragments: Iterable[tuple[str, str]]) -> list[str]:
+def _missing_lower_fragments(text: str, fragments: Iterable[str]) -> list[str]:
     lower_text = text.lower()
-    return [fragment for fragment, lower_fragment in fragments if lower_fragment not in lower_text]
+    return [fragment for fragment in fragments if fragment.lower() not in lower_text]
 
 
 def validate_pr_description(
@@ -472,7 +469,7 @@ def validate_pr_description(
         blockers.append(
             not_ready(f"PR description must include current base {expected_base_sha}")
         )
-    missing = _missing_lower_fragments(body_text, REQUIRED_PR_BODY_FRAGMENT_CHECKS)
+    missing = _missing_lower_fragments(body_text, REQUIRED_PR_BODY_FRAGMENTS)
     if missing:
         blockers.append(
             not_ready("PR description is missing evidence for " + ", ".join(missing))
