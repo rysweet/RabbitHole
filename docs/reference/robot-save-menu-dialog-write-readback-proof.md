@@ -62,6 +62,152 @@ The shard delegates final evidence semantics to `SaveOperationCompletionEvidence
 
 Blocked output is the executable blocker for the missing step. It is not proof of Save completion.
 
+Use the JSON artifact as the source of truth. Do not treat Maven success by itself as proof. A blocked artifact is blocker evidence for its `blocker.kind` only; `headless_awt` blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` with `blocker.kind` set to `headless_awt`, use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation or full desktop Save completion.
+
+### Blocked headless-display artifact
+
+This is the complete blocked example for a headless AWT display. It records no successful Save evidence and must not be cited as partial Robot Save proof.
+
+```json
+{
+  "schemaVersion": "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1",
+  "scenario": "alice-desktop-save-menu-dialog-write-proof",
+  "workflow": "save-menu-dialog-write-proof",
+  "runId": "example-run-1",
+  "generatedAtUtc": "2099-01-01T00:00:00Z",
+  "status": "blocked",
+  "proofTarget": "single rendered desktop Save path: menu, dialog, control, write, readback",
+  "reportingSummary": "Robot File menu Save dialog/write/readback path was not proven; blocker.kind identifies the first missing or unsafe step.",
+  "blocker": {
+    "kind": "headless_awt",
+    "observed": "No available non-headless AWT display",
+    "required": "Xvfb or another non-headless AWT display capable of Robot mouse events and Swing JFileChooser display"
+  },
+  "menu": {
+    "fileMenuOpened": false,
+    "saveMenuItemInvoked": false,
+    "saveActionIdentityMatched": false
+  },
+  "dialog": {
+    "saveDialogObserved": false,
+    "dialogType": "Swing JFileChooser",
+    "dialogClass": null,
+    "dialogShowing": false,
+    "ambiguousChooserDiscovery": false,
+    "pollCount": 0
+  },
+  "control": {
+    "selectedPathSet": false,
+    "approvedSelection": false,
+    "selectedPathMatchesExpected": false,
+    "targetInsideProofRoot": true,
+    "normalizedSelectedPath": null,
+    "expectedPath": "projects/robot-save-menu-proof.a3p"
+  },
+  "write": {
+    "fileWritten": false,
+    "fileNonempty": false,
+    "fileHasExpectedExtension": true,
+    "outputPath": "projects/robot-save-menu-proof.a3p",
+    "outputSizeBytes": 0
+  },
+  "readback": {
+    "projectReadable": false,
+    "marker": "robotSaveMenuRoundTripMarker",
+    "markerPresent": false
+  },
+  "baselinePreserved": [
+    "StageIdeSaveMenuDoClickToWriteProofTest",
+    "ProjectApplicationSaveProjectToTest",
+    "JMenuBarRobotClickSaveProofTest"
+  ],
+  "requiresNextEvidence": [
+    "Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related",
+    "Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed in one rendered path"
+  ],
+  "doesNotClaim": [
+    "Save As coverage",
+    "all Save variants",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage"
+  ]
+}
+```
+
+### Proven artifact
+
+This is the minimum successful example. It is valid only when every menu, dialog, selected-file, write, and readback field is true for the same rendered run.
+
+```json
+{
+  "schemaVersion": "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1",
+  "scenario": "alice-desktop-save-menu-dialog-write-proof",
+  "workflow": "save-menu-dialog-write-proof",
+  "runId": "example-run-1",
+  "generatedAtUtc": "2099-01-01T00:00:00Z",
+  "status": "proven",
+  "proofTarget": "single rendered desktop Save path: menu, dialog, control, write, readback",
+  "claim": "AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker",
+  "blocker": null,
+  "menu": {
+    "fileMenuOpened": true,
+    "saveMenuItemInvoked": true,
+    "saveActionIdentityMatched": true
+  },
+  "dialog": {
+    "saveDialogObserved": true,
+    "dialogType": "Swing JFileChooser",
+    "dialogClass": "javax.swing.JDialog",
+    "dialogShowing": true,
+    "ambiguousChooserDiscovery": false,
+    "pollCount": 4
+  },
+  "control": {
+    "selectedPathSet": true,
+    "approvedSelection": true,
+    "selectedPathMatchesExpected": true,
+    "targetInsideProofRoot": true,
+    "normalizedSelectedPath": "projects/robot-save-menu-proof.a3p",
+    "expectedPath": "projects/robot-save-menu-proof.a3p"
+  },
+  "write": {
+    "fileWritten": true,
+    "fileNonempty": true,
+    "fileHasExpectedExtension": true,
+    "outputPath": "projects/robot-save-menu-proof.a3p",
+    "outputSizeBytes": 12345
+  },
+  "readback": {
+    "projectReadable": true,
+    "marker": "robotSaveMenuRoundTripMarker",
+    "markerPresent": true
+  },
+  "baselinePreserved": [
+    "StageIdeSaveMenuDoClickToWriteProofTest",
+    "ProjectApplicationSaveProjectToTest",
+    "JMenuBarRobotClickSaveProofTest"
+  ],
+  "requiresNextEvidence": [
+    "Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related",
+    "Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed in one rendered path"
+  ],
+  "doesNotClaim": [
+    "Save As coverage",
+    "all Save variants",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage"
+  ]
+}
+```
+
 ## API boundaries
 
 This proof is test-only. It does not add a public application API. The stable review interface is the machine-readable artifact documented in [Save Proof Evidence](./save-proof-evidence.md).
