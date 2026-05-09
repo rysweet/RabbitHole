@@ -93,6 +93,33 @@ Review `loadRealStarterProjectInspectSaveCopyAndReopen` for these assertions:
 | Save copy | Copy file exists on disk. | Re-serialization of a real project succeeds. |
 | Reopen copy | Program type name equals original. | Round-trip preserves the real project's identity. |
 
+## Run via the QA scenario runner
+
+The same test is available through the Alice desktop outside-in QA runner, which
+adds evidence collection and gated execution:
+
+```bash
+git submodule update --init tweedle-lang
+export NODE_OPTIONS=--max-old-space-size=32768
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-silver-thread-launch-build-run \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/silver-thread
+```
+
+Review the evidence directory for `status.txt` (pass/fail outcome) and
+`command.log` (Maven output). Without `ALICE_QA_RUN_GATED_SMOKES=1`, the runner
+writes `outcome=gated-not-run` evidence for preflight review.
+
+To prepare evidence without executing the gated command:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-silver-thread-launch-build-run \
+  --prepare-only
+```
+
 ## Keep the claim narrow
 
 Cite this test only for the headless create→build→run→save→reopen silver thread

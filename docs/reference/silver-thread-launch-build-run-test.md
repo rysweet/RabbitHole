@@ -283,6 +283,49 @@ NamedUserType programType = project.getProgramType();
 // programType is assignable to SProgram
 ```
 
+## QA scenario
+
+The `silver-thread-launch-build-run` QA scenario wraps this JUnit test in the
+Alice desktop outside-in QA framework. The scenario YAML is at
+`qa/outside-in/alice-desktop/scenarios/silver-thread-launch-build-run.yaml`.
+
+### Running via the QA runner
+
+```bash
+git submodule update --init tweedle-lang
+export NODE_OPTIONS=--max-old-space-size=32768
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-silver-thread-launch-build-run \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/silver-thread
+```
+
+The runner creates a timestamped evidence directory containing `status.txt`,
+`command.log`, and `manual-evidence-checklist.txt`. When
+`ALICE_QA_RUN_GATED_SMOKES=1` is set, the runner executes the configured Maven
+argv and records the test outcome. Without the gate, the runner writes
+`outcome=gated-not-run` evidence for preflight/checklist preparation.
+
+### Scenario fields
+
+| Field | Value |
+| --- | --- |
+| `id` | `alice-desktop-silver-thread-launch-build-run` |
+| `workflow` | `silver-thread-launch-build-run` |
+| `automationMode` | `gated-command-smoke` |
+| `automation.cwd` | `.` (repository root) |
+| `automation.timeoutSeconds` | `600` |
+| `supportingEvidence` | `alice-desktop-launch` |
+| `tags` | `silver-thread`, `command-smoke`, `end-to-end` |
+
+### Relationship to the JUnit test
+
+The scenario delegates entirely to the JUnit test via its `automation.argv`. No
+additional behavior is added by the QA layer — it provides evidence collection,
+gated execution, and the 4-layer const-allowlist security model. The test itself
+is the single source of truth for assertions and behavior.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |

@@ -120,10 +120,32 @@ select-project-atk-exec-smoke
 select-project-interaction-smoke
 select-project-tab-click-smoke
 select-project-widget-introspection-smoke
+silver-thread-launch-build-run
 tweedle-decoder-boundary-smoke
 tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
+
+To run the silver thread end-to-end create→build→save→reopen→run smoke:
+
+```bash
+git submodule update --init tweedle-lang
+export NODE_OPTIONS=--max-old-space-size=32768
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-silver-thread-launch-build-run \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/silver-thread
+```
+
+The scenario delegates to `SilverThreadLaunchBuildRunTest` which proves the core
+student journey headlessly: create a project, add a statement, save, reopen,
+execute through the virtual machine, verify execution via listener events, and
+verify round-trip fidelity. It also loads a real starter project, saves a copy,
+and verifies the copy reopens with program type fidelity. No display server,
+JavaFX toolkit, or gallery assets are needed. See the [Silver Thread
+Launch-Build-Run Test reference](../../../docs/reference/silver-thread-launch-build-run-test.md)
+for the full behavior contract and claim boundaries.
 
 To observe only the live first-lesson procedure/code-editor target after Select
 Project opens the configured starter:
