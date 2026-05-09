@@ -253,6 +253,47 @@ public class ProjectBackupRecoveryIoTest {
     assertEquals("RecoveredTeachingProgram", exportedProject.getProgramType().getName());
   }
 
+  @Test
+  public void pr426BackupContractStopsAfterSuccessfulRecovery() throws Exception {
+    File corruptMainProject = temporaryFolder.newFile("single-success-world.a3p");
+    Files.writeString(corruptMainProject.toPath(), "not a project archive", StandardCharsets.UTF_8);
+    File backupDirectory = temporaryFolder.newFolder("single-success-world.bak");
+    File newestValidBackup = new File(backupDirectory, "auto20240102_150000.a3p");
+    Project newestProject = new Project(programType("NewestRecoveredProgram"), Project.SceneCameraType.WindowCamera);
+    IoUtilities.writeProject(newestValidBackup, newestProject);
+    File olderCorruptBackup = new File(backupDirectory, "auto20240102_140000.a3p");
+    Files.writeString(olderCorruptBackup.toPath(), "older backup should not be loaded", StandardCharsets.UTF_8);
+    ProjectBackupSelector selector = new ProjectBackupSelector(file -> {
+      throw new AssertionError("corrupted main project should not compare backup timestamps");
+    });
+
+    Project mainProject = new TestFileProjectLoader(corruptMainProject).loadNow();
+    File backup = selector.getNextBackup(
+        LocalDateTime.MIN,
+        backupDirectory,
+        new File[] {newestValidBackup, olderCorruptBackup},
+        true,
+        Set.of(corruptMainProject.getName()));
+    ProjectLoadFailurePlan plan = ProjectLoadFailurePlan.choose(
+        false,
+        false,
+        true,
+        false,
+        backup,
+        corruptMainProject);
+    ProjectLoadFailureDispatchPlan dispatch = ProjectLoadFailureDispatchPlan.afterUserChoice(
+        plan.getAction(),
+        true);
+    Project recoveredProject = new TestFileProjectLoader(plan.getBackupToLoad()).loadNow();
+
+    assertNull(mainProject);
+    assertEquals(ProjectLoadFailurePlan.Action.PROMPT_LOAD_BACKUP, plan.getAction());
+    assertEquals(newestValidBackup, plan.getBackupToLoad());
+    assertEquals(ProjectLoadFailureDispatchPlan.LoadTarget.BACKUP, dispatch.getLoadTarget());
+    assertFalse(dispatch.shouldShowNewProject());
+    assertEquals("NewestRecoveredProgram", recoveredProject.getProgramType().getName());
+  }
+
   private static NamedUserType programType(String name) {
     NamedUserType type = new NamedUserType();
     type.name.setValue(name);

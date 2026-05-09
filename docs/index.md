@@ -13,8 +13,10 @@ repository.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
 - [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
 - [ProjectMigrationManager Migration Characterization](./reference/project-migration-manager-characterization.md) - Reference for generated XML-string characterization around versioned Alice project text migrations.
-- [Exported NetBeans Ant Project Behavior](./reference/exported-netbeans-ant-project-behavior.md) - Reference for current exported-project launcher evidence plus the target bounded no-Sims exported Ant/NetBeans build proof, deterministic display no-go behavior, and Ant runtime metadata.
-- [Headless Runtime Dispatch and Generated Story API Listener Source Characterization](./reference/generated-story-api-listener-source-characterization.md) - Reference for bounded headless virtual-machine listener dispatch, generated listener registration source, scene activation dispatch, and no-desktop boundaries.
+- [Exported NetBeans Ant Project Behavior](./reference/exported-netbeans-ant-project-behavior.md) - Reference for exported-project launcher evidence, deterministic display no-go behavior, the bounded no-Sims exported Ant/NetBeans build proof, and Ant runtime metadata.
+- [Headless Runtime Dispatch and Generated Story API Listener Source Characterization](./reference/generated-story-api-listener-source-characterization.md) - Reference for bounded headless virtual-machine listener dispatch, generated listener registration source, scene activation dispatch, AST/source-code-generator snippets, generated NetBeans project source, and no-desktop boundaries.
+- [Characterize Source-Code-Generator Behavior](./howto/characterize-source-code-generator.md) - How to add or review focused AST, generated NetBeans source, Story API listener, and launcher evidence characterization.
+- [Finalize a source-code-generator pull request](./howto/finalize-source-code-generator.md) - How to refresh current-head GitHub evidence, verify review and required-check state, preserve focused `core/ast` scope, and produce a no-timeout no-op or focused-fix finalization.
 - [Characterize Project Save and Export Operations](./howto/characterize-project-save-export-operations.md) - How to add or review compatibility tests for save/export operations.
 - [Finalize exported NetBeans Ant smoke recovery](./howto/finalize-exported-netbeans-ant-smoke-recovery.md) - How to collect current-head, diff-scope, QA scenario, focused Ant smoke, quality-audit, docs-impact, GitHub Actions, and PR description evidence for a bounded recovery handoff.
 - [Run the Save Menu Dialog Write/Readback Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused Robot Save menu/dialog/write/readback QA scenario with Xvfb when needed.
@@ -24,6 +26,7 @@ repository.
 - [Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof](./tutorials/trace-robot-save-menu-dialog-write-readback-proof.md) - Guided review of Robot menu activation, chooser approval, `.a3p` write, readback, marker evidence, and non-claims.
 - [Tutorial: Add a Project IO Corpus Characterization](./tutorials/project-io-corpus-characterization.md) - A guided example for protecting generated `.a3p` archive behavior.
 - [Tutorial: Add a ProjectMigrationManager Migration Characterization](./tutorials/project-migration-manager-characterization.md) - A guided example for protecting ordered text migration behavior without binary fixtures.
+- [Tutorial: Trace Source-Code-Generator Characterization](./tutorials/trace-source-code-generator-characterization.md) - Guided review from core AST snippets to generated NetBeans source, Story API listener seams, launcher evidence, and bounded non-claims.
 
 ## QA and acceptance testing
 
@@ -55,7 +58,7 @@ repository.
 - [Expand coverage ratchets](./howto/expand-coverage-ratchets.md) - measure no-Sims coverage, choose safe module floors, and document protected hotspot decisions.
 - [Coverage ratchet and hotspot review tutorial](./tutorials/coverage-ratchet-and-hotspot-review.md) - guided ratchet expansion example with conservative thresholds and a hotspot skip/refactor decision.
 - [Coverage reporting reference](./reference/coverage-reporting.md) - aggregate and module JaCoCo reporting, CLI options, CI ratchet gates, configuration, and path toward 70% line coverage.
-- [CI efficiency notes](./reference/ci-efficiency.md) - current pull request check timing, parallelism status, and safe next targets.
+- [CI efficiency and no-op validation skips](./reference/ci-efficiency.md) - conservative docs-only CI skip rules, event-aware Maven gates, and preserved validation surfaces.
 
 ## Modernization evidence and scorecards
 
@@ -68,12 +71,15 @@ repository.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
 - [Tutorial: Characterize ModelResourceExporter bounding-box state](./tutorials/model-resource-exporter-bounding-box-state.md) - guided example for protecting the intentional stateful XML bounding-box behavior.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, literal arithmetic field initializers, player archive, type archive boundaries, and resource decode tests.
+- [Archive/Player Boundary](./reference/archive-player-boundary.md) - fail-closed legacy JSON `.a3w` player readback when manifest-declared image resources are recoverable but the manifest-named program Tweedle type is unsupported.
 - [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments and the argument-bearing explicit `this.method(label: value, ...)` fail-fast boundary.
 - [Simple if-statement decode reference](./reference/simple-if-statement-decode.md) - Tweedle decoder contract for simple `if (condition) { ... }` bodies with supported conditions and an explicit conditional-body allowlist including zero-argument `this.method();` calls.
 - [Player archive unsupported Tweedle diagnostics](./reference/player-archive-unsupported-tweedle-diagnostics.md) - narrow JSON `.a3w` archive contract for surfacing unsupported argument-bearing explicit `this` call reasons while keeping literal arithmetic field-initializer support scoped.
+- [Validate the Archive/Player Boundary](./howto/validate-archive-player-boundary.md) - how to run and review the focused resource-recovery fail-closed evidence without broad player, rendering, Save, grading, Sims, installer, or lesson-completion claims.
 - [Characterize zero-argument this-method call decode](./howto/characterize-zero-argument-this-method-call-decode.md) - how to review focused positive and negative tests for the implemented call slice and named argument-bearing boundary.
 - [Characterize simple if-statement decode](./howto/characterize-simple-if-statement-decode.md) - how to add or review focused positive and negative tests for simple-if bodies that preserve supported conditions and the conditional-body allowlist.
 - [Characterize player archive unsupported Tweedle diagnostics](./howto/characterize-player-archive-unsupported-tweedle-diagnostics.md) - how to add generated `.a3w` characterization for archive-level unsupported decode reason reporting.
+- [Tutorial: Add Archive/Player Boundary Characterization](./tutorials/archive-player-boundary-characterization.md) - guided example for a generated JSON `.a3w` image-resource archive that must fail closed when the manifest-named program type is unsupported.
 - [Tutorial: Add zero-argument this-method call decode coverage](./tutorials/zero-argument-this-method-call-decode.md) - guided example for adding decoded `MethodInvocation` shape coverage and unsupported-neighbor assertions without broadening decoder claims.
 - [Tutorial: Trace simple if-statement decode](./tutorials/simple-if-statement-decode.md) - guided example for asserting the decoded `ConditionalStatement` shape, allowlisted body statements, and unsupported neighboring conditional-body cases.
 - [Tutorial: Trace a player archive unsupported this-call diagnostic](./tutorials/player-archive-unsupported-this-call-diagnostic.md) - guided example for checking fail-closed `.a3w` diagnostics around `this.helper(value: 1)` and `caller.this.helper` context.

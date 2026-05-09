@@ -5,11 +5,22 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 from pathlib import Path
+
+import alice_qa_amplihack
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WRAPPER_PATH = REPO_ROOT / "alice_qa_amplihack.py"
+ARCHIVE_FIXTURE_SCENARIO = (
+    REPO_ROOT
+    / "qa"
+    / "outside-in"
+    / "alice-desktop"
+    / "scenarios"
+    / "archive-fixture-smoke.yaml"
+)
 
 
 def write_file(path: Path, content: str) -> None:
@@ -23,8 +34,8 @@ def write_executable(path: Path, content: str) -> None:
 
 
 def write_wrapper_repo(root: Path) -> None:
-    write_file(root / "qa/outside-in/alice-desktop/runners/validate-scenarios.sh", "#!/usr/bin/env bash\n")
-    write_file(root / "qa/outside-in/alice-desktop/runners/run-scenario.sh", "#!/usr/bin/env bash\n")
+    write_executable(root / "qa/outside-in/alice-desktop/runners/validate-scenarios.sh", "#!/usr/bin/env bash\n")
+    write_executable(root / "qa/outside-in/alice-desktop/runners/run-scenario.sh", "#!/usr/bin/env bash\n")
     write_file(
         root / "scripts/generate-modernization-scorecard.py",
         textwrap.dedent(
@@ -39,7 +50,39 @@ def write_wrapper_repo(root: Path) -> None:
     )
 
 
+def write_logged_command(path: Path, log_path: Path, command_name: str) -> None:
+    write_executable(
+        path,
+        textwrap.dedent(
+            f"""\
+            #!/usr/bin/env bash
+            echo {command_name} "$@" >> {log_path}
+            echo {command_name}-node-options "${{NODE_OPTIONS:-}}" >> {log_path}
+            """
+        ),
+    )
+
+
+def write_validate_scenarios_logger(path: Path, log_path: Path) -> None:
+    write_logged_command(path, log_path, "validate-scenarios")
+
+
 class AmplihackWrapperTest(unittest.TestCase):
+    def test_node_options_env_inherits_environment_when_memory_flag_is_already_set(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"NODE_OPTIONS": "--trace-warnings --max-old-space-size=32768"},
+        ):
+            self.assertIsNone(alice_qa_amplihack.node_options_env())
+
+    def test_node_options_env_appends_memory_flag_when_missing(self) -> None:
+        with mock.patch.dict(os.environ, {"NODE_OPTIONS": "--trace-warnings"}):
+            env = alice_qa_amplihack.node_options_env()
+
+        self.assertIsNotNone(env)
+        assert env is not None
+        self.assertEqual("--trace-warnings --max-old-space-size=32768", env["NODE_OPTIONS"])
+
     def test_help_lists_scorecard_command_without_requiring_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             result = subprocess.run(
@@ -52,8 +95,12 @@ class AmplihackWrapperTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
+        self.assertIn("amplihack archive-player-boundary verify", result.stdout)
         self.assertIn("amplihack tweedle-decode verify", result.stdout)
         self.assertIn("simple-if-method-call", result.stdout)
+        self.assertNotIn("full UI automation", result.stdout)
+        self.assertNotIn("rendering correctness", result.stdout)
+        self.assertNotIn("grading", result.stdout)
 
     def test_scorecard_command_delegates_to_generator_from_repo_root(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -87,24 +134,8 @@ class AmplihackWrapperTest(unittest.TestCase):
             write_wrapper_repo(root)
             bin_dir = root / "bin"
             log_path = root / "commands.log"
-            write_executable(
-                bin_dir / "git",
-                textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo git "$@" >> {log_path}
-                    """
-                ),
-            )
-            write_executable(
-                bin_dir / "mvn",
-                textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo mvn "$@" >> {log_path}
-                    """
-                ),
-            )
+            write_logged_command(bin_dir / "git", log_path, "git")
+            write_logged_command(bin_dir / "mvn", log_path, "mvn")
 
             result = subprocess.run(
                 [
@@ -118,7 +149,11 @@ class AmplihackWrapperTest(unittest.TestCase):
                 check=False,
                 capture_output=True,
                 text=True,
-                env={**os.environ, "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+                env={
+                    **os.environ,
+                    "NODE_OPTIONS": "--trace-warnings",
+                    "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+                },
             )
 
             log = log_path.read_text(encoding="utf-8")
@@ -126,7 +161,9 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("PASS: simple-if-method-call", result.stdout)
         self.assertIn("git submodule update --init tweedle-lang", log)
+        self.assertIn("git-node-options --trace-warnings --max-old-space-size=32768", log)
         self.assertIn("-pl core/ast", log)
+        self.assertIn("mvn-node-options --trace-warnings --max-old-space-size=32768", log)
         self.assertIn(
             "-Dtest=TweedleEncoderDecoderTest#decodeClassWithSimpleIfMethodCallBodyCreatesConditionalMethodInvocation",
             log,
@@ -138,24 +175,8 @@ class AmplihackWrapperTest(unittest.TestCase):
             write_wrapper_repo(root)
             bin_dir = root / "bin"
             log_path = root / "commands.log"
-            write_executable(
-                bin_dir / "git",
-                textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo git "$@" >> {log_path}
-                    """
-                ),
-            )
-            write_executable(
-                bin_dir / "mvn",
-                textwrap.dedent(
-                    f"""\
-                    #!/usr/bin/env bash
-                    echo mvn "$@" >> {log_path}
-                    """
-                ),
-            )
+            write_logged_command(bin_dir / "git", log_path, "git")
+            write_logged_command(bin_dir / "mvn", log_path, "mvn")
 
             result = subprocess.run(
                 [
@@ -178,6 +199,89 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertIn("PASS: simple-if-player-archive", result.stdout)
         self.assertIn("-pl core/story-api-migration", log)
         self.assertIn("-Dtest=IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType", log)
+
+    def test_archive_player_boundary_verify_runs_bounded_readiness_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            bin_dir = root / "bin"
+            log_path = root / "commands.log"
+            write_validate_scenarios_logger(
+                root / "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+                log_path,
+            )
+            write_logged_command(bin_dir / "git", log_path, "git")
+            write_logged_command(bin_dir / "mvn", log_path, "mvn")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "archive-player-boundary",
+                    "verify",
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+                env={
+                    **os.environ,
+                    "NODE_OPTIONS": "--trace-warnings",
+                    "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+                },
+            )
+
+            log = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("PASS: archive-player-boundary", result.stdout)
+        self.assertIn("validate-scenarios", log)
+        self.assertIn("git submodule update --init tweedle-lang", log)
+        self.assertIn("mvn -DincludeSims=false -Dinstall4j.skip", log)
+        self.assertIn("-DfailIfNoTests=false", log)
+        self.assertIn("-Dsurefire.failIfNoSpecifiedTests=false", log)
+        self.assertIn("-pl core/story-api-migration", log)
+        self.assertIn("-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest", log)
+        self.assertIn("validate-scenarios-node-options --trace-warnings --max-old-space-size=32768", log)
+        self.assertIn("git-node-options --trace-warnings --max-old-space-size=32768", log)
+        self.assertIn("mvn-node-options --trace-warnings --max-old-space-size=32768", log)
+        self.assertNotIn("timeout ", log)
+        self.assertNotIn("gh pr merge", log)
+
+    def test_archive_player_boundary_verify_rejects_extra_arguments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "archive-player-boundary",
+                    "verify",
+                    "--full-ui",
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("archive-player-boundary usage", result.stderr)
+        self.assertNotIn("full UI", result.stdout + result.stderr)
+
+    def test_archive_fixture_smoke_scenario_stays_on_resource_recovery_boundary(self) -> None:
+        scenario = ARCHIVE_FIXTURE_SCENARIO.read_text(encoding="utf-8")
+
+        self.assertIn("legacy player resource-recovery boundary", scenario)
+        self.assertIn("manifest-declared image resources", scenario)
+        self.assertIn("unsupported manifest-declared program", scenario)
+        self.assertNotIn("XML fallback", scenario)
+        self.assertNotIn("full historical archive", scenario)
+        self.assertNotIn("full player", scenario)
+        self.assertNotIn("rendering", scenario.lower())
+        self.assertNotIn("grading", scenario.lower())
 
 
 if __name__ == "__main__":

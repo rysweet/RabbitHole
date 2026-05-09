@@ -1,5 +1,5 @@
 id: alice-desktop-archive-fixture-smoke
-title: LFS-independent historical archive fixture boundary smoke
+title: Legacy player resource-recovery boundary smoke
 workflow: archive-fixture-smoke
 automationMode: gated-command-smoke
 preconditions:
@@ -8,13 +8,13 @@ preconditions:
   - The tweedle-lang submodule is initialized.
   - Historical archive round-trip characterization tests are available in the checkout.
 userActions:
-  - Run the focused historical archive fixture boundary characterization smoke from the command line.
-  - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries.
-  - Confirm unsupported Tweedle method, constructor, complex value, and unresolved parent cases fail explicitly.
+  - Run the focused legacy player resource-recovery boundary characterization smoke from the command line.
+  - Exercise generated JSON .a3w archives with manifest-declared image resources.
+  - Confirm unsupported manifest-declared program and sibling Tweedle types fail explicitly instead of producing partial resource-only readback.
 expectedOutcomes:
-  - The historical archive fixture boundary smoke command exits successfully when the gate is enabled.
-  - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
-  - Generated XML fallback .a3p fixtures still save, reopen, and preserve resources through project I/O.
+  - The legacy player resource-recovery boundary smoke command exits successfully when the gate is enabled.
+  - Generated JSON .a3w fixtures with unsupported resource initializers report explicit archive readback failures.
+  - Supported generated JSON .a3w neighbors remain covered by the same focused characterization suite.
 automation:
   cwd: .
   argv:
@@ -33,16 +33,16 @@ automation:
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the historical archive fixture boundary smoke command.
+    - command.log from the legacy player resource-recovery boundary smoke command.
     - Test output or surefire report naming HistoricalArchiveRoundTripCharacterizationTest.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If the focused Maven smoke is unavailable, attach the nearest archive fixture characterization evidence.
-    - Manual GUI save/load evidence remains covered separately by alice-desktop-save-load.
+    - If the focused Maven smoke is unavailable, attach the nearest legacy player resource-recovery characterization evidence.
+    - Do not substitute GUI save/load evidence for this archive/player boundary.
 supportingEvidence:
-  - alice-desktop-project-io-smoke
+  - alice-desktop-tweedle-decoder-boundary-smoke
 tags:
   - archive-fixture
   - command-smoke
-  - project-io
+  - archive-player-boundary
