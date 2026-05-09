@@ -10,6 +10,7 @@ This reference describes the `core/issue-reporting` background submission worker
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
+- [Workflow evidence requirements](#workflow-evidence-requirements)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
 
@@ -150,6 +151,18 @@ mvn -pl core/issue-reporting -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 ```
+
+## Workflow evidence requirements
+
+Use this checklist when preparing or reviewing a PR that only changes the issue-reporting background submission worker seam. Record the current branch and HEAD with the executable validation output; do not carry forward stale results from another checkout or prior session.
+
+| Evidence | Accepted current-head proof |
+| --- | --- |
+| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, and directly related docs. |
+| Readiness | The focused `IssueSubmissionProgressWorkerTest` command above passes with `NODE_OPTIONS=--max-old-space-size=32768`. Run the full `core/issue-reporting` module command when handing off the PR or when any issue-reporting production code changes. |
+| Review | Source review confirms `createIssueBuilder()` still delegates to `JSubmitPane.createIssueBuilder()`, the progress pane remains lazy through `getProgressPane()`, and `do_onBackgroundThread()` still publishes start, delegates submission work, then publishes completion only after a normal delegate return. |
+| Finalization | `git --no-pager status --short --branch`, `gh pr view 428`, and `gh pr checks 428 --watch=false` describe the open PR state and checks without manually merging the PR. |
+| Claim boundary | Handoff notes cite only the worker seam, background ordering, attachment intent, exception propagation, source review, and Maven/PR-check evidence. They do not claim rendered UI automation, real issue-service submission, grading, or full end-to-end coverage. |
 
 ## Compatibility rules
 
