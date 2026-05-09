@@ -144,15 +144,16 @@ public class Decoder {
       type.fields.add(decodeField(property));
     }
     List<UserField> fields = type.getDeclaredFields();
-    List<UserMethod> userMethods = new ArrayList<>();
-    for (TweedleMethod method : tweedleClass.getMethods()) {
+    List<TweedleMethod> tweedleMethods = tweedleClass.getMethods();
+    List<UserMethod> userMethods = new ArrayList<>(tweedleMethods.size());
+    for (TweedleMethod method : tweedleMethods) {
       UserMethod userMethod = decodeMethodSignature(method);
       type.methods.add(userMethod);
       userMethods.add(userMethod);
     }
-    Map<String, UserMethod> zeroArgumentMethods = zeroArgumentMethodsByName(tweedleClass.getMethods(), userMethods);
-    for (int i = 0; i < tweedleClass.getMethods().size(); i++) {
-      TweedleMethod tweedleMethod = tweedleClass.getMethods().get(i);
+    Map<String, UserMethod> zeroArgumentMethods = zeroArgumentMethodsByName(tweedleMethods, userMethods);
+    for (int i = 0; i < tweedleMethods.size(); i++) {
+      TweedleMethod tweedleMethod = tweedleMethods.get(i);
       UserMethod userMethod = userMethods.get(i);
       userMethod.body.setValue(decodeMethodBody(
           tweedleMethod,
@@ -191,9 +192,10 @@ public class Decoder {
       List<UserField> fields,
       NamedUserType declaringType,
       Map<String, UserMethod> zeroArgumentMethods) {
-    List<Statement> statements = new ArrayList<>();
+    List<TweedleStatement> body = constructor.getBody();
+    List<Statement> statements = new ArrayList<>(body.size());
     List<UserLocal> locals = new ArrayList<>();
-    for (TweedleStatement statement : constructor.getBody()) {
+    for (TweedleStatement statement : body) {
       if (statement instanceof LocalVariableDeclaration localVariableDeclaration) {
         LocalDeclarationStatement localStatement =
             decodeLocalDeclarationStatement(constructor.getName(), localVariableDeclaration, parameters, locals, fields);
@@ -255,17 +257,18 @@ public class Decoder {
       List<UserField> fields,
       NamedUserType declaringType,
       Map<String, UserMethod> zeroArgumentMethods) {
-    if (method.getBody().isEmpty()) {
+    List<TweedleStatement> body = method.getBody();
+    if (body.isEmpty()) {
       if (returnType != JavaType.VOID_TYPE) {
         throw new UnsupportedTweedleDecodeException(
             "Tweedle method return values require a supported return statement: " + method.getName());
       }
       return new BlockStatement();
     }
-    List<Statement> statements = new ArrayList<>();
+    List<Statement> statements = new ArrayList<>(body.size());
     List<UserLocal> locals = new ArrayList<>();
-    for (int i = 0; i < method.getBody().size(); i++) {
-      TweedleStatement statement = method.getBody().get(i);
+    for (int i = 0; i < body.size(); i++) {
+      TweedleStatement statement = body.get(i);
       if (statement instanceof LocalVariableDeclaration localVariableDeclaration) {
         LocalDeclarationStatement localStatement =
             decodeLocalDeclarationStatement(method.getName(), localVariableDeclaration, allParameters, locals, fields);
@@ -288,14 +291,14 @@ public class Decoder {
         statements.add(decodeZeroArgumentSameClassMethodCallStatement(
             declaringType, method.getName(), methodCall, zeroArgumentMethods));
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
-          && i == method.getBody().size() - 1) {
+          && i == body.size() - 1) {
         statements.add(decodeReturnStatement(method, returnType, allParameters, locals, fields, returnStatement));
       } else {
         throw unsupportedMethodBody(method);
       }
     }
     if (returnType != JavaType.VOID_TYPE
-        && !(method.getBody().get(method.getBody().size() - 1) instanceof org.alice.tweedle.ast.ReturnStatement)) {
+        && !(body.get(body.size() - 1) instanceof org.alice.tweedle.ast.ReturnStatement)) {
       throw unsupportedMethodBody(method);
     }
     return new BlockStatement(statements.toArray(Statement[]::new));
@@ -306,14 +309,15 @@ public class Decoder {
       String ownerName,
       MethodCallExpression methodCall,
       Map<String, UserMethod> zeroArgumentMethods) {
+    boolean hasArguments = !methodCall.getArguments().isEmpty();
     if (methodCall.hasExplicitTarget()) {
       if (!(methodCall.getTarget() instanceof ThisExpression)) {
         throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
       }
-      if (!methodCall.getArguments().isEmpty()) {
+      if (hasArguments) {
         throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
       }
-    } else if (!methodCall.getArguments().isEmpty()) {
+    } else if (hasArguments) {
       throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
     }
     UserMethod targetMethod = zeroArgumentMethods.get(methodCall.getMethodName());
@@ -362,7 +366,7 @@ public class Decoder {
       NamedUserType declaringType,
       Map<String, UserMethod> zeroArgumentMethods,
       List<TweedleStatement> statements) {
-    List<Statement> decoded = new ArrayList<>();
+    List<Statement> decoded = new ArrayList<>(statements.size());
     for (TweedleStatement statement : statements) {
       if (!(statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement)) {
         throw unsupportedSimpleIfBody(method);
@@ -919,7 +923,7 @@ public class Decoder {
           && tweedleMethod.getOptionalParameters().isEmpty()
           && userMethod.getRequiredParameters().isEmpty()) {
         if (methodsByName == null) {
-          methodsByName = new HashMap<>(userMethods.size());
+          methodsByName = new HashMap<>();
         }
         if (methodsByName.put(userMethod.getName(), userMethod) != null) {
           throw new UnsupportedTweedleDecodeException(
