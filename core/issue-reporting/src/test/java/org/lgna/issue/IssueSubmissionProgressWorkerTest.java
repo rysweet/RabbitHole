@@ -39,6 +39,22 @@ public class IssueSubmissionProgressWorkerTest {
     assertSame(throwable, capturedIssue.getThrowable());
   }
 
+  @Test
+  public void backgroundSubmissionCarriesAttachmentOptOutAndSuccessfulResult() throws Exception {
+    Thread thread = new Thread("issue-reporting-worker-opt-out");
+    Throwable throwable = new IllegalArgumentException("opt-out source");
+    RecordingIssueSubmissionProgressWorker worker = new RecordingIssueSubmissionProgressWorker(thread, throwable, false, true);
+
+    Boolean result = worker.do_onBackgroundThread();
+
+    assertEquals(Boolean.TRUE, result);
+    assertEquals(List.of("START_MESSAGE", "submission:false", "END_MESSAGE"), worker.progressMessages);
+    Issue capturedIssue = worker.capturedIssueBuilder.build();
+    assertEquals(IssueType.BUG, capturedIssue.getType());
+    assertSame(thread, capturedIssue.getThread());
+    assertSame(throwable, capturedIssue.getThrowable());
+  }
+
   private static final class RecordingIssueSubmissionProgressWorker extends IssueSubmissionProgressWorker {
     private final Boolean submissionResult;
     private final Thread thread;

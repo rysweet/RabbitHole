@@ -13,6 +13,7 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
+  amplihack issue-reporting verify <progress-worker-basic|progress-worker-attachment-opt-out>
   amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
 
 Run from the Alice repository root or one of its child directories.
@@ -45,6 +46,18 @@ TWEEDLE_DECODE_SCENARIOS = {
 }
 
 
+ISSUE_REPORTING_SCENARIOS = {
+    "progress-worker-basic": {
+        "description": "Issue submission progress worker publishes start/end around the submission result",
+        "tests": "IssueSubmissionProgressWorkerTest#backgroundSubmissionPublishesStartThenEndAroundSubmissionResult",
+    },
+    "progress-worker-attachment-opt-out": {
+        "description": "Issue submission progress worker carries the attachment opt-out flag through submission",
+        "tests": "IssueSubmissionProgressWorkerTest#backgroundSubmissionCarriesAttachmentOptOutAndSuccessfulResult",
+    },
+}
+
+
 def find_repo_root(start: Path) -> Path | None:
     for candidate in (start, *start.parents):
         runners = candidate / "qa" / "outside-in" / "alice-desktop" / "runners"
@@ -69,6 +82,15 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
     module = selected["module"]
     test_selector = selected["tests"]
     print(f"Running Tweedle decode scenario: {description}")
+    test_result = run_focused_maven_test(root, module, test_selector)
+    if test_result == 0:
+        print(f"PASS: {scenario}")
+    else:
+        print(f"FAIL: {scenario}", file=sys.stderr)
+    return test_result
+
+
+def run_focused_maven_test(root: Path, module: str, test_selector: str) -> int:
     submodule_result = subprocess.run(
         ["git", "submodule", "update", "--init", "tweedle-lang"],
         cwd=root,
@@ -78,7 +100,7 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
         print("FAIL: unable to initialize tweedle-lang submodule", file=sys.stderr)
         return submodule_result.returncode
 
-    test_result = subprocess.run(
+    return subprocess.run(
         [
             "mvn",
             "-pl",
@@ -92,12 +114,26 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
         ],
         cwd=root,
         check=False,
-    )
-    if test_result.returncode == 0:
+    ).returncode
+
+
+def run_issue_reporting_verification(root: Path, scenario: str) -> int:
+    selected = ISSUE_REPORTING_SCENARIOS.get(scenario)
+    if selected is None:
+        valid = ", ".join(sorted(ISSUE_REPORTING_SCENARIOS))
+        print(f"unknown issue-reporting scenario: {scenario}", file=sys.stderr)
+        print(f"valid scenarios: {valid}", file=sys.stderr)
+        return 2
+
+    description = selected["description"]
+    test_selector = selected["tests"]
+    print(f"Running issue-reporting scenario: {description}")
+    test_result = run_focused_maven_test(root, "core/issue-reporting", test_selector)
+    if test_result == 0:
         print(f"PASS: {scenario}")
     else:
         print(f"FAIL: {scenario}", file=sys.stderr)
-    return test_result.returncode
+    return test_result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -123,6 +159,12 @@ def main(argv: list[str] | None = None) -> int:
                 *args[1:],
             ],
         )
+
+    if args[0] == "issue-reporting":
+        if len(args) != 3 or args[1] != "verify":
+            print("issue-reporting usage: amplihack issue-reporting verify <scenario>", file=sys.stderr)
+            return 2
+        return run_issue_reporting_verification(root, args[2])
 
     if args[0] == "tweedle-decode":
         if len(args) != 3 or args[1] != "verify":
