@@ -42,6 +42,7 @@ PR389_CHANGED_FILES = [
     "docs/reference/modernization-corpus-manifest.json",
     "docs/reference/modernization-scorecard.md",
     "netbeans/src/test/java/org/alice/netbeans/Alice3LibraryClasspathTestSupport.java",
+    "netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java",
     "pyproject.toml",
     "qa/outside-in/alice-desktop/README.md",
     "qa/outside-in/alice-desktop/runners/run-scenario.sh",
