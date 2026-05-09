@@ -73,7 +73,7 @@ The characterization tests exercise three protected/package-private seams withou
 
 **Type:** Protected method override.
 
-The production implementation iterates with `Thread.sleep` calls, publishing numbered progress messages. The test subclass `RecordingIssueSubmissionProgressWorker` overrides this to:
+The production implementation first publishes the builder's `toString()` and the `isProjectAttachmentDesired` flag, then iterates with `Thread.sleep` calls publishing numbered progress messages. The test subclass `RecordingIssueSubmissionProgressWorker` overrides this to:
 - Capture the `Issue.Builder` for assertion
 - Publish a deterministic `"submission:<isProjectAttachmentDesired>"` message
 - Return a configurable `boolean` result or throw a configurable `RuntimeException`

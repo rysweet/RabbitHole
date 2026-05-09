@@ -33,7 +33,7 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 | Seam | Type | Production behavior | Test override |
 | --- | --- | --- | --- |
-| `doInternal_onBackgroundThread(Issue.Builder)` | Protected method | Publishes numbered progress messages with `Thread.sleep` calls | Captures the builder, publishes a deterministic marker, returns a configurable result or throws |
+| `doInternal_onBackgroundThread(Issue.Builder)` | Protected method | Publishes builder toString and attachment flag, then numbered progress messages with `Thread.sleep` calls | Captures the builder, publishes a deterministic marker, returns a configurable result or throws |
 | `publishProgressMessage(String)` | Protected method | Delegates to `SwingWorker.publish(String)` for EDT delivery | Records messages into a `List<String>` |
 | `createIssueBuilder()` | Package-private method | Delegates to `JSubmitPane.createIssueBuilder()` | Returns a builder with known thread, throwable, and empty user fields |
 
