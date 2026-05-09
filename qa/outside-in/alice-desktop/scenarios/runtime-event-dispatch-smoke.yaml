@@ -1,0 +1,47 @@
+id: alice-desktop-runtime-event-dispatch-smoke
+title: Headless runtime event dispatch smoke
+workflow: runtime-event-dispatch-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - The headless virtual-machine runtime event characterization test is available in the checkout.
+userActions:
+  - Enable gated smokes in a workspace prepared for core AST module tests.
+  - Run the focused headless runtime event dispatch command smoke.
+  - Review the command output for deterministic listener event order and listener removal evidence.
+expectedOutcomes:
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
+  - When the gate is enabled, the focused headless runtime event dispatch test exits successfully.
+  - Command evidence covers only bounded headless virtual-machine listener dispatch and does not claim desktop runtime execution, full world playback, visible correctness, grading, Save completion, or full UI automation.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/ast
+    - -am
+    - -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the focused headless runtime event dispatch smoke command.
+    - Test output or surefire report naming VirtualMachineHeadlessRuntimeEventTest.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If focused core AST tests are unavailable, attach the nearest runtime listener dispatch characterization evidence and record the missing assertion.
+    - Do not substitute desktop Run, visible rendering, Save, grading, or full UI automation proof for this headless dispatch smoke.
+tags:
+  - immediate-qa-backlog
+  - runtime-event-dispatch
+  - command-smoke
+

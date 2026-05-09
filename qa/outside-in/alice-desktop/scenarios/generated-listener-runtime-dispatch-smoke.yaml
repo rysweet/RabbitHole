@@ -1,0 +1,48 @@
+id: alice-desktop-generated-listener-runtime-dispatch-smoke
+title: Generated listener headless runtime dispatch smoke
+workflow: generated-listener-runtime-dispatch-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - The generated Story API listener source characterization test is available in the checkout.
+userActions:
+  - Enable gated smokes in a workspace prepared for NetBeans module tests.
+  - Run the focused generated listener source and headless dispatch command smoke.
+  - Review the command output for generated source compilation and scene activation callback evidence.
+expectedOutcomes:
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
+  - When the gate is enabled, the focused generated Story API listener source and runtime dispatch test exits successfully.
+  - Command evidence covers only compiler-valid generated listener registration source and one bounded headless scene activation callback; it does not claim desktop runtime execution, full world playback, visible correctness, grading, Save completion, or full UI automation.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - netbeans
+    - -am
+    - -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest
+    - test
+  timeoutSeconds: 900
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the focused generated listener runtime dispatch smoke command.
+    - Test output or surefire report naming ProjectCodeGeneratorStoryApiGeneratedSourceTest.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If focused NetBeans generated-source tests are unavailable, attach the nearest generated listener characterization evidence and record the missing assertion.
+    - Do not substitute desktop Run, visible rendering, Save, grading, or full UI automation proof for this generated listener smoke.
+tags:
+  - immediate-qa-backlog
+  - runtime-event-dispatch
+  - generated-listener-source
+  - command-smoke
+

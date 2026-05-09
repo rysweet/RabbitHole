@@ -169,6 +169,36 @@ validate_allowed_automation() {
     [ "$4" = -DfailIfNoTests=false ] &&
     [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
     [ "$6" = -pl ] &&
+    [ "$7" = core/ast ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
+    [ "$7" = netbeans ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
     [ "$7" = core/story-api-migration ] &&
     [ "$8" = -am ] &&
     [ "$9" = -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest ] &&

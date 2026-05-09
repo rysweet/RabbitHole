@@ -101,6 +101,7 @@ failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
 future-ui-smoke
+generated-listener-runtime-dispatch-smoke
 instructor-student-setup
 launch
 menu-action-smoke
@@ -112,6 +113,7 @@ post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
+runtime-event-dispatch-smoke
 run-debug
 save-load
 save-menu-dialog-write-proof
@@ -366,6 +368,7 @@ exported-project-smoke
 failure-path-smoke
 file-loader-smoke
 future-ui-smoke
+generated-listener-runtime-dispatch-smoke
 instructor-student-setup
 launch
 menu-action-smoke
@@ -377,6 +380,7 @@ post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
+runtime-event-dispatch-smoke
 run-debug
 save-load
 save-menu-dialog-write-proof
