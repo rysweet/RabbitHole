@@ -66,7 +66,8 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh --dump-json \
   alice-desktop-launch
 ```
 
-Confirm these launch evidence markers are present in the output:
+Confirm these launch evidence markers are present in the output. They appear as
+artifact references in the scenario's evidence and runner configuration:
 
 | Marker | What it proves |
 | --- | --- |
