@@ -49,6 +49,7 @@ def passing_evidence() -> dict:
                 "alice_qa_amplihack.py",
                 "docs/howto/run-save-menu-dialog-negative-artifact-contract.md",
                 "docs/reference/save-menu-dialog-negative-artifact-contract.md",
+                "pyproject.toml",
                 "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh",
                 "tests/test_alice_qa_amplihack_docs_contract.py",
             ],

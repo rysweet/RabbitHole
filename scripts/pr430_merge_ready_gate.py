@@ -34,6 +34,7 @@ SUPPORTED_DIFF_PATHS = (
     "docs/reference/",
     "docs/tutorials/",
     "docs/index.md",
+    "pyproject.toml",
     "qa/outside-in/alice-desktop/",
     "scripts/pr430_merge_ready_gate.py",
     "tests/",
