@@ -1,6 +1,6 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported-project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported Ant project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
 
 ## Contents
 
@@ -16,6 +16,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Review the desktop Run execution gap report](#review-the-desktop-run-execution-gap-report)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
+- [Run the exported Ant project smoke](#run-the-exported-ant-project-smoke)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
 - [Configure scenario and Xvfb runs](#configure-scenario-and-xvfb-runs)
 - [Review evidence](#review-evidence)
@@ -522,6 +523,48 @@ unsupportedClaims:
 
 For the complete artifact API, configuration, examples, and review rules, see
 [Desktop Run execution gap report](../reference/desktop-run-execution-gap-report.md).
+
+## Run the exported Ant project smoke
+
+Use `alice-desktop-exported-project-smoke` for the bounded no-Sims exported
+Ant/NetBeans build proof through `Alice3ProjectTemplateAntSmokeTest`.
+
+Run from the repository root:
+
+```bash
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-exported-project-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-smoke
+```
+
+The runner maps the workflow to this fixed Maven argv:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
+  test
+```
+
+Review `status.txt` and `command.log` in the generated evidence directory. A
+passing run proves only the exported Ant project build path:
+generated classes, the exported jar and manifest, resource packaging, Ant `jar`,
+`run`, `run-test-with-main`, `clean`, and deterministic probe markers
+`ANT_RUN_PROBE_OK`, `ANT_RESOURCE_PROBE_OK`,
+`ANT_RUNTIME_CONFIGURATION_PROBE_OK`, and `ANT_TEST_MAIN_PROBE_OK`. No Ant log
+may contain `Java Result:`. If the target command cannot complete, keep the
+failed evidence directory as the blocker and name the exact command, failing Ant
+target or prerequisite, and missing condition.
+
+This smoke is not installer validation, not a full GUI export journey, not
+visible rendering evidence, and not Sims coverage.
 
 ## Prepare evidence for manual workflows
 

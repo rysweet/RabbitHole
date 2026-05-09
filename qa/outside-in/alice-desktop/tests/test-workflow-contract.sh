@@ -10,6 +10,7 @@ SCHEMA="$BASE_DIR/schema/scenario.schema.json"
 QA_REFERENCE_DOC="$BASE_DIR/../../../docs/reference/alice-desktop-outside-in-qa.md"
 QA_HOWTO_DOC="$BASE_DIR/../../../docs/howto/alice-desktop-outside-in-qa.md"
 QA_TUTORIAL_DOC="$BASE_DIR/../../../docs/tutorials/alice-desktop-outside-in-qa.md"
+EXPORTED_ANT_BEHAVIOR_DOC="$BASE_DIR/../../../docs/reference/exported-netbeans-ant-project-behavior.md"
 README_DOC="$BASE_DIR/README.md"
 PROCEDURE_EDIT_SEAM_DOC="$BASE_DIR/../../../docs/reference/first-lesson-procedure-edit-seam.md"
 LEARNER_WORLD_BOUNDARY="$BASE_DIR/contracts/learner-world-assessment-boundary.json"
@@ -27,7 +28,7 @@ assert_success "$status" "runner lists scenario catalog"
 status=$?
 assert_success "$status" "validator dumps scenario catalog for workflow checks"
 
-python3 - "$tmp_root/catalog.json" "$SCHEMA" "$VALIDATOR" "$QA_REFERENCE_DOC" "$QA_HOWTO_DOC" "$QA_TUTORIAL_DOC" "$README_DOC" "$PROCEDURE_EDIT_SEAM_DOC" "$LEARNER_WORLD_BOUNDARY" >"$tmp_root/workflow-contract.out" 2>"$tmp_root/workflow-contract.err" <<'PY'
+python3 - "$tmp_root/catalog.json" "$SCHEMA" "$VALIDATOR" "$QA_REFERENCE_DOC" "$QA_HOWTO_DOC" "$QA_TUTORIAL_DOC" "$EXPORTED_ANT_BEHAVIOR_DOC" "$README_DOC" "$PROCEDURE_EDIT_SEAM_DOC" "$LEARNER_WORLD_BOUNDARY" >"$tmp_root/workflow-contract.out" 2>"$tmp_root/workflow-contract.err" <<'PY'
 from collections import Counter
 import json
 import re
@@ -41,9 +42,10 @@ validator_text = Path(sys.argv[3]).read_text(encoding="utf-8")
 qa_reference_text = Path(sys.argv[4]).read_text(encoding="utf-8")
 qa_howto_text = Path(sys.argv[5]).read_text(encoding="utf-8")
 qa_tutorial_text = Path(sys.argv[6]).read_text(encoding="utf-8")
-readme_text = Path(sys.argv[7]).read_text(encoding="utf-8")
-procedure_edit_seam_text = Path(sys.argv[8]).read_text(encoding="utf-8")
-learner_world_boundary_path = Path(sys.argv[9])
+exported_ant_behavior_text = Path(sys.argv[7]).read_text(encoding="utf-8")
+readme_text = Path(sys.argv[8]).read_text(encoding="utf-8")
+procedure_edit_seam_text = Path(sys.argv[9]).read_text(encoding="utf-8")
+learner_world_boundary_path = Path(sys.argv[10])
 if learner_world_boundary_path.is_file():
     learner_world_boundary_text = learner_world_boundary_path.read_text(encoding="utf-8")
     learner_world_boundary = json.loads(learner_world_boundary_text)
@@ -55,7 +57,7 @@ workflow_counts = Counter(scenario["workflow"] for scenario in catalog_list)
 required_workflows = [
     "archive-fixture-smoke",
     "export",
-    "exported-project-smoke",
+    "exported-project-ant-build-smoke",
     "failure-path-smoke",
     "file-loader-smoke",
     "first-lesson-live-procedure-target-observation",
@@ -345,6 +347,7 @@ texts_for_overclaim_scan = (
     ("QA reference docs", qa_reference_text),
     ("QA how-to docs", qa_howto_text),
     ("QA tutorial docs", qa_tutorial_text),
+    ("exported Ant behavior docs", exported_ant_behavior_text),
     ("learner-world boundary artifact", learner_world_boundary_text),
 )
 for name, text in texts_for_overclaim_scan:
@@ -384,6 +387,44 @@ for scenario_id in gated_scenarios:
         errors.append(f"{scenario_id} must require status.txt evidence")
     if not any(token in evidence_text for token in ("command.log", "artifact", "project", "failure")):
         errors.append(f"{scenario_id} must require command, artifact, project, or failure-path evidence")
+
+exported_project_smoke = catalog.get("alice-desktop-exported-project-smoke")
+if exported_project_smoke is None:
+    errors.append("catalog must contain alice-desktop-exported-project-smoke")
+else:
+    expected_exported_ant_build_argv = (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "netbeans",
+        "-am",
+        "-Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest",
+        "test",
+    )
+    actual_exported_ant_build_argv = tuple(exported_project_smoke.get("automation", {}).get("argv", []))
+    exported_project_text = json.dumps(exported_project_smoke, sort_keys=True)
+    exported_project_lower = exported_project_text.lower()
+    if exported_project_smoke["workflow"] != "exported-project-ant-build-smoke":
+        errors.append("exported project smoke must use the exported-project-ant-build-smoke workflow")
+    if actual_exported_ant_build_argv != expected_exported_ant_build_argv:
+        errors.append(
+            "exported project smoke must run the focused no-Sims Alice3ProjectTemplateAntSmokeTest Maven command"
+        )
+    if "ProjectCodeGeneratorStandaloneProjectTest" in exported_project_text:
+        errors.append("exported project smoke must not treat ProjectCodeGeneratorStandaloneProjectTest as final Ant build proof")
+    if "launcher handoff" in exported_project_lower:
+        errors.append("exported project Ant build proof must not claim launcher handoff evidence as its required outcome")
+    for required in ("ant", "jar", "build/classes"):
+        if required not in exported_project_lower:
+            errors.append(f"exported project Ant build proof must name concrete {required} evidence")
+    for forbidden in ("installer validation", "full gui export journey"):
+        if forbidden in exported_project_lower:
+            errors.append(f"exported project Ant build proof must not overclaim {forbidden}")
+    if "after the feature is wired" in exported_ant_behavior_text.lower():
+        errors.append("exported Ant behavior docs must not use stale point-in-time wiring language")
 
 if errors:
     raise AssertionError("\n".join(errors))

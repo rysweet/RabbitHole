@@ -56,3 +56,46 @@ Limits:
 - This evidence does not claim runtime dispatch completion beyond the focused
   generated-source/headless characterization test.
 - This evidence does not claim export completion.
+
+Default-workflow recovery/finalization for PR #389
+Recorded at: 2026-05-09T03:55:00Z
+Starting PR head verified: b183575ca623d07affb296fe753d30860cad4832
+Base branch verified: develop
+
+Scope inspected:
+- Full origin/develop...HEAD diff reviewed.
+- Diff scope covers the exported-project Ant build smoke workflow rename/wiring,
+  the runner and validator argv allowlists, schema/workflow contract tests, and
+  documentation/evidence-boundary updates.
+- A stale wording blocker was fixed so the docs no longer say the Ant target
+  execution remains unwired.
+
+Validation completed:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-gadugi-exported-launcher-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/run-tests.sh
+- ALICE_QA_RUN_GATED_SMOKES=1 NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-exported-project-smoke --evidence-dir /tmp/rabbithole-pr389-exported-ant-evidence
+- git diff --check origin/develop...HEAD
+- git merge-tree clean check against origin/develop
+
+Result:
+- Prior manual-fallback marker is cleared by default-workflow-owned evidence.
+- Focused QA contracts passed.
+- The gated exported Ant project smoke passed with status.txt outcome=passed,
+  exitCode=0, and Alice3ProjectTemplateAntSmokeTest tests run: 7, failures: 0,
+  errors: 0, skipped: 0.
+- No Ant log contained Java Result.
+- GitHub PR checks for build, package-netbeans, test, and GitGuardian passed at
+  pushed head 96f0834e5259f0b1b96fcbf4e73dd250f0902ab5; coverage was still
+  in progress at the time of base-merge refresh.
+
+Limits:
+- The exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest
+  Ant build/JAR/probe behavior.
+- This evidence does not claim full GUI export journey validation.
+- This evidence does not claim deployed installer validation.
+- This evidence does not claim visible rendering or Sims validation.
