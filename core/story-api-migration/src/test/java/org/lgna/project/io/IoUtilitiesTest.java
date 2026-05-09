@@ -346,6 +346,28 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonPlayerReaderAcceptsSafeRelativeImageEntryOutsideExporterResourceDirectory() throws Exception {
+    UUID imageId = UUID.randomUUID();
+    ImageReference imageReference = imageReference(imageId, "legacy-picture.png", "png");
+    imageReference.file = "legacy-images/legacy-picture.png";
+    byte[] imageData = new byte[] {7, 8, 9};
+    File exportFile = temporaryFolder.newFile("safe-relative-image-entry.a3w");
+    writePlayerArchive(exportFile, imageReference, imageData);
+
+    Project readProject = IoUtilities.readProject(exportFile);
+
+    assertNotNull(readProject.getProgramType());
+    assertEquals("Program", readProject.getProgramType().getName());
+    Resource readResource = onlyResource(readProject);
+    assertEquals(ImageResource.class, readResource.getClass());
+    assertEquals(imageId, readResource.getId());
+    assertEquals("legacy-picture.png", readResource.getOriginalFileName());
+    assertEquals("legacy-picture.png", readResource.getName());
+    assertEquals("png", readResource.getContentType());
+    assertArrayEquals(imageData, readResource.getData());
+  }
+
+  @Test
   public void jsonPlayerReaderReportsMissingImageResourceData() throws Exception {
     ImageReference imageReference = imageReference(UUID.randomUUID(), "missing.png", "png");
     File exportFile = temporaryFolder.newFile("missing-image.a3w");
