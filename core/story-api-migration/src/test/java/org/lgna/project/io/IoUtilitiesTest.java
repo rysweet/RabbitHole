@@ -120,19 +120,35 @@ public class IoUtilitiesTest {
     assertNotNull(editedProgramType);
     assertEquals(editedProgramName, editedProgramType.getName());
     try (ZipFile zipFile = new ZipFile(editedProjectFile)) {
+      assertNotNull(zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
       ProjectManifest saveManifest = readProjectManifest(zipFile);
       assertEquals(editedProgramName, saveManifest.description.name);
       assertEquals(IoUtilities.PROJECT_EXTENSION, saveManifest.metadata.fileType);
+      assertEquals(Project.SceneCameraType.WindowCamera, saveManifest.projectStructure.sceneCameraType);
+      assertTrue(saveManifest.resources.isEmpty());
       assertNotNull(zipFile.getEntry("programType.xml"));
     }
 
     IoUtilities.exportProject(exportFile, editedProject);
 
     try (ZipFile zipFile = new ZipFile(exportFile)) {
+      assertNotNull(zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
       ProjectManifest exportManifest = readProjectManifest(zipFile);
       assertEquals(editedProgramName, exportManifest.description.name);
       assertEquals(IoUtilities.EXPORT_EXTENSION, exportManifest.metadata.fileType);
-      assertNotNull(zipFile.getEntry("src/" + editedProgramName + ".twe"));
+      assertEquals(Project.SceneCameraType.WindowCamera, exportManifest.projectStructure.sceneCameraType);
+      assertNull(zipFile.getEntry("programType.xml"));
+
+      TypeReference editedProgramReference = null;
+      for (ResourceReference resourceReference : exportManifest.resources) {
+        if (resourceReference instanceof TypeReference typeReference && editedProgramName.equals(typeReference.name)) {
+          editedProgramReference = typeReference;
+        }
+      }
+      assertNotNull(editedProgramReference);
+      assertEquals("src/" + editedProgramName + ".twe", editedProgramReference.file);
+      assertNotNull(zipFile.getEntry(editedProgramReference.file));
+      assertTrue(readZipEntryText(zipFile, editedProgramReference.file).contains("class " + editedProgramName));
     }
   }
 
