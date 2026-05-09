@@ -153,6 +153,65 @@ class MergeReadyRecoveryUnitContractTest(unittest.TestCase):
         self.assertNotIn("json-secret", failure)
         self.assertLessEqual(len(failure), 320)
 
+    def test_sanitizer_redacts_common_secret_formats(self) -> None:
+        cases = [
+            (
+                "authorization token header",
+                "Authorization: token header-secret",
+                "Authorization: token <redacted>",
+                "header-secret",
+            ),
+            (
+                "authorization bearer header",
+                "Authorization: Bearer bearer-header-secret",
+                "Authorization: Bearer <redacted>",
+                "bearer-header-secret",
+            ),
+            (
+                "standalone bearer token",
+                "request failed with Bearer standalone-bearer-secret",
+                "Bearer <redacted>",
+                "standalone-bearer-secret",
+            ),
+            (
+                "colon password",
+                "password: colon-secret",
+                "password: <redacted>",
+                "colon-secret",
+            ),
+            (
+                "json token fields",
+                '{"access_token":"json-token-secret"}',
+                '"access_token":<redacted>',
+                "json-token-secret",
+            ),
+            (
+                "json secret fields",
+                '{"client_secret":"json-client-secret"}',
+                '"client_secret":<redacted>',
+                "json-client-secret",
+            ),
+            (
+                "spaced key value",
+                "refresh_token = refresh-secret",
+                "refresh_token = <redacted>",
+                "refresh-secret",
+            ),
+            (
+                "api key value",
+                "api_key=api-secret",
+                "api_key=<redacted>",
+                "api-secret",
+            ),
+        ]
+
+        for name, raw, expected, leaked in cases:
+            with self.subTest(name=name):
+                sanitized = self.recovery.sanitize_output_excerpt(raw, max_chars=1000)
+
+                self.assertIn(expected, sanitized)
+                self.assertNotIn(leaked, sanitized)
+
     def test_checks_require_stable_sha_and_all_green_check_states(self) -> None:
         checks = [
             {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},

@@ -10,6 +10,7 @@ import importlib.util
 import io
 import json
 import sys
+import tempfile
 import unittest
 from functools import lru_cache
 from pathlib import Path
@@ -367,6 +368,44 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         self.assertNotIn("/home/azureuser/src/private", blockers)
         self.assertNotIn("hunter2", blockers)
         self.assertFalse(any(command and command[0] == "grep" for command in runner.commands))
+
+    def test_missing_qa_discovery_search_path_blocks_before_shell_discovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runner = FakeRunner(body=complete_pr_body(), checks=[])
+
+            with self.assertRaisesRegex(self.recovery.RecoveryEvidenceError, "missing or inaccessible"):
+                self.recovery.discover_qa_paths(runner, root)
+
+            self.assertEqual([], runner.commands)
+
+    def test_grep_discovery_failure_surfaces_sanitized_blocker(self) -> None:
+        qa_path = "qa/outside-in/alice-desktop/scenarios/export-model.yaml"
+        runner = FakeRunner(
+            body=complete_pr_body(),
+            checks=[
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
+            ],
+            diff_output=f"M\t{qa_path}\n",
+            grep_returncode=2,
+            grep_stderr="/home/azureuser/src/private/qa.log Authorization: Bearer grep-secret",
+        )
+
+        report = as_mapping(
+            self.recovery.recover_pr(
+                self.recovery_inputs(expected_diff_paths={qa_path}),
+                command_runner=runner,
+                repo_root=REPO_ROOT,
+            )
+        )
+
+        blockers = "\n".join(report["blockers"])
+        self.assertEqual("NOT_MERGE_READY", report["result"])
+        self.assertIn("QA/scenario grep discovery failed", blockers)
+        self.assertIn("Authorization: Bearer <redacted>", blockers)
+        self.assertIn("<path>", blockers)
+        self.assertNotIn("/home/azureuser/src/private", blockers)
+        self.assertNotIn("grep-secret", blockers)
 
     def test_grep_no_matches_is_not_treated_as_discovery_failure(self) -> None:
         qa_path = "qa/outside-in/alice-desktop/scenarios/export-model.yaml"

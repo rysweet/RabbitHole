@@ -59,6 +59,10 @@ OVERCLAIM_PHRASES = (
 QA_SURFACE_PREFIX = "qa/outside-in/"
 QA_SCENARIO_EXTENSIONS = (".yaml", ".yml")
 QA_DISCOVERY_SEARCH_DIRS = ("qa/outside-in", "docs/reference", "docs/howto")
+SECRET_FIELD_NAME_PATTERN = (
+    r"(?:access[_-]?token|refresh[_-]?token|id[_-]?token|auth[_-]?token|token|"
+    r"client[_-]?secret|secret|password|passwd|pwd|api[_-]?key|private[_-]?key)"
+)
 
 
 class RecoveryEvidenceError(RuntimeError):
@@ -123,11 +127,23 @@ def sanitize_output_excerpt(text: str, *, max_chars: int = 240) -> str:
     home = str(Path.home())
     if home:
         compact = compact.replace(home, "~")
-    compact = re.sub(r"(?i)(authorization\s*:\s*(?:token|bearer)\s+)\S+", r"\1<redacted>", compact)
-    compact = re.sub(r"(?i)(authorization\s*=\s*(?:token|bearer)\s+)\S+", r"\1<redacted>", compact)
-    compact = re.sub(r"(?i)(token|secret|password|authorization|api[_-]?key)=\S+", r"\1=<redacted>", compact)
-    compact = re.sub(r'(?i)("?(?:token|secret|password|api[_-]?key)"?\s*:\s*)"?[^"\s,;}]+"?', r"\1<redacted>", compact)
-    compact = re.sub(r"(?i)Bearer\s+\S+", "Bearer <redacted>", compact)
+    compact = re.sub(
+        r"(?i)(\bauthorization\s*:\s*(?:token|bearer|basic)\s+)\S+",
+        r"\1<redacted>",
+        compact,
+    )
+    compact = re.sub(
+        r"(?i)(\bauthorization\s*=\s*(?:(?:token|bearer|basic)\s+)?)\S+",
+        r"\1<redacted>",
+        compact,
+    )
+    compact = re.sub(
+        rf"(?i)((?<![\w-])[\"']?(?:{SECRET_FIELD_NAME_PATTERN})[\"']?\s*[:=]\s*)"
+        r"(?:\"[^\"]*\"|'[^']*'|[^\s,;}]+)",
+        r"\1<redacted>",
+        compact,
+    )
+    compact = re.sub(r"(?i)(\bBearer\s+)\S+", r"\1<redacted>", compact)
     compact = re.sub(r"(?<![\w.-])(?:~|/(?:home|tmp|var|workspace|mnt|Users))/[^\s:;]+", "<path>", compact)
     if len(compact) > max_chars:
         return compact[: max_chars - 3].rstrip() + "..."
@@ -686,7 +702,7 @@ def discover_qa_paths(runner: CommandRunner, root: Path) -> list[str]:
     missing_dirs = [relative for relative in QA_DISCOVERY_SEARCH_DIRS if not (root / relative).is_dir()]
     if missing_dirs:
         raise RecoveryEvidenceError(
-            "QA/scenario discovery search paths are missing: " + ", ".join(missing_dirs)
+            "QA/scenario discovery search paths are missing or inaccessible: " + ", ".join(missing_dirs)
         )
 
     find_result = runner(["find", "qa/outside-in", "-maxdepth", "4", "-type", "f"], cwd=root, env=None)
