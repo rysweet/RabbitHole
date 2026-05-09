@@ -1,0 +1,48 @@
+id: alice-desktop-silver-thread-launch-build-run
+title: Silver thread create-build-save-reopen-run end-to-end smoke
+workflow: silver-thread-launch-build-run
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - SilverThreadLaunchBuildRunTest is available in the checkout.
+userActions:
+  - Run the focused silver thread end-to-end characterization smoke from the command line.
+  - Create a new project, add a comment, save the project, reopen it, and verify execution.
+  - Load a real starter project, inspect it, save a copy, and reopen the copy.
+expectedOutcomes:
+  - The silver thread smoke command exits successfully when the gate is enabled.
+  - A new project round-trips through create, comment, save, reopen, and execute without error.
+  - A real starter project round-trips through load, inspect, save-copy, and reopen without error.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/ide
+    - -am
+    - -Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the silver thread smoke command.
+    - Test output or surefire report naming SilverThreadLaunchBuildRunTest.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the focused Maven smoke is unavailable, attach the nearest silver thread characterization evidence.
+    - Do not substitute GUI evidence for this headless create-build-save-reopen-run boundary.
+supportingEvidence:
+  - alice-desktop-launch
+tags:
+  - silver-thread
+  - command-smoke
+  - end-to-end
