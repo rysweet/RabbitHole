@@ -12,7 +12,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.EventObject;
 import java.util.Objects;
@@ -176,27 +178,44 @@ final class SaveOperationCompletionEvidence {
   }
 
   static Path configuredSaveProofArtifact(Path proofRoot) {
+    Objects.requireNonNull(proofRoot, "proofRoot");
+    Path canonicalProofRoot = canonicalDirectory(proofRoot, "Save proof root");
     String configured = propertyOrEnv(SAVE_PROOF_EVIDENCE_PATH_PROPERTY, SAVE_PROOF_EVIDENCE_PATH_ENV);
     if (configured == null || configured.isBlank()) {
-      return proofRoot.resolve(SAVE_PROOF_ARTIFACT);
+      return canonicalProofRoot.resolve(SAVE_PROOF_ARTIFACT);
     }
-    Path artifact = Path.of(configured).normalize();
+    Path artifact = Path.of(configured).toAbsolutePath().normalize();
     if (!SAVE_PROOF_ARTIFACT.equals(artifact.getFileName().toString())) {
       throw new IllegalArgumentException("Save proof evidence path must end with " + SAVE_PROOF_ARTIFACT);
     }
-    return artifact;
+    Path parent = artifact.getParent();
+    if (parent == null) {
+      throw new IllegalArgumentException("Save proof evidence path must have a parent directory");
+    }
+    requirePathUnderProofRoot(parent, canonicalProofRoot, "Save proof evidence path must stay under the proof root");
+    Path canonicalParent = canonicalDirectory(parent, "Save proof evidence parent");
+    requirePathUnderProofRoot(canonicalParent, canonicalProofRoot, "Save proof evidence path must stay under the proof root");
+    return canonicalParent.resolve(SAVE_PROOF_ARTIFACT);
   }
 
   static String configuredSaveProofScenario() {
     String configured = propertyOrEnv(SAVE_PROOF_SCENARIO_PROPERTY, SAVE_PROOF_SCENARIO_ENV);
-    return configured == null || configured.isBlank() ? SAVE_PROOF_SCENARIO : configured;
+    String scenario = configured == null || configured.isBlank() ? SAVE_PROOF_SCENARIO : configured;
+    if (!SAVE_PROOF_SCENARIO.equals(scenario)) {
+      throw new IllegalArgumentException("Save proof scenario must be " + SAVE_PROOF_SCENARIO);
+    }
+    return scenario;
   }
 
   static String configuredSaveProofRunId() {
     String configured = propertyOrEnv(SAVE_PROOF_RUN_ID_PROPERTY, SAVE_PROOF_RUN_ID_ENV);
-    return configured == null || configured.isBlank()
+    String runId = configured == null || configured.isBlank()
         ? "standalone-" + UUID.randomUUID()
         : configured;
+    if (!runId.matches("[A-Za-z0-9._-]+")) {
+      throw new IllegalArgumentException("Save proof runId must be a non-empty safe token");
+    }
+    return runId;
   }
 
   private static String propertyOrEnv(String propertyName, String envName) {
@@ -567,6 +586,20 @@ final class SaveOperationCompletionEvidence {
     return artifact;
   }
 
+  private static Path canonicalDirectory(Path directory, String label) {
+    try {
+      return Files.createDirectories(directory).toRealPath();
+    } catch (IOException ioe) {
+      throw new IllegalArgumentException(label + " must be a writable canonical directory", ioe);
+    }
+  }
+
+  private static void requirePathUnderProofRoot(Path path, Path proofRoot, String message) {
+    if (!path.normalize().startsWith(proofRoot)) {
+      throw new IllegalArgumentException(message);
+    }
+  }
+
   static final class SaveProofEvidence {
     volatile boolean robotFileMenuOpened;
     volatile boolean robotSaveItemClicked;
@@ -589,11 +622,16 @@ final class SaveOperationCompletionEvidence {
     private final File targetFile;
     private final Path proofRoot;
     private final String targetCanonicalPath;
+    private final Path targetPath;
+    private final String targetFileName;
 
     private SaveProofEvidence(File targetFile, Path proofRoot) throws IOException {
       this.targetFile = Objects.requireNonNull(targetFile, "targetFile");
       this.proofRoot = Objects.requireNonNull(proofRoot, "proofRoot").toRealPath();
       this.targetCanonicalPath = targetFile.getCanonicalPath();
+      this.targetPath = Path.of(this.targetCanonicalPath).normalize();
+      this.targetFileName = targetFile.getName();
+      this.targetInsideProofRoot = proofContainsPath(this.targetPath);
     }
 
     void block(String kind, String observed, String required) {
@@ -610,31 +648,62 @@ final class SaveOperationCompletionEvidence {
     }
 
     Path write(Path artifact) throws IOException {
-      Path normalizedArtifact = artifact.normalize();
+      Path normalizedArtifact = artifact.toAbsolutePath().normalize();
       if (!SAVE_PROOF_ARTIFACT.equals(normalizedArtifact.getFileName().toString())) {
         throw new IllegalArgumentException("Save proof artifact must be " + SAVE_PROOF_ARTIFACT);
       }
-      Files.createDirectories(normalizedArtifact.getParent());
-      Files.writeString(normalizedArtifact, json(), StandardCharsets.UTF_8);
-      if (!Files.isRegularFile(normalizedArtifact) || Files.size(normalizedArtifact) == 0) {
-        throw new IOException("Save proof artifact was not written: " + normalizedArtifact);
+      Path parent = normalizedArtifact.getParent();
+      if (parent == null) {
+        throw new IllegalArgumentException("Save proof artifact must have a parent directory");
       }
-      return normalizedArtifact;
+      requirePathUnderProofRoot(parent, this.proofRoot, "Save proof artifact escapes proof root");
+      Path canonicalParent = Files.createDirectories(parent).toRealPath();
+      requirePathUnderProofRoot(canonicalParent, this.proofRoot, "Save proof artifact escapes proof root");
+      Path canonicalArtifact = canonicalParent.resolve(SAVE_PROOF_ARTIFACT);
+      if (Files.exists(canonicalArtifact, LinkOption.NOFOLLOW_LINKS)
+          && Files.isSymbolicLink(canonicalArtifact)) {
+        throw new IOException("Save proof artifact refuses to overwrite symlink: " + canonicalArtifact);
+      }
+      Path tempArtifact = Files.createTempFile(canonicalParent, SAVE_PROOF_ARTIFACT, ".tmp");
+      try {
+        Files.writeString(tempArtifact, json(), StandardCharsets.UTF_8);
+        Files.move(
+            tempArtifact,
+            canonicalArtifact,
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING);
+      } finally {
+        Files.deleteIfExists(tempArtifact);
+      }
+      if (!Files.isRegularFile(canonicalArtifact) || Files.size(canonicalArtifact) == 0) {
+        throw new IOException("Save proof artifact was not written: " + canonicalArtifact);
+      }
+      return canonicalArtifact;
     }
 
     boolean proofContainsPath(Path path) {
       return path != null && path.normalize().startsWith(this.proofRoot);
     }
 
+    boolean recordSelectedFile(File selectedFile) throws IOException {
+      this.normalizedSelectedFile = selectedFile == null ? null : selectedFile.getCanonicalPath();
+      this.selectedFileVerified =
+          this.normalizedSelectedFile != null && this.targetCanonicalPath.equals(this.normalizedSelectedFile);
+      return this.selectedFileVerified && this.targetInsideProofRoot && hasExpectedTargetExtension();
+    }
+
+    private boolean hasExpectedTargetExtension() {
+      return this.targetFileName.endsWith(".a3p");
+    }
+
     private String json() throws IOException {
-      Path targetPath = Path.of(this.targetCanonicalPath).normalize();
       Path selectedPath = this.normalizedSelectedFile == null
           ? null
           : Path.of(this.normalizedSelectedFile).normalize();
       boolean fileExists = this.targetFile.isFile();
       long fileSizeBytes = fileExists ? this.targetFile.length() : 0;
       boolean fileNonempty = fileSizeBytes > 0;
-      boolean fileHasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
+      boolean fileHasExpectedExtension = hasExpectedTargetExtension();
       boolean selectedFileMatchesExpected =
           this.normalizedSelectedFile != null && this.targetCanonicalPath.equals(this.normalizedSelectedFile);
       boolean observedWrite = fileExists && fileNonempty && fileHasExpectedExtension && this.targetInsideProofRoot;
@@ -657,62 +726,104 @@ final class SaveOperationCompletionEvidence {
             "A complete Robot File menu Save activation, rendered dialog approval, write, readback, and marker path");
       }
       String status = proven ? "proven" : "blocked";
+      return "{\n"
+          + headerJson(status, proven)
+          + blockerJson(proven)
+          + menuJson()
+          + dialogJson()
+          + controlJson(selectedPath, selectedFileMatchesExpected)
+          + writeJson(proven, fileExists, fileNonempty, fileHasExpectedExtension, fileSizeBytes)
+          + readbackJson(proven)
+          + baselinePreservedJson()
+          + requiresNextEvidenceJson()
+          + doesNotClaimJson()
+          + "}\n";
+    }
+
+    private String headerJson(String status, boolean proven) {
       String claimOrSummary = proven
           ? "  \"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified " + SAVE_PROOF_MARKER + "\",\n"
           : "  \"reportingSummary\": \"Robot File menu Save dialog/write/readback path was not proven; blocker.kind identifies the first missing or unsafe step.\",\n";
-      return "{\n"
-          + "  \"schemaVersion\": \"" + SAVE_PROOF_SCHEMA_VERSION + "\",\n"
+      return "  \"schemaVersion\": \"" + SAVE_PROOF_SCHEMA_VERSION + "\",\n"
           + "  \"scenario\": \"" + escapeJson(configuredSaveProofScenario()) + "\",\n"
           + "  \"workflow\": \"" + SAVE_PROOF_WORKFLOW + "\",\n"
           + "  \"runId\": \"" + escapeJson(configuredSaveProofRunId()) + "\",\n"
           + "  \"generatedAtUtc\": \"" + Instant.now() + "\",\n"
           + "  \"status\": \"" + status + "\",\n"
           + "  \"proofTarget\": \"single rendered desktop Save path: menu, dialog, control, write, readback\",\n"
-          + claimOrSummary
-          + blockerJson(proven)
-          + "  \"menu\": {\n"
+          + claimOrSummary;
+    }
+
+    private String menuJson() {
+      return "  \"menu\": {\n"
           + "    \"fileMenuOpened\": " + this.robotFileMenuOpened + ",\n"
           + "    \"saveMenuItemInvoked\": " + this.robotSaveItemClicked + ",\n"
           + "    \"saveActionIdentityMatched\": " + this.saveActionIdentityMatched + "\n"
-          + "  },\n"
-          + "  \"dialog\": {\n"
+          + "  },\n";
+    }
+
+    private String dialogJson() {
+      return "  \"dialog\": {\n"
           + "    \"saveDialogObserved\": " + this.chooserObserved + ",\n"
           + "    \"dialogType\": \"Swing JFileChooser\",\n"
           + "    \"dialogClass\": " + stringJson(this.dialogClass) + ",\n"
           + "    \"dialogShowing\": " + this.dialogShowing + ",\n"
           + "    \"ambiguousChooserDiscovery\": " + this.ambiguousChooserDiscovery + ",\n"
           + "    \"pollCount\": " + this.pollCount + "\n"
-          + "  },\n"
-          + "  \"control\": {\n"
+          + "  },\n";
+    }
+
+    private String controlJson(Path selectedPath, boolean selectedFileMatchesExpected) throws IOException {
+      return "  \"control\": {\n"
           + "    \"selectedPathSet\": " + this.selectedFileVerified + ",\n"
           + "    \"approvedSelection\": " + this.approvedSelection + ",\n"
           + "    \"selectedPathMatchesExpected\": " + selectedFileMatchesExpected + ",\n"
           + "    \"targetInsideProofRoot\": " + this.targetInsideProofRoot + ",\n"
           + "    \"normalizedSelectedPath\": " + stringJson(proofRelativePath(selectedPath)) + ",\n"
-          + "    \"expectedPath\": " + stringJson(proofRelativePath(targetPath)) + "\n"
-          + "  },\n"
-          + "  \"write\": {\n"
+          + "    \"expectedPath\": " + stringJson(proofRelativePath(this.targetPath)) + "\n"
+          + "  },\n";
+    }
+
+    private String writeJson(
+        boolean proven,
+        boolean fileExists,
+        boolean fileNonempty,
+        boolean fileHasExpectedExtension,
+        long fileSizeBytes) throws IOException {
+      return "  \"write\": {\n"
           + "    \"fileWritten\": " + (proven && fileExists) + ",\n"
           + "    \"fileNonempty\": " + (proven && fileNonempty) + ",\n"
           + "    \"fileHasExpectedExtension\": " + fileHasExpectedExtension + ",\n"
-          + "    \"outputPath\": " + stringJson(proofRelativePath(targetPath)) + ",\n"
+          + "    \"outputPath\": " + stringJson(proofRelativePath(this.targetPath)) + ",\n"
           + "    \"outputSizeBytes\": " + fileSizeBytes + "\n"
-          + "  },\n"
-          + "  \"readback\": {\n"
+          + "  },\n";
+    }
+
+    private String readbackJson(boolean proven) {
+      return "  \"readback\": {\n"
           + "    \"projectReadable\": " + (proven && this.projectReadable) + ",\n"
           + "    \"marker\": \"" + SAVE_PROOF_MARKER + "\",\n"
           + "    \"markerPresent\": " + (proven && this.markerPresent) + "\n"
-          + "  },\n"
-          + "  \"baselinePreserved\": [\n"
+          + "  },\n";
+    }
+
+    private String baselinePreservedJson() {
+      return "  \"baselinePreserved\": [\n"
           + "    \"StageIdeSaveMenuDoClickToWriteProofTest\",\n"
           + "    \"ProjectApplicationSaveProjectToTest\",\n"
           + "    \"JMenuBarRobotClickSaveProofTest\"\n"
-          + "  ],\n"
-          + "  \"requiresNextEvidence\": [\n"
+          + "  ],\n";
+    }
+
+    private String requiresNextEvidenceJson() {
+      return "  \"requiresNextEvidence\": [\n"
           + "    \"Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related\",\n"
           + "    \"Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed in one rendered path\"\n"
-          + "  ],\n"
-          + "  \"doesNotClaim\": [\n"
+          + "  ],\n";
+    }
+
+    private String doesNotClaimJson() {
+      return "  \"doesNotClaim\": [\n"
           + "    \"Save As coverage\",\n"
           + "    \"all Save variants\",\n"
           + "    \"full lesson completion\",\n"
@@ -721,8 +832,7 @@ final class SaveOperationCompletionEvidence {
           + "    \"physical user click\",\n"
           + "    \"broad UI automation coverage\",\n"
           + "    \"native dialog coverage\"\n"
-          + "  ]\n"
-          + "}\n";
+          + "  ]\n";
     }
 
     private String inferBlockerKind(boolean observedWrite) {
@@ -741,7 +851,7 @@ final class SaveOperationCompletionEvidence {
       if (!this.dialogShowing || !this.selectedFileVerified || !this.approvedSelection) {
         return "chooser_control_failed";
       }
-      if (!this.targetInsideProofRoot || !this.targetFile.getName().endsWith(".a3p")) {
+      if (!this.targetInsideProofRoot || !hasExpectedTargetExtension()) {
         return "target_path_rejected";
       }
       if (!observedWrite) {
@@ -769,7 +879,7 @@ final class SaveOperationCompletionEvidence {
       if (!this.dialogShowing || !this.selectedFileVerified || !this.approvedSelection) {
         return "The live Save chooser could not be safely controlled";
       }
-      if (!this.targetInsideProofRoot || !this.targetFile.getName().endsWith(".a3p")) {
+      if (!this.targetInsideProofRoot || !hasExpectedTargetExtension()) {
         return "The selected Save target was outside the proof root or not an .a3p file";
       }
       if (!observedWrite) {

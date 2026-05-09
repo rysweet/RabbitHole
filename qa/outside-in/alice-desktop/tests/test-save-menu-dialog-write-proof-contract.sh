@@ -83,6 +83,8 @@ if '\\"status\\": \\"blocked\\"' not in text:
     errors.append("Robot Save proof test must write an executable blocked artifact on unmet preconditions")
 if '\\"status\\": \\"proven\\"' not in text:
     errors.append("Robot Save proof test must be able to write a proven artifact only for the single rendered path")
+if "Robot Save proof blocked" not in text or "fail(" not in text:
+    errors.append("Robot Save proof test must fail closed after writing a blocked artifact")
 
 if errors:
     raise AssertionError("\n".join(errors))
@@ -167,6 +169,7 @@ payload = {
     "runId": run_id,
     "generatedAtUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     "status": "proven",
+    "claim": "AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker",
     "menu": {
         "fileMenuOpened": True,
         "saveMenuItemInvoked": True,
@@ -176,13 +179,18 @@ payload = {
         "saveDialogObserved": True,
         "dialogType": "Swing JFileChooser",
         "dialogShowing": True,
+        "ambiguousChooserDiscovery": False,
     },
     "control": {
         "selectedPathSet": True,
         "approvedSelection": True,
+        "selectedPathMatchesExpected": True,
+        "targetInsideProofRoot": True,
     },
     "write": {
         "fileWritten": True,
+        "fileNonempty": True,
+        "fileHasExpectedExtension": True,
         "outputPath": str(output_path),
         "outputSizeBytes": output_path.stat().st_size,
     },
@@ -196,6 +204,10 @@ payload = {
         "Save As coverage",
         "all Save variants",
         "full lesson completion",
+        "visible rendering correctness",
+        "grading correctness",
+        "broad UI automation coverage",
+        "native dialog coverage",
     ],
 }
 evidence_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -246,12 +258,22 @@ payload = {
     "runId": "contract-run-1",
     "generatedAtUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     "status": "proven",
+    "claim": "AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker",
     "menu": {"fileMenuOpened": True, "saveMenuItemInvoked": True, "saveActionIdentityMatched": True},
-    "dialog": {"saveDialogObserved": True, "dialogType": "Swing JFileChooser", "dialogShowing": True},
-    "control": {"selectedPathSet": True, "approvedSelection": True},
-    "write": {"fileWritten": True, "outputPath": str(output), "outputSizeBytes": output.stat().st_size},
+    "dialog": {"saveDialogObserved": True, "dialogType": "Swing JFileChooser", "dialogShowing": True, "ambiguousChooserDiscovery": False},
+    "control": {"selectedPathSet": True, "approvedSelection": True, "selectedPathMatchesExpected": True, "targetInsideProofRoot": True},
+    "write": {"fileWritten": True, "fileNonempty": True, "fileHasExpectedExtension": True, "outputPath": str(output), "outputSizeBytes": output.stat().st_size},
     "readback": {"projectReadable": True, "marker": "robotSaveMenuRoundTripMarker", "markerPresent": True},
     "blocker": None,
+    "doesNotClaim": [
+        "Save As coverage",
+        "all Save variants",
+        "full lesson completion",
+        "visible rendering correctness",
+        "grading correctness",
+        "broad UI automation coverage",
+        "native dialog coverage",
+    ],
 }
 artifact.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -264,9 +286,22 @@ PY
 status=$?
 assert_success "$status" "runner accepts complete, fresh, internally consistent proven Save proof evidence"
 
-assert_validation_failure_contains "$valid_dir/missing.json" "missing-evidence" 'missing.*robot-save-menu-dialog-write-readback-proof|No such file|not found'
+wrong_name_artifact="$tmp_root/wrong-save-proof-name.json"
+cp "$valid_artifact" "$wrong_name_artifact"
+assert_validation_failure_contains "$wrong_name_artifact" "wrong-evidence-name" 'canonical filename|robot-save-menu-dialog-write-readback-proof\.json'
 
-stale_artifact="$tmp_root/stale-evidence.json"
+symlink_artifact="$tmp_root/$ARTIFACT"
+if ln -s "$valid_artifact" "$symlink_artifact" 2>/dev/null; then
+  assert_validation_failure_contains "$symlink_artifact" "symlink-evidence" 'must not be a symlink'
+fi
+
+missing_dir="$tmp_root/missing-evidence-dir"
+mkdir -p "$missing_dir"
+assert_validation_failure_contains "$missing_dir/$ARTIFACT" "missing-evidence" 'missing.*robot-save-menu-dialog-write-readback-proof|No such file|not found'
+
+stale_dir="$tmp_root/stale-evidence-dir"
+mkdir -p "$stale_dir"
+stale_artifact="$stale_dir/$ARTIFACT"
 cp "$valid_artifact" "$stale_artifact"
 python3 - "$stale_artifact" <<'PY'
 import json
@@ -280,9 +315,24 @@ path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="
 PY
 assert_validation_failure_contains "$stale_artifact" "stale-evidence" 'stale|generatedAtUtc|mtime'
 
-assert_validation_failure_contains "$FIXTURE_DIR/missing-required-flags.json" "partial-evidence" 'missing|required|menu|dialog|control|write|readback'
-assert_validation_failure_contains "$FIXTURE_DIR/inconsistent-proven.json" "inconsistent-proven" 'inconsistent|fileWritten|markerPresent|outputSizeBytes'
-assert_validation_failure_contains "$FIXTURE_DIR/blocked-known-kind.json" "blocked-known-kind" 'blocked.*dialog_not_observed|non-proven|status'
-assert_validation_failure_contains "$FIXTURE_DIR/blocked-unknown-kind.json" "blocked-unknown-kind" 'unknown.*blocker|unsupported.*blocker|not_allowed_blocker'
+partial_dir="$tmp_root/partial-evidence-dir"
+mkdir -p "$partial_dir"
+cp "$FIXTURE_DIR/missing-required-flags.json" "$partial_dir/$ARTIFACT"
+assert_validation_failure_contains "$partial_dir/$ARTIFACT" "partial-evidence" 'missing|required|menu|dialog|control|write|readback'
+
+inconsistent_dir="$tmp_root/inconsistent-proven-dir"
+mkdir -p "$inconsistent_dir"
+cp "$FIXTURE_DIR/inconsistent-proven.json" "$inconsistent_dir/$ARTIFACT"
+assert_validation_failure_contains "$inconsistent_dir/$ARTIFACT" "inconsistent-proven" 'inconsistent|fileWritten|markerPresent|outputSizeBytes'
+
+blocked_known_dir="$tmp_root/blocked-known-kind-dir"
+mkdir -p "$blocked_known_dir"
+cp "$FIXTURE_DIR/blocked-known-kind.json" "$blocked_known_dir/$ARTIFACT"
+assert_validation_failure_contains "$blocked_known_dir/$ARTIFACT" "blocked-known-kind" 'blocked.*dialog_not_observed|non-proven|status'
+
+blocked_unknown_dir="$tmp_root/blocked-unknown-kind-dir"
+mkdir -p "$blocked_unknown_dir"
+cp "$FIXTURE_DIR/blocked-unknown-kind.json" "$blocked_unknown_dir/$ARTIFACT"
+assert_validation_failure_contains "$blocked_unknown_dir/$ARTIFACT" "blocked-unknown-kind" 'unknown.*blocker|unsupported.*blocker|not_allowed_blocker'
 
 finish

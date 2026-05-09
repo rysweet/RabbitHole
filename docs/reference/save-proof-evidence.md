@@ -30,6 +30,8 @@ The QA runner writes and validates that artifact inside the scenario run directo
 | `write` | Output path and size evidence |
 | `readback` | Project readback and marker evidence |
 | `blocker` | `null` for proven evidence; one blocker object for blocked evidence |
+| `claim` | Exact bounded claim text for proven evidence |
+| `doesNotClaim` | Explicit non-claims for Save variants and non-Save desktop behavior |
 
 ## Proven evidence
 
@@ -38,12 +40,12 @@ Validation accepts `status: "proven"` only when all of these are true in one art
 | Object | Required true fields |
 | --- | --- |
 | `menu` | `fileMenuOpened`, `saveMenuItemInvoked`, `saveActionIdentityMatched` |
-| `dialog` | `saveDialogObserved`, `dialogShowing`; `dialogType` must be `Swing JFileChooser` |
-| `control` | `selectedPathSet`, `approvedSelection` |
-| `write` | `fileWritten`; `outputSizeBytes` must match the file size on disk |
+| `dialog` | `saveDialogObserved`, `dialogShowing`; `dialogType` must be `Swing JFileChooser`; `ambiguousChooserDiscovery` must be `false` |
+| `control` | `selectedPathSet`, `approvedSelection`, `selectedPathMatchesExpected`, `targetInsideProofRoot` |
+| `write` | `fileWritten`, `fileNonempty`, `fileHasExpectedExtension`; `outputSizeBytes` must match the file size on disk |
 | `readback` | `projectReadable`, `markerPresent`; `marker` must be `robotSaveMenuRoundTripMarker` |
 
-`blocker` must be `null`. The output file must exist, be fresh for the run, and match the recorded size.
+`blocker` must be `null`. The output file must exist, be fresh for the run, and match the recorded size. The bounded `claim` and required `doesNotClaim` entries must be present so the artifact cannot be used as broad Save, Save As, lesson, grading, rendering, or desktop automation evidence.
 
 ## Blocked evidence
 

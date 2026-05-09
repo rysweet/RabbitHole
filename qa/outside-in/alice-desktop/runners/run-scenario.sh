@@ -689,7 +689,6 @@ validate_save_proof_evidence() {
 
   python3 - "$artifact_path" "$scenario" "$workflow" "$run_id" "$started_at_epoch" <<'PY'
 import json
-import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -703,6 +702,20 @@ started_at_epoch = int(sys.argv[5] or "0")
 
 SCHEMA_VERSION = "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1"
 MARKER = "robotSaveMenuRoundTripMarker"
+EXPECTED_CLAIM = (
+    "AWT Robot opened File, clicked the production Save menu item, controlled the rendered "
+    "Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified "
+    "robotSaveMenuRoundTripMarker"
+)
+REQUIRED_NON_CLAIMS = {
+    "Save As coverage",
+    "all Save variants",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "broad UI automation coverage",
+    "native dialog coverage",
+}
 KNOWN_BLOCKERS = {
     "headless_awt",
     "robot_unavailable",
@@ -721,6 +734,10 @@ def fail(message):
     print(message, file=sys.stderr)
     sys.exit(1)
 
+if artifact.name != "robot-save-menu-dialog-write-readback-proof.json":
+    fail("Save proof evidence path must use canonical filename robot-save-menu-dialog-write-readback-proof.json")
+if artifact.is_symlink():
+    fail("Save proof evidence artifact must not be a symlink")
 if not artifact.is_file():
     fail(f"missing Save proof evidence artifact robot-save-menu-dialog-write-readback-proof.json: {artifact}")
 
@@ -763,25 +780,52 @@ if status == "blocked":
 elif blocker is not None:
     fail("proven Save proof evidence must have blocker null")
 
+if payload.get("claim") != EXPECTED_CLAIM:
+    fail("missing bounded proven Save proof claim")
+does_not_claim = payload.get("doesNotClaim")
+if not isinstance(does_not_claim, list) or not all(isinstance(item, str) for item in does_not_claim):
+    fail("missing bounded Save proof doesNotClaim list")
+missing_non_claims = sorted(REQUIRED_NON_CLAIMS - set(does_not_claim))
+if missing_non_claims:
+    fail("missing bounded Save proof non-claim(s): " + ", ".join(missing_non_claims))
+
+def required_object(name):
+    value = payload.get(name)
+    if not isinstance(value, dict):
+        fail(f"missing required {name} object")
+    return value
+
+menu = required_object("menu")
+dialog = required_object("dialog")
+control = required_object("control")
+write = required_object("write")
+readback = required_object("readback")
+
 required_true = [
-    ("menu.fileMenuOpened", payload.get("menu", {}).get("fileMenuOpened")),
-    ("menu.saveMenuItemInvoked", payload.get("menu", {}).get("saveMenuItemInvoked")),
-    ("menu.saveActionIdentityMatched", payload.get("menu", {}).get("saveActionIdentityMatched")),
-    ("dialog.saveDialogObserved", payload.get("dialog", {}).get("saveDialogObserved")),
-    ("dialog.dialogShowing", payload.get("dialog", {}).get("dialogShowing")),
-    ("control.selectedPathSet", payload.get("control", {}).get("selectedPathSet")),
-    ("control.approvedSelection", payload.get("control", {}).get("approvedSelection")),
-    ("write.fileWritten", payload.get("write", {}).get("fileWritten")),
-    ("readback.projectReadable", payload.get("readback", {}).get("projectReadable")),
-    ("readback.markerPresent", payload.get("readback", {}).get("markerPresent")),
+    ("menu.fileMenuOpened", menu.get("fileMenuOpened")),
+    ("menu.saveMenuItemInvoked", menu.get("saveMenuItemInvoked")),
+    ("menu.saveActionIdentityMatched", menu.get("saveActionIdentityMatched")),
+    ("dialog.saveDialogObserved", dialog.get("saveDialogObserved")),
+    ("dialog.dialogShowing", dialog.get("dialogShowing")),
+    ("control.selectedPathSet", control.get("selectedPathSet")),
+    ("control.approvedSelection", control.get("approvedSelection")),
+    ("control.selectedPathMatchesExpected", control.get("selectedPathMatchesExpected")),
+    ("control.targetInsideProofRoot", control.get("targetInsideProofRoot")),
+    ("write.fileWritten", write.get("fileWritten")),
+    ("write.fileNonempty", write.get("fileNonempty")),
+    ("write.fileHasExpectedExtension", write.get("fileHasExpectedExtension")),
+    ("readback.projectReadable", readback.get("projectReadable")),
+    ("readback.markerPresent", readback.get("markerPresent")),
 ]
 missing_or_false = [name for name, value in required_true if value is not True]
 if missing_or_false:
     fail("missing required proven Save proof flag(s): " + ", ".join(missing_or_false))
 
-if payload.get("dialog", {}).get("dialogType") != "Swing JFileChooser":
+if dialog.get("dialogType") != "Swing JFileChooser":
     fail("Save proof evidence dialog.dialogType must be Swing JFileChooser")
-if payload.get("readback", {}).get("marker") != MARKER:
+if dialog.get("ambiguousChooserDiscovery") is not False:
+    fail("inconsistent proven Save proof evidence: dialog.ambiguousChooserDiscovery must be false")
+if readback.get("marker") != MARKER:
     fail("Save proof evidence readback.marker mismatch")
 
 generated_at = payload.get("generatedAtUtc")
@@ -795,9 +839,6 @@ mtime_epoch = artifact.stat().st_mtime
 if started_at_epoch and (generated_epoch + 1 < started_at_epoch or mtime_epoch + 1 < started_at_epoch):
     fail("stale Save proof evidence: generatedAtUtc/mtime predates command start")
 
-write = payload.get("write")
-if not isinstance(write, dict):
-    fail("missing required write object")
 output_size = write.get("outputSizeBytes")
 if not isinstance(output_size, int) or output_size <= 0:
     fail("inconsistent proven Save proof evidence: outputSizeBytes must be a positive integer")

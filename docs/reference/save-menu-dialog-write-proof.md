@@ -1,10 +1,10 @@
 # Save Menu Dialog Write/Readback Proof
 
-This reference documents the `save-menu-dialog-write-proof` outside-in QA scenario. The scenario runs the canonical rendered desktop Save proof path through `RobotSaveMenuDialogWriteReadbackProofTest` and validates the artifact emitted by `SaveOperationCompletionEvidence`.
+This reference documents the `save-menu-dialog-write-proof` outside-in QA scenario. The scenario attempts one bounded rendered desktop Save proof path through `RobotSaveMenuDialogWriteReadbackProofTest` and validates the artifact emitted by `SaveOperationCompletionEvidence`.
 
 ## Scope
 
-The finished scenario proves one path:
+A `status: "proven"` artifact from this scenario proves one path:
 
 ```text
 rendered File menu

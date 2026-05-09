@@ -1,6 +1,6 @@
 # Run the Save Menu Dialog Write/Readback Proof
 
-Use this guide to run the target canonical outside-in Save proof for the Alice desktop Save menu path. The finished scenario exercises one rendered path from File -> Save through the live Save dialog, controlled chooser interaction, `.a3p` write, project readback, and marker verification.
+Use this guide to run the target canonical outside-in Save proof for the Alice desktop Save menu path. A `status: "proven"` artifact exercises one rendered path from File -> Save through the live Save dialog, controlled chooser interaction, `.a3p` write, project readback, and marker verification.
 
 When the artifact reports `status: "proven"`, it proves only that single rendered Save path. It does not prove Save As, overwrite prompts, cancellation, retry, native file dialogs, every Save variant, lesson completion, grading, or broad desktop automation.
 

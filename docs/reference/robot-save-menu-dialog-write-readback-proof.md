@@ -1,6 +1,6 @@
 # Robot Save Menu Dialog Write/Readback Proof
 
-This reference documents the target focused Java proof shard behind the `save-menu-dialog-write-proof` outside-in scenario. The finished shard uses AWT Robot against the rendered Alice desktop File menu, follows the production Save dialog path, controls the live Swing chooser, writes a `.a3p`, reads it back, and verifies `robotSaveMenuRoundTripMarker`.
+This reference documents the focused Java proof shard behind the `save-menu-dialog-write-proof` outside-in scenario. A `status: "proven"` artifact from this shard means AWT Robot used the rendered Alice desktop File menu, followed the production Save dialog path, controlled the live Swing chooser, wrote a `.a3p`, read it back, and verified `robotSaveMenuRoundTripMarker`.
 
 Until `RobotSaveMenuDialogWriteReadbackProofTest` records observations through `SaveOperationCompletionEvidence` and emits the canonical `schemaVersion` artifact, treat this page as the implementation target rather than a statement about legacy proof-local evidence.
 
@@ -8,7 +8,7 @@ For the canonical JSON field contract and validation rules, see [Save Proof Evid
 
 ## Purpose
 
-`RobotSaveMenuDialogWriteReadbackProofTest` joins the historical supporting seams into one rendered path:
+`RobotSaveMenuDialogWriteReadbackProofTest` uses one continuous rendered path and keeps the historical seams as support only:
 
 | Supporting seam | What it proves |
 | --- | --- |

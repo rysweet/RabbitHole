@@ -36,6 +36,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import java.awt.AWTError;
 import java.awt.AWTException;
 import java.awt.Component;
@@ -53,7 +54,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -63,6 +63,8 @@ import java.util.prefs.Preferences;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Joins the next Save seam: Robot File-menu activation, live Save dialog control,
@@ -127,177 +129,18 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     SaveOperationCompletionEvidence.SaveProofEvidence evidence =
         SaveOperationCompletionEvidence.saveProofEvidence(targetFile, proofRoot);
     if (!isNonHeadlessAwtDisplayAvailable()) {
-      evidence.block("headless_awt",
+      blockAndFail(evidence, artifact, "headless_awt",
           "No available non-headless AWT display",
           "Xvfb or another non-headless AWT display capable of Robot mouse events and Swing JFileChooser display");
-      evidence.write(artifact);
-      assertBlockedArtifact(artifact, "headless_awt");
       return;
     }
 
-    System.clearProperty(FileDialogUtilities.SAVE_DIALOG_SELECTED_PATH_PROPERTY);
-    System.setProperty(FileDialogUtilities.SAVE_DIALOG_DISCOVERY_EVIDENCE_DIR_PROPERTY, proofRoot.toString());
-    System.setProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY, proofRoot.toString());
-    System.clearProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY);
-    useDistributionDirectoryIfAvailable();
-    resetActiveApplication();
+    configureSaveProofRun(proofRoot);
 
     AtomicReference<StageIDE> ideRef = new AtomicReference<>();
     AtomicReference<JFrame> menuFrameRef = new AtomicReference<>();
-    AtomicReference<JMenu> fileMenuRef = new AtomicReference<>();
-
     try {
-      SwingUtilities.invokeAndWait(() -> {
-        StageIDE ide = new StageIDE(new CrashDetector(RobotSaveMenuDialogWriteReadbackProofTest.class));
-        licensePreferences.putBoolean("isLicenseAccepted", true);
-        ide.initialize(new String[0]);
-        try {
-          ProjectDocumentState.getInstance().setValueTransactionlessly(
-              new ProjectDocument(minimalProject(), new UserActivity()));
-          injectUriProjectLoader(ide, new NewProjectLoader());
-        } catch (Exception e) {
-          throw new RuntimeException("project state injection failed", e);
-        }
-        ide.getDocumentFrame().getFrame().pack();
-        ide.getDocumentFrame().getFrame().setLocation(520, 80);
-        ide.getDocumentFrame().getFrame().setVisible(true);
-        assertTrue(ide.getDocumentFrame().getFrame().getAwtComponent().isDisplayable());
-        assertTrue(ide.getDocumentFrame().getFrame().getAwtComponent().isShowing());
-        ideRef.set(ide);
-
-        FileMenuModel fileMenuModel = findFileMenuModel(ide);
-        assertNotNull("FileMenuModel not found in AliceMenuBar children", fileMenuModel);
-        org.lgna.croquet.MenuBarComposite testMenuBarComposite =
-            new org.lgna.croquet.MenuBarComposite(UUID.randomUUID());
-        testMenuBarComposite.addItem(fileMenuModel);
-        org.lgna.croquet.views.Frame croquetFrame = new org.lgna.croquet.views.Frame();
-        croquetFrame.setMenuBarComposite(testMenuBarComposite);
-        JFrame menuFrame = croquetFrame.getAwtComponent();
-        menuFrame.setTitle("Robot Save Menu Dialog Write Readback Proof");
-        menuFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        menuFrame.setSize(420, 180);
-        menuFrame.setLocation(40, 80);
-        menuFrame.pack();
-        menuFrame.setVisible(true);
-        menuFrameRef.set(menuFrame);
-
-        JMenuBar jMenuBar = menuFrame.getJMenuBar();
-        assertNotNull("JMenuBar not set on Croquet Frame", jMenuBar);
-        for (int i = 0; i < jMenuBar.getMenuCount(); i++) {
-          JMenu menu = jMenuBar.getMenu(i);
-          if (menu != null && "File".equals(menu.getText())) {
-            fileMenuRef.set(menu);
-            break;
-          }
-        }
-        assertNotNull("File JMenu not found in rendered MenuBar", fileMenuRef.get());
-      });
-      drainEdt();
-      disableThumbnailCameraRender();
-
-      Robot robot;
-      try {
-        robot = new Robot();
-      } catch (AWTException | SecurityException ex) {
-        evidence.block("robot_unavailable",
-            "java.awt.Robot could not be created for this display",
-            "A desktop session that permits java.awt.Robot mouse events");
-        evidence.write(artifact);
-        assertBlockedArtifact(artifact, "robot_unavailable");
-        return;
-      }
-      robot.setAutoDelay(40);
-      robot.waitForIdle();
-      robot.delay(250);
-
-      if (!robotOpenFileMenu(robot, fileMenuRef.get())) {
-        evidence.block("file_menu_not_showing",
-            "Robot could not open the rendered File menu popup",
-            "A visible Croquet File menu that accepts Robot mouse events");
-        evidence.write(artifact);
-        assertBlockedArtifact(artifact, "file_menu_not_showing");
-        return;
-      }
-      evidence.robotFileMenuOpened = true;
-
-      AtomicReference<Point> saveItemCenter = new AtomicReference<>();
-      SwingUtilities.invokeAndWait(() -> {
-        JMenu fileMenu = fileMenuRef.get();
-        JPopupMenu popup = fileMenu.getPopupMenu();
-        javax.swing.Action saveAction =
-            SaveProjectOperation.getInstance().getImp().getSwingModel().getAction();
-        for (Component component : popup.getComponents()) {
-          if (component instanceof JMenuItem item && item.getAction() == saveAction && item.isShowing()) {
-            evidence.saveActionIdentityMatched = true;
-            Point loc = item.getLocationOnScreen();
-            saveItemCenter.set(new Point(loc.x + item.getWidth() / 2, loc.y + item.getHeight() / 2));
-            break;
-          }
-        }
-      });
-      if (saveItemCenter.get() == null) {
-        evidence.block("save_item_not_attributed",
-            "The rendered File popup did not expose the Save item by SaveProjectOperation action identity",
-            "A Save menu item whose Swing Action is SaveProjectOperation");
-        evidence.write(artifact);
-        assertBlockedArtifact(artifact, "save_item_not_attributed");
-        return;
-      }
-
-      RobotSaveDialogController controller = new RobotSaveDialogController(targetFile, evidence);
-      controller.start();
-      try {
-        robot.mouseMove(saveItemCenter.get().x, saveItemCenter.get().y);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-        evidence.robotSaveItemClicked = true;
-        robot.waitForIdle();
-        waitForFileWrite(targetFile.toPath());
-      } finally {
-        controller.stop();
-      }
-
-      if (targetFile.isFile() && targetFile.length() > 0) {
-        try {
-          Project savedProject = IoUtilities.readProject(targetFile);
-          evidence.recordReadback(savedProject != null, projectContainsMarker(savedProject, READBACK_MARKER));
-        } catch (Exception ex) {
-          evidence.block("readback_failed",
-              "The written .a3p file could not be read back through IoUtilities.readProject",
-              "A readable Alice project archive with the expected marker");
-        }
-      }
-      evidence.write(artifact);
-
-      String json = Files.readString(artifact);
-      assertTrue(json, json.contains("\"schemaVersion\": \"" + SCHEMA_VERSION + "\""));
-      assertTrue(json, json.contains("\"proofTarget\": \"single rendered desktop Save path: menu, dialog, control, write, readback\""));
-      assertTrue(json, json.contains("\"baselinePreserved\""));
-      assertTrue(json, json.contains("\"StageIdeSaveMenuDoClickToWriteProofTest\""));
-      assertTrue(json, json.contains("\"ProjectApplicationSaveProjectToTest\""));
-      assertTrue(json, json.contains("\"JMenuBarRobotClickSaveProofTest\""));
-      if (json.contains("\"status\": \"proven\"")) {
-        assertTrue(json, json.contains("\"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\""));
-        assertTrue(json, json.contains("\"fileMenuOpened\": true"));
-        assertTrue(json, json.contains("\"saveMenuItemInvoked\": true"));
-        assertTrue(json, json.contains("\"saveActionIdentityMatched\": true"));
-        assertTrue(json, json.contains("\"saveDialogObserved\": true"));
-        assertTrue(json, json.contains("\"approvedSelection\": true"));
-        assertTrue(json, json.contains("\"fileWritten\": true"));
-        assertTrue(json, json.contains("\"fileNonempty\": true"));
-        assertTrue(json, json.contains("\"projectReadable\": true"));
-        assertTrue(json, json.contains("\"marker\": \"" + READBACK_MARKER + "\""));
-        assertTrue(json, json.contains("\"markerPresent\": true"));
-        assertFalse(json, json.contains("\"status\": \"blocked\""));
-      } else {
-        assertTrue(json, json.contains("\"status\": \"blocked\""));
-        assertTrue(json, json.contains("\"blocker\""));
-        assertTrue(json, json.contains("\"requiresNextEvidence\""));
-        assertFalse(json, json.contains("\"claim\""));
-      }
-      assertFalse(json, json.contains(FileDialogUtilities.escapeJson(targetFile.getCanonicalPath())));
-      assertTrue(json, json.contains("\"all Save variants\""));
-      assertTrue(json, json.contains("\"Save As coverage\""));
+      runRenderedSaveProofPath(artifact, targetFile, evidence, ideRef, menuFrameRef);
     } finally {
       cleanupRobotProofResources(menuFrameRef, ideRef);
     }
@@ -424,6 +267,266 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     assertFalse(json, json.contains("\"claim\""));
   }
 
+  @Test
+  public void wrongSelectedFileDoesNotRewriteExpectedTargetBoundaryEvidence() throws Exception {
+    Path proofRoot = Files.createDirectories(Path.of(
+        "target", "robot-save-menu-proof-contract-test", UUID.randomUUID().toString()));
+    Path projectsDir = Files.createDirectories(proofRoot.resolve("projects"));
+    Path outsideRoot = Files.createDirectories(Path.of(
+        "target", "robot-save-menu-proof-wrong-selection-test", UUID.randomUUID().toString()));
+    File targetFile = projectsDir.resolve(TARGET_FILE_NAME).toFile();
+    File outsideSelection = Files.writeString(outsideRoot.resolve(TARGET_FILE_NAME), "outside").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, proofRoot);
+
+    evidence.robotFileMenuOpened = true;
+    evidence.robotSaveItemClicked = true;
+    evidence.saveActionIdentityMatched = true;
+    evidence.chooserObserved = true;
+    evidence.dialogShowing = true;
+    evidence.dialogClass = JDialog.class.getName();
+    evidence.recordSelectedFile(outsideSelection);
+
+    evidence.write(proofRoot.resolve(ARTIFACT));
+
+    String json = Files.readString(proofRoot.resolve(ARTIFACT));
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"kind\": \"chooser_control_failed\""));
+    assertTrue(json, json.contains("\"selectedPathMatchesExpected\": false"));
+    assertTrue(json, json.contains("\"targetInsideProofRoot\": true"));
+    assertTrue(json, json.contains("\"normalizedSelectedPath\": \"[outside-proof-root]\""));
+    assertTrue(json, json.contains("\"expectedPath\": \"projects/" + TARGET_FILE_NAME + "\""));
+    assertFalse(json, json.contains(FileDialogUtilities.escapeJson(outsideSelection.getCanonicalPath())));
+    assertFalse(json, json.contains("\"claim\""));
+  }
+
+  private void configureSaveProofRun(Path proofRoot) throws Exception {
+    System.clearProperty(FileDialogUtilities.SAVE_DIALOG_SELECTED_PATH_PROPERTY);
+    System.setProperty(FileDialogUtilities.SAVE_DIALOG_DISCOVERY_EVIDENCE_DIR_PROPERTY, proofRoot.toString());
+    System.setProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY, proofRoot.toString());
+    System.clearProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY);
+    useDistributionDirectoryIfAvailable();
+    resetActiveApplication();
+  }
+
+  private void runRenderedSaveProofPath(
+      Path artifact,
+      File targetFile,
+      SaveOperationCompletionEvidence.SaveProofEvidence evidence,
+      AtomicReference<StageIDE> ideRef,
+      AtomicReference<JFrame> menuFrameRef) throws Exception {
+    AtomicReference<JMenu> fileMenuRef = new AtomicReference<>();
+    initializeRenderedSaveMenuOnEdt(ideRef, menuFrameRef, fileMenuRef);
+    drainEdt();
+    disableThumbnailCameraRender();
+
+    Robot robot = robotOrBlock(evidence, artifact);
+    if (!robotOpenFileMenu(robot, fileMenuRef.get())) {
+      blockAndFail(evidence, artifact, "file_menu_not_showing",
+          "Robot could not open the rendered File menu popup",
+          "A visible Croquet File menu that accepts Robot mouse events");
+      return;
+    }
+    evidence.robotFileMenuOpened = true;
+
+    AtomicReference<Point> saveItemCenter = saveItemCenterOnEdt(fileMenuRef.get(), evidence);
+    if (saveItemCenter.get() == null) {
+      blockAndFail(evidence, artifact, "save_item_not_attributed",
+          "The rendered File popup did not expose the Save item by SaveProjectOperation action identity",
+          "A Save menu item whose Swing Action is SaveProjectOperation");
+      return;
+    }
+
+    clickSaveAndWaitForWrite(robot, saveItemCenter.get(), targetFile, evidence);
+    recordReadbackIfWritten(targetFile, evidence);
+    evidence.write(artifact);
+    assertRenderedSaveProofArtifact(artifact, targetFile);
+  }
+
+  private static Robot robotOrBlock(
+      SaveOperationCompletionEvidence.SaveProofEvidence evidence,
+      Path artifact) throws Exception {
+    try {
+      return createProofRobot();
+    } catch (AWTException | SecurityException ex) {
+      blockAndFail(evidence, artifact, "robot_unavailable",
+          "java.awt.Robot could not be created for this display",
+          "A desktop session that permits java.awt.Robot mouse events");
+      throw ex;
+    }
+  }
+
+  private void initializeRenderedSaveMenuOnEdt(
+      AtomicReference<StageIDE> ideRef,
+      AtomicReference<JFrame> menuFrameRef,
+      AtomicReference<JMenu> fileMenuRef) throws Exception {
+    SwingUtilities.invokeAndWait(() -> {
+      StageIDE ide = new StageIDE(new CrashDetector(RobotSaveMenuDialogWriteReadbackProofTest.class));
+      licensePreferences.putBoolean("isLicenseAccepted", true);
+      ide.initialize(new String[0]);
+      installMinimalProject(ide);
+      showIdeFrame(ide);
+      ideRef.set(ide);
+
+      JFrame menuFrame = createRenderedFileMenuFrame(ide);
+      menuFrameRef.set(menuFrame);
+      fileMenuRef.set(findRenderedFileMenu(menuFrame));
+      assertNotNull("File JMenu not found in rendered MenuBar", fileMenuRef.get());
+    });
+  }
+
+  private static void installMinimalProject(StageIDE ide) {
+    try {
+      ProjectDocumentState.getInstance().setValueTransactionlessly(
+          new ProjectDocument(minimalProject(), new UserActivity()));
+      injectUriProjectLoader(ide, new NewProjectLoader());
+    } catch (Exception e) {
+      throw new RuntimeException("project state injection failed", e);
+    }
+  }
+
+  private static void showIdeFrame(StageIDE ide) {
+    ide.getDocumentFrame().getFrame().pack();
+    ide.getDocumentFrame().getFrame().setLocation(520, 80);
+    ide.getDocumentFrame().getFrame().setVisible(true);
+    assertTrue(ide.getDocumentFrame().getFrame().getAwtComponent().isDisplayable());
+    assertTrue(ide.getDocumentFrame().getFrame().getAwtComponent().isShowing());
+  }
+
+  private static JFrame createRenderedFileMenuFrame(StageIDE ide) {
+    FileMenuModel fileMenuModel = findFileMenuModel(ide);
+    assertNotNull("FileMenuModel not found in AliceMenuBar children", fileMenuModel);
+    org.lgna.croquet.MenuBarComposite testMenuBarComposite =
+        new org.lgna.croquet.MenuBarComposite(UUID.randomUUID());
+    testMenuBarComposite.addItem(fileMenuModel);
+    org.lgna.croquet.views.Frame croquetFrame = new org.lgna.croquet.views.Frame();
+    croquetFrame.setMenuBarComposite(testMenuBarComposite);
+    JFrame menuFrame = croquetFrame.getAwtComponent();
+    menuFrame.setTitle("Robot Save Menu Dialog Write Readback Proof");
+    menuFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    menuFrame.setSize(420, 180);
+    menuFrame.setLocation(40, 80);
+    menuFrame.pack();
+    menuFrame.setVisible(true);
+    return menuFrame;
+  }
+
+  private static JMenu findRenderedFileMenu(JFrame menuFrame) {
+    JMenuBar jMenuBar = menuFrame.getJMenuBar();
+    assertNotNull("JMenuBar not set on Croquet Frame", jMenuBar);
+    for (int i = 0; i < jMenuBar.getMenuCount(); i++) {
+      JMenu menu = jMenuBar.getMenu(i);
+      if (menu != null && "File".equals(menu.getText())) {
+        return menu;
+      }
+    }
+    return null;
+  }
+
+  private static Robot createProofRobot() throws AWTException {
+    Robot robot = new Robot();
+    robot.setAutoDelay(40);
+    robot.waitForIdle();
+    robot.delay(250);
+    return robot;
+  }
+
+  private static AtomicReference<Point> saveItemCenterOnEdt(
+      JMenu fileMenu,
+      SaveOperationCompletionEvidence.SaveProofEvidence evidence) throws Exception {
+    AtomicReference<Point> saveItemCenter = new AtomicReference<>();
+    SwingUtilities.invokeAndWait(() -> {
+      JPopupMenu popup = fileMenu.getPopupMenu();
+      javax.swing.Action saveAction =
+          SaveProjectOperation.getInstance().getImp().getSwingModel().getAction();
+      for (Component component : popup.getComponents()) {
+        if (component instanceof JMenuItem item && item.getAction() == saveAction && item.isShowing()) {
+          evidence.saveActionIdentityMatched = true;
+          Point loc = item.getLocationOnScreen();
+          saveItemCenter.set(new Point(loc.x + item.getWidth() / 2, loc.y + item.getHeight() / 2));
+          break;
+        }
+      }
+    });
+    return saveItemCenter;
+  }
+
+  private static void clickSaveAndWaitForWrite(
+      Robot robot,
+      Point saveItemCenter,
+      File targetFile,
+      SaveOperationCompletionEvidence.SaveProofEvidence evidence) throws Exception {
+    RobotSaveDialogController controller = new RobotSaveDialogController(targetFile, evidence);
+    controller.start();
+    try {
+      robot.mouseMove(saveItemCenter.x, saveItemCenter.y);
+      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+      evidence.robotSaveItemClicked = true;
+      robot.waitForIdle();
+      waitForFileWrite(targetFile.toPath());
+    } finally {
+      controller.stop();
+    }
+  }
+
+  private static void recordReadbackIfWritten(
+      File targetFile,
+      SaveOperationCompletionEvidence.SaveProofEvidence evidence) {
+    if (!targetFile.isFile() || targetFile.length() <= 0) {
+      return;
+    }
+    try {
+      Project savedProject = IoUtilities.readProject(targetFile);
+      evidence.recordReadback(savedProject != null, projectContainsMarker(savedProject, READBACK_MARKER));
+    } catch (Exception ex) {
+      evidence.block("readback_failed",
+          "The written .a3p file could not be read back through IoUtilities.readProject",
+          "A readable Alice project archive with the expected marker");
+    }
+  }
+
+  private static void assertRenderedSaveProofArtifact(Path artifact, File targetFile) throws Exception {
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"schemaVersion\": \"" + SCHEMA_VERSION + "\""));
+    assertTrue(json, json.contains("\"proofTarget\": \"single rendered desktop Save path: menu, dialog, control, write, readback\""));
+    assertTrue(json, json.contains("\"baselinePreserved\""));
+    assertTrue(json, json.contains("\"StageIdeSaveMenuDoClickToWriteProofTest\""));
+    assertTrue(json, json.contains("\"ProjectApplicationSaveProjectToTest\""));
+    assertTrue(json, json.contains("\"JMenuBarRobotClickSaveProofTest\""));
+    if (json.contains("\"status\": \"proven\"")) {
+      assertProvenRenderedSaveProof(json);
+    } else {
+      assertBlockedRenderedSaveProof(json, artifact);
+    }
+    assertFalse(json, json.contains(FileDialogUtilities.escapeJson(targetFile.getCanonicalPath())));
+    assertTrue(json, json.contains("\"all Save variants\""));
+    assertTrue(json, json.contains("\"Save As coverage\""));
+  }
+
+  private static void assertProvenRenderedSaveProof(String json) {
+    assertTrue(json, json.contains("\"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\""));
+    assertTrue(json, json.contains("\"fileMenuOpened\": true"));
+    assertTrue(json, json.contains("\"saveMenuItemInvoked\": true"));
+    assertTrue(json, json.contains("\"saveActionIdentityMatched\": true"));
+    assertTrue(json, json.contains("\"saveDialogObserved\": true"));
+    assertTrue(json, json.contains("\"approvedSelection\": true"));
+    assertTrue(json, json.contains("\"fileWritten\": true"));
+    assertTrue(json, json.contains("\"fileNonempty\": true"));
+    assertTrue(json, json.contains("\"projectReadable\": true"));
+    assertTrue(json, json.contains("\"marker\": \"" + READBACK_MARKER + "\""));
+    assertTrue(json, json.contains("\"markerPresent\": true"));
+    assertFalse(json, json.contains("\"status\": \"blocked\""));
+  }
+
+  private static void assertBlockedRenderedSaveProof(String json, Path artifact) {
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"blocker\""));
+    assertTrue(json, json.contains("\"requiresNextEvidence\""));
+    assertFalse(json, json.contains("\"claim\""));
+    fail("Robot Save proof blocked; see " + artifact);
+  }
+
   private static boolean robotOpenFileMenu(Robot robot, JMenu fileMenu) throws Exception {
     AtomicReference<Point> fileMenuCenter = new AtomicReference<>();
     SwingUtilities.invokeAndWait(() -> {
@@ -469,9 +572,44 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     assertFalse(json, json.contains("\"status\": \"proven\""));
   }
 
+  private static void blockAndFail(
+      SaveOperationCompletionEvidence.SaveProofEvidence evidence,
+      Path artifact,
+      String blockerKind,
+      String observed,
+      String required) throws Exception {
+    evidence.block(blockerKind, observed, required);
+    evidence.write(artifact);
+    assertBlockedArtifact(artifact, blockerKind);
+    String message = "Robot Save proof blocked at " + blockerKind + "; see " + artifact;
+    if (isExplicitSaveProofRun()) {
+      fail(message);
+    }
+    assumeTrue(message, false);
+  }
+
+  private static boolean isExplicitSaveProofRun() {
+    return isConfigured(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY,
+        SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_ENV)
+        || isConfigured(SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY,
+            SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_ENV)
+        || isConfigured(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+            SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_ENV);
+  }
+
+  private static boolean isConfigured(String propertyName, String envName) {
+    String propertyValue = System.getProperty(propertyName);
+    if (propertyValue != null && !propertyValue.isBlank()) {
+      return true;
+    }
+    String envValue = System.getenv(envName);
+    return envValue != null && !envValue.isBlank();
+  }
+
   private static class RobotSaveDialogController {
     private static final int MAX_POLLS = 500;
     private static final int MAX_CHOOSER_CANDIDATES = 2;
+    private static final int POLL_INTERVAL_MILLIS = 100;
 
     private final File targetFile;
     private final SaveOperationCompletionEvidence.SaveProofEvidence evidence;
@@ -479,7 +617,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     private final AtomicBoolean approvalScheduled = new AtomicBoolean(false);
     private final AtomicBoolean approvalApplied = new AtomicBoolean(false);
     private final AtomicInteger pollCount = new AtomicInteger();
-    private volatile java.util.Timer timer;
+    private volatile Timer timer;
 
     RobotSaveDialogController(File targetFile, SaveOperationCompletionEvidence.SaveProofEvidence evidence) {
       this.targetFile = targetFile;
@@ -487,20 +625,22 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     }
 
     void start() {
-      this.timer = new java.util.Timer("robot-save-dialog-controller", true);
-      this.timer.scheduleAtFixedRate(new TimerTask() {
-        @Override
-        public void run() {
-          poll();
+      SwingUtilities.invokeLater(() -> {
+        if (this.finished.get() || this.timer != null) {
+          return;
         }
-      }, 0, 100);
+        Timer current = new Timer(POLL_INTERVAL_MILLIS, event -> pollOnEdt());
+        current.setInitialDelay(0);
+        this.timer = current;
+        current.start();
+      });
     }
 
     void stop() {
-      cancelTimer();
+      finish();
     }
 
-    private synchronized void poll() {
+    private void pollOnEdt() {
       if (this.finished.get()) {
         return;
       }
@@ -538,21 +678,13 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     }
 
     private void approveChooserOnEdt(JFileChooser chooser) {
-      SwingUtilities.invokeLater(() -> {
+      Runnable approve = () -> {
         if (!this.approvalApplied.compareAndSet(false, true)) {
           return;
         }
         try {
           chooser.setSelectedFile(this.targetFile);
-          File selectedFile = chooser.getSelectedFile();
-          this.evidence.normalizedSelectedFile =
-              selectedFile == null ? null : selectedFile.getCanonicalPath();
-          this.evidence.selectedFileVerified =
-              this.targetFile.getCanonicalPath().equals(this.evidence.normalizedSelectedFile);
-          this.evidence.targetInsideProofRoot =
-              this.evidence.proofContainsPath(Path.of(this.targetFile.getCanonicalPath()));
-          boolean hasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
-          if (this.evidence.selectedFileVerified && this.evidence.targetInsideProofRoot && hasExpectedExtension) {
+          if (this.evidence.recordSelectedFile(chooser.getSelectedFile())) {
             chooser.approveSelection();
             this.evidence.approvedSelection = true;
           } else {
@@ -567,7 +699,12 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
               "A canonical target path that can be compared against the proof root");
           chooser.cancelSelection();
         }
-      });
+      };
+      if (SwingUtilities.isEventDispatchThread()) {
+        approve.run();
+      } else {
+        SwingUtilities.invokeLater(approve);
+      }
     }
 
     private void finish() {
@@ -576,10 +713,17 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     }
 
     private void cancelTimer() {
-      java.util.Timer current = this.timer;
-      if (current != null) {
-        current.cancel();
-        this.timer = null;
+      Runnable cancel = () -> {
+        Timer current = this.timer;
+        if (current != null) {
+          current.stop();
+          this.timer = null;
+        }
+      };
+      if (SwingUtilities.isEventDispatchThread()) {
+        cancel.run();
+      } else {
+        SwingUtilities.invokeLater(cancel);
       }
     }
   }
@@ -618,11 +762,16 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
   }
 
   private static void cancelCurrentChoosersOnEdt() {
-    SwingUtilities.invokeLater(() -> {
+    Runnable cancel = () -> {
       for (ChooserCandidate candidate : findChooserCandidates(Integer.MAX_VALUE)) {
         candidate.chooser().cancelSelection();
       }
-    });
+    };
+    if (SwingUtilities.isEventDispatchThread()) {
+      cancel.run();
+    } else {
+      SwingUtilities.invokeLater(cancel);
+    }
   }
 
   private static boolean isNonHeadlessAwtDisplayAvailable() {
