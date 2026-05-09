@@ -62,7 +62,7 @@ The shard delegates final evidence semantics to `SaveOperationCompletionEvidence
 
 Blocked output is the executable blocker for the missing step. It is not proof of Save completion.
 
-Use the JSON artifact as the source of truth. Do not treat Maven success by itself as proof. A blocked artifact is blocker evidence for its `blocker.kind` only; `headless_awt` blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` with `blocker.kind` set to `headless_awt`, use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation or full desktop Save completion.
+Use the JSON artifact as the source of truth. Do not treat Maven success by itself as proof. A blocked artifact is blocker evidence for its `blocker.kind` only; `headless_awt` blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` with `blocker.kind` set to `headless_awt`, use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation, full Save completion, or full desktop Save completion.
 
 ### Blocked headless-display artifact
 
