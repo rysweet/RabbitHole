@@ -19,8 +19,8 @@ completion.
 - [Executable characterization](#executable-characterization)
 - [API reference](#api-reference)
 - [Validation commands](#validation-commands)
-- [Tutorial: verify exported launcher evidence](#tutorial-verify-exported-launcher-evidence)
-- [Tutorial: verify exported Ant runtime metadata](#tutorial-verify-exported-ant-runtime-metadata)
+- [Review checklist: exported launcher evidence](#review-checklist-exported-launcher-evidence)
+- [Review checklist: exported Ant runtime metadata](#review-checklist-exported-ant-runtime-metadata)
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
 
@@ -345,12 +345,12 @@ git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-## Tutorial: verify exported launcher evidence
+## Review checklist: exported launcher evidence
 
-Use this flow when reviewing a change to `ProjectCodeGenerator.java` or to the
-generated `AliceJavaFXLauncher` contract.
+Use this checklist when reviewing a change to `ProjectCodeGenerator.java` or to
+the generated `AliceJavaFXLauncher` contract.
 
-### Step 1: Inspect the generated launcher
+### 1. Inspect the generated launcher
 
 Open the generated source for an exported project and find:
 
@@ -361,7 +361,7 @@ AliceJavaFXLauncher.java
 Confirm the launcher uses `Application.launch(args)` in `main(String[] args)`.
 Do not accept a launcher that calls `Program.main(...)` directly from `main`.
 
-### Step 2: Check stable markers
+### 2. Check stable markers
 
 The generated launcher should contain:
 
@@ -375,7 +375,7 @@ The success path should distinguish JavaFX startup, stage receipt, marker scene
 configuration, stage show attempt, marker-pixel observation, and Program
 delegation. The no-go path should be clearly separate from success.
 
-### Step 3: Interpret a display-unavailable run
+### 3. Interpret a display-unavailable run
 
 In an environment without a usable display, a launcher run can produce:
 
@@ -390,7 +390,7 @@ This proves only that the launcher attempted JavaFX handoff and stopped at a
 classified missing-display boundary. It does not prove marker-pixel observation,
 scene setup, Program delegation, or Alice world rendering.
 
-### Step 4: Interpret a marker-observed run
+### 4. Interpret a marker-observed run
 
 When JavaFX starts, a stage is shown, and the marker pixel is sampled, the
 evidence includes:
@@ -408,18 +408,18 @@ ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted
 This proves launcher-owned marker observation and Program delegation. It does
 not prove the generated Alice world rendered correctly.
 
-### Step 5: Keep stronger evidence separate
+### 5. Keep stronger evidence separate
 
 If a review requires UI automation, full world execution, visible rendering
 correctness, Save completion, grading, or lesson-completion evidence, collect it
 in a separate explicitly gated lane with its own observable artifacts. Do not
 rename the default launcher evidence to imply those broader behaviors.
 
-## Tutorial: verify exported Ant runtime metadata
+## Review checklist: exported Ant runtime metadata
 
-Use this flow when reviewing or extending exported-project Ant behavior.
+Use this checklist when reviewing or extending exported-project Ant behavior.
 
-### Step 1: Start from a no-Sims checkout
+### 1. Start from a no-Sims checkout
 
 From the repository root:
 
@@ -431,7 +431,7 @@ test -d tweedle-lang/Grammar
 Do not pull Git LFS files or Sims/nonfree payloads for this smoke. The
 characterization generates synthetic Alice projects and local fixtures.
 
-### Step 2: Run the focused Ant smoke
+### 2. Run the focused Ant smoke
 
 Run:
 
@@ -457,7 +457,7 @@ The same log must not contain:
 Java Result:
 ```
 
-### Step 3: Interpret the Ant evidence
+### 3. Interpret the Ant evidence
 
 Treat a passing Ant smoke as evidence that the exported Ant project consumes the
 runtime metadata asserted by the probe up to the launcher boundary. It proves the

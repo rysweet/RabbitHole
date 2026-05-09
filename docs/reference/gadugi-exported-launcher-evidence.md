@@ -21,13 +21,13 @@ desktop workflow.
 
 - [Scope](#scope)
 - [Files](#files)
-- [Usage](#usage)
+- [Command reference](#command-reference)
 - [Configuration](#configuration)
 - [Scenario contract](#scenario-contract)
 - [Validation commands](#validation-commands)
-- [Examples](#examples)
+- [Review checklists](#review-checklists)
 - [Evidence boundaries](#evidence-boundaries)
-- [Troubleshooting](#troubleshooting)
+- [Failure modes reference](#failure-modes-reference)
 
 ## Scope
 
@@ -65,7 +65,7 @@ The `gadugi/` directory exists because `gadugi-test validate` uses a different
 schema than the Alice custom outside-in `scenarios/` directory. Keeping the
 formats separate lets both validators stay strict.
 
-## Usage
+## Command reference
 
 Run commands from the repository root.
 
@@ -120,7 +120,15 @@ The Gadugi scenario is intentionally small and repo-local.
 | Interface | `cli` | The scenario is a command-line evidence check, not a browser, desktop, or rendering test. |
 | Scenario name | `exported-launcher-evidence` | Stable name used with `gadugi-test run -s exported-launcher-evidence`. |
 | Timeout | `180000` in the scenario, `300000` for the PR readiness wrapper run | The YAML keeps individual command timeouts short; the wrapper run leaves enough time for the delegated QA scripts. |
-| Tags | `cli`, `gadugi`, `pr-155`, `exported-launcher`, `launcher-evidence-contract` | Tags make the scenario discoverable as a PR #155 launcher evidence contract check. |
+| Tags | `cli`, `gadugi`, `pr-155`, `exported-launcher`, `launcher-evidence-contract` | `pr-155` is the historical Gadugi scenario identity retained by the existing QA contract; PR 423 references that inherited launcher-evidence lane without retargeting the scenario metadata. |
+
+The `pr-155` tag and description text are historical scenario metadata, not a
+claim that PR 423 is PR 155. The PR 423 source-generation characterization uses
+this existing Gadugi lane as supporting launcher-evidence wiring. Retargeting the
+scenario identity would require coordinated changes to
+`exported-launcher-evidence.yaml` and
+`test-gadugi-exported-launcher-contract.sh`, which is outside this reference
+update.
 
 The surrounding QA environment may set:
 
@@ -196,7 +204,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-## Examples
+## Review checklists
 
 ### Review the scenario without executing the gated smoke
 
@@ -258,7 +266,7 @@ Display-backed world rendering, Save/load, grading, creative assessment, and
 lesson-completion evidence belongs in separate outside-in Alice desktop
 scenarios with their own evidence artifacts.
 
-## Troubleshooting
+## Failure modes reference
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |

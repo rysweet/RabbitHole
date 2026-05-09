@@ -17,8 +17,8 @@ completion.
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
-- [Examples](#examples)
-- [Tutorial: review source generation](#tutorial-review-source-generation)
+- [Generated-source specimen reference](#generated-source-specimen-reference)
+- [Review checklist: source generation](#review-checklist-source-generation)
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
 
@@ -100,10 +100,13 @@ Story API calls that are important to exported source generation:
 | `SScene.addSceneActivationListener(SceneActivationListener)` with a `null` listener | `this.addSceneActivationListener(null);` in `Scene.java`. |
 | Lambda-backed scene activation and time listeners | Generated lambdas use the listener event parameter shape and compile against the current Story API listener types. |
 
-The generated `Scene` fixtures use a method named `handleActiveChanged(Boolean
-isActive, Integer activationCount)`. That method name and parameter shape are
-fixture input. They do not imply that all Alice scene activation behavior,
-animation scheduling, rendering, or world execution has been validated.
+The generated `Scene` fixtures use a method named `handleActiveChanged` with
+`Boolean isActive` and `Integer activationCount` parameters. The runtime-seam
+tests assert the generated declaration fragment
+`public void handleActiveChanged(Boolean isActive,Integer activationCount)`.
+That method name and parameter shape are fixture input. They do not imply that
+all Alice scene activation behavior, animation scheduling, rendering, or world
+execution has been validated.
 
 ## Headless event-seam contract
 
@@ -216,7 +219,12 @@ git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-## Examples
+## Generated-source specimen reference
+
+These specimens are reference fragments for the focused assertions. Where the
+text says "asserted", match the generated source exactly; where it says
+"shape-only", use the specimen to understand intent without treating every
+whitespace choice as frozen.
 
 ### Repaired cached loop item name
 
@@ -227,7 +235,7 @@ ForEachInArrayLoop loop = forEachLoop("COUNT__");
 ```
 
 is accepted only when generated source repairs both the loop header and body
-access:
+access. The asserted fragments are:
 
 ```java
 for(String itemA : new String[]{"red", "blue"}) {
@@ -240,7 +248,7 @@ for(String itemA : new String[]{"red", "blue"}) {
 ### Escaped Java string literal
 
 A string literal containing a newline, tab, quote, and backslash is emitted as
-valid Java source:
+valid Java source. The asserted fragment is:
 
 ```java
 "line1\n\t\"quote\"\\backslash"
@@ -248,11 +256,11 @@ valid Java source:
 
 ### Listener registration source
 
-The listener registration fixture accepts generated `Scene.java` source shaped
-like:
+The listener registration fixture accepts generated `Scene.java` source with
+the exact asserted fragments shown here:
 
 ```java
-void handleActiveChanged(Boolean isActive, Integer activationCount) {
+public void handleActiveChanged(Boolean isActive,Integer activationCount) {
   this.addTimeListener(null,2);
   this.addSceneActivationListener(null);
 }
@@ -264,7 +272,7 @@ calls.
 
 ### Lambda listener payload source
 
-A payload-probe fixture accepts generated source shaped like:
+A payload-probe fixture accepts generated source with this shape-only fragment:
 
 ```java
 this.addSceneActivationListener((SceneActivationEvent p0) ->
@@ -274,12 +282,12 @@ this.addSceneActivationListener((SceneActivationEvent p0) ->
 The test then invokes the handler seam directly and asserts that the same event
 object reaches the generated listener body.
 
-## Tutorial: review source generation
+## Review checklist: source generation
 
-Use this flow when changing source generation near the AST generator, NetBeans
-project generator, Story API calls, or listener registration.
+Use this checklist when changing source generation near the AST generator,
+NetBeans project generator, Story API calls, or listener registration.
 
-### Step 1: Start from a no-Sims checkout
+### 1. Start from a no-Sims checkout
 
 From the repository root:
 
@@ -291,19 +299,19 @@ test -d tweedle-lang/Grammar
 Do not fetch Git LFS assets or Sims payloads for these tests. The fixtures create
 the Alice projects they need.
 
-### Step 2: Run focused characterization first
+### 2. Run focused characterization first
 
 Run the core AST command, then the focused NetBeans command from
 [Validation commands](#validation-commands). A useful review starts from the
 smallest failing generated snippet or generated file.
 
-### Step 3: Inspect generated source before runtime seams
+### 3. Inspect generated source before runtime seams
 
 For Story API listener failures, inspect the generated `Scene.java` assertion
 first. Runtime seam failures are useful only after the generated source compiles
 and contains the expected listener lambda or method call.
 
-### Step 4: Keep stronger claims in separate lanes
+### 4. Keep stronger claims in separate lanes
 
 Do not broaden this documentation or these tests into full UI automation, visible
 rendering correctness, Save completion, grading, broad Tweedle/player decode, or
