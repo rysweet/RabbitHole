@@ -64,20 +64,14 @@ public class ModelResourceCrawler implements Crawler {
 
   @Override
   public void visit(Crawlable crawlable) {
-    if (crawlable == null) {
-      return;
-    }
-    if (FieldAccess.class.isAssignableFrom(crawlable.getClass())) {
-      addIfResourceEnum((FieldAccess) crawlable);
-    }
-    if (InstanceCreation.class.isAssignableFrom(crawlable.getClass())) {
-      addNonEnumResourceCreations((InstanceCreation) crawlable);
-    }
-    if (NamedUserType.class.isAssignableFrom(crawlable.getClass())) {
-      activeUserTypes.add((NamedUserType) crawlable);
-    }
-    if (ResourceExpression.class.isAssignableFrom(crawlable.getClass())) {
-      resources.add(((ResourceExpression) crawlable).resource.getValue());
+    if (crawlable instanceof FieldAccess fieldAccess) {
+      addIfResourceEnum(fieldAccess);
+    } else if (crawlable instanceof InstanceCreation instanceCreation) {
+      addNonEnumResourceCreations(instanceCreation);
+    } else if (crawlable instanceof NamedUserType namedUserType) {
+      activeUserTypes.add(namedUserType);
+    } else if (crawlable instanceof ResourceExpression resourceExpression) {
+      resources.add(resourceExpression.resource.getValue());
     }
   }
 
