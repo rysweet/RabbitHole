@@ -58,7 +58,7 @@ observable generated Java source:
 ForEachInArrayLoop loop = forEachLoop("COUNT__");
 loop.body.getValue().statements.add(
     new LocalDeclarationStatement(
-        new UserLocal("copy", JavaType.STRING_TYPE),
+        new UserLocal("copy", String.class, true),
         new LocalAccess(loop.item.getValue())));
 
 String source = generate(loop);
