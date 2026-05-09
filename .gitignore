@@ -32,3 +32,4 @@ out/*
 .copilot/
 .claude/runtime/
 __pycache__/
+logs/
