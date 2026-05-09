@@ -117,9 +117,9 @@ class Pr424MigrationHotspotRecoveryContractTest(unittest.TestCase):
 
     def test_scoped_recovery_files_have_no_conflict_markers(self) -> None:
         blocked_patterns = [
-            "<<<<<<<",
-            "=======",
-            ">>>>>>>",
+            "<" * 7,
+            "=" * 7,
+            ">" * 7,
         ]
         files = [PYPROJECT, MIGRATION_TEST, *SCOPED_DOCS]
 
