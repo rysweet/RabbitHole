@@ -10,9 +10,9 @@ targets, implemented by three required executable test methods:
    emitted, compiles, registers a generated listener, and observes one scene
    activation callback through the existing headless runtime dispatch seam.
 
-The lane does not launch Alice desktop, execute full world playback, assert
-visible correctness, grade learner work, complete Save workflows, or provide
-full UI automation evidence.
+**Non-goals:** this lane does not launch Alice desktop, execute full world
+playback, assert visible correctness, grade learner work, complete Save
+workflows, or provide full UI automation evidence.
 
 ## Contents
 
@@ -22,6 +22,8 @@ full UI automation evidence.
 - [Generated listener source contract](#generated-listener-source-contract)
 - [Headless scene activation dispatch contract](#headless-scene-activation-dispatch-contract)
 - [Executable characterization](#executable-characterization)
+- [QA scenario metadata](#qa-scenario-metadata)
+- [Evidence links](#evidence-links)
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
@@ -234,6 +236,37 @@ when:
 The executable tests create only temporary files. Generated project archives,
 source directories, and class directories are managed by JUnit temporary
 locations and are not persisted in the repository.
+
+## QA scenario metadata
+
+The Alice desktop QA scenario system exposes this lane through the
+`runtime-event-dispatch-smoke` and `generated-listener-runtime-dispatch-smoke`
+gated command-smoke workflows.
+
+Workflow values and supported argv allowlists must be updated together with
+their contract tests. Keep these files synchronized when changing the scenario
+metadata, workflow names, or Maven argv values:
+
+- `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`
+- `qa/outside-in/alice-desktop/runners/run-scenario.sh`
+- `qa/outside-in/alice-desktop/schema/scenario.schema.json`
+- `qa/outside-in/alice-desktop/tests/test-schema-contract.sh`
+- `qa/outside-in/alice-desktop/tests/test-workflow-contract.sh`
+
+Scenario metadata must not introduce arbitrary commands, paths, or shell
+fragments. The runner accepts only checked-in workflow values and explicit argv
+allowlist entries.
+
+## Evidence links
+
+Evidence links for this lane must stay focused on PR #403/runtime-dispatch
+characterization evidence: this reference, the focused `core/ast` and
+`netbeans` tests, the QA scenario contract tests, and the runtime-dispatch docs
+contract. When `docs/index.md` is updated during develop integration, preserve
+only focused PR #403/runtime-dispatch references for this lane; do not link this
+feature to desktop UI, rendering, playback, Save, grading, or full automation
+evidence unless a separate evidence lane documents and tests that broader
+behavior.
 
 ## API reference
 
