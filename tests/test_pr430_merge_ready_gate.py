@@ -37,6 +37,9 @@ def passing_evidence() -> dict:
             "branch": PR_BRANCH,
             "remote_head_sha": HEAD_SHA,
             "evaluated_head_sha": HEAD_SHA,
+            "state": "OPEN",
+            "is_draft": False,
+            "merge_state_status": "CLEAN",
             "manual_merge": False,
         },
         "workflow": {
@@ -151,6 +154,35 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
         self.assert_not_merge_ready_contains(
             self.evaluate(evidence),
             r"remote PR head|head SHA|stale",
+        )
+
+    def test_closed_draft_or_unclean_pr_state_blocks_ready(self) -> None:
+        cases = [
+            ("state", "CLOSED", r"PR #430.*open|open PR"),
+            ("state", "MERGED", r"PR #430.*open|open PR"),
+            ("is_draft", True, r"non-draft|draft"),
+            ("merge_state_status", "DIRTY", r"merge.*clean|mergeStateStatus"),
+            ("merge_state_status", "UNKNOWN", r"merge.*clean|mergeStateStatus"),
+        ]
+
+        for field, value, pattern in cases:
+            evidence = passing_evidence()
+            evidence["pr"][field] = value
+            with self.subTest(field=field, value=value):
+                self.assert_not_merge_ready_contains(
+                    self.evaluate(evidence),
+                    pattern,
+                )
+
+    def test_missing_pr_state_evidence_blocks_no_op_ready(self) -> None:
+        evidence = passing_evidence()
+        del evidence["pr"]["state"]
+        del evidence["pr"]["is_draft"]
+        del evidence["pr"]["merge_state_status"]
+
+        self.assert_not_merge_ready_contains(
+            self.evaluate(evidence),
+            r"PR #430.*open|non-draft|merge.*clean|PR state",
         )
 
     def test_missing_required_runnable_qa_evidence_blocks_ready(self) -> None:
@@ -310,6 +342,9 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
             "number": 430,
             "headRefName": PR_BRANCH,
             "headRefOid": HEAD_SHA,
+            "state": "OPEN",
+            "isDraft": False,
+            "mergeStateStatus": "CLEAN",
             "body": body,
             "files": [
                 {"path": "alice_qa_amplihack.py"},
@@ -348,9 +383,15 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
         )
 
         self.assertEqual([["gh", "pr", "view", "430", "--json", module.GITHUB_PR_VIEW_FIELDS]], calls)
+        self.assertIn("state", module.GITHUB_PR_VIEW_FIELDS)
+        self.assertIn("isDraft", module.GITHUB_PR_VIEW_FIELDS)
+        self.assertIn("mergeStateStatus", module.GITHUB_PR_VIEW_FIELDS)
         self.assertEqual(HEAD_SHA, refreshed["pr"]["remote_head_sha"])
         self.assertEqual(HEAD_SHA, refreshed["pr"]["evaluated_head_sha"])
         self.assertEqual(PR_BRANCH, refreshed["pr"]["branch"])
+        self.assertEqual("OPEN", refreshed["pr"]["state"])
+        self.assertIs(refreshed["pr"]["is_draft"], False)
+        self.assertEqual("CLEAN", refreshed["pr"]["merge_state_status"])
         self.assertEqual(
             [
                 "alice_qa_amplihack.py",

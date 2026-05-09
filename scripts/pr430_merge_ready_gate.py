@@ -17,7 +17,9 @@ from typing import Any
 
 EXPECTED_PR_NUMBER = 430
 EXPECTED_BRANCH = "feat/issue-407-rabbithole-wave7-save-negative-contract-lane-follo"
-GITHUB_PR_VIEW_FIELDS = "number,headRefName,headRefOid,body,statusCheckRollup,files"
+GITHUB_PR_VIEW_FIELDS = (
+    "number,headRefName,headRefOid,state,isDraft,mergeStateStatus,body,statusCheckRollup,files"
+)
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 PYTHON_TEST_COMMAND = "NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest discover -s tests"
@@ -133,6 +135,7 @@ def evaluate_merge_readiness(evidence: dict[str, Any]) -> dict[str, Any]:
 
     blockers: list[str] = []
     _check_pr_head(evidence, blockers)
+    _check_pr_state(evidence, blockers)
     _check_workflow(evidence, blockers)
     _check_diff_scope(evidence, blockers)
     _check_runnable_qa(evidence, blockers)
@@ -171,6 +174,21 @@ def _check_pr_head(evidence: dict[str, Any], blockers: list[str]) -> None:
     if remote_head and evaluated_head and remote_head != evaluated_head:
         blockers.append(
             "Evaluated head SHA is stale: it must match the current remote PR head SHA."
+        )
+
+
+def _check_pr_state(evidence: dict[str, Any], blockers: list[str]) -> None:
+    pr = _dict(evidence.get("pr"))
+    state = _optional_string(pr.get("state"))
+    merge_state_status = _optional_string(pr.get("merge_state_status"))
+
+    if state != "OPEN":
+        blockers.append("PR #430 must be open before merge-ready finalization.")
+    if pr.get("is_draft") is not False:
+        blockers.append("PR #430 must be non-draft before merge-ready finalization.")
+    if merge_state_status != "CLEAN":
+        blockers.append(
+            "PR #430 mergeStateStatus must be CLEAN; merge state evidence must be clean."
         )
 
 
@@ -376,6 +394,9 @@ def _normalize_github_pr_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "branch": _optional_string(payload.get("headRefName")),
             "remote_head_sha": head_sha,
             "evaluated_head_sha": head_sha,
+            "state": _optional_string(payload.get("state")),
+            "is_draft": payload.get("isDraft"),
+            "merge_state_status": _optional_string(payload.get("mergeStateStatus")),
             "manual_merge": False,
         },
         "diff": {"changed_files": _github_changed_files(payload.get("files"))},

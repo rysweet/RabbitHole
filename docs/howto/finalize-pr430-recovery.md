@@ -9,10 +9,9 @@ artifact rejection.
 This guide is only for PR #430. It is not a general Save workflow guide and it
 does not prove desktop Save completion.
 
-The local `HEAD`, working-tree, and PR open/non-draft/clean checks below are
-manual preflight checks. The merge-ready gate evaluates evidence JSON and
-refreshed GitHub PR diff/check/description data; it does not run these local Git
-or PR-state checks for you.
+The local `HEAD` and working-tree checks below are manual preflight checks. The
+merge-ready gate evaluates evidence JSON and refreshed GitHub PR
+state/diff/check/description data; it does not run local Git checks for you.
 
 ## Prerequisites
 

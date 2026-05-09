@@ -6,9 +6,10 @@ and, when requested, refreshes read-only GitHub evidence for the PR head, PR dif
 paths, check status, and PR description.
 
 The gate is not a complete local finalization command. It does not inspect the
-checked-out `HEAD`, run `git status`, or verify that PR #430 is open, non-draft,
-and merge-clean. Those checks are manual preflight requirements in
-[Finalize PR #430 Recovery](../howto/finalize-pr430-recovery.md).
+checked-out `HEAD` or run `git status`; those checks are manual preflight
+requirements in [Finalize PR #430 Recovery](../howto/finalize-pr430-recovery.md).
+It does validate supplied or refreshed PR evidence showing that PR #430 is open,
+non-draft, and merge-clean.
 
 The gate is intentionally narrow. It protects the Save menu dialog negative
 artifact contract: invalid Save proof artifacts must fail closed with explicit
@@ -50,13 +51,14 @@ The evidence must prove all of the following:
 
 1. The evidence targets PR #430 and the authoritative PR branch.
 2. The evidence `evaluated_head_sha` matches the current remote PR `headRefOid`.
-3. Manual merge evidence is absent.
-4. The GitHub PR diff paths stay inside the focused Save negative artifact contract surface.
-5. GitHub checks for the current PR head are complete and green.
-6. Focused runnable QA evidence is represented in the evidence JSON for the evaluated head.
-7. Documentation impact is assessed and claim wording stays bounded.
-8. The PR description cites current-head evidence, docs impact, quality-audit cycles, green checks, and non-claims.
-9. Workflow evidence has `NO_OP_GUARD` classification, no timeout wrappers were used, and the required audit/description evidence has no unresolved blocker.
+3. PR #430 is open, non-draft, and has `mergeStateStatus` `CLEAN`.
+4. Manual merge evidence is absent.
+5. The GitHub PR diff paths stay inside the focused Save negative artifact contract surface.
+6. GitHub checks for the current PR head are complete and green.
+7. Focused runnable QA evidence is represented in the evidence JSON for the evaluated head.
+8. Documentation impact is assessed and claim wording stays bounded.
+9. The PR description cites current-head evidence, docs impact, quality-audit cycles, green checks, and non-claims.
+10. Workflow evidence has `NO_OP_GUARD` classification, no timeout wrappers were used, and the required audit/description evidence has no unresolved blocker.
 
 `evaluated_head_sha` is evidence supplied to the gate or refreshed from GitHub.
 The gate compares that value to the remote PR head; it does not independently

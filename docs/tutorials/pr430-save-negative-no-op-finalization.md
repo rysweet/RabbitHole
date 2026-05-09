@@ -8,9 +8,9 @@ evidence into one bounded no-op decision.
 The tutorial does not teach Save implementation work. It keeps the claim limited
 to invalid Save proof artifacts failing closed.
 
-Steps 1 through 3 are manual preflight checks. The gate in step 5 evaluates the
-evidence JSON and refreshed GitHub PR diff/check/description data; it does not
-read local `HEAD`, run `git status`, or verify the PR draft/merge state.
+Steps 1 and 2 are manual local preflight checks. The gate in step 5 evaluates
+the evidence JSON and refreshed GitHub PR state/diff/check/description data; it
+does not read local `HEAD` or run `git status`.
 
 ## 1. Start from the PR head
 
