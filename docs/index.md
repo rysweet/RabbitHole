@@ -7,8 +7,8 @@ repository.
 ## Project save and export characterization
 
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, and characterization seams.
-- [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Target contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.
-- [Save Proof Evidence](./reference/save-proof-evidence.md) - Target canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
+- [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Implemented contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.
+- [Save Proof Evidence](./reference/save-proof-evidence.md) - Canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
 - [Robot Save Menu Dialog Write/Readback Proof](./reference/robot-save-menu-dialog-write-readback-proof.md) - Reference for the Robot File-menu Save activation, Swing chooser control, `.a3p` write, readback, marker, and blocker artifact contract.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
 - [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
