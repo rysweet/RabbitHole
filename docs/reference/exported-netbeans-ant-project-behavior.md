@@ -412,9 +412,10 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-ant-build
 ```
 
-The scenario's `status.txt` and `command.log` are review evidence for the Ant
-build proof. The command remains a bounded Ant/template build proof; it is not
-installer validation or full GUI export journey evidence.
+For review evidence, `status.txt` records the gated scenario result, exit code,
+and focused Maven argv; `command.log` records the Maven, Surefire, and Ant output
+from that argv. The command remains a bounded Ant/template build proof; it is
+not installer validation or full GUI export journey evidence.
 
 Run the broader no-Sims NetBeans reactor validation after launcher generator,
 template, or NetBeans export behavior changes:
@@ -578,10 +579,19 @@ recovery](../howto/finalize-exported-netbeans-ant-smoke-recovery.md).
 
 Recovery finalization is accepted only as current-head evidence. It must name the
 branch and commit under review, confirm the Tweedle grammar submodule is present,
-validate the scenario catalog and shell contracts, and run the focused
-`Alice3ProjectTemplateAntSmokeTest` command. If those checks pass and no
-implementation patch is required, the handoff uses a current-head no-op
-justification instead of inventing a source change.
+validate the scenario catalog and shell contracts, run the gated
+`alice-desktop-exported-project-smoke` scenario, run the focused
+`Alice3ProjectTemplateAntSmokeTest` command, complete three
+`SEEK -> VALIDATE -> FIX` quality-audit cycles with a clean final cycle, confirm
+documentation impact, verify focused diff scope, verify the pull request
+description evidence, verify GitHub Actions are green for the exact same head
+SHA, and evaluate the collected evidence with
+`scripts/pr389_recovery_gate.py`.
+
+If those checks pass and no implementation patch is required, the handoff uses a
+current-head no-op justification instead of inventing a source change. If any
+gate is missing, stale, pending, failed, or SHA-mismatched, the handoff remains
+`NOT_MERGE_READY` with explicit blockers.
 
 ## Compatibility rules
 
