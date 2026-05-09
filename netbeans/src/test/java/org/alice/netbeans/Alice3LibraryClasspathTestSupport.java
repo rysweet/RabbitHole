@@ -31,11 +31,22 @@ public final class Alice3LibraryClasspathTestSupport {
   private static final String MODULE_EXTENSION_ROOT = "nbinst:/modules/ext/org.alice.netbeans/";
   private static final Set<String> OPTIONAL_LIBRARY_ARTIFACTS = Set.of("models-nonfree", "story-api-nonfree");
   private static final Map<String, Path> MODULE_OUTPUTS = moduleOutputs();
+  private static String cachedAliceLibraryClasspath;
+  private static String cachedAntRuntimeClasspath;
+  private static List<Path> cachedTestClasspathEntries;
+  private static List<String> cachedClasspathResources;
 
   private Alice3LibraryClasspathTestSupport() {
   }
 
-  public static String aliceLibraryClasspath() throws Exception {
+  public static synchronized String aliceLibraryClasspath() throws Exception {
+    if (cachedAliceLibraryClasspath == null) {
+      cachedAliceLibraryClasspath = buildAliceLibraryClasspath();
+    }
+    return cachedAliceLibraryClasspath;
+  }
+
+  private static String buildAliceLibraryClasspath() throws Exception {
     List<String> missing = new ArrayList<>();
     List<String> entries = new ArrayList<>();
 
@@ -74,11 +85,14 @@ public final class Alice3LibraryClasspathTestSupport {
     }
   }
 
-  public static String antRuntimeClasspath() throws URISyntaxException {
-    return String.join(
-        File.pathSeparator,
-        Path.of(Launcher.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(),
-        Path.of(org.apache.tools.ant.Project.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
+  public static synchronized String antRuntimeClasspath() throws URISyntaxException {
+    if (cachedAntRuntimeClasspath == null) {
+      cachedAntRuntimeClasspath = String.join(
+          File.pathSeparator,
+          Path.of(Launcher.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString(),
+          Path.of(org.apache.tools.ant.Project.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString());
+    }
+    return cachedAntRuntimeClasspath;
   }
 
   private static Optional<Path> resolveArtifact(String artifactId) {
@@ -109,27 +123,36 @@ public final class Alice3LibraryClasspathTestSupport {
         || (fileName.startsWith(artifactId + "-") && fileName.endsWith(".jar"));
   }
 
-  private static List<Path> testClasspathEntries() {
+  private static synchronized List<Path> testClasspathEntries() {
+    if (cachedTestClasspathEntries != null) {
+      return cachedTestClasspathEntries;
+    }
     String classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path", ""));
-    return List.of(classpath.split(File.pathSeparator)).stream()
+    cachedTestClasspathEntries = List.of(classpath.split(File.pathSeparator)).stream()
         .filter(entry -> !entry.isBlank())
         .map(Path::of)
         .toList();
+    return cachedTestClasspathEntries;
   }
 
-  private static List<String> classpathResources() throws Exception {
+  private static synchronized List<String> classpathResources() throws Exception {
+    if (cachedClasspathResources != null) {
+      return cachedClasspathResources;
+    }
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     var builder = factory.newDocumentBuilder();
     builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
     Document document = builder.parse(TARGET.resolve("classes/org/alice/netbeans/Alice3Library.xml").toFile());
     NodeList volumes = document.getElementsByTagName("volume");
-    return IntStream.range(0, volumes.getLength())
+    List<String> resources = IntStream.range(0, volumes.getLength())
         .mapToObj(index -> (Element) volumes.item(index))
         .filter(volume -> "classpath".equals(volume.getElementsByTagName("type").item(0).getTextContent()))
         .flatMap(volume -> elements(volume.getElementsByTagName("resource")).stream())
         .map(Element::getTextContent)
         .filter(resource -> resource.startsWith(MODULE_EXTENSION_ROOT))
         .toList();
+    cachedClasspathResources = resources;
+    return cachedClasspathResources;
   }
 
   private static List<Element> elements(NodeList nodes) {
