@@ -1,6 +1,6 @@
 # Simple If-Statement Decode
 
-This page defines the target Tweedle AST decoder contract for simple
+This page defines the Tweedle AST decoder contract for simple
 `if (condition) { ... }` statements whose condition uses existing Boolean,
 logical, or comparison expression support and whose body contains an explicit
 conditional-body allowlist, especially explicit zero-argument `this.method();`
@@ -10,14 +10,12 @@ This is not full Tweedle conditional decode. The feature does not add general
 `if/else`, nested conditional, argument-bearing method-call, arbitrary receiver,
 or new statement-family support.
 
-This page describes behavior the simple-if slice must provide when implemented.
-Current decoder behavior already covers assignment-only conditional bodies; the
-method-call body case requires a decoder and test change before it can be
-treated as implemented behavior.
+This page describes the implemented simple-if slice. Decoder behavior also
+continues to cover the pre-existing assignment-only `if/else` body case.
 
-## Target usage
+## Usage
 
-The direct decoder entry point for raw Tweedle source should accept this shape:
+The direct decoder entry point for raw Tweedle source accepts this shape:
 
 ```java
 NamedUserType type = (NamedUserType) new TweedleEncoderDecoder().decode("""
@@ -37,7 +35,7 @@ NamedUserType type = (NamedUserType) new TweedleEncoderDecoder().decode("""
     """);
 ```
 
-When implemented, the decoded `run` method contains one Alice
+The decoded `run` method contains one Alice
 `ConditionalStatement`. Its first `BooleanExpressionBodyPair` preserves the
 decoded condition expression. Its body contains the decoded allowlisted
 statements in order: a `MethodInvocation` statement for `this.helper();` and an
@@ -56,7 +54,7 @@ All of these conditions must be true:
 | Body statements | Explicit conditional-body allowlist only: existing assignment statements plus explicit zero-argument `this.method();` expression statements. |
 | Method-call target | For method calls, the target is explicit `this`. |
 | Method-call arguments | For method calls, the Tweedle call has no arguments and resolves to a same-type zero-argument `UserMethod`. |
-| Target AST result | The decoder returns a `ConditionalStatement` with one `BooleanExpressionBodyPair` and an empty `elseBody`. |
+| AST result | The decoder returns a `ConditionalStatement` with one `BooleanExpressionBodyPair` and an empty `elseBody`. |
 
 The decoder preserves statement order in the `if` body. It must fail closed
 before returning a partial conditional body when any body statement is
@@ -64,7 +62,7 @@ unsupported.
 
 ## API behavior
 
-`TweedleEncoderDecoder.decode(String source)` should accept a simple-if method
+`TweedleEncoderDecoder.decode(String source)` accepts a simple-if method
 body when the condition and every body statement are inside the supported shape.
 
 ```java
@@ -80,7 +78,7 @@ class Program {
 }
 ```
 
-The intended decoded Alice AST shape is:
+The decoded Alice AST shape is:
 
 ```text
 UserMethod run
@@ -115,11 +113,11 @@ calls, arbitrary receivers, local declarations, return statements, or other
 unsupported statements remains outside this slice unless a separate decoder
 contract implements it.
 
-## Implementation impact
+## Implementation boundary
 
-The implementation must change conditional branch body decoding, not the public
-decoder API. The current branch-body path accepts assignment statements only.
-Add a small allowlisted conditional-body statement decoder that accepts:
+Conditional branch body decoding changed without changing the public decoder API.
+The simple-if path uses a small allowlisted conditional-body statement decoder
+that accepts:
 
 1. The assignment statements already supported in conditional bodies.
 2. Explicit zero-argument `this.method();` expression statements that satisfy
@@ -133,8 +131,8 @@ overloads, or optional-argument behavior inside conditional bodies.
 ## Player archive behavior
 
 JSON player archives that already satisfy the existing JSON `.a3w` reader
-requirements should pass manifest-declared Tweedle types through this same
-decoder slice once the direct decoder support exists.
+requirements pass manifest-declared Tweedle types through this same decoder
+slice.
 
 ```text
 version.txt
@@ -142,7 +140,7 @@ manifest.json
 src/Program.twe
 ```
 
-For a target supported simple-if program type:
+For a supported simple-if program type:
 
 ```java
 class Program extends SProgram {
@@ -243,10 +241,9 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   test
 ```
 
-## Required characterization tests
+## Characterization coverage
 
-Focused positive tests must be added before the method-call body behavior is
-considered implemented. They should prove:
+Focused positive tests prove:
 
 1. A simple `if` with a comparison condition decodes to `ConditionalStatement`.
 2. Logical and comparison condition expressions are preserved in the
@@ -256,7 +253,7 @@ considered implemented. They should prove:
 4. Multiple allowlisted body statements keep source order.
 5. Existing assignment-only `if/else` behavior still decodes both branches.
 
-Focused negative tests should prove:
+Focused negative tests prove:
 
 1. Argument-bearing `this.helper(value: 1);` inside the `if` body throws
    `UnsupportedTweedleDecodeException`.
@@ -266,14 +263,14 @@ Focused negative tests should prove:
 4. Unsupported body statements fail closed and do not return partial
    conditional AST.
 
-The direct decoder tests belong in:
+The direct decoder tests live in:
 
 ```text
 core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java
 ```
 
-Archive-level coverage, when present, belongs in the existing JSON archive
-reader characterization suite under:
+Archive-level coverage lives in the existing JSON archive reader
+characterization suite under:
 
 ```text
 core/story-api-migration/src/test/java/org/lgna/project/io/

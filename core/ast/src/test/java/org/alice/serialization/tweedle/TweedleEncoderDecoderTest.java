@@ -1998,7 +1998,7 @@ public class TweedleEncoderDecoderTest {
             }
             """));
 
-    assertTrue(thrown.getMessage().contains("if/else"));
+    assertTrue(thrown.getMessage().contains("simple if"));
     assertTrue(thrown.getMessage().contains("bad"));
   }
 
@@ -2058,7 +2058,7 @@ public class TweedleEncoderDecoderTest {
             }
             """));
 
-    assertTrue(thrown.getMessage().contains("if/else"));
+    assertTrue(thrown.getMessage().contains("simple if"));
     assertTrue(thrown.getMessage().contains("bad"));
   }
 

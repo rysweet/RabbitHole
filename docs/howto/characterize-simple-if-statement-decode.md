@@ -1,9 +1,9 @@
 # Characterize Simple If-Statement Decode
 
-Use this guide when adding or reviewing characterization tests for the target
+Use this guide when adding or reviewing characterization tests for the
 simple Tweedle `if (condition) { ... }` decode slice.
 
-This guide covers the feature we intend to build: simple-if bodies with an
+This guide covers the implemented feature: simple-if bodies with an
 explicit conditional-body statement allowlist. The allowlist includes existing
 assignment statements and explicit zero-argument `this.method();` expression
 statements. It does not cover full `if/else`, nested conditionals, arbitrary
@@ -68,13 +68,12 @@ Keep assertions on public AST objects such as `ConditionalStatement`,
 `BooleanExpressionBodyPair`, `ExpressionStatement`, `MethodInvocation`, and the
 resolved `UserMethod`.
 
-## Update the decoder intentionally
+## Review the decoder boundary
 
-The current conditional branch body decoder accepts assignment statements only.
-The implementation must add a narrow conditional-body allowlist rather than
+The simple-if conditional body decoder uses a narrow allowlist rather than
 delegating to unrestricted method-body decoding.
 
-The allowlist should accept:
+The allowlist accepts:
 
 1. Existing assignment statements in conditional bodies.
 2. Explicit zero-argument `this.method();` expression statements that satisfy

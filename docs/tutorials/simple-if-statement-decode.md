@@ -1,7 +1,7 @@
 # Tutorial: Trace Simple If-Statement Decode
 
-This tutorial walks through the target simple Tweedle
-`if (condition) { ... }` decode slice we will build. It uses raw Tweedle source
+This tutorial walks through the implemented simple Tweedle
+`if (condition) { ... }` decode slice. It uses raw Tweedle source
 and the public `TweedleEncoderDecoder` path.
 
 ## Goal
@@ -14,9 +14,8 @@ containing allowlisted decoded statements becomes an Alice ConditionalStatement.
 The body can include an explicit zero-argument this.method(); call.
 ```
 
-This tutorial does not prove current implementation behavior until the decoder
-and tests are updated. It does not prove full conditional decode, broad
-method-call decode, or full player archive decode.
+This tutorial proves the focused simple-if behavior. It does not prove full
+conditional decode, broad method-call decode, or full player archive decode.
 
 ## Implementation boundary
 
@@ -116,7 +115,7 @@ assertSame(helper, invocation.method.getValue());
 assertTrue(invocation.expression.getValue() instanceof ThisExpression);
 ```
 
-These assertions document the target public AST contract. They do not depend on
+These assertions document the public AST contract. They do not depend on
 private decoder helper names.
 
 ## 6. Add a logical/comparison condition example
