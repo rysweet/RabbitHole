@@ -40,6 +40,7 @@ netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorTest.java
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorGeneratedSourceTest.java
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandaloneProjectTest.java
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
+netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java
 ```
 
 The exported-project slice verifies that a generated, LFS-free Alice project:
@@ -170,6 +171,11 @@ The JSON fields are:
 | `missingObservationMechanism` | Stable reason code when observation cannot be completed. |
 | `detail` | Human-readable detail without host paths, arguments, user names, or stack traces. |
 
+String fields in the render-observation JSON, including `detail`, must escape
+quotes, backslashes, and JSON control characters. For example, a JavaFX Robot
+failure detail that contains `"`, `\`, or a newline is emitted with `\"`, `\\`,
+and `\n` escapes inside the JSON string, not as raw control characters.
+
 Accepted marker observation is:
 
 ```text
@@ -248,8 +254,8 @@ generated into `AliceJavaFXLauncher` for exported projects.
 
 The same class also compiles and executes generated launcher source with
 test-owned JavaFX stubs so marker-observation success, unsupported pixel
-observation, pixel mismatch, and starting-argument delegation remain
-characterized.
+observation, render-observation JSON escaping, pixel mismatch, and
+starting-argument delegation remain characterized.
 
 ### Generated source compileability
 
@@ -281,6 +287,20 @@ environment, accepted evidence is a deterministic display-unavailable boundary.
 When `xvfb-run` is available, a gated path can prove the launcher-owned marker
 observation and Program delegation under Xvfb. Neither path proves Alice world
 rendering correctness.
+
+### Exported Ant runtime metadata characterization
+
+`Alice3ProjectTemplateAntSmokeTest` exercises the packaged NetBeans Ant template
+with synthetic Alice projects and local library bindings. It verifies exported
+project compile, jar, run, resource packaging, test-main, clean, wizard export,
+and runtime metadata behavior without requiring Sims or LFS payloads.
+
+For the runtime configuration boundary, the focused smoke overrides
+`main.class` with a probe and verifies that the exported Ant `run` target passes
+assertions, Alice system properties, interpolated Alice library paths, and the
+expected classpath to the launched JVM. That smoke stops at Ant/JVM metadata; it
+does not prove JavaFX `Application.start(...)`, launcher marker observation,
+Program delegation, or Alice world rendering.
 
 ## API reference
 
