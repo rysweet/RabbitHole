@@ -135,7 +135,7 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-When a surrounding Node-based workflow invokes validation, keep the saved memory setting:
+Use `NODE_OPTIONS=--max-old-space-size=32768` for this validation lane when a surrounding Node-based workflow invokes Maven:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -178,7 +178,7 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 | Review | Source review confirms `createIssueBuilder()` still delegates to `JSubmitPane.createIssueBuilder()`, the progress pane remains lazy through `getProgressPane()`, and `do_onBackgroundThread()` still publishes start, delegates submission work, then publishes completion only after a normal delegate return. |
 | Quality audit | Record at least three SEEK / VALIDATE / FIX cycles against the current head. A clean final cycle has no remaining worker, docs, scenario-applicability, diff-scope, or evidence issue requiring a fix. |
 | PR description | The PR body names the exact head validated, focused and module validation commands, docs impact, scenario applicability, diff scope, quality-audit cycles, GitHub Actions status, and bounded non-claims. |
-| Finalization | `git --no-pager status --short --branch`, `gh pr view 428`, and `gh pr checks 428 --watch=false` describe the open PR state and checks without manually merging the PR. |
+| Finalization | `git --no-pager status --short --branch`, `gh pr view <PR_NUMBER>`, and `gh pr checks <PR_NUMBER> --watch=false` describe the open PR state and checks without manually merging the PR. |
 | Claim boundary | Handoff notes cite only the worker seam, background ordering, attachment intent, exception propagation, source review, and Maven/PR-check evidence. They do not claim rendered UI automation, real issue-service submission, grading, or full end-to-end coverage. |
 
 ## Compatibility rules
@@ -199,10 +199,15 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 private static final class RecordingIssueSubmissionProgressWorker
     extends IssueSubmissionProgressWorker {
   private final List<String> messages = new ArrayList<>();
+  private final Thread thread;
+  private final Throwable throwable;
   private Issue.Builder capturedBuilder;
 
-  private RecordingIssueSubmissionProgressWorker(boolean attachProject) {
+  private RecordingIssueSubmissionProgressWorker(
+      Thread thread, Throwable throwable, boolean attachProject) {
     super(null, attachProject);
+    this.thread = thread;
+    this.throwable = throwable;
   }
 
   @Override
@@ -212,7 +217,8 @@ private static final class RecordingIssueSubmissionProgressWorker
         .description("")
         .steps("")
         .reportedBy("")
-        .emailAddress("");
+        .emailAddress("")
+        .threadAndThrowable(this.thread, this.throwable);
   }
 
   @Override

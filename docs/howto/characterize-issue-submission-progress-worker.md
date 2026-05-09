@@ -22,7 +22,7 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Keep the saved Node memory setting when a Node-based workflow invokes the lane:
+Use `NODE_OPTIONS=--max-old-space-size=32768` for this validation lane when a Node-based workflow invokes Maven:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -49,10 +49,15 @@ Extend `IssueSubmissionProgressWorker` inside a test and override only the narro
 private static final class RecordingIssueSubmissionProgressWorker
     extends IssueSubmissionProgressWorker {
   private final List<String> progressMessages = new ArrayList<>();
+  private final Thread thread;
+  private final Throwable throwable;
   private Issue.Builder capturedIssueBuilder;
 
-  private RecordingIssueSubmissionProgressWorker(boolean attachProject) {
+  private RecordingIssueSubmissionProgressWorker(
+      Thread thread, Throwable throwable, boolean attachProject) {
     super(null, attachProject);
+    this.thread = thread;
+    this.throwable = throwable;
   }
 
   @Override
@@ -62,7 +67,8 @@ private static final class RecordingIssueSubmissionProgressWorker
         .description("")
         .steps("")
         .reportedBy("")
-        .emailAddress("");
+        .emailAddress("")
+        .threadAndThrowable(this.thread, this.throwable);
   }
 
   @Override
@@ -82,8 +88,10 @@ private static final class RecordingIssueSubmissionProgressWorker
 Exercise `do_onBackgroundThread()` directly. That keeps the test focused on background ordering and avoids launching the Swing progress dialog:
 
 ```java
+Thread thread = new Thread("issue-reporting-worker");
+Throwable throwable = new IllegalStateException("submission source");
 RecordingIssueSubmissionProgressWorker worker =
-    new RecordingIssueSubmissionProgressWorker(true);
+    new RecordingIssueSubmissionProgressWorker(thread, throwable, true);
 
 Boolean result = worker.do_onBackgroundThread();
 
@@ -92,6 +100,8 @@ assertEquals(
     List.of("START_MESSAGE", "submission:true", "END_MESSAGE"),
     worker.progressMessages);
 assertEquals(IssueType.BUG, worker.capturedIssueBuilder.build().getType());
+assertSame(thread, worker.capturedIssueBuilder.build().getThread());
+assertSame(throwable, worker.capturedIssueBuilder.build().getThrowable());
 ```
 
 ## Keep the boundary narrow
