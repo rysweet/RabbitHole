@@ -162,7 +162,8 @@ message contains:
 
 ```text
 Unsupported legacy JSON project archive
-Program
+Program Tweedle decode is unsupported
+no safe legacy resource recovery applies
 ```
 
 When available, the message can include useful archive context such as decoded

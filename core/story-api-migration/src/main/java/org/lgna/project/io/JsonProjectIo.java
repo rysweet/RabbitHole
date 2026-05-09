@@ -75,7 +75,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
   private static final String TWEEDLE_FORMAT = "tweedle";
   private static final String LEGACY_PROGRAM_TYPE_NAME = "Program";
   private static final String UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE =
-      "Unsupported legacy JSON project archive: manifest advertises Program but no supported project structure was found";
+      "Unsupported legacy JSON project archive: manifest-declared Program Tweedle decode is unsupported and no safe legacy resource recovery applies";
 
   public static JsonProjectReader reader(ZipEntryContainer container) {
     return new JsonProjectReader(container);
@@ -102,7 +102,12 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       NamedUserType programType = decodedTypes.findByName(manifestName(manifest));
       if ((programType == null) && isUnsupportedLegacyProgramArchive(manifest, decodedTypes)) {
         if (hasExactlyOneRecoverableImageReference(manifest)) {
-          Set<Resource> resources = readResources(manifest);
+          Set<Resource> resources;
+          try {
+            resources = readResources(manifest);
+          } catch (IOException e) {
+            throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes, e);
+          }
           if (hasExactlyOneRecoveredImageResource(resources)) {
             return new Project(null, new HashSet<>(decodedTypes.types), resources, sceneCameraType(manifest));
           }
@@ -378,11 +383,19 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private static IOException unsupportedLegacyJsonProjectArchive(
         ProjectManifest manifest,
         TypeReadResult decodedTypes) {
+      return unsupportedLegacyJsonProjectArchive(manifest, decodedTypes, null);
+    }
+
+    private static IOException unsupportedLegacyJsonProjectArchive(
+        ProjectManifest manifest,
+        TypeReadResult decodedTypes,
+        IOException resourceRecoveryFailure) {
       String expectedProgramName = manifestName(manifest);
       UnsupportedTweedleDecodeException cause = decodedTypes.unsupportedTweedleDecodeCauseFor(expectedProgramName);
-      return (cause == null)
+      Throwable effectiveCause = (resourceRecoveryFailure == null) ? cause : resourceRecoveryFailure;
+      return (effectiveCause == null)
           ? new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE)
-          : new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE, cause);
+          : new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE, effectiveCause);
     }
 
     private static void verifyArchiveHasExpectedType(
