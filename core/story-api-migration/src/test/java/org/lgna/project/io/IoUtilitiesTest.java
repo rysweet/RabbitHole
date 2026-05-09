@@ -361,10 +361,8 @@ public class IoUtilitiesTest {
     Resource readResource = onlyResource(readProject);
     assertEquals(ImageResource.class, readResource.getClass());
     assertEquals(imageId, readResource.getId());
-    assertEquals("legacy-picture.png", readResource.getOriginalFileName());
-    assertEquals("legacy-picture.png", readResource.getName());
     assertEquals("png", readResource.getContentType());
-    assertArrayEquals(imageData, readResource.getData());
+    assertSafeReadbackResource(readResource, "legacy-picture.png", imageData);
   }
 
   @Test

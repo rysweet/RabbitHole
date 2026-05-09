@@ -471,7 +471,6 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private static class TypeReadResult {
       private final Set<NamedUserType> types = new LinkedHashSet<>();
       private final Map<String, NamedUserType> typesByName = new HashMap<>();
-      private final Map<String, String> unsupportedTweedleDecodeReasonsByTypeName = new HashMap<>();
       private final Map<String, UnsupportedTweedleDecodeException> unsupportedTweedleDecodeCausesByTypeName = new HashMap<>();
       private boolean hasTypeReferences;
 
@@ -488,7 +487,6 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
       private void addUnsupportedTweedleType(TypeReference typeReference, UnsupportedTweedleDecodeException e) {
         String typeName = unsupportedTweedleTypeName(typeReference);
-        unsupportedTweedleDecodeReasonsByTypeName.putIfAbsent(typeName, unsupportedTweedleDecodeReason(e));
         unsupportedTweedleDecodeCausesByTypeName.putIfAbsent(typeName, e);
       }
 
@@ -503,7 +501,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
 
       private boolean hasUnsupportedTweedleDecodeFor(String name) {
-        return (name != null) && unsupportedTweedleDecodeReasonsByTypeName.containsKey(name);
+        return (name != null) && unsupportedTweedleDecodeCausesByTypeName.containsKey(name);
       }
 
       private UnsupportedTweedleDecodeException unsupportedTweedleDecodeCauseFor(String name) {
@@ -511,19 +509,19 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
 
       private boolean hasUnsupportedTweedleTypes() {
-        return !unsupportedTweedleDecodeReasonsByTypeName.isEmpty();
+        return !unsupportedTweedleDecodeCausesByTypeName.isEmpty();
       }
 
       private String unsupportedTweedleTypeNames() {
-        return unsupportedTweedleDecodeReasonsByTypeName.keySet().stream()
+        return unsupportedTweedleDecodeCausesByTypeName.keySet().stream()
             .sorted()
             .collect(Collectors.joining(", ", "[", "]"));
       }
 
       private String unsupportedTweedleDecodeReasons() {
-        return unsupportedTweedleDecodeReasonsByTypeName.entrySet().stream()
+        return unsupportedTweedleDecodeCausesByTypeName.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
-            .map(entry -> entry.getKey() + ": " + entry.getValue())
+            .map(entry -> entry.getKey() + ": " + unsupportedTweedleDecodeReason(entry.getValue()))
             .collect(Collectors.joining(", ", "[", "]"));
       }
 
