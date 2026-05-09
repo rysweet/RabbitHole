@@ -13,6 +13,7 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
+  amplihack source-code-generator verify <static-method-import|all-characterizations>
   amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
 
 Run from the Alice repository root or one of its child directories.
@@ -44,6 +45,22 @@ TWEEDLE_DECODE_SCENARIOS = {
     },
 }
 
+SOURCE_CODE_GENERATOR_SCENARIOS = {
+    "static-method-import": {
+        "description": "Generated Java source emits configured static method imports",
+        "module": "core/ast",
+        "tests": (
+            "SourceCodeGeneratorTest#"
+            "characterizesConfiguredStaticMethodImportInGeneratedClassSource"
+        ),
+    },
+    "all-characterizations": {
+        "description": "Generated Java source characterization suite",
+        "module": "core/ast",
+        "tests": "SourceCodeGeneratorTest",
+    },
+}
+
 
 def find_repo_root(start: Path) -> Path | None:
     for candidate in (start, *start.parents):
@@ -57,18 +74,18 @@ def run_from_repo(root: Path, command: list[str]) -> int:
     return subprocess.run(command, cwd=root, check=False).returncode
 
 
-def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
-    selected = TWEEDLE_DECODE_SCENARIOS.get(scenario)
+def run_focused_maven_verification(root: Path, family: str, scenario: str, scenarios: dict[str, dict[str, str]]) -> int:
+    selected = scenarios.get(scenario)
     if selected is None:
-        valid = ", ".join(sorted(TWEEDLE_DECODE_SCENARIOS))
-        print(f"unknown tweedle-decode scenario: {scenario}", file=sys.stderr)
+        valid = ", ".join(sorted(scenarios))
+        print(f"unknown {family} scenario: {scenario}", file=sys.stderr)
         print(f"valid scenarios: {valid}", file=sys.stderr)
         return 2
 
     description = selected["description"]
     module = selected["module"]
     test_selector = selected["tests"]
-    print(f"Running Tweedle decode scenario: {description}")
+    print(f"Running {family} scenario: {description}")
     submodule_result = subprocess.run(
         ["git", "submodule", "update", "--init", "tweedle-lang"],
         cwd=root,
@@ -100,6 +117,19 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
     return test_result.returncode
 
 
+def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
+    return run_focused_maven_verification(root, "tweedle-decode", scenario, TWEEDLE_DECODE_SCENARIOS)
+
+
+def run_source_code_generator_verification(root: Path, scenario: str) -> int:
+    return run_focused_maven_verification(
+        root,
+        "source-code-generator",
+        scenario,
+        SOURCE_CODE_GENERATOR_SCENARIOS,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] in {"-h", "--help", "help"}:
@@ -129,6 +159,15 @@ def main(argv: list[str] | None = None) -> int:
             print("tweedle-decode usage: amplihack tweedle-decode verify <scenario>", file=sys.stderr)
             return 2
         return run_tweedle_decode_verification(root, args[2])
+
+    if args[0] == "source-code-generator":
+        if len(args) != 3 or args[1] != "verify":
+            print(
+                "source-code-generator usage: amplihack source-code-generator verify <scenario>",
+                file=sys.stderr,
+            )
+            return 2
+        return run_source_code_generator_verification(root, args[2])
 
     if args[0] != "alice-qa":
         print(f"unknown command: {args[0]}", file=sys.stderr)
