@@ -3718,7 +3718,7 @@ run_gated_command_smoke() {
 
   local automation_fields cwd configured_timeout scenario_id automation_mode run_timeout checklist exit_code outcome resolved_cwd
   local save_proof_artifact save_proof_run_id save_proof_validation_status save_proof_validation_exit command_start_epoch
-  local run_window_artifact run_window_validation_status run_window_validation_exit
+  local run_window_evidence_dir run_window_artifact run_window_validation_status run_window_validation_exit
   local -a argv command_argv
   mapfile -t automation_fields < <(SCENARIO_JSON="$scenario_json" python3 - <<'PY'
 import json
@@ -3762,7 +3762,8 @@ PY
       printf 'Run-window contract workflow does not accept --timeout-seconds\n' >&2
       return 2
     fi
-    run_window_artifact="$(CDPATH= cd -- "$run_dir" && pwd)/$RUN_WINDOW_CONTRACT_ARTIFACT"
+    run_window_evidence_dir="$(CDPATH= cd -- "$run_dir" && pwd)"
+    run_window_artifact="$run_window_evidence_dir/$RUN_WINDOW_CONTRACT_ARTIFACT"
   fi
 
   if [ "$prepare_only" = "1" ] || [ "${ALICE_QA_RUN_GATED_SMOKES:-}" != "1" ]; then
@@ -3811,7 +3812,7 @@ PY
   elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
     command_argv=(
       "${argv[0]}"
-      "-Dorg.alice.eatme.runWindowEvidenceDir=$run_dir"
+      "-Dorg.alice.eatme.runWindowEvidenceDir=$run_window_evidence_dir"
       "${argv[@]:1}"
     )
   fi
@@ -3827,7 +3828,7 @@ PY
       export ALICE_SAVE_PROOF_EVIDENCE_PATH="$save_proof_artifact"
       "${command_argv[@]}" < /dev/null
     elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
-      export ALICE_RUN_WINDOW_EVIDENCE_DIR="$run_dir"
+      export ALICE_RUN_WINDOW_EVIDENCE_DIR="$run_window_evidence_dir"
       "${command_argv[@]}" < /dev/null
     else
       timeout --foreground -k 10s "${run_timeout}s" "${command_argv[@]}" < /dev/null
