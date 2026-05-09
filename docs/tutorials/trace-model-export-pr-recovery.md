@@ -4,6 +4,12 @@ This tutorial walks through the merge-ready recovery for a model export PR,
 from QA scenario validation through quality audit to the final PR description
 update.
 
+> **Note:** Steps 1–5 use existing QA tooling and work today. Steps 6–7
+> reference the recovery script and test modules that are specified but not yet
+> implemented. See the
+> [reference specification](../reference/merge-ready-pr-recovery.md) for the
+> full contract.
+
 ## Goal
 
 Trace one complete merge-ready recovery path for a PR that adds model export
@@ -216,7 +222,8 @@ merge-readiness.
 
 ## Step 6: Review the PR description
 
-After the recovery script completes, check the PR description:
+After the recovery completes (manually or via the script once implemented),
+check the PR description:
 
 ```bash
 gh pr view 425 --json body -q '.body' | tail -30
@@ -232,7 +239,11 @@ Confirm the `## Merge-Ready Evidence` section includes:
 
 ## Step 7: Verify tests pass
 
-Run the Python test suite to confirm the recovery and workflow tests:
+> The recovery test modules below are part of the implementation plan and do
+> not exist yet. The focused `ModelExportTest` command below works today.
+
+Run the Python test suite to confirm the recovery and workflow tests
+(once implemented):
 
 ```bash
 python3 -m unittest \

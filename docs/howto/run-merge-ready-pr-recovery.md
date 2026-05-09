@@ -4,6 +4,11 @@ Use this guide when bringing a pull request to merge-ready status. The recovery
 script automates QA scenario validation, quality audit cycles, and PR
 description updates.
 
+> **Note:** The recovery script (`scripts/merge-ready-pr-recovery.py`) is
+> specified but not yet implemented. Steps 1 and 3–5 below work today using
+> manual commands. Steps 2 and 6 require the script, which will be built to
+> satisfy the [reference specification](../reference/merge-ready-pr-recovery.md).
+
 For the full API, configuration, and evidence template contract, see the
 [Merge-ready PR recovery reference](../reference/merge-ready-pr-recovery.md).
 
@@ -117,6 +122,8 @@ The PR is now merge-ready for reviewer approval. Do not merge manually; let the
 reviewer complete the merge.
 
 ## 6. Run the recovery tests independently
+
+> These test modules are part of the implementation plan and do not exist yet.
 
 When modifying the recovery script, run its focused tests:
 

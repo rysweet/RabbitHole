@@ -55,7 +55,7 @@ repository.
 - [Coverage ratchet and hotspot review tutorial](./tutorials/coverage-ratchet-and-hotspot-review.md) - guided ratchet expansion example with conservative thresholds and a hotspot skip/refactor decision.
 - [Coverage reporting reference](./reference/coverage-reporting.md) - aggregate and module JaCoCo reporting, CLI options, CI ratchet gates, configuration, and path toward 70% line coverage.
 - [CI efficiency notes](./reference/ci-efficiency.md) - current pull request check timing, parallelism status, and safe next targets.
-- [Merge-ready PR recovery](./reference/merge-ready-pr-recovery.md) - CLI contract, recovery steps, evidence template, and validation for the automated merge-ready blocker resolution script.
+- [Merge-ready PR recovery](./reference/merge-ready-pr-recovery.md) - Specification for the automated merge-ready blocker resolution script: CLI contract, recovery steps, evidence template, and validation.
 - [Run merge-ready PR recovery](./howto/run-merge-ready-pr-recovery.md) - how to bring a pull request to merge-ready status with QA scenario validation, quality audit cycles, and PR description updates.
 
 ## Modernization evidence and scorecards

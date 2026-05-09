@@ -3,8 +3,17 @@
 This reference describes the merge-ready PR recovery script that automates the
 final validation steps for bringing a pull request to merge-ready status.
 
+## Implementation status
+
+> **Specification only.** The recovery script and its tests do not exist yet.
+> This document specifies the CLI contract, recovery steps, and evidence
+> template that the implementation must satisfy. Each individual recovery step
+> (QA catalog validation, gated smoke, quality audit) can be run manually today
+> using the commands listed in [Recovery steps](#recovery-steps).
+
 ## Contents
 
+- [Implementation status](#implementation-status)
 - [Feature scope](#feature-scope)
 - [Usage](#usage)
 - [CLI contract](#cli-contract)
@@ -17,13 +26,13 @@ final validation steps for bringing a pull request to merge-ready status.
 
 ## Feature scope
 
-The recovery script lives at:
+The recovery script will live at:
 
 ```text
 scripts/merge-ready-pr-recovery.py
 ```
 
-It automates three merge-ready blockers:
+It will automate three merge-ready blockers:
 
 | Blocker | What the script does |
 | --- | --- |
@@ -31,16 +40,16 @@ It automates three merge-ready blockers:
 | Quality audit | Runs at least three SEEK/VALIDATE/FIX cycles against the PR diff surface and confirms the final cycle is clean. |
 | PR description | Appends a merge-ready evidence template to the PR body with outcome summaries, validation commands, and timestamps. |
 
-The script does not merge the PR. It brings the PR to a state where a reviewer
+The script will not merge the PR. It brings the PR to a state where a reviewer
 can approve and merge with confidence that the three blockers are resolved.
 
-Unit tests live in:
+Unit tests will live in:
 
 ```text
 tests/test_merge_ready_pr_recovery_units.py
 ```
 
-Workflow tests live in:
+Workflow tests will live in:
 
 ```text
 tests/test_merge_ready_pr_recovery_workflow.py
@@ -237,6 +246,11 @@ python3 scripts/merge-ready-pr-recovery.py \
 
 ## Validation
 
+> The test modules below are part of the implementation plan and do not exist
+> yet. Until they are created, validate the individual recovery steps manually
+> using the commands in [Recovery steps](#recovery-steps) and the
+> [tutorial](../tutorials/trace-model-export-pr-recovery.md).
+
 Run the unit tests from the repository root:
 
 ```bash
@@ -258,5 +272,5 @@ python3 -m unittest \
   tests.test_merge_ready_pr_recovery_workflow
 ```
 
-The workflow tests use temporary branches and evidence directories. They do not
-push to remote branches, merge PRs, or modify the scenario catalog.
+The workflow tests will use temporary branches and evidence directories. They
+will not push to remote branches, merge PRs, or modify the scenario catalog.
