@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class AliceMenuBarContractTest {
@@ -41,11 +42,30 @@ public class AliceMenuBarContractTest {
     }
   }
 
+  @Test
+  public void desktopMenuBarRegistersWindowMenuModel() {
+    AliceMenuBar menuBar = new AliceMenuBar(null);
+
+    StandardMenuItemPrepModel windowMenuModel = registeredMenuOfType(menuBar, WindowMenuModel.class);
+
+    assertNotNull("WindowMenuModel should be registered in the desktop menu bar", windowMenuModel);
+    assertTrue("WindowMenuModel should be reachable through menu bar registration", menuBar.contains(windowMenuModel));
+  }
+
   private static List<Class<?>> childTypes(AliceMenuBar menuBar) {
     List<Class<?>> childTypes = new ArrayList<>();
     for (StandardMenuItemPrepModel child : menuBar.getChildren()) {
       childTypes.add(child.getClass());
     }
     return childTypes;
+  }
+
+  private static StandardMenuItemPrepModel registeredMenuOfType(AliceMenuBar menuBar, Class<?> menuType) {
+    for (StandardMenuItemPrepModel child : menuBar.getChildren()) {
+      if (menuType.isInstance(child)) {
+        return child;
+      }
+    }
+    return null;
   }
 }
