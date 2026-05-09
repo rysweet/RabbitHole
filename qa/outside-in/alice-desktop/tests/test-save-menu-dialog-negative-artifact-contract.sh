@@ -116,6 +116,8 @@ assert_fixture_rejected "missing-required-flags.json" "scenario-mismatch" 'scena
 assert_fixture_rejected "missing-required-flags.json" "workflow-mismatch" 'workflow mismatch' 0 "$SCENARIO_ID" "different-save-workflow"
 assert_fixture_rejected "missing-required-flags.json" "run-id-mismatch" 'runId mismatch' 0 "$SCENARIO_ID" "$WORKFLOW" "different-run-1"
 assert_fixture_rejected "missing-required-flags.json" "missing-required-flags" 'missing|required|menu|dialog|control|write|readback'
+# The inconsistent fixture intentionally has several contradictions; any first explicit
+# inconsistency diagnostic is acceptable for fail-closed coverage.
 assert_fixture_rejected "inconsistent-proven.json" "inconsistent-proven" 'inconsistent|fileWritten|markerPresent|outputSizeBytes'
 assert_fixture_rejected "future-generated-at.json" "future-generated-at" 'future Save proof evidence|clock skew' 0
 assert_fixture_rejected "blocked-known-kind.json" "blocked-known-kind" 'blocked.*dialog_not_observed|non-proven|status'

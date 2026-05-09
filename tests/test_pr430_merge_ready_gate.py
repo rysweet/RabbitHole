@@ -216,6 +216,7 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
             "tests/./test_evil.py",
             "/tests/test_evil.py",
             "tests\\test_evil.py",
+            "tests/test_evil.py\x00",
             "scripts/pr430_merge_ready_gate.py/extra",
         ]
 
@@ -228,6 +229,22 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
                     r"focused diff|diff scope",
                     r"malformed|out-of-scope",
                 )
+
+    def test_valid_diff_paths_still_pass_focused_scope_gate(self) -> None:
+        evidence = passing_evidence()
+        evidence["diff"]["changed_files"] = [
+            "alice_qa_amplihack.py",
+            "docs/reference/save-menu-dialog-negative-artifact-contract.md",
+            "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh",
+            "scripts/pr430_merge_ready_gate.py",
+            "tests/test_pr430_merge_ready_gate.py",
+        ]
+
+        result = self.evaluate(evidence)
+
+        self.assertTrue(result["ready"])
+        self.assertEqual("MERGE_READY", result["status"])
+        self.assertEqual([], result["blockers"])
 
     def test_pending_or_failed_github_action_for_current_head_blocks_ready(self) -> None:
         for status, conclusion in (("in_progress", None), ("completed", "failure")):
