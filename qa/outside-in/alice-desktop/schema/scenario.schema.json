@@ -759,7 +759,10 @@
       "if": {
         "properties": {
           "workflow": {
-            "const": "save-menu-dialog-write-proof"
+            "enum": [
+              "save-menu-dialog-write-proof",
+              "run-window-contract"
+            ]
           }
         },
         "required": [

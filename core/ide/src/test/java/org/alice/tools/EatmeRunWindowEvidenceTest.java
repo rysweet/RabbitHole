@@ -1,6 +1,5 @@
 package org.alice.tools;
 
-import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -8,7 +7,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.logging.Level;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -148,16 +146,18 @@ public class EatmeRunWindowEvidenceTest {
   }
 
   @Test
-  public void recordRunWindowCreatedDoesNotAbortWindowCreationWhenConfiguredPathIsInvalid() {
+  public void recordRunWindowCreatedSurfacesInvalidConfiguredPath() {
     String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
-    Level previousLevel = Logger.getLevel();
     try {
-      Logger.setLevel(Level.OFF);
       System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, "bad\0path");
 
-      EatmeRunWindowEvidence.recordRunWindowCreated(null, null);
+      try {
+        EatmeRunWindowEvidence.recordRunWindowCreated(null, null);
+        fail("invalid configured evidence path should be surfaced");
+      } catch (IllegalStateException expected) {
+        assertTrue(expected.getMessage().contains("Run-window evidence write failed"));
+      }
     } finally {
-      Logger.setLevel(previousLevel);
       if (previous == null) {
         System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
       } else {

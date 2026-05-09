@@ -69,6 +69,7 @@ automation = scenario.get("automation", {})
 require(automation.get("cwd") == ".", "automation.cwd must stay at the repository root")
 require(automation.get("argv") == expected_argv, "automation.argv must be the exact focused Maven seam command")
 require(isinstance(automation.get("readyWaitSeconds"), int), "automation.readyWaitSeconds must be explicit")
+require("timeoutSeconds" not in automation, "Run-window contract must not use workflow timeout wiring")
 
 scenario_text = json.dumps(scenario, sort_keys=True)
 scenario_lower = scenario_text.lower()
@@ -226,6 +227,11 @@ status=$?
 assert_success "$status" "runner lists the scenario catalog with the Run-window contract lane"
 assert_contains "$tmp_root/list.out" "$SCENARIO_ID" "runner list includes the Run-window contract scenario"
 
+"$RUNNER" run "$SCENARIO_ID" --timeout-seconds 12 --evidence-dir "$tmp_root/timeout-rejected" >"$tmp_root/timeout-rejected.out" 2>"$tmp_root/timeout-rejected.err"
+status=$?
+assert_exit_code "$status" 2 "runner rejects Run-window workflow timeout overrides"
+assert_contains "$tmp_root/timeout-rejected.err" 'Run-window contract workflow does not accept --timeout-seconds' "timeout override rejection names the Run-window contract workflow"
+
 prepare_evidence="$tmp_root/prepare-evidence"
 "$RUNNER" run "$SCENARIO_ID" --prepare-only --evidence-dir "$prepare_evidence" >"$tmp_root/prepare.out" 2>"$tmp_root/prepare.err"
 status=$?
@@ -243,6 +249,8 @@ if [ "$run_dir_status" -eq 0 ]; then
   assert_contains "$status_file" '^automationMode=gated-command-smoke$' "status records gated command mode"
   assert_contains "$status_file" '^outcome=gated-not-run$' "status records intentional gated skip"
   assert_contains "$status_file" '^skipMode=prepare-only$' "status records prepare-only skip mode"
+  assert_not_contains "$status_file" '^timeoutSeconds=' "prepare-only Run-window contract status omits workflow timeout"
+  assert_contains "$status_file" '^timeoutPolicy=none$' "prepare-only Run-window contract status records no-timeout policy"
   assert_contains "$checklist" "$ARTIFACT" "prepare-only checklist names the fixed Run-window artifact"
   assert_contains "$checklist" 'contract_scope=run-window-creation-wiring' "prepare-only checklist preserves contract scope"
   assert_contains "$checklist" 'rendering_correctness_claimed=false' "prepare-only checklist preserves rendering non-claim"
@@ -308,12 +316,21 @@ printf 'fake Run-window seam completed\n'
 printf 'argv=%s\n' "$*"
 SH
 chmod +x "$fake_bin/mvn"
+timeout_log="$tmp_root/timeout.log"
+: > "$timeout_log"
+cat > "$fake_bin/timeout" <<'SH'
+#!/usr/bin/env bash
+printf 'timeout invoked for Run-window contract: %s\n' "$*" >> "${ALICE_QA_TIMEOUT_LOG:?}"
+exit 77
+SH
+chmod +x "$fake_bin/timeout"
 
 enabled_evidence="$tmp_root/enabled-evidence"
-PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 \
+PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 ALICE_QA_TIMEOUT_LOG="$timeout_log" \
   "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$enabled_evidence" >"$tmp_root/enabled.out" 2>"$tmp_root/enabled.err"
 status=$?
 assert_success "$status" "enabled Run-window contract runner validates canonical evidence"
+assert_not_contains "$timeout_log" 'timeout invoked' "enabled Run-window contract does not invoke shell timeout"
 enabled_run_dir=$(single_child_dir "$enabled_evidence/$SCENARIO_ID")
 enabled_status=$?
 assert_success "$enabled_status" "enabled Run-window contract creates one evidence directory"
@@ -324,6 +341,8 @@ if [ "$enabled_status" -eq 0 ]; then
   assert_file_exists "$enabled_run_dir/run-window-validation.log" "enabled Run-window contract writes validation log"
   assert_contains "$enabled_run_dir/command.log" 'org\.alice\.eatme\.runWindowEvidenceDir=' "Maven command receives Run-window evidence directory property"
   assert_contains "$enabled_run_dir/status.txt" '^outcome=passed$' "enabled Run-window contract records pass outcome"
+  assert_not_contains "$enabled_run_dir/status.txt" '^timeoutSeconds=' "enabled Run-window contract status omits workflow timeout"
+  assert_contains "$enabled_run_dir/status.txt" '^timeoutPolicy=none$' "enabled Run-window contract status records no-timeout policy"
   assert_contains "$enabled_run_dir/status.txt" '^runWindowEvidence=run-window-created\.json$' "status links canonical Run-window evidence"
   assert_contains "$enabled_run_dir/status.txt" '^runWindowEvidenceStatus=created$' "status records validated Run-window evidence"
   assert_contains "$enabled_run_dir/run-window-validation.log" 'Run-window evidence created' "validation log records created Run-window evidence"

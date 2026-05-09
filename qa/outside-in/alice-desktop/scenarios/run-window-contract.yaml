@@ -29,7 +29,6 @@ automation:
     - -am
     - -Dtest=org.alice.tools.EatmeRunWindowEvidenceTest
     - test
-  timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:

@@ -3684,6 +3684,10 @@ PY
     fi
   fi
   if [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+    if [ -n "$timeout_override" ]; then
+      printf 'Run-window contract workflow does not accept --timeout-seconds\n' >&2
+      return 2
+    fi
     run_window_artifact="$(CDPATH= cd -- "$run_dir" && pwd)/$RUN_WINDOW_CONTRACT_ARTIFACT"
   fi
 
@@ -3706,7 +3710,7 @@ PY
         printf 'timeoutPolicy=none\n'
         printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
       elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
-        printf 'timeoutSeconds=%s\n' "$run_timeout"
+        printf 'timeoutPolicy=none\n'
         printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
         printf 'runWindowEvidenceStatus=not-run\n'
       else
@@ -3750,7 +3754,7 @@ PY
       "${command_argv[@]}" < /dev/null
     elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
       export ALICE_RUN_WINDOW_EVIDENCE_DIR="$run_dir"
-      timeout --foreground -k 10s "${run_timeout}s" "${command_argv[@]}" < /dev/null
+      "${command_argv[@]}" < /dev/null
     else
       timeout --foreground -k 10s "${run_timeout}s" "${command_argv[@]}" < /dev/null
     fi
@@ -3812,7 +3816,7 @@ PY
       printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
       printf 'saveProofValidationLog=%s\n' save-proof-validation.log
     elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
-      printf 'timeoutSeconds=%s\n' "$run_timeout"
+      printf 'timeoutPolicy=none\n'
       printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
       printf 'runWindowEvidenceStatus=%s\n' "$run_window_validation_status"
       printf 'runWindowValidationLog=%s\n' run-window-validation.log

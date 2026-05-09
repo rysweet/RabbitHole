@@ -167,7 +167,7 @@ and artifact behavior.
 | --- | --- |
 | `EVIDENCE_DIR_PROPERTY` | JVM property name: `org.alice.eatme.runWindowEvidenceDir`. |
 | `RUN_WINDOW_CREATED_ARTIFACT` | Fixed artifact name: `run-window-created.json`. |
-| `recordRunWindowCreated(Frame frame, NamedUserType programType)` | Reads the JVM property, records the artifact when configured, and logs evidence write failures without aborting Run-window creation. |
+| `recordRunWindowCreated(Frame frame, NamedUserType programType)` | Reads the JVM property, records the artifact when configured, and surfaces evidence write failures as `IllegalStateException`. |
 
 The test seam also characterizes package-local artifact writing, JSON escaping,
 and path validation. Those helpers support the contract; they are not a separate

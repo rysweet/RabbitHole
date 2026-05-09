@@ -403,7 +403,7 @@ supportingEvidence:
 | --- | --- | --- |
 | `automation.cwd` | string | Repository-relative working directory for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`; absolute paths, `..`, and realpath escapes outside the repository are rejected. |
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
-| `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke` except `save-menu-dialog-write-proof`, where workflow-level timeouts are invalid. |
+| `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke` except `save-menu-dialog-write-proof` and `run-window-contract`, where workflow-level timeouts are invalid. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec`. |
 | `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario and first-lesson live target observation this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
@@ -412,7 +412,7 @@ supportingEvidence:
 
 `automation` is required when `automationMode` is `xvfb-real-alice` or `gated-command-smoke`. Manual scenarios do not need an `automation` block because the runner generates a checklist instead of driving Swing interactions. Automation must be represented as `argv`; shell command strings are not accepted, including in custom catalogs selected with `ALICE_QA_SCENARIO_DIR`.
 
-The `save-menu-dialog-write-proof` workflow is the no-timeout exception. Its scenario omits `automation.timeoutSeconds`, and the runner does not wrap the Maven argv in shell `timeout`. Validator and runner contract tests reject timeout wiring for that workflow while preserving timeout requirements for the other argv-backed scenarios.
+The `save-menu-dialog-write-proof` and `run-window-contract` workflows are no-timeout exceptions. Their scenarios omit `automation.timeoutSeconds`, and the runner does not wrap their Maven argv in shell `timeout`. Validator and runner contract tests reject timeout wiring for those workflows while preserving timeout requirements for the other argv-backed scenarios.
 
 ### Workflow values
 

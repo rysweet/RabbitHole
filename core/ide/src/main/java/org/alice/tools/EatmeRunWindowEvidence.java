@@ -1,6 +1,5 @@
 package org.alice.tools;
 
-import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.lgna.croquet.views.Frame;
 import org.lgna.project.ast.NamedUserType;
 
@@ -40,7 +39,7 @@ public final class EatmeRunWindowEvidence {
     try {
       writeRunWindowCreated(Path.of(evidenceDir), title(frame), typeName(programType));
     } catch (IOException | SecurityException | IllegalArgumentException ex) {
-      Logger.throwable(ex, "eatme Run-window evidence write failed: " + evidenceDir);
+      throw new IllegalStateException("Run-window evidence write failed: " + evidenceDir, ex);
     }
   }
 
