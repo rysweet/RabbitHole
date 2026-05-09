@@ -4,6 +4,158 @@ This reference defines the target scenario metadata, validator rules, runner int
 
 The lane is intentionally narrow. It records target identification, target-specific selection/opening progress, or the exact blocker that stopped progress. It does not establish visible rendering correctness, full lesson execution, grading, Save behavior, full UI automation, or world interaction.
 
+## PR #437 recovery contract
+
+The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. It starts from the GitHub PR head, reproduces merge state locally, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker.
+
+The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR state snapshot records:
+
+| Field | Required use |
+| --- | --- |
+| `headRefName` | Branch checked out for recovery work. Do not infer this from the current local branch. |
+| `headRefOid` | Exact PR head commit. The checked-out local `git rev-parse HEAD` value must match this SHA before validation or merge checks count as PR evidence. |
+| `baseRefName` | Branch used for local merge reproduction. |
+| `isDraft` | Draft state used by the finalization gate. |
+| `mergeStateStatus` | GitHub mergeability signal. `DIRTY` is actionable until locally reproduced or disproved. |
+| `statusCheckRollup` | Current GitHub check context. Passing checks do not override local merge dirtiness or missing evidence. |
+
+`mergeStateStatus=DIRTY` is a blocker until the exact PR head is checked out explicitly and a local merge check against the PR base lists either no unmerged files or the exact conflict files. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot alone.
+
+### External service boundary
+
+No Alice runtime API client or service adapter is required for this Select Project lane. The only external service dependency in PR #437 recovery is GitHub metadata and checkout access through the `gh` CLI and `git fetch`; treat those commands as the operator-facing service adapter.
+
+Read-only GitHub metadata and fetch calls may be retried for transient GitHub CLI authentication, network connectivity, or rate limiting failures. Do not silently substitute cached, historical, or manually typed PR metadata after the final retry fails. Record the failure as the current `environment dependency` blocker, naming the unavailable dependency and leaving the PR draft.
+
+Do not use gh auth status --show-token, print tokens, or include authentication output in evidence. Record only the command shape, exit status, PR fields, and non-secret error category needed to explain the blocker.
+
+### Local PR head and merge check
+
+Start from the PR's recorded head commit, then prove the local checkout matches it:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+
+with_external_retry() {
+  attempts="${GH_EXTERNAL_ATTEMPTS:-3}"
+  delay_seconds="${GH_EXTERNAL_RETRY_SECONDS:-2}"
+  attempt=1
+
+  while true; do
+    "$@" && return 0
+    status="$?"
+    if [ "$attempt" -ge "$attempts" ]; then
+      printf 'external service call failed after %s attempts: %s\n' "$attempts" "$*" >&2
+      return "$status"
+    fi
+    printf 'external service call failed on attempt %s/%s; retrying in %ss: %s\n' \
+      "$attempt" "$attempts" "$delay_seconds" "$*" >&2
+    sleep "$delay_seconds"
+    attempt=$((attempt + 1))
+  done
+}
+
+with_external_retry gh pr view 437 --repo rysweet/RabbitHole \
+  --json number,title,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,statusCheckRollup,url
+
+PR_JSON="$(with_external_retry gh pr view 437 --repo rysweet/RabbitHole \
+  --json number,title,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,statusCheckRollup,url)"
+PR_HEAD_OID="$(printf '%s\n' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefOid"])')"
+BASE_REF="$(printf '%s\n' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["baseRefName"])')"
+test -n "$PR_HEAD_OID"
+test -n "$BASE_REF"
+
+gh pr checkout 437 --repo rysweet/RabbitHole
+LOCAL_HEAD_SHA="$(git rev-parse HEAD)"
+test "$LOCAL_HEAD_SHA" = "$PR_HEAD_OID"
+
+with_external_retry git fetch origin "$BASE_REF"
+git status --short --branch
+```
+
+Use a disposable worktree for merge reproduction so the PR checkout stays reviewable. Always abort the no-commit merge before removing the disposable worktree; a clean `git merge --no-commit --no-ff` still leaves staged merge results.
+
+```bash
+MERGE_WORKTREE="$(mktemp -d /tmp/pr437-merge-check.XXXXXX)"
+rmdir "$MERGE_WORKTREE"
+
+trap '(
+  cd "$MERGE_WORKTREE" && git merge --abort >/dev/null 2>&1 || true
+)
+git worktree remove --force "$MERGE_WORKTREE" >/dev/null 2>&1 || true' EXIT
+
+git worktree add --detach "$MERGE_WORKTREE" "$PR_HEAD_OID"
+set +e
+(
+  cd "$MERGE_WORKTREE"
+  git merge --no-commit --no-ff "origin/$BASE_REF"
+)
+MERGE_STATUS="$?"
+set -e
+
+(
+  cd "$MERGE_WORKTREE"
+  git diff --name-only --diff-filter=U
+)
+test "$MERGE_STATUS" -eq 0
+```
+
+If the merge check reports conflicts, resolve only those files on the PR branch. For each conflict, record the file, conflict reason, resolution, and next validation. If a behavior-sensitive conflict cannot be safely resolved, stop and publish `merge dirtiness` as the current blocker.
+
+### Conflict resolution scope
+
+Resolve only files reported by the local merge check as unmerged:
+
+```bash
+git diff --name-only --diff-filter=U
+```
+
+For each conflict file, record:
+
+| Field | Meaning |
+| --- | --- |
+| Conflict file | Repository-relative path reported by Git. |
+| Conflict reason | The incompatible edits or overlapping contract change that blocked the merge. |
+| Resolution | The narrow behavior-preserving resolution, or `unresolved` when unsafe. |
+| Next action | The exact validation, owner decision, or follow-up needed. |
+
+If the conflict touches behavior-sensitive Alice code and no characterization or focused validation exists, the recovery lane records `merge dirtiness` as the current blocker instead of guessing a resolution.
+
+### PR #437 recovery snapshot from 2026-05-09
+
+`Verified evidence`:
+
+- `gh pr view 437 --repo rysweet/RabbitHole --json number,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,statusCheckRollup,url` reported `headRefName=feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`, `headRefOid=472c7f1325b054eae1fe2e7ab9470198865e0312`, `baseRefName=develop`, `isDraft=true`, and `mergeStateStatus=DIRTY`.
+- `gh pr checkout 437 --repo rysweet/RabbitHole` followed by `git rev-parse HEAD` confirmed the local head SHA was `472c7f1325b054eae1fe2e7ab9470198865e0312`, matching the PR head.
+- A disposable worktree merge check against `refs/remotes/origin/develop` exited non-zero and reported one unmerged file: `pyproject.toml`.
+- `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` exited 0 and validated 29 scenarios.
+- `bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh`, `bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh`, and `bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh` exited 0.
+
+`Unverified assumptions`:
+
+- A live `run-scenario.sh run alice-desktop-select-project-tab-click-exec` AT-SPI execution was not completed in this snapshot, so this snapshot does not prove full UI automation, visible rendering correctness, Save completion, grading, or lesson completion.
+
+`Current blocker`:
+
+- `merge dirtiness`: `pyproject.toml` has a version-only conflict between PR `0.8.0` and base `0.7.1`. The narrow resolution is to keep the PR's later `0.8.0` package version when merging the base, then rerun focused validation before any ready-for-review change.
+
+### Recovery blocker taxonomy
+
+The recovery lane publishes exactly one current blocker when the PR cannot advance:
+
+| Blocker | Required meaning |
+| --- | --- |
+| `merge dirtiness` | PR #437 cannot be cleanly merged into its base, or conflict resolution is unsafe/incomplete. |
+| `missing evidence` | Merge state is clean enough to proceed, but the focused Select Project evidence artifacts are absent or insufficient. |
+| `failing validation` | Focused scenario/schema/probe contract checks fail. |
+| `environment dependency` | Live AT-SPI or supporting desktop/runtime dependencies prevent execution; the docs name the missing dependency instead of claiming proof. |
+
+For PR #437 recovery, GitHub CLI authentication, network connectivity, and rate limiting are supporting external-service dependencies under `environment dependency` because they prevent verified PR metadata retrieval.
+
+Do not publish multiple blockers as a grab bag. The report names the first blocker that prevents responsible finalization and preserves supporting details for that blocker.
+
+`None` is not a blocker. Use `Current blocker: None` only as the ready state after every PR finalization gate passes.
+
 ## Artifact field names
 
 The committed artifacts use the current target-specific field names directly:
@@ -263,6 +415,33 @@ Publish only one of these outcomes:
 | Blocked | One blocker code and detail, current Alice Java/window context, Select Project window context, Starters-tab safety, target observation state, target selection state, open-attempt state, project-open state, and one structured `nextBlocker`. |
 
 Do not publish full Alice UI automation, Save proof, visible rendering correctness, grading, creative assessment, first-lesson completion, model exporter behavior, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage measurements from this lane.
+
+## PR finalization gate
+
+PR #437 remains draft unless all finalization conditions are true:
+
+| Gate | Ready condition |
+| --- | --- |
+| PR head checked out | `gh pr checkout 437 --repo rysweet/RabbitHole` or an equivalent explicit checkout is the active branch, and local `git rev-parse HEAD` matches the recorded `headRefOid`. |
+| Local merge state | The local merge check against the recorded base has no unmerged files. |
+| Conflict scope | Any resolved conflicts are limited to PR-blocking files and preserve Alice/RabbitHole baseline behavior unless a tested change is documented. |
+| Focused validation | Select Project scenario/schema/probe contract checks pass. |
+| Evidence truthfulness | Published evidence names only commands and artifacts actually produced in the recovery run. |
+| Claim boundary | The report separates verified evidence from unverified assumptions and does not imply full UI automation. |
+
+When any gate fails, the PR stays draft and the recovery report publishes one current blocker from the blocker taxonomy. Passing GitHub checks are useful context, but they do not make a dirty, under-evidenced, or overclaiming PR ready for review.
+
+## Verified evidence report shape
+
+Every recovery report uses these headings:
+
+| Heading | Required content |
+| --- | --- |
+| `Verified evidence` | Commands run, exit status, and artifact paths produced by this recovery run. |
+| `Unverified assumptions` | Expected behavior or code-path reasoning that was not executed. Use `None recorded` only when no assumptions are needed. |
+| `Current blocker` | Exactly one blocker: `merge dirtiness`, `missing evidence`, `failing validation`, or `environment dependency`; use `None` only when every finalization gate is satisfied. |
+
+The evidence report may cite `tab-click-observation.json`, `post-project-open-observation.json`, `status.txt`, `x-window-inventory.json`, and `select-project-window.json` only when those files were produced by the run being reported. It must not convert historical artifacts, expected probe behavior, or passing non-UI checks into live Select Project proof.
 
 ## Claim boundaries
 

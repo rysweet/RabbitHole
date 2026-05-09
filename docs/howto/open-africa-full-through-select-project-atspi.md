@@ -10,18 +10,6 @@ targetStarter:
 
 The evidence is intentionally narrow. It proves starter identification, target-specific selection/opening progress, or the exact blocker that stopped progress. It does not prove visible rendering correctness, full lesson execution, grading, Save behavior, full UI automation, or world interaction.
 
-## Target evidence vocabulary
-
-The artifact contract uses the committed target-scoped field names:
-
-| Field | Meaning |
-| --- | --- |
-| `targetStarter` | Validated Africa Full starter metadata. |
-| `targetStarterObserved` | Safe AT-SPI observation for the Africa Full starter node. |
-| `targetSelectionObserved` | Target-specific Africa Full selection was observed. |
-| `openAttempted` | OK/Open was attempted after target-specific selection evidence. |
-| `openedStarter` | Starter metadata recorded only after the guarded Select Project dismissal. |
-
 ## Prerequisites
 
 Run commands from the repository root.
@@ -53,6 +41,24 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Generated evidence under `qa/outside-in/alice-desktop/evidence/` is transient and ignored by Git. Promote only intentionally reviewed evidence or documentation; do not treat ignored run output as durable by default.
+
+## PR #437 recovery note
+
+Use this how-to for the focused Select Project evidence run. If the run is part of PR #437 recovery or finalization, follow the [PR #437 recovery contract](../reference/select-project-africa-full-atspi-evidence.md#pr-437-recovery-contract) after the local prerequisites above are satisfied. That contract requires exact PR head SHA verification, a disposable local merge check with safe cleanup, and a finalization report that keeps merge state, evidence, and blockers separate.
+
+GitHub PR metadata is an external dependency for that recovery path, not Alice runtime proof. If `gh pr view`, `gh pr checkout`, or `git fetch` cannot complete because of GitHub CLI authentication, network connectivity, or rate limiting, report `environment dependency` and do not replace the missing PR metadata with cached or hand-entered values.
+
+## Target evidence vocabulary
+
+The artifact contract uses the committed target-scoped field names:
+
+| Field | Meaning |
+| --- | --- |
+| `targetStarter` | Validated Africa Full starter metadata. |
+| `targetStarterObserved` | Safe AT-SPI observation for the Africa Full starter node. |
+| `targetSelectionObserved` | Target-specific Africa Full selection was observed. |
+| `openAttempted` | OK/Open was attempted after target-specific selection evidence. |
+| `openedStarter` | Starter metadata recorded only after the guarded Select Project dismissal. |
 
 ## Validate the contract
 
@@ -226,3 +232,29 @@ Publish only one of these outcomes:
 | Blocked | One blocker code/detail, Alice Java/window context, Select Project window context, Starters-tab safety, target observation state, target selection state, open-attempt state, project-open state, and one structured `nextBlocker`. |
 
 Do not publish downstream claims from this lane. It does not prove visible rendering correctness, full UI automation, Save completion, grading, creative assessment, full lesson execution, model export, unrelated launcher behavior, archive fixture behavior, procedure/edit behavior, unrelated decoder behavior, or coverage.
+
+## PR #437 publication boundary
+
+If this run supports PR #437 recovery or finalization, use the [verified evidence report shape](../reference/select-project-africa-full-atspi-evidence.md#verified-evidence-report-shape) from the reference contract. The report must include these headings:
+
+```markdown
+## Verified evidence
+
+- PR state: `headRefName`, `headRefOid`, `baseRefName`, `isDraft`, `mergeStateStatus`, and check summary from a successful `gh pr view`.
+- Local PR head: `git rev-parse HEAD` value and confirmation that it matches `headRefOid`.
+- Local merge check: command used, conflict files if any, and final merge-check result.
+- Focused Select Project validation: commands run and exit status.
+- Artifacts: exact run directory and files reviewed, such as `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, and `select-project-window.json`.
+
+## Unverified assumptions
+
+- Expected behavior or code-path reasoning not executed in this recovery run.
+- Use `None recorded` only when every claim is backed by a command or artifact from this run.
+
+## Current blocker
+
+- One of `merge dirtiness`, `missing evidence`, `failing validation`, or `environment dependency`.
+- Use `Current blocker: None` only when every PR finalization gate passes.
+```
+
+Keep PR #437 draft unless the local merge check is clean, focused validation passes, the evidence artifacts exist for this run, and the report does not claim full UI automation, rendering, Save, grading, lesson completion, or other downstream behavior.
