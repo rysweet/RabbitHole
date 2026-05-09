@@ -1,11 +1,10 @@
-# [PLANNED - Implementation Pending] Tutorial: Trace the Legacy Program JSON Archive Boundary
+# Tutorial: Trace the Legacy Program JSON Archive Boundary
 
-This tutorial walks through the planned fail-closed JSON archive boundary for a
+This tutorial walks through the fail-closed JSON archive boundary for a
 `.a3w` archive that advertises `Program`, fails supported decoding, and does not
 satisfy the narrow one-image legacy resource recovery predicate.
 
-**Implementation status:** planned. The current reader may still report the
-older generic project-archive diagnostic until the feature is implemented.
+**Implementation status:** implemented in `JsonProjectIo.Reader.readProject`.
 
 The goal is to prove this behavior:
 

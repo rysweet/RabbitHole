@@ -1,11 +1,10 @@
-# [PLANNED - Implementation Pending] Characterize the Legacy Program JSON Archive Boundary
+# Characterize the Legacy Program JSON Archive Boundary
 
-Use this guide to add or review focused planned tests for JSON `.a3w` archives
+Use this guide to add or review focused tests for JSON `.a3w` archives
 that advertise `Program`, fail supported decoding, and do not satisfy the narrow
 one-image legacy resource recovery predicate.
 
-**Implementation status:** planned. Until the reader change lands, existing tests
-may still observe the older generic project-archive diagnostic.
+**Implementation status:** implemented in `JsonProjectIo.Reader.readProject`.
 
 The expected result is failure clarity only. Do not add player implementation,
 broaden Tweedle decoding, or claim full legacy archive support when following
@@ -67,7 +66,7 @@ archives, historical binary files, or Git LFS payloads for this test.
 ## Avoid the narrow recovery predicate
 
 The legacy image-resource recovery path remains supported. A negative test for
-this boundary must avoid satisfying all of these planned conditions at once:
+this boundary must avoid satisfying all of these conditions at once:
 
 ```text
 metadata.fileType = a3w

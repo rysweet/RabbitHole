@@ -1,12 +1,11 @@
-# [PLANNED - Implementation Pending] Legacy Program JSON Archive Boundary
+# Legacy Program JSON Archive Boundary
 
-This page defines the planned fail-closed archive boundary for JSON `.a3w`
+This page defines the fail-closed archive boundary for JSON `.a3w`
 archives whose manifest advertises `Program`, where supported decoding fails and
 the archive does not satisfy the narrow one-image legacy resource recovery
 predicate.
 
-**Implementation status:** planned. The current reader may still report the
-older generic project-archive diagnostic until this boundary is implemented.
+**Implementation status:** implemented in `JsonProjectIo.Reader.readProject`.
 
 The covered seam is `JsonProjectIo` through the public project read API:
 
@@ -102,7 +101,7 @@ assertTrue(thrown.getMessage().contains("Program"));
 ```
 
 The public contract is the checked `IOException` and stable message fragments.
-Cause preservation is not part of the planned public contract; tests should not
+Cause preservation is not part of the public contract; tests should not
 assert an exact cause class.
 
 ## Supported neighboring behavior
