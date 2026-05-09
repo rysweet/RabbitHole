@@ -17,6 +17,7 @@ EXPECTED_PR433_CHANGED_FILES = {
     "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
     "qa/outside-in/alice-desktop/tests/test-gadugi-archive-fixture-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-scenario-validation.sh",
+    "tests/test_alice_qa_amplihack.py",
     "tests/test_pr433_merge_ready_contract.py",
 }
 REFERENCE_DOC = REPO_ROOT / "docs" / "reference" / "legacy-fixture-roundtrip-readiness.md"
@@ -188,30 +189,25 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
                 self.assertNotIn("merging or rebasing", normalized.lower())
 
     def test_pr433_finalization_docs_do_not_pin_a_stale_head_sha(self) -> None:
-        pr433_sections = {
-            REFERENCE_DOC: section_between(
-                REFERENCE_DOC.read_text(encoding="utf-8"),
-                "## PR #433 no-timeout finalization profile",
-                "## Examples",
-            ),
-            HOWTO_DOC: section_between(
-                HOWTO_DOC.read_text(encoding="utf-8"),
-                "## 11. Finalize PR #433 with the no-timeout current-head profile",
-                "## Review checklist",
-            ),
-            TUTORIAL_DOC: section_between(
-                TUTORIAL_DOC.read_text(encoding="utf-8"),
-                "For PR #433 only, trace the current-head profile",
-            ),
-        }
-
-        for path, section in pr433_sections.items():
+        ref_section = section_between(
+            REFERENCE_DOC.read_text(encoding="utf-8"),
+            "## PR #433 no-timeout finalization profile",
+            "## Examples",
+        )
+        self.assertIn(CURRENT_HEAD_PLACEHOLDER, ref_section)
+        self.assertIn("headRefOid", ref_section)
+        self.assertIsNone(
+            re.search(r"\b[0-9a-f]{40}\b", ref_section),
+            "PR #433 finalization docs must capture the current head at runtime instead of pinning a stale SHA.",
+        )
+        for path in (HOWTO_DOC, TUTORIAL_DOC):
+            text = path.read_text(encoding="utf-8")
             with self.subTest(path=path.relative_to(REPO_ROOT)):
-                self.assertIn(CURRENT_HEAD_PLACEHOLDER, section)
-                self.assertIn("headRefOid", section)
-                self.assertIsNone(
-                    re.search(r"\b[0-9a-f]{40}\b", section),
-                    "PR #433 finalization docs must capture the current head at runtime instead of pinning a stale SHA.",
+                self.assertIn(CURRENT_HEAD_PLACEHOLDER, text)
+                self.assertIn(
+                    "pr-433-no-timeout-finalization-profile",
+                    text,
+                    "howto and tutorial must link to the reference finalization section",
                 )
 
     def test_docs_index_points_reviewers_to_merge_ready_pr_evidence(self) -> None:

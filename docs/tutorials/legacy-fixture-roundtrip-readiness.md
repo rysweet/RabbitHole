@@ -291,46 +291,12 @@ pending, so this note does not claim strict merge-ready or all checks passed.
 The following PR #433-specific block becomes historical context after that PR
 merges and may be archived in a follow-up cleanup.
 
-For PR #433 only, trace the current-head profile instead of replacing the
-placeholders with an earlier branch head or reusing this as a generic merge
-workflow. Capture the expected head from local `HEAD` and GitHub `headRefOid` at
-finalization time:
+For PR #433 only, trace the current-head profile described in the
+[reference finalization section](../reference/legacy-fixture-roundtrip-readiness.md#pr-433-no-timeout-finalization-profile)
+instead of replacing the placeholders with an earlier branch head or reusing
+this as a generic merge workflow. Capture the expected head from local `HEAD`
+and GitHub `headRefOid` at finalization time:
 
 ```text
 <current-pr-head-sha>
-```
-
-The finished evidence sequence is:
-
-```bash
-git rev-parse HEAD
-gh pr view 433 --repo rysweet/RabbitHole \
-  --json headRefOid,state,isDraft,baseRefName,mergeStateStatus,reviewDecision,statusCheckRollup
-NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -DincludeSims=false -Dinstall4j.skip \
-  -DfailIfNoTests=false \
-  -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
-  test
-python3 -m unittest tests.test_pr433_merge_ready_contract
-```
-
-The resulting PR note stays narrow:
-
-```text
-PR #433 is current at <current-pr-head-sha>. The focused
-legacy fixture round-trip Maven lane and PR #433 merge-ready contract passed for
-that head, required/relevant PR checks in statusCheckRollup are successful for
-the same head, and GitHub mergeability is CLEAN. This does not claim formal
-approval unless GitHub reports reviewDecision: APPROVED, and it does not claim
-full historical archive migration, full Tweedle decode, full player decode,
-arbitrary user archive support, or desktop UI behavior.
-```
-
-Use the required no-op wording only for a finalization/evidence run that changes
-no repository files, not for documentation-retcon changes:
-
-```text
-No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head <current-pr-head-sha> matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
 ```

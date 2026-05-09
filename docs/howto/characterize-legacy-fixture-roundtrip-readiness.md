@@ -297,61 +297,22 @@ checks and final-head focused evidence.
 > or removed in a follow-up cleanup. The reusable merge-readiness workflow is in
 > Section 10.
 
-PR #433 uses the same bounded lane with current-head evidence. This is a
-PR-specific finalization profile for PR `433` in `rysweet/RabbitHole`; do not
-reuse it as a generic approval or merge workflow.
-
-The accepted head is the current PR head observed at finalization time, not a
-SHA copied forward from an earlier evidence run. Capture it with the read-only
-commands below and use that same value consistently in any PR note:
+Follow the canonical
+[PR #433 no-timeout finalization profile](../reference/legacy-fixture-roundtrip-readiness.md#pr-433-no-timeout-finalization-profile)
+in the reference doc. The key constraint: capture the current `headRefOid` and
+local `HEAD` at finalization time — do not carry forward a SHA from an earlier
+run:
 
 ```text
 <current-pr-head-sha>
 ```
 
-Confirm local and GitHub state with read-only commands:
+Do not wrap the command in an external timeout helper. The QA scenario's
+`timeoutSeconds` field is harness metadata, not canonical readiness evidence.
 
-```bash
-git rev-parse HEAD
-gh pr view 433 --repo rysweet/RabbitHole \
-  --json headRefOid,state,isDraft,baseRefName,mergeStateStatus,reviewDecision,statusCheckRollup
-```
-
-Proceed only when local `HEAD` and GitHub `headRefOid` both equal the captured
-`<current-pr-head-sha>`, the PR is open and non-draft, `mergeStateStatus` is
-`CLEAN`, and the required/relevant PR checks in `statusCheckRollup` are
-successful for the same head. If `reviewDecision` is empty, say the PR was
-reviewed/finalized with current evidence; do not say it is formally approved.
-
-Refresh the focused lane without an external timeout wrapper:
-
-```bash
-NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -DincludeSims=false -Dinstall4j.skip \
-  -DfailIfNoTests=false \
-  -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl core/story-api-migration -am \
-  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
-  test
-```
-
-Then run the PR-specific merge-ready contract:
-
-```bash
-python3 -m unittest tests.test_pr433_merge_ready_contract
-```
-
-Use merge-ready wording only if both commands pass for the accepted head and the
-diff remains inside the focused legacy fixture round-trip lane. Do not manually
-merge the PR.
-
-Use this literal no-op statement only for the finalization/evidence run when
-that run edits no repository files. Do not use it for documentation-retcon work
-or any other task that changes files:
-
-```text
-No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head <current-pr-head-sha> matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
-```
+See the
+[merge-ready evidence contract](../reference/legacy-fixture-roundtrip-readiness.md#merge-ready-evidence-contract)
+for the full checklist.
 
 ## Review checklist
 
