@@ -36,6 +36,23 @@ validator prints an explicit diagnostic. It exercises:
 10. Blocked artifact with a known blocker kind.
 11. Blocked artifact with an unknown blocker kind.
 
+## Run through the Amplihack CLI wrapper
+
+Reviewers can install the wrapper from a branch or commit and execute the same
+checked-out contract:
+
+```bash
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
+  amplihack alice-qa save-negative-contract
+```
+
+Run it from the root, or a child directory, of the checkout under review. The
+wrapper delegates to the checked-out
+`qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh`
+script and accepts no extra arguments. Its success proves only that invalid Save
+proof artifacts fail closed with explicit diagnostics. Replace
+`<branch-or-commit>` with the PR branch or commit being reviewed.
+
 ## Run the positive proof contract beside it
 
 When reviewing this lane, run the existing positive contract as a separate check:

@@ -124,6 +124,27 @@ The contract is shell/Python validation only. It does not require Xvfb,
 `ALICE_QA_RUN_GATED_SMOKES`, or a non-headless AWT display. Those settings are
 required only when collecting positive rendered Save proof evidence.
 
+## Amplihack CLI wrapper
+
+The branch-installable QA wrapper exposes the same contract as:
+
+```bash
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
+  amplihack alice-qa save-negative-contract
+```
+
+Run the command from the root, or a child directory, of the checkout being
+reviewed. The installed wrapper locates that checkout and delegates to:
+
+```text
+qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+```
+
+`amplihack alice-qa save-negative-contract` accepts no extra arguments. Extra
+arguments are a usage error. Its success and failure meaning is identical to the
+direct shell contract: success proves only that invalid Save proof artifacts
+fail closed with explicit diagnostics.
+
 ## Review rules
 
 Use the negative contract to guard the artifact validator, not to claim Save

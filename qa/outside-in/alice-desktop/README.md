@@ -100,6 +100,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh list
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desktop/scenarios/launch.yaml
 bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
 ```
 
 Use one of the supported workflows:
@@ -244,15 +245,15 @@ wiring and JavaFX handoff/no-go checks only; it does not prove visible
 rendering, save behavior, grading, creative assessment, or full lesson
 completion.
 
-For branch-installable outside-in checks, run the thin `amplihack` wrapper from a checkout of the branch:
+For branch- or commit-installable outside-in checks, run the thin `amplihack` wrapper from the checkout under review:
 
 ```bash
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa list
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa save-negative-contract
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa list
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-Replace `<branch>` with the PR branch or commit you are reviewing. The wrapper
+Replace `<branch-or-commit>` with the PR branch or commit you are reviewing. The wrapper
 delegates to the same repo-owned runners and intentionally requires an Alice
 checkout as the current working tree.
 
