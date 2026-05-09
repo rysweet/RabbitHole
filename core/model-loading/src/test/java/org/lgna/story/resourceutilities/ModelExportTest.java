@@ -141,11 +141,11 @@ public class ModelExportTest {
     NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
 
     assertEquals(2, resources.getLength());
-    assertEquals("DEFAULT", ((Element) resources.item(0)).getAttribute("resourceName"));
+    Element defaultResource = (Element) resources.item(0);
+    assertResourceIdentity(defaultResource, "DEFAULT", "TestProp", "DEFAULT");
     Element blueStripe = (Element) resources.item(1);
-    assertEquals("BLUE_STRIPE", blueStripe.getAttribute("resourceName"));
-    assertEquals("TestProp", blueStripe.getAttribute("modelName"));
-    assertEquals("BLUE_STRIPE", blueStripe.getAttribute("textureName"));
+    assertResourceIdentity(blueStripe, "BLUE_STRIPE", "TestProp", "BLUE_STRIPE");
+    assertFalse(defaultResource.getAttribute("resourceName").equals(blueStripe.getAttribute("resourceName")));
 
     String javaCode = exporter.createJavaCode();
     assertTrue(javaCode.contains("\tDEFAULT,"));
@@ -435,6 +435,12 @@ public class ModelExportTest {
   private static void assertResourceWithoutAttribution(Element resource) {
     assertFalse(resource.hasAttribute("creator"));
     assertFalse(resource.hasAttribute("creationYear"));
+  }
+
+  private static void assertResourceIdentity(Element resource, String resourceName, String modelName, String textureName) {
+    assertEquals(resourceName, resource.getAttribute("resourceName"));
+    assertEquals(modelName, resource.getAttribute("modelName"));
+    assertEquals(textureName, resource.getAttribute("textureName"));
   }
 
   private static Element findResourceByModelName(NodeList resources, String modelName) {
