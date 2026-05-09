@@ -3,6 +3,7 @@ package org.lgna.project.io;
 import edu.cmu.cs.dennisc.java.util.zip.ByteArrayDataSource;
 import edu.cmu.cs.dennisc.java.util.zip.DataSource;
 import edu.cmu.cs.dennisc.pattern.IsInstanceCrawler;
+import edu.cmu.cs.dennisc.print.PrintUtilities;
 import edu.cmu.cs.dennisc.xml.XMLUtilities;
 import org.alice.serialization.xml.XmlEncoderDecoder;
 import org.alice.tweedle.file.AliceTextureReference;
@@ -51,6 +52,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -1235,6 +1237,34 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void xmlProjectMissingResourceWarningDoesNotLeakAbsoluteResourcePath() throws Exception {
+    ImageResource resource = imageResource("/Users/alice-secret/private-model-assets/warning-picture.png", 0xFFFF0000);
+    Project project = new Project(
+        programTypeReferencingImageResources("Program", resource),
+        Project.SceneCameraType.WindowCamera);
+    File projectFile = temporaryFolder.newFile("warning-path-resource.a3p");
+
+    String output = captureStandardOutput(() -> IoUtilities.writeProject(projectFile, project));
+
+    assertTrue(output.contains("WARNING: adding missing resource reference"));
+    assertNoLocalPathLeak(output);
+  }
+
+  @Test
+  public void jsonExportMissingResourceWarningDoesNotLeakAbsoluteResourcePath() throws Exception {
+    ImageResource resource = imageResource("C:\\Users\\alice-secret\\private-model-assets\\warning-picture.png", 0xFFFF0000);
+    Project project = new Project(
+        programTypeReferencingImageResources("Program", resource),
+        Project.SceneCameraType.WindowCamera);
+    File exportFile = temporaryFolder.newFile("warning-path-resource.a3w");
+
+    String output = captureStandardOutput(() -> IoUtilities.exportProject(exportFile, project));
+
+    assertTrue(output.contains("WARNING: added missing resource reference"));
+    assertNoLocalPathLeak(output);
+  }
+
+  @Test
   public void jsonPlayerImageReadsWithSameUuidDoNotMutateEarlierRead() throws Exception {
     UUID sharedId = UUID.randomUUID();
     byte[] firstData = new byte[] {1, 2, 3};
@@ -1658,6 +1688,24 @@ public class IoUtilitiesTest {
     assertFalse("Local Windows drive leaked in " + value, value.contains("C:"));
     assertFalse("Local path owner leaked in " + value, value.contains("alice-secret"));
     assertFalse("Local path directory leaked in " + value, value.contains("private-model-assets"));
+  }
+
+  private static String captureStandardOutput(IoAction action) throws Exception {
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    PrintStream capturedOut = new PrintStream(stdout, true, StandardCharsets.UTF_8);
+    PrintUtilities.pushPrintStream();
+    try {
+      PrintUtilities.setPrintStream(capturedOut);
+      action.run();
+    } finally {
+      PrintUtilities.popPrintStream();
+      capturedOut.close();
+    }
+    return stdout.toString(StandardCharsets.UTF_8);
+  }
+
+  private interface IoAction {
+    void run() throws Exception;
   }
 
   private static byte[] thumbnailPng() throws IOException {
