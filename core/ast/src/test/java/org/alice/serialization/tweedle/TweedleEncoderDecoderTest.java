@@ -385,10 +385,24 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithNonLiteralReturnMethodBodyReportsUnsupportedReturnExpression() {
+  public void decodeClassWithLiteralArithmeticReturnMethodBodyCreatesArithmeticInfix() throws Exception {
+    NamedUserType type = decodeUserType("class SyntheticType { WholeNumber count() { return 1 + 2; } }");
+
+    UserMethod method = type.getDeclaredMethods().get(0);
+    assertEquals("count", method.getName());
+    assertEquals(1, method.body.getValue().statements.size());
+    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
+    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
+    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
+    assertArithmeticInfix(returnStatement.expression.getValue(),
+        ArithmeticInfixExpression.Operator.PLUS, JavaType.getInstance(Integer.class), 1, 2);
+  }
+
+  @Test
+  public void decodeClassWithIdentifierArithmeticReturnMethodBodyReportsUnsupportedReturnExpression() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("class SyntheticType { WholeNumber count() { return 1 + 2; } }"));
+        () -> coder.decode("class SyntheticType { WholeNumber seed <- 1; WholeNumber count() { return seed + 2; } }"));
 
     assertTrue(thrown.getMessage().contains("method return expressions"));
     assertTrue(thrown.getMessage().contains("count"));

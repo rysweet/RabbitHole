@@ -811,6 +811,17 @@ public class Decoder {
     if (returnExpression instanceof org.alice.tweedle.ast.FieldAccess fieldAccess) {
       return decodeMethodReturnFieldAccess(method, returnType, fields, fieldAccess);
     }
+    if (returnExpression instanceof BinaryNumericExpression<?> binaryNumeric
+        && isLiteralOnlyArithmeticExpression(binaryNumeric)) {
+      ArithmeticInfixExpression arithmetic =
+          decodeBinaryNumericExpression(method.getName(), binaryNumeric, allParameters, locals, fields);
+      if (returnType.isAssignableFrom(arithmetic.getType())) {
+        return arithmetic;
+      }
+      throw new UnsupportedTweedleDecodeException(
+          "Tweedle method return arithmetic expression type is not assignable to "
+              + returnType.getName() + ": " + method.getName());
+    }
     if (returnExpression instanceof StringConcatenationExpression stringConcat) {
       StringConcatenation concat = decodeStringConcatenationExpression(
           method.getName(), stringConcat, allParameters, locals, fields);
