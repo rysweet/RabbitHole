@@ -3,6 +3,7 @@ import sys
 import unittest
 from functools import lru_cache
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -91,15 +92,15 @@ def valid_context() -> dict:
     return {
         "pr_number": 401,
         "local_head": PR_HEAD,
-            "pr": {
-                "headRefName": BRANCH,
-                "headRefOid": PR_HEAD,
-                "baseRefName": "develop",
-                "mergeStateStatus": "CLEAN",
-                "isDraft": False,
-                "statusCheckRollup": green_checks(),
-            },
-            "working_tree_clean": True,
+        "pr": {
+            "headRefName": BRANCH,
+            "headRefOid": PR_HEAD,
+            "baseRefName": "develop",
+            "mergeStateStatus": "CLEAN",
+            "isDraft": False,
+            "statusCheckRollup": green_checks(),
+        },
+        "working_tree_clean": True,
         "validation": {
             "node_options": "--max-old-space-size=32768",
             "focused_maven": {
@@ -184,6 +185,43 @@ class Pr401MergeReadyGateTest(unittest.TestCase):
         self.assertIn("NOT_MERGE_READY: local HEAD does not match PR headRefOid", result["blockers"])
         self.assertIn("NOT_MERGE_READY: GitHub Actions are not green for the current PR head", result["blockers"])
 
+    def test_successful_required_check_without_head_sha_is_not_same_head_evidence(self) -> None:
+        gate = load_gate()
+        context = valid_context()
+        del context["pr"]["statusCheckRollup"][0]["headSha"]
+
+        result = gate.evaluate_merge_readiness(context)
+
+        self.assertFalse(result["ready"])
+        self.assertIn("NOT_MERGE_READY: GitHub Actions are not green for the current PR head", result["blockers"])
+
+    def test_validation_requires_exact_focused_maven_command(self) -> None:
+        gate = load_gate()
+        context = valid_context()
+        context["validation"]["focused_maven"]["command"] = [
+            "mvn",
+            "-pl",
+            "core/ide",
+            "-am",
+            f"-Dtest={JAVA_CONTRACT}",
+            "help:effective-pom",
+        ]
+
+        result = gate.evaluate_merge_readiness(context)
+
+        self.assertFalse(result["ready"])
+        self.assertIn("NOT_MERGE_READY: runnable QA/scenario evidence is incomplete", result["blockers"])
+
+    def test_validation_rejects_qa_command_argument_containment(self) -> None:
+        gate = load_gate()
+        context = valid_context()
+        context["validation"]["qa_commands"][0]["command"] = ["echo", REQUIRED_QA_COMMANDS[0]]
+
+        result = gate.evaluate_merge_readiness(context)
+
+        self.assertFalse(result["ready"])
+        self.assertIn("NOT_MERGE_READY: runnable QA/scenario evidence is incomplete", result["blockers"])
+
     def test_missing_runnable_qa_docs_diff_or_audit_cycle_creates_explicit_blockers(self) -> None:
         gate = load_gate()
         context = valid_context()
@@ -230,16 +268,72 @@ class Pr401MergeReadyGateTest(unittest.TestCase):
             result["blockers"],
         )
 
+    def test_final_quality_audit_cycle_is_the_last_documented_cycle(self) -> None:
+        gate = load_gate()
+        context = valid_context()
+        context["audit_cycles"].append(
+            {
+                "cycle": 4,
+                "seek": "final same-head verification after PR body update",
+                "validate": "remote PR metadata and local evidence rechecked",
+                "fix": "follow-up blocker remains unresolved",
+                "clean": False,
+            }
+        )
+
+        result = gate.evaluate_merge_readiness(context)
+
+        self.assertFalse(result["ready"])
+        self.assertIn("NOT_MERGE_READY: quality-audit cycle 4 is not clean", result["blockers"])
+        self.assertIn("NOT_MERGE_READY: final quality-audit cycle is not clean", result["blockers"])
+
+    def test_live_runtime_context_is_metadata_only_without_complete_evidence(self) -> None:
+        gate = load_gate()
+        pr = {
+            "headRefName": BRANCH,
+            "headRefOid": PR_HEAD,
+            "baseRefName": "develop",
+            "mergeStateStatus": "CLEAN",
+            "isDraft": False,
+            "statusCheckRollup": green_checks(),
+            "body": valid_pr_body(),
+        }
+
+        def fake_run_text(command: list[str]) -> str:
+            if command[:2] == ["git", "rev-parse"]:
+                return PR_HEAD
+            if command[:2] == ["git", "status"]:
+                return ""
+            if command[:3] == ["git", "diff", "--name-only"]:
+                return "\n".join(ALLOWED_DIFF)
+            raise AssertionError(f"Unexpected command: {command}")
+
+        with patch.object(gate, "_run_json", return_value=pr), patch.object(
+            gate, "_run_text", side_effect=fake_run_text
+        ):
+            context = gate.build_runtime_context(pr_number=401, base_ref="develop")
+
+        result = gate.evaluate_merge_readiness(context)
+
+        self.assertEqual("live-metadata-only", context["context_source"])
+        self.assertFalse(result["ready"])
+        self.assertIn("NOT_MERGE_READY: runnable QA/scenario evidence is incomplete", result["blockers"])
+        self.assertIn("NOT_MERGE_READY: docs impact review is incomplete", result["blockers"])
+        self.assertIn("NOT_MERGE_READY: fewer than three quality-audit cycles are documented", result["blockers"])
+
     def test_validation_plan_uses_node_options_and_no_timeout_wrappers(self) -> None:
         gate = load_gate()
 
         plan = gate.validation_plan()
+        expected_focused_command, expected_qa_commands = gate.expected_validation_commands()
 
         rendered_commands = [" ".join(item["command"]) for item in plan]
         self.assertTrue(any(JAVA_CONTRACT in command for command in rendered_commands))
         for required in REQUIRED_QA_COMMANDS:
             with self.subTest(required=required):
                 self.assertTrue(any(required in command for command in rendered_commands))
+                self.assertIn((required,), expected_qa_commands)
+        self.assertEqual(tuple(plan[0]["command"]), expected_focused_command)
 
         for item in plan:
             with self.subTest(command=item["command"]):

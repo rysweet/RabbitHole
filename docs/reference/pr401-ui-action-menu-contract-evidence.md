@@ -97,8 +97,8 @@ Green checks and workflow completion are necessary but not sufficient.
 | --- | --- |
 | Branch and head alignment | `gh pr view 401` reports branch `wave6-ui-action-menu-contract-1778302300`; `git rev-parse HEAD` equals the PR `headRefOid`. |
 | No manual merge | No local merge commit, no manual merge of PR #401, and no push to protected branch state. |
-| GitHub Actions | All required checks complete successfully for the same `headRefOid`. |
-| Runnable QA/scenario evidence | Focused Maven contract and applicable QA scenario/schema/workflow/gated-command checks run without timeout wrappers. |
+| GitHub Actions | All required checks complete successfully and each required check entry carries the exact same `headRefOid`. Missing check SHA evidence is blocking. |
+| Runnable QA/scenario evidence | Focused Maven contract and applicable QA scenario/schema/workflow/gated-command checks run as the exact command arrays printed by `scripts/pr401-merge-ready-gate.py --validation-plan`, without timeout wrappers. |
 | Docs impact | Changed reference, how-to, tutorial, and QA docs are accurate for the feature boundary and do not overclaim. |
 | Quality audit | At least three `SEEK -> VALIDATE -> FIX` cycles are documented; the final cycle is clean. |
 | Focused diff scope | `git diff --name-status origin/develop...HEAD` stays limited to UI action/menu contract recovery, QA scenario wiring, tests, evidence docs, and directly related test-package metadata. |
@@ -149,6 +149,19 @@ bash qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh
 The Save proof and silver-thread checks validate runner wiring, artifact
 contracts, and bounded status reporting. They are not proof of full desktop Save
 completion.
+
+The live gate command collects PR, local head, worktree, diff, and PR-body
+metadata only:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 scripts/pr401-merge-ready-gate.py --json
+```
+
+Live metadata mode is a blocker reporter, not a full readiness proof. It remains
+`NOT_MERGE_READY` until complete validation, docs-impact, and audit-cycle
+evidence is supplied through `--context-json`. Use
+`scripts/pr401-merge-ready-gate.py --validation-plan` as the source of truth for
+the exact validation command arrays accepted in that context JSON.
 
 ## Configuration
 
@@ -287,9 +300,9 @@ Use `NOT_MERGE_READY` for any missing or stale gate. Common blockers:
 | Blocker | Required disposition |
 | --- | --- |
 | Local HEAD differs from `gh pr view 401` headRefOid | Re-check out the PR head or stop recovery; do not use local evidence. |
-| GitHub Actions are pending, failing, or tied to another SHA | Wait for same-head green checks or record the failing check. |
-| Focused Maven contract was not run and no accepted same-head artifact exists | Run the direct Maven selector or record the missing contract evidence. |
-| Scenario/schema/workflow/gated-command checks were not run | Run the shell recovery checks or record missing runnable QA evidence. |
+| GitHub Actions are pending, failing, or tied to another SHA | Wait for same-head green checks; missing check SHA evidence is also blocking. |
+| Focused Maven contract was not run and no accepted same-head artifact exists | Run the direct Maven selector exactly as printed by the validation plan or record the missing contract evidence. |
+| Scenario/schema/workflow/gated-command checks were not run with exact validation-plan command arrays | Run the shell recovery checks exactly or record missing runnable QA evidence. |
 | Gated desktop smoke is required but unavailable | Record the environment blocker; do not claim full smoke execution. |
 | Docs contain stale SHA, stale claims, or overclaims | Fix docs or record docs impact as blocking. |
 | Fewer than three quality-audit cycles are documented | Complete cycles or record missing audit evidence. |

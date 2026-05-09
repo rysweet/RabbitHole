@@ -34,6 +34,7 @@ REQUIRED_CHECKS = (
     "test",
     "GitGuardian Security Checks",
 )
+REQUIRED_CHECKS_SET = frozenset(REQUIRED_CHECKS)
 
 REQUIRED_QA_COMMANDS = (
     "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
@@ -42,6 +43,18 @@ REQUIRED_QA_COMMANDS = (
     "qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-write-proof-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh",
+)
+
+REQUIRED_PR_BODY_FRAGMENTS = (
+    "GitHub Actions",
+    "QA/scenario evidence",
+    "Docs impact",
+    "Quality audit",
+    "SEEK -> VALIDATE -> FIX",
+    "Diff scope",
+    "Accepted claim",
+    "Non-claims",
+    "NOT_MERGE_READY:",
 )
 
 ALLOWED_DIFF_FILES = frozenset(
@@ -93,6 +106,7 @@ OVERCLAIM_RE = re.compile(
     r"full lesson completion|full Save completion|full Tweedle/player decode)\b",
     re.IGNORECASE | re.DOTALL,
 )
+NON_CLAIM_LINE_RE = re.compile(r"\b(?:no|non-claims?|not claim|without claiming)\b", re.IGNORECASE)
 
 
 def validation_plan() -> list[dict[str, Any]]:
@@ -117,13 +131,23 @@ def validation_plan() -> list[dict[str, Any]]:
     ]
     plan.extend(
         {
-            "name": Path(command).name,
+            "name": command.rsplit("/", 1)[-1],
             "env": {"NODE_OPTIONS": NODE_OPTIONS},
             "command": [command],
         }
         for command in REQUIRED_QA_COMMANDS
     )
     return plan
+
+
+def expected_validation_commands() -> tuple[tuple[str, ...], frozenset[tuple[str, ...]]]:
+    """Return the exact command arrays accepted as validation evidence."""
+    plan = validation_plan()
+    focused_command = tuple(str(part) for part in _list(plan[0].get("command")))
+    qa_commands = frozenset(
+        tuple(str(part) for part in _list(item.get("command"))) for item in plan[1:]
+    )
+    return focused_command, qa_commands
 
 
 def contains_timeout_wrapper(command: Sequence[str]) -> bool:
@@ -147,18 +171,7 @@ def validate_pr_body(body: str, expected_head: str) -> list[str]:
     if _contains_overclaim(body):
         blockers.append(BLOCKER_BODY_OVERCLAIM)
 
-    required_fragments = (
-        "GitHub Actions",
-        "QA/scenario evidence",
-        "Docs impact",
-        "Quality audit",
-        "SEEK -> VALIDATE -> FIX",
-        "Diff scope",
-        "Accepted claim",
-        "Non-claims",
-        "NOT_MERGE_READY:",
-    )
-    missing_fragments = [fragment for fragment in required_fragments if fragment not in body]
+    missing_fragments = [fragment for fragment in REQUIRED_PR_BODY_FRAGMENTS if fragment not in body]
     if missing_fragments:
         blockers.append(
             "NOT_MERGE_READY: PR body lacks required evidence sections: "
@@ -240,7 +253,7 @@ def build_runtime_context(
     base_ref: str,
     validation_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Collect current local/remote metadata without running validation commands."""
+    """Collect metadata only; complete readiness requires a context JSON with evidence."""
     pr = _run_json(
         [
             "gh",
@@ -256,6 +269,7 @@ def build_runtime_context(
     diff_files = _run_text(["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]).splitlines()
 
     return {
+        "context_source": "live-metadata-only",
         "pr_number": pr_number,
         "local_head": local_head,
         "pr": pr,
@@ -280,7 +294,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--context-json",
         type=Path,
-        help="Evaluate a complete context JSON file instead of collecting live metadata",
+        help="Evaluate a complete evidence context JSON file instead of live metadata-only mode",
     )
     parser.add_argument(
         "--validation-plan",
@@ -300,7 +314,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         LOGGER.info("Reading merge-ready context from %s", args.context_json)
         context = json.loads(args.context_json.read_text(encoding="utf-8"))
     else:
-        LOGGER.info("Collecting live PR #%s metadata", args.pr)
+        LOGGER.info("Collecting live PR #%s metadata only; validation evidence requires --context-json", args.pr)
         context = build_runtime_context(pr_number=args.pr, base_ref=args.base_ref)
 
     result = evaluate_merge_readiness(context)
@@ -312,12 +326,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _contains_overclaim(body: str) -> bool:
-    claim_lines = [
-        line
-        for line in body.splitlines()
-        if not re.search(r"\b(?:no|non-claims?|not claim|without claiming)\b", line, re.IGNORECASE)
-    ]
-    return OVERCLAIM_RE.search("\n".join(claim_lines)) is not None
+    claim_text = "\n".join(line for line in body.splitlines() if not NON_CLAIM_LINE_RE.search(line))
+    return OVERCLAIM_RE.search(claim_text) is not None
 
 
 def _checks_green_for_head(checks: Any, head: str) -> bool:
@@ -328,7 +338,7 @@ def _checks_green_for_head(checks: Any, head: str) -> bool:
     for check in _list(checks):
         check_map = _mapping(check)
         name = _string(check_map.get("name") or check_map.get("context") or check_map.get("workflowName"))
-        if name not in REQUIRED_CHECKS:
+        if name not in REQUIRED_CHECKS_SET:
             continue
 
         check_head = _string(
@@ -336,7 +346,7 @@ def _checks_green_for_head(checks: Any, head: str) -> bool:
             or check_map.get("head_sha")
             or _mapping(check_map.get("details")).get("headSha")
         )
-        if check_head and check_head != head:
+        if check_head != head:
             return False
 
         status = _string(check_map.get("status") or check_map.get("state")).upper()
@@ -350,34 +360,35 @@ def _checks_green_for_head(checks: Any, head: str) -> bool:
             return False
         seen.add(name)
 
-    return set(REQUIRED_CHECKS).issubset(seen)
+    return REQUIRED_CHECKS_SET.issubset(seen)
 
 
 def _validation_complete(validation: Mapping[str, Any], head: str) -> bool:
     if validation.get("node_options") != NODE_OPTIONS:
         return False
 
+    expected_focused_command, expected_qa_commands = expected_validation_commands()
     focused_maven = _mapping(validation.get("focused_maven"))
-    focused_command = _list(focused_maven.get("command"))
+    focused_command = tuple(str(item) for item in _list(focused_maven.get("command")))
     if (
         not focused_maven.get("passed")
         or focused_maven.get("head") != head
-        or contains_timeout_wrapper([str(item) for item in focused_command])
-        or not any(JAVA_CONTRACT in str(item) for item in focused_command)
+        or contains_timeout_wrapper(focused_command)
+        or focused_command != expected_focused_command
     ):
         return False
 
-    observed_commands: set[str] = set()
+    observed_commands: set[tuple[str, ...]] = set()
     for item in _list(validation.get("qa_commands")):
         evidence = _mapping(item)
-        command = [str(part) for part in _list(evidence.get("command"))]
+        command = tuple(str(part) for part in _list(evidence.get("command")))
         if not evidence.get("passed") or evidence.get("head") != head:
             return False
         if contains_timeout_wrapper(command):
             return False
-        observed_commands.update(part for part in command if part in REQUIRED_QA_COMMANDS)
+        observed_commands.add(command)
 
-    if not set(REQUIRED_QA_COMMANDS).issubset(observed_commands):
+    if not expected_qa_commands.issubset(observed_commands):
         return False
 
     gated_smoke = _mapping(validation.get("gated_desktop_smoke"))
@@ -395,34 +406,39 @@ def _docs_review_complete(docs_impact: Mapping[str, Any]) -> bool:
 
 
 def _audit_cycle_blockers(audit_cycles: Sequence[Any]) -> list[str]:
-    if len(audit_cycles) < 3:
+    cycles = [_mapping(cycle) for cycle in audit_cycles]
+    if len(cycles) < 3:
         return [BLOCKER_AUDIT_COUNT]
 
     blockers: list[str] = []
-    for index, cycle in enumerate(audit_cycles[:3], start=1):
-        cycle_map = _mapping(cycle)
+    for index, cycle_map in enumerate(cycles, start=1):
         for field in ("seek", "validate", "fix"):
             if not _string(cycle_map.get(field)):
                 blockers.append(f"NOT_MERGE_READY: quality-audit cycle {index} lacks {field}")
         if cycle_map.get("clean") is not True:
             blockers.append(f"NOT_MERGE_READY: quality-audit cycle {index} is not clean")
 
-    if _mapping(audit_cycles[2]).get("clean") is not True:
+    if cycles[-1].get("clean") is not True:
         blockers.append("NOT_MERGE_READY: final quality-audit cycle is not clean")
 
     return blockers
 
 
 def _diff_scope_focused(diff_files: Sequence[Any]) -> bool:
-    observed = {str(path) for path in diff_files if str(path)}
-    return observed.issubset(ALLOWED_DIFF_FILES)
+    for path in diff_files:
+        path_text = str(path)
+        if path_text and path_text not in ALLOWED_DIFF_FILES:
+            return False
+    return True
 
 
 def _deduplicate(items: Iterable[str]) -> list[str]:
     result: list[str] = []
+    seen: set[str] = set()
     for item in items:
-        if item and item not in result:
+        if item and item not in seen:
             result.append(item)
+            seen.add(item)
     return result
 
 
