@@ -13,8 +13,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.EventObject;
 import java.util.Objects;
@@ -107,9 +109,7 @@ final class SaveOperationCompletionEvidence {
         artifact,
         resultJson(operationClass, extension, result),
         StandardCharsets.UTF_8);
-    if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
-      throw new IOException("Save operation completion artifact was not written: " + artifact);
-    }
+    requireNonEmptyRegularFile(artifact, "Save operation completion artifact was not written");
     writeDialogControlTarget(evidenceDir, operationClass, extension, result);
     return artifact;
   }
@@ -127,9 +127,7 @@ final class SaveOperationCompletionEvidence {
         artifact,
         dialogControlTargetJson(operationClass, extension, result),
         StandardCharsets.UTF_8);
-    if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
-      throw new IOException("Save dialog control target artifact was not written: " + artifact);
-    }
+    requireNonEmptyRegularFile(artifact, "Save dialog control target artifact was not written");
     return artifact;
   }
 
@@ -167,9 +165,7 @@ final class SaveOperationCompletionEvidence {
             projectDocumentFrameAvailable,
             invocationTrigger),
         StandardCharsets.UTF_8);
-    if (!Files.isRegularFile(artifact) || Files.size(artifact) == 0) {
-      throw new IOException("Save action invocation proof artifact was not written: " + artifact);
-    }
+    requireNonEmptyRegularFile(artifact, "Save action invocation proof artifact was not written");
     return artifact;
   }
 
@@ -193,9 +189,15 @@ final class SaveOperationCompletionEvidence {
       throw new IllegalArgumentException("Save proof evidence path must have a parent directory");
     }
     requirePathUnderProofRoot(parent, canonicalProofRoot, "Save proof evidence path must stay under the proof root");
-    Path canonicalParent = canonicalDirectory(parent, "Save proof evidence parent");
-    requirePathUnderProofRoot(canonicalParent, canonicalProofRoot, "Save proof evidence path must stay under the proof root");
-    return canonicalParent.resolve(SAVE_PROOF_ARTIFACT);
+    try {
+      Path canonicalParent = canonicalDirectoryUnderProofRoot(
+          parent,
+          canonicalProofRoot,
+          "Save proof evidence path must stay under the proof root");
+      return canonicalParent.resolve(SAVE_PROOF_ARTIFACT);
+    } catch (IOException ioe) {
+      throw new IllegalArgumentException("Save proof evidence parent must be a writable canonical directory", ioe);
+    }
   }
 
   static String configuredSaveProofScenario() {
@@ -273,9 +275,9 @@ final class SaveOperationCompletionEvidence {
   private static String resultJson(String operationClass, String extension, SaveOperationFlow.Result result) {
     File savedFile = result.savedFile();
     Path savedPath = savedFile == null ? null : savedFile.toPath();
-    boolean savedFileExists = savedPath != null && Files.isRegularFile(savedPath);
-    Long fileSizeBytes = savedFileExists ? savedFileSizeBytes(savedPath) : null;
-    boolean wroteFile = wroteFile(savedPath, fileSizeBytes, extension);
+    RegularFileState savedFileState = regularFileState(savedPath);
+    Long fileSizeBytes = savedFileState.exists() ? savedFileState.sizeBytes() : null;
+    boolean wroteFile = wroteFile(savedPath, savedFileState, extension);
     String resultStatus = status(result);
     return "{\n"
         + "  \"schema_version\": \"eatme.alice-desktop-save-operation-result/v1\",\n"
@@ -288,7 +290,7 @@ final class SaveOperationCompletionEvidence {
         + "  \"prompt_count\": " + result.promptCount() + ",\n"
         + "  \"save_attempts\": " + result.saveAttempts() + ",\n"
         + "  \"saved_file\": " + savedFileJson(savedFile) + ",\n"
-        + "  \"saved_file_exists\": " + savedFileExistsJson(savedFile, savedFileExists) + ",\n"
+        + "  \"saved_file_exists\": " + savedFileExistsJson(savedFile, savedFileState.exists()) + ",\n"
         + "  \"saved_file_size_bytes\": " + savedFileSizeJson(fileSizeBytes) + ",\n"
         + "  \"dialogType\": \"Swing JFileChooser\",\n"
         + "  \"evidencePath\": \"Save dialog control/write path\",\n"
@@ -523,20 +525,11 @@ final class SaveOperationCompletionEvidence {
     return savedFileSizeBytes == null ? "null" : savedFileSizeBytes.toString();
   }
 
-  private static Long savedFileSizeBytes(Path savedPath) {
-    try {
-      return Files.size(savedPath);
-    } catch (IOException ioe) {
-      Logger.throwable(ioe, "eatme Save operation completion evidence could not measure saved file: " + redactedSavedPath(savedPath));
-      return null;
-    }
-  }
-
-  private static boolean wroteFile(Path savedPath, Long savedFileSizeBytes, String extension) {
+  private static boolean wroteFile(Path savedPath, RegularFileState savedFileState, String extension) {
     if (!hasExtension(savedPath, extension)) {
       return false;
     }
-    return savedFileSizeBytes != null && savedFileSizeBytes > 0;
+    return savedFileState.exists() && savedFileState.nonEmpty();
   }
 
   private static boolean hasExtension(Path savedPath, String extension) {
@@ -586,11 +579,70 @@ final class SaveOperationCompletionEvidence {
     return artifact;
   }
 
+  private static void requireNonEmptyRegularFile(Path artifact, String message) throws IOException {
+    RegularFileState state = regularFileState(artifact);
+    if (!state.exists() || !state.nonEmpty()) {
+      throw new IOException(message + ": " + artifact);
+    }
+  }
+
+  private static RegularFileState regularFileState(Path path) {
+    if (path == null) {
+      return RegularFileState.MISSING;
+    }
+    try {
+      BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
+      return attributes.isRegularFile()
+          ? new RegularFileState(true, attributes.size())
+          : RegularFileState.MISSING;
+    } catch (NoSuchFileException nsfe) {
+      return RegularFileState.MISSING;
+    } catch (IOException ioe) {
+      Logger.throwable(ioe, "eatme Save operation completion evidence could not inspect file: " + redactedSavedPath(path));
+      return RegularFileState.MISSING;
+    }
+  }
+
   private static Path canonicalDirectory(Path directory, String label) {
     try {
       return Files.createDirectories(directory).toRealPath();
     } catch (IOException ioe) {
       throw new IllegalArgumentException(label + " must be a writable canonical directory", ioe);
+    }
+  }
+
+  private static Path canonicalDirectoryUnderProofRoot(
+      Path directory,
+      Path proofRoot,
+      String message) throws IOException {
+    Path normalizedDirectory = directory.toAbsolutePath().normalize();
+    Path normalizedProofRoot = proofRoot.toAbsolutePath().normalize();
+    requirePathUnderProofRoot(normalizedDirectory, normalizedProofRoot, message);
+    Path current = normalizedProofRoot;
+    for (Path segment : normalizedProofRoot.relativize(normalizedDirectory)) {
+      current = current.resolve(segment);
+      ensureDirectoryWithoutFollowingSymlink(current, message);
+    }
+    Path canonicalDirectory = current.toRealPath();
+    requirePathUnderProofRoot(canonicalDirectory, normalizedProofRoot, message);
+    return canonicalDirectory;
+  }
+
+  private static void ensureDirectoryWithoutFollowingSymlink(Path directory, String message)
+      throws IOException {
+    try {
+      BasicFileAttributes attributes =
+          Files.readAttributes(directory, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (!attributes.isDirectory() || attributes.isSymbolicLink()) {
+        throw new IOException(message + ": " + directory);
+      }
+    } catch (NoSuchFileException nsfe) {
+      Files.createDirectory(directory);
+      BasicFileAttributes attributes =
+          Files.readAttributes(directory, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (!attributes.isDirectory() || attributes.isSymbolicLink()) {
+        throw new IOException(message + ": " + directory);
+      }
     }
   }
 
@@ -657,8 +709,10 @@ final class SaveOperationCompletionEvidence {
         throw new IllegalArgumentException("Save proof artifact must have a parent directory");
       }
       requirePathUnderProofRoot(parent, this.proofRoot, "Save proof artifact escapes proof root");
-      Path canonicalParent = Files.createDirectories(parent).toRealPath();
-      requirePathUnderProofRoot(canonicalParent, this.proofRoot, "Save proof artifact escapes proof root");
+      Path canonicalParent = canonicalDirectoryUnderProofRoot(
+          parent,
+          this.proofRoot,
+          "Save proof artifact escapes proof root");
       Path canonicalArtifact = canonicalParent.resolve(SAVE_PROOF_ARTIFACT);
       if (Files.exists(canonicalArtifact, LinkOption.NOFOLLOW_LINKS)
           && Files.isSymbolicLink(canonicalArtifact)) {
@@ -675,9 +729,7 @@ final class SaveOperationCompletionEvidence {
       } finally {
         Files.deleteIfExists(tempArtifact);
       }
-      if (!Files.isRegularFile(canonicalArtifact) || Files.size(canonicalArtifact) == 0) {
-        throw new IOException("Save proof artifact was not written: " + canonicalArtifact);
-      }
+      requireNonEmptyRegularFile(canonicalArtifact, "Save proof artifact was not written");
       return canonicalArtifact;
     }
 
@@ -700,9 +752,10 @@ final class SaveOperationCompletionEvidence {
       Path selectedPath = this.normalizedSelectedFile == null
           ? null
           : Path.of(this.normalizedSelectedFile).normalize();
-      boolean fileExists = this.targetFile.isFile();
-      long fileSizeBytes = fileExists ? this.targetFile.length() : 0;
-      boolean fileNonempty = fileSizeBytes > 0;
+      RegularFileState targetFileState = regularFileState(this.targetPath);
+      boolean fileExists = targetFileState.exists();
+      long fileSizeBytes = targetFileState.sizeBytes();
+      boolean fileNonempty = targetFileState.nonEmpty();
       boolean fileHasExpectedExtension = hasExpectedTargetExtension();
       boolean selectedFileMatchesExpected =
           this.normalizedSelectedFile != null && this.targetCanonicalPath.equals(this.normalizedSelectedFile);
@@ -943,6 +996,14 @@ final class SaveOperationCompletionEvidence {
       return "org.lgna.croquet.triggers.ActionEventTrigger".equals(triggerClass)
           && MenuItem.class.getName().equals(viewControllerClass)
           && JMenuItem.class.getName().equals(awtSourceClass);
+    }
+  }
+
+  private record RegularFileState(boolean exists, long sizeBytes) {
+    private static final RegularFileState MISSING = new RegularFileState(false, 0);
+
+    boolean nonEmpty() {
+      return exists && sizeBytes > 0;
     }
   }
 }

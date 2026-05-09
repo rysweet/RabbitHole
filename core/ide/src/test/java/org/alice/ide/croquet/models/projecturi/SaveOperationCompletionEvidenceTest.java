@@ -476,6 +476,59 @@ public class SaveOperationCompletionEvidenceTest {
     assertTrue(thrown.getMessage().contains("refuses to overwrite symlink"));
   }
 
+  @Test
+  public void canonicalProofArtifactRejectsSymlinkParentBeforeCreatingOutsideDirectory() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path target = Files.writeString(proofRoot.resolve("robot-save-menu-proof.a3p"), "project");
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(target.toFile(), proofRoot);
+    Path outsideRoot = Files.createDirectories(newTestDir().resolve("outside-root")).toRealPath();
+    Path symlinkParent = proofRoot.resolve("linked-parent");
+    try {
+      Files.createSymbolicLink(symlinkParent, outsideRoot);
+    } catch (IOException | SecurityException | UnsupportedOperationException e) {
+      return;
+    }
+
+    Path nestedArtifact = symlinkParent.resolve("nested")
+        .resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+    IOException thrown = assertThrows(IOException.class, () -> evidence.write(nestedArtifact));
+
+    assertTrue(thrown.getMessage().contains("escapes proof root"));
+    assertFalse(Files.exists(outsideRoot.resolve("nested")));
+  }
+
+  @Test
+  public void configuredSaveProofArtifactRejectsSymlinkParentBeforeCreatingOutsideDirectory() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path outsideRoot = Files.createDirectories(newTestDir().resolve("outside-root")).toRealPath();
+    Path symlinkParent = proofRoot.resolve("linked-parent");
+    try {
+      Files.createSymbolicLink(symlinkParent, outsideRoot);
+    } catch (IOException | SecurityException | UnsupportedOperationException e) {
+      return;
+    }
+    Path nestedArtifact = symlinkParent.resolve("nested")
+        .resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+    String previousEvidencePath = System.getProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY);
+    System.setProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+        nestedArtifact.toString());
+    try {
+      IllegalArgumentException thrown = assertThrows(
+          IllegalArgumentException.class,
+          () -> SaveOperationCompletionEvidence.configuredSaveProofArtifact(proofRoot));
+
+      assertTrue(thrown.getMessage().contains("writable canonical directory"));
+      assertFalse(Files.exists(outsideRoot.resolve("nested")));
+    } finally {
+      restoreProperty(
+          SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+          previousEvidencePath);
+    }
+  }
+
   private static Path newTestDir() throws Exception {
     return Files.createDirectories(Path.of(
         "target",

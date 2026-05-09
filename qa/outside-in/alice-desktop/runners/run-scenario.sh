@@ -3245,7 +3245,7 @@ PY
   save_proof_validation_status=not-requested
   if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
     set +e
-    "$0" validate-save-proof-evidence "$save_proof_artifact" \
+    validate_save_proof_evidence "$save_proof_artifact" \
       --scenario "$scenario_id" \
       --workflow save-menu-dialog-write-proof \
       --run-id "$save_proof_run_id" \
