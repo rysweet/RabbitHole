@@ -25,6 +25,7 @@ upstream_sha=
 if [ -n "$upstream_ref" ]; then
   upstream_sha=$(git -C "$REPO_ROOT" rev-parse "$upstream_ref" 2>/dev/null || true)
 fi
+worktree_dirty=$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)
 
 python3 - \
   "$EVIDENCE_LOG" \
@@ -35,6 +36,7 @@ python3 - \
   "$merge_base" \
   "$upstream_ref" \
   "$upstream_sha" \
+  "$worktree_dirty" \
   >"$tmp_root/pr419-readiness-contract.out" \
   2>"$tmp_root/pr419-readiness-contract.err" <<'PY'
 import re
@@ -50,7 +52,8 @@ from pathlib import Path
     merge_base,
     upstream_ref,
     upstream_sha,
-) = sys.argv[1:9]
+    worktree_dirty,
+) = sys.argv[1:10]
 evidence = Path(evidence_path).read_text(encoding="utf-8")
 doc = Path(doc_path).read_text(encoding="utf-8")
 combined = f"{evidence}\n\n{doc}"
@@ -114,7 +117,7 @@ if exact_head is not None and upstream_sha:
     )
 require_literal(evidence, f"origin/develop at recovery: {develop_sha}", "evidence log")
 require_literal(evidence, f"merge-base(HEAD, origin/develop): {merge_base}", "evidence log")
-if upstream_sha and head_sha != upstream_sha:
+if upstream_sha and (head_sha != upstream_sha or worktree_dirty):
     require_literal(
         evidence,
         "Local recovery changes in this worktree are not part of that pushed PR head yet",
@@ -130,6 +133,20 @@ if upstream_sha and head_sha != upstream_sha:
         "refresh this log's exact HEAD and PR-head metadata to the post-commit SHA",
         "evidence log post-commit refresh instruction",
     )
+elif upstream_sha and head_sha == upstream_sha:
+    require_literal(
+        evidence,
+        "local worktree HEAD and upstream PR head both",
+        "evidence log exact-head local/upstream match",
+    )
+    for stale_local_caveat in (
+        "Local recovery changes in this worktree are not part of that pushed PR head yet",
+        "refresh this log's exact HEAD and PR-head metadata to the post-commit SHA",
+    ):
+        require(
+            stale_local_caveat not in evidence,
+            f"evidence log must not carry stale local-divergence caveat {stale_local_caveat!r}",
+        )
 
 for command in (
     "NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh",

@@ -90,7 +90,7 @@ def sample_points(extents: dict[str, int]) -> list[dict[str, int | str]]:
 
 def normalize_channel(value: int) -> int:
     if value <= 255:
-        return value
+        return max(0, value)
     return max(0, min(255, round(value / 257)))
 
 

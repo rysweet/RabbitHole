@@ -1,10 +1,10 @@
 Default-workflow recovery evidence for PR #419
-Recorded at: 2026-05-09T10:07:42Z
+Recorded at: 2026-05-09T11:13:51Z
 PR: https://github.com/rysweet/RabbitHole/pull/419
 Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
 Base branch: develop
 Evidence stage: final PR419 exact-head readiness handoff
-Exact checked HEAD at final validation: e28058677c0a3b9335672a7b9e989fac5759247b
+Exact checked HEAD at final validation: 33cafc5604b9acbda495dd9296b664ff24447f2e
 origin/develop at recovery: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 merge-base(HEAD, origin/develop): 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 
@@ -19,7 +19,7 @@ Merge status:
 - The branch contains current origin/develop at the checked recovery
   point; no rebase was performed and no shared PR history was rewritten.
 - PR #419 points at the validated exact HEAD
-  e28058677c0a3b9335672a7b9e989fac5759247b on the existing branch.
+  33cafc5604b9acbda495dd9296b664ff24447f2e on the existing branch.
 
 Worktree end state:
 - No unmerged path remains; the previous AA index state for

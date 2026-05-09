@@ -313,6 +313,36 @@ PY
 
 assert_file_exists "$SAMPLER" "world-canvas pixel sampler script is checked in at the documented path"
 
+python3 - "$SAMPLER" >"$tmp_root/channel-normalization.out" 2>"$tmp_root/channel-normalization.err" <<'PY'
+import importlib.util
+import sys
+
+sys.dont_write_bytecode = True
+sampler_path = sys.argv[1]
+spec = importlib.util.spec_from_file_location("world_canvas_pixel_sampler", sampler_path)
+if spec is None or spec.loader is None:
+    raise AssertionError("sampler module could not be loaded")
+sampler = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(sampler)
+
+cases = {
+    -1: 0,
+    0: 0,
+    255: 255,
+    65535: 255,
+}
+for value, expected in cases.items():
+    actual = sampler.normalize_channel(value)
+    if actual != expected:
+        raise AssertionError(f"normalize_channel({value}) returned {actual}, expected {expected}")
+
+parsed = sampler.parse_rgba("srgba(-1,65535,32,1)")
+if parsed != [0, 255, 32, 255]:
+    raise AssertionError(f"parse_rgba did not normalize channels into 0..255: {parsed!r}")
+PY
+status=$?
+assert_success "$status" "standalone sampler normalizes RGBA channels into the 0..255 range"
+
 unreadable_target_out="$tmp_root/unreadable-target-sampler.json"
 python3 "$SAMPLER" \
   --target-json "$tmp_root/missing-target.json" \
