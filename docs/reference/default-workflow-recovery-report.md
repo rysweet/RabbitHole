@@ -8,6 +8,7 @@ under review and keep the final report structured, even when no files changed.
 ## Contents
 
 - [Scope](#scope)
+- [Design inventory](#design-inventory)
 - [No-timeout merge-ready recovery](#no-timeout-merge-ready-recovery)
 - [Repository path resolution](#repository-path-resolution)
 - [No-op guard](#no-op-guard)
@@ -32,6 +33,28 @@ claims, Run execution claims, visible rendering claims, Save claims, grading
 claims, Sims validation claims, or deployed installer claims. Product evidence
 must come from the focused artifacts documented by the relevant feature
 reference, such as [Desktop Run execution gap report](./desktop-run-execution-gap-report.md).
+
+## Design inventory
+
+The recovery design explicitly adds these files:
+
+```yaml
+new_files:
+  - docs/howto/recover-pr-with-default-workflow.md
+  - docs/reference/default-workflow-recovery-report.md
+  - docs/reference/desktop-run-execution-gap-report.md
+  - docs/tutorials/trace-no-timeout-pr-recovery.md
+  - qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh
+  - scripts/default_workflow_recovery.py
+  - tests/test_default_workflow_merge_ready_contract.py
+  - tests/test_default_workflow_recovery_contract.py
+```
+
+The design also updates existing desktop QA, scenario, evidence, and index files
+to wire the bounded Run-window/debug evidence contract into the existing
+documentation and validation surfaces. Do not summarize this feature as
+`new_files: []`; reviewers need the added docs, helper, and contract tests listed
+explicitly to audit the recovery scope.
 
 ## No-timeout merge-ready recovery
 

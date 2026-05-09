@@ -1,6 +1,14 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported Ant project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and
+collect reviewable evidence for user-like workflows.
+
+The lane groups scenarios into launch and Select Project inventory, first-lesson
+procedure seams, instructor/student setup, scene creation, bounded
+run/debug-like behavior, save/load and export flows, exported Ant and NetBeans
+package smokes, package/install smoke, failure-path smoke, future UI smoke,
+menu/action smoke, wizard/palette/completion smoke, and post-open
+runtime/display accessibility evidence.
 
 ## Contents
 

@@ -225,7 +225,7 @@ Field order is not part of the contract. The report has this shape:
     "required Run-window evidence artifact names must be present",
     "executableToday evidence list must be non-empty",
     "blockerToFullWorldExecution.reason must be non-empty",
-    "doesNotClaim must include every prohibited claim category"
+    "doesNotClaim must include every implementation-enforced prohibited claim category"
   ],
   "doesNotClaim": [
     "full world execution",

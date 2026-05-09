@@ -29,11 +29,32 @@ existing scenario contract.
 
 ## Verify the PR head
 
+Set the recovery inputs. Replace the placeholder values with the pull request
+number, the pull request head branch, and the target base branch before running
+the commands:
+
+```bash
+export PR_NUMBER="REPLACE_WITH_PULL_REQUEST_NUMBER"
+export HEAD_BRANCH="REPLACE_WITH_PULL_REQUEST_HEAD_BRANCH"
+export BASE_BRANCH=develop
+
+# Optional: set this only when the recovery task names an exact base SHA.
+# export EXPECTED_DEVELOP_HEAD="REPLACE_WITH_EXPECTED_ORIGIN_DEVELOP_SHA"
+```
+
+For a concrete PR #404 run, see the [no-timeout recovery
+tutorial](../tutorials/trace-no-timeout-pr-recovery.md).
+
 Fetch the branch and compare local `HEAD` to the current pull request head:
 
 ```bash
-pr_number=404
-head_branch=wave6-run-execution-gap-1778302300
+: "${PR_NUMBER:?Set PR_NUMBER to the pull request number}"
+: "${HEAD_BRANCH:?Set HEAD_BRANCH to the pull request head branch}"
+
+pr_number="$PR_NUMBER"
+head_branch="$HEAD_BRANCH"
+base_branch="${BASE_BRANCH:-develop}"
+expected_develop_head="${EXPECTED_DEVELOP_HEAD:-}"
 
 git fetch origin "$head_branch"
 git switch "$head_branch"
@@ -61,7 +82,6 @@ request into `develop`, do not push to `develop`, and do not use a web/manual
 merge as evidence.
 
 ```bash
-base_branch=develop
 git fetch origin "$base_branch"
 base_head=$(git rev-parse "origin/$base_branch")
 git status --short --branch
@@ -71,7 +91,9 @@ If the recovery task names an expected develop SHA, verify it before changing
 the branch:
 
 ```bash
-test "$base_head" = "$expected_develop_head"
+if [ -n "$expected_develop_head" ]; then
+  test "$base_head" = "$expected_develop_head"
+fi
 ```
 
 Then update only the pull request branch with the current base and resolve
@@ -138,9 +160,11 @@ mergeability must be recorded as `NOT_MERGE_READY` blockers.
 Review the base-to-head diff:
 
 ```bash
-git fetch origin develop
-git diff --name-status "origin/develop...HEAD"
-git diff --stat "origin/develop...HEAD"
+base_branch="${BASE_BRANCH:-develop}"
+
+git fetch origin "$base_branch"
+git diff --name-status "origin/$base_branch...HEAD"
+git diff --stat "origin/$base_branch...HEAD"
 ```
 
 The diff must stay within the recovery's intended QA, tests, docs, or feature
