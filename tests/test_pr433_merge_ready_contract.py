@@ -13,7 +13,9 @@ EXPECTED_PR433_CHANGED_FILES = {
     "docs/reference/alice-desktop-outside-in-qa.md",
     "docs/reference/legacy-fixture-roundtrip-readiness.md",
     "docs/tutorials/legacy-fixture-roundtrip-readiness.md",
+    "qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml",
     "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
+    "qa/outside-in/alice-desktop/tests/test-gadugi-archive-fixture-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-scenario-validation.sh",
     "tests/test_pr433_merge_ready_contract.py",
 }
