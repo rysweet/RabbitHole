@@ -56,7 +56,7 @@ Use the JSON artifact as the source of truth.
 | `proven` | Robot menu activation, Save action attribution, dialog observation, chooser control, file write, readback, and marker verification all completed in the same rendered run. |
 | `blocked` | The proof recorded exactly one known blocker for the earliest missing or unsafe step and the JUnit run failed. |
 
-Do not treat Maven success by itself as proof. If the artifact reports `status: "blocked"` for a headless AWT display, it is not Save evidence. Use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation, and it does not prove full desktop Save completion.
+Do not treat Maven success by itself as proof. Blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` for a headless AWT display, it is not Save evidence. Use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation, and it does not prove full desktop Save completion or any full Save completion claim.
 
 Example blocked artifact:
 
