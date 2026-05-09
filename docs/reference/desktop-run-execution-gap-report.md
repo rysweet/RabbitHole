@@ -24,6 +24,7 @@ Save validation, or world-advance proof.
 - [Examples](#examples)
 - [Review rules](#review-rules)
 - [Validation commands](#validation-commands)
+- [Recovery workflow reporting](#recovery-workflow-reporting)
 - [Troubleshooting](#troubleshooting)
 
 ## Scope
@@ -100,8 +101,9 @@ Use the report to answer only these questions:
 | Which claims are explicitly unsupported? | `doesNotClaim` |
 | Did the report validate the required artifact reference list and blocker text? | `failClosedRequirements` and focused tests |
 
-Do not use the report as proof that a world completed execution, pixels rendered
-correctly, learner work was graded, Save finished, or the full Alice UI was
+Do not use the report as proof that a world completed execution, playback
+succeeded, pixels rendered correctly, learner work was graded, Save finished,
+Sims were validated, a deployed installer succeeded, or the full Alice UI was
 automated.
 
 ## Configuration
@@ -212,7 +214,10 @@ Field order is not part of the contract. The report has this shape:
 | `blockerToFullWorldExecution.reason` | Non-empty text naming the missing deterministic proof that the world advances through full runtime execution rather than artifact presence alone. |
 | `blockerToFullWorldExecution.missingProof` | Stable token `deterministic_world_advance_through_full_runtime_execution`. |
 | `failClosedRequirements` | Non-empty list naming the validation rules. |
-| `doesNotClaim` | Contains `full world execution`, `visible rendering correctness`, `grading`, `Save completion`, and `full UI automation`. |
+| `doesNotClaim` | Contains the implementation-enforced categories `full world execution`, `visible rendering correctness`, `grading`, `Save completion`, and `full UI automation`. |
+
+Playback, Sims validation, and deployed installer success remain review-language
+non-claims, but they are not v1 payload tokens.
 
 ### Required Run-window artifact references
 
@@ -271,13 +276,14 @@ Accepted review wording:
 ```text
 The run produced bounded Run-window evidence and a desktop Run execution gap
 report. The report identifies the existing executable artifacts and keeps full
-world execution blocked until deterministic world-advance proof exists.
+world execution blocked until deterministic world-advance proof exists. It also
+does not support playback, Sims validation, or deployed installer claims.
 ```
 
 Rejected review wording:
 
 ```text
-Any wording that treats the report as proof of full execution or rendering correctness.
+Any wording that treats the report as proof of full execution, playback, or rendering correctness.
 ```
 
 ### Use the report in QA notes
@@ -296,6 +302,10 @@ unsupportedClaims:
   - grading
   - Save completion
   - full UI automation
+additionalReviewLimits:
+  - playback
+  - Sims validation
+  - deployed installer success
 ```
 
 ### Validate the focused implementation contract
@@ -321,8 +331,8 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 5. Require `doesNotClaim` to include full world execution, visible rendering
    correctness, grading, Save completion, and full UI automation.
 6. Keep PR and review text conservative: "bounded Run-window evidence" and
-   "execution gap report" are acceptable; completion, correctness, grading, Save,
-   or full-automation claims are not.
+   "execution gap report" are acceptable; completion, playback, correctness,
+   grading, Save, Sims, installer, or full-automation claims are not.
 
 ## Validation commands
 
@@ -353,6 +363,21 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
+## Recovery workflow reporting
+
+When the desktop Run execution gap report is updated through a default workflow
+recovery, the workflow report follows the [Default workflow recovery report](./default-workflow-recovery-report.md)
+contract. The recovery report must resolve the actual PR worktree with Git, run
+the no-op guard against that resolved path, include a `Files modified` section
+even when the value is `None`, and include exact-head clean-tree readiness
+evidence before claiming the branch is ready.
+
+The recovery workflow output remains separate from
+`desktop-run-execution-gap-report.json`. It documents repository state and
+validation commands; it does not add product behavior or expand the Run gap
+artifact beyond bounded Run-window evidence and the deterministic world-advance
+blocker.
+
 ## Troubleshooting
 
 | Symptom | Meaning | Next check |
@@ -361,4 +386,4 @@ test -d tweedle-lang/Grammar
 | Report exists but omits a required artifact name | The report is invalid. | Run `EatmeDesktopRunExecutionEvidenceTest`; fix the required artifact list before review. |
 | Report has an empty blocker reason | The report is invalid. | Restore the deterministic world-advance blocker text. |
 | Report omits a prohibited claim category | The report is invalid. | Restore all required `doesNotClaim` entries. |
-| Review text says the world executed fully | The review overclaims the evidence. | Replace with bounded Run-window evidence wording and cite the blocker. |
+| Review text says the world executed fully, playback succeeded, rendering is correct, Save completed, grading ran, Sims were validated, an installer succeeded, or the UI was fully automated | The review overclaims the evidence. | Replace with bounded Run-window evidence wording and cite the blocker. |

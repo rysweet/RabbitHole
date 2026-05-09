@@ -342,13 +342,16 @@ The opt-in desktop Run evidence hook writes
 `desktop-run-execution-gap-report.json` after the existing Run-window artifact
 writers complete their non-empty checks, including
 `desktop-run-status-summary.json`. The report states that the executable
-evidence in this lane is bounded Run-window evidence and name the blocker to a
+evidence in this lane is bounded Run-window evidence and names the blocker to a
 stronger execution claim: missing deterministic proof that the Alice world
 advances through full runtime execution rather than merely producing Run-window
 artifacts. Missing required artifact references, missing blocker text, or
 missing non-claim categories fail validation for the report while preserving
-normal Run behavior. The report does not prove full world execution, visible
-rendering correctness, grading, Save completion, or full UI automation. See
+normal Run behavior. The report does not prove full world execution, playback,
+visible rendering correctness, full UI automation, Save completion, grading,
+Sims validation, or deployed installer success. The report payload enforces the
+implementation-backed `doesNotClaim` tokens documented in the reference; the
+playback, Sims, and installer limits are review-language boundaries. See
 [Desktop Run execution gap
 report](../../../docs/reference/desktop-run-execution-gap-report.md).
 

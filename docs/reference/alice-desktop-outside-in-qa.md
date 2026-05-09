@@ -82,14 +82,16 @@ completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
 
 The desktop Run execution gap report is emitted only after existing Run-window
-artifact writers complete their non-empty checks for
-evidence such as `desktop-run-render-affordance.json` and
-`desktop-run-status-summary.json`. It names the executable evidence in this
-lane as bounded Run-window evidence and record the exact blocker to a stronger
+artifact writers complete their non-empty checks for evidence such as
+`desktop-run-render-affordance.json` and
+`desktop-run-status-summary.json`. It names the executable evidence in this lane
+as bounded Run-window evidence and records the exact blocker to a stronger
 claim: missing deterministic proof that the world advances through full runtime
 execution rather than artifact presence alone. The report must not be used to
-claim full world execution, visible rendering correctness, grading, Save
-completion, or full UI automation.
+claim full world execution, playback, visible rendering correctness, full UI
+automation, Save completion, grading, Sims validation, or deployed installer
+success. Its v1 `doesNotClaim` payload enforces only the implementation-backed
+tokens documented in the [Desktop Run execution gap report](./desktop-run-execution-gap-report.md).
 
 ## Learner-world boundary
 

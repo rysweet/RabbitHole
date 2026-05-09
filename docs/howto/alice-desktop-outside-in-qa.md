@@ -450,7 +450,9 @@ required Run-window artifact references, and include `doesNotClaim` entries for
 full world execution, visible rendering correctness, grading, Save completion,
 and full UI automation. If any of those fields are missing, validation fails
 closed for the report and the report is not acceptable evidence; normal Run
-behavior is preserved.
+behavior is preserved. Review notes must also avoid playback, Sims validation,
+and deployed installer success claims because this evidence lane does not cover
+them.
 
 For the complete artifact API, configuration, examples, and review rules, see
 [Desktop Run execution gap report](../reference/desktop-run-execution-gap-report.md).
