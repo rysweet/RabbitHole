@@ -119,11 +119,11 @@ def parse_rgba(text: str) -> list[int] | None:
     return channels
 
 
-def sample_pixel(point: dict[str, int | str]) -> list[int]:
-    if shutil.which("xwd") is None or shutil.which("convert") is None:
-        raise RuntimeError("xwd and convert are required for target-scoped raw pixel sampling")
-    x = int(point["x"])
-    y = int(point["y"])
+def missing_sampling_tools() -> list[str]:
+    return [tool for tool in ("xwd", "convert") if shutil.which(tool) is None]
+
+
+def capture_root_image() -> bytes:
     xwd = subprocess.run(
         ["xwd", "-root", "-silent"],
         check=False,
@@ -132,17 +132,26 @@ def sample_pixel(point: dict[str, int | str]) -> list[int]:
     )
     if xwd.returncode != 0:
         raise RuntimeError((xwd.stderr or b"xwd capture failed").decode("utf-8", errors="replace").strip())
+    return xwd.stdout
+
+
+def extract_pixel(root_image: bytes, point: dict[str, int | str]) -> list[int]:
+    x = int(point["x"])
+    y = int(point["y"])
     convert = subprocess.run(
         ["convert", "xwd:-", "-crop", f"1x1+{x}+{y}", "txt:-"],
-        input=xwd.stdout,
+        input=root_image,
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
     )
     if convert.returncode != 0:
-        raise RuntimeError((convert.stderr or "convert pixel extraction failed").strip())
-    rgba = parse_rgba(convert.stdout)
+        raise RuntimeError(
+            (convert.stderr or b"convert pixel extraction failed")
+            .decode("utf-8", errors="replace")
+            .strip()
+        )
+    rgba = parse_rgba(convert.stdout.decode("utf-8", errors="replace"))
     if rgba is None:
         raise RuntimeError("convert output did not contain a parseable RGBA pixel")
     return rgba
@@ -167,13 +176,22 @@ def read_target(
 
 
 def collect_samples(extents: dict[str, int]) -> list[dict[str, Any]]:
+    missing_tools = missing_sampling_tools()
+    if missing_tools:
+        tool_list = " and ".join(missing_tools)
+        verb = "are" if len(missing_tools) > 1 else "is"
+        raise RuntimeError(
+            f"{tool_list} {verb} required for target-scoped raw pixel sampling"
+        )
+
+    root_image = capture_root_image()
     samples: list[dict[str, Any]] = []
     for point in sample_points(extents):
         samples.append(
             {
                 "name": str(point["name"]),
                 "point": {"x": int(point["x"]), "y": int(point["y"])},
-                "rgba": sample_pixel(point),
+                "rgba": extract_pixel(root_image, point),
                 "checked": True,
             }
         )

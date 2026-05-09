@@ -338,6 +338,69 @@ assert_contains "$unreadable_target_out" '"full-visible-rendering-correctness"' 
 assert_contains "$unreadable_target_out" '"rendered-world-correctness"' "standalone sampler blocker explicitly excludes rendered-world correctness"
 assert_contains "$unreadable_target_out" '"world-execution"' "standalone sampler blocker explicitly excludes world execution"
 
+standalone_dir="$tmp_root/standalone-sampler"
+mkdir -p "$standalone_dir/fake-bin"
+cat >"$standalone_dir/target.json" <<'JSON'
+{
+  "screenExtents": {
+    "coordinateType": "screen",
+    "height": 20,
+    "width": 20,
+    "x": 10,
+    "y": 20
+  },
+  "status": "target-ready"
+}
+JSON
+cat >"$standalone_dir/fake-bin/xwd" <<'SH'
+#!/usr/bin/env bash
+set -u
+printf 'xwd\n' >>"$SAMPLER_XWD_LOG"
+printf 'fake-root-window-image'
+SH
+cat >"$standalone_dir/fake-bin/convert" <<'SH'
+#!/usr/bin/env bash
+set -u
+printf 'convert %s\n' "$*" >>"$SAMPLER_CONVERT_LOG"
+cat >/dev/null
+printf '# ImageMagick pixel enumeration: 1,1,255,srgba\n'
+printf '0,0: (16,32,48,255) #102030FF srgba(16,32,48,1)\n'
+SH
+chmod +x "$standalone_dir/fake-bin/xwd" "$standalone_dir/fake-bin/convert"
+standalone_out="$standalone_dir/pixel-observation.json"
+SAMPLER_XWD_LOG="$standalone_dir/xwd.log" \
+SAMPLER_CONVERT_LOG="$standalone_dir/convert.log" \
+PATH="$standalone_dir/fake-bin:$PATH" \
+  python3 "$SAMPLER" \
+    --target-json "$standalone_dir/target.json" \
+    --output "$standalone_out" \
+    >"$standalone_dir/sampler.out" \
+    2>"$standalone_dir/sampler.err"
+status=$?
+assert_success "$status" "standalone sampler observes target pixels with fake capture tools"
+assert_file_exists "$standalone_out" "standalone sampler writes bounded pixel observation"
+assert_contains "$standalone_out" '"status": "observed"' "standalone sampler records observed status"
+assert_contains "$standalone_out" '"sampleCount": 3' "standalone sampler records the three checked sample points"
+assert_contains "$standalone_out" '"samplingMethod": "xwd-convert-target-scoped-raw-rgba"' "standalone sampler records the raw RGBA sampling method"
+xwd_count=0
+convert_count=0
+if [ -f "$standalone_dir/xwd.log" ]; then
+  xwd_count=$(grep -c '^xwd$' "$standalone_dir/xwd.log" || true)
+fi
+if [ -f "$standalone_dir/convert.log" ]; then
+  convert_count=$(grep -c '^convert ' "$standalone_dir/convert.log" || true)
+fi
+if [ "$xwd_count" -eq 1 ]; then
+  pass "standalone sampler captures the root window once per target"
+else
+  fail "standalone sampler should capture once per target (got $xwd_count captures)"
+fi
+if [ "$convert_count" -eq 3 ]; then
+  pass "standalone sampler extracts one pixel per checked sample point"
+else
+  fail "standalone sampler should extract three checked pixels (got $convert_count extracts)"
+fi
+
 success_dir="$tmp_root/success"
 mkdir -p "$success_dir"
 write_runtime_display_artifact "$success_dir" ready
