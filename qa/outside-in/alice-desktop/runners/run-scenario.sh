@@ -18,6 +18,8 @@ POST_OPEN_RUNTIME_DISPLAY_SCENARIO=alice-desktop-post-open-runtime-display-acces
 POST_OPEN_RUNTIME_DISPLAY_ARTIFACT=post-open-runtime-display-accessibility-evidence.json
 VISIBLE_RENDERING_PIXEL_TARGET_BLOCKER=visible-rendering-pixel-target-blocker.json
 VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER=visible-rendering-pixel-sampling-blocker.json
+VISIBLE_RENDERING_PIXEL_OBSERVATION=visible-rendering-pixel-observation.json
+WORLD_CANVAS_PIXEL_SAMPLER="$SCRIPT_DIR/world-canvas-pixel-sampler.py"
 FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
 FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
 FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
@@ -1206,14 +1208,14 @@ if isinstance(controlled, dict) and isinstance(controlled.get("worldCanvasPixelT
 
 target_ready = target.get("identified") is True and target.get("status") == "target-ready"
 if target_ready:
-    blocker = "world-canvas-pixel-sampling-not-implemented"
+    blocker = "world-canvas-pixel-sampler-unavailable"
     blocker_detail = (
-        "A single world-canvas pixel target is ready, but this runner does not yet "
-        "sample pixels inside screenExtents or compare sampled pixels to rendered-world expectations."
+        "A single world-canvas pixel target is ready, but no usable target-scoped "
+        "world-canvas pixel sampler is available for this run."
     )
     claim_scope_detail = "target-ready-sampling-not-observed"
     prerequisite_status = "target-ready"
-    exact_next_unblocker = "sample-run-window-world-canvas-pixels"
+    exact_next_unblocker = "provide-world-canvas-pixel-sampler"
 else:
     blocker = "world-canvas-pixel-target-not-ready"
     blocker_detail = (
@@ -1237,6 +1239,7 @@ payload = {
     "prerequisiteTargetStatus": prerequisite_status,
     "exactNextUnblocker": exact_next_unblocker,
     "renderedWorldPixelsObserved": False,
+    "visibleRenderingCorrectnessEstablished": False,
     "sampleCount": 0,
     "screenshotPath": screenshot_path(controlled),
     "screenshotStatus": controlled.get("screenshotStatus") if isinstance(controlled, dict) else "",
@@ -1255,6 +1258,415 @@ payload = {
 with output_path.open("w", encoding="utf-8") as stream:
     json.dump(payload, stream, indent=2, sort_keys=True)
     stream.write("\n")
+PY
+}
+
+write_visible_rendering_pixel_sampling_evidence() {
+  local run_dir=$1
+  local controlled_display_artifact=${2:-}
+  local sampler=${ALICE_QA_WORLD_CANVAS_PIXEL_SAMPLER:-$WORLD_CANVAS_PIXEL_SAMPLER}
+
+  VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT="$controlled_display_artifact" \
+  VISIBLE_RENDERING_WORLD_CANVAS_PIXEL_SAMPLER="$sampler" \
+  VISIBLE_RENDERING_OBSERVATION_PATH="$run_dir/$VISIBLE_RENDERING_PIXEL_OBSERVATION" \
+  VISIBLE_RENDERING_BLOCKER_PATH="$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" \
+  python3 - <<'PY'
+import json
+import math
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+SOURCE_ARTIFACT = "controlled-display-pixel-observation.json"
+TARGET_SOURCE_ARTIFACT = "post-open-runtime-display-accessibility-evidence.json"
+CONTROLLED_DISPLAY_CLAIM_SCOPE = "controlled-display-screenshot-consistency"
+SELECTION_RULE = "single-visible-showing-runtime-display-candidate-with-valid-screen-extents"
+CLAIM_SCOPE = "visible-rendering-world-canvas-pixel-sampling"
+unsupported_claims = [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion",
+]
+forbidden_claim_phrases = (
+    "visible rendering correctness established",
+    "visible rendering correctness passed",
+    "rendered-world correctness established",
+    "world canvas pixel correctness passed",
+)
+
+controlled_display_path = Path(os.environ.get("VISIBLE_RENDERING_CONTROLLED_DISPLAY_ARTIFACT", ""))
+sampler_path = Path(os.environ.get("VISIBLE_RENDERING_WORLD_CANVAS_PIXEL_SAMPLER", ""))
+observation_path = Path(os.environ["VISIBLE_RENDERING_OBSERVATION_PATH"])
+blocker_path = Path(os.environ["VISIBLE_RENDERING_BLOCKER_PATH"])
+
+
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as stream:
+        json.dump(payload, stream, indent=2, sort_keys=True)
+        stream.write("\n")
+
+
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def read_controlled_display(path):
+    if path.name != SOURCE_ARTIFACT:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact must use the fixed artifact name."
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, "world-canvas-pixel-source-artifact-invalid", f"Controlled-display source artifact is unreadable: {exc}"
+    if not isinstance(payload, dict):
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact must be a JSON object."
+    if payload.get("schemaVersion") != 1:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact must use schemaVersion=1."
+    if payload.get("claimScope") != CONTROLLED_DISPLAY_CLAIM_SCOPE:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact has an unsupported claim scope."
+    if payload.get("status") not in {"observed", "blocked"}:
+        return None, "world-canvas-pixel-source-artifact-invalid", "Controlled-display source artifact has an unsupported status."
+    return payload, "", ""
+
+
+def screenshot_path(payload):
+    if not isinstance(payload, dict):
+        return None
+    screenshot = payload.get("screenshot")
+    if isinstance(screenshot, dict) and screenshot.get("path"):
+        return Path(str(screenshot["path"])).name
+    raw_path = payload.get("screenshotFile")
+    return Path(str(raw_path)).name if raw_path else None
+
+
+def target_extents(target):
+    extents = target.get("screenExtents") if isinstance(target, dict) else None
+    if not isinstance(extents, dict) or extents.get("coordinateType") != "screen":
+        return None
+    for key in ("x", "y", "width", "height"):
+        if not is_number(extents.get(key)):
+            return None
+    if extents["width"] <= 0 or extents["height"] <= 0:
+        return None
+    return {
+        "coordinateType": "screen",
+        "x": extents["x"],
+        "y": extents["y"],
+        "width": extents["width"],
+        "height": extents["height"],
+    }
+
+
+def target_has_visible_showing_state(target):
+    states = target.get("candidateStates") if isinstance(target, dict) else None
+    if not isinstance(states, list):
+        return False
+    normalized = {str(state).lower() for state in states}
+    return "visible" in normalized and "showing" in normalized
+
+
+def validated_target(controlled):
+    target = controlled.get("worldCanvasPixelTarget") if isinstance(controlled, dict) else None
+    if not isinstance(target, dict):
+        return None, {}
+    extents = target_extents(target)
+    if (
+        target.get("identified") is True
+        and target.get("status") == "target-ready"
+        and target.get("sourceArtifact") == TARGET_SOURCE_ARTIFACT
+        and target.get("geometryStatus") == "available"
+        and target.get("selectionRule") == SELECTION_RULE
+        and target_has_visible_showing_state(target)
+        and extents is not None
+    ):
+        sanitized = dict(target)
+        sanitized["screenExtents"] = extents
+        return sanitized, sanitized
+    return None, target
+
+
+def base_blocker(blocker, blocker_detail, claim_scope_detail, prerequisite_status, exact_next_unblocker, controlled=None, target=None, sampling=None):
+    target_payload = target if isinstance(target, dict) and prerequisite_status == "target-ready" else {}
+    if isinstance(target, dict) and target.get("status") == "blocked":
+        target_payload = target
+    payload = {
+        "schemaVersion": 1,
+        "status": "blocked",
+        "blocker": blocker,
+        "blockerDetail": blocker_detail,
+        "claimScope": CLAIM_SCOPE,
+        "claimScopeDetail": claim_scope_detail,
+        "sourceArtifact": SOURCE_ARTIFACT,
+        "prerequisiteTargetStatus": prerequisite_status,
+        "exactNextUnblocker": exact_next_unblocker,
+        "renderedWorldPixelsObserved": False,
+        "visibleRenderingCorrectnessEstablished": False,
+        "sampleCount": 0,
+        "screenshotPath": screenshot_path(controlled),
+        "screenshotStatus": controlled.get("screenshotStatus") if isinstance(controlled, dict) else "",
+        "screenshotPixelStatus": controlled.get("screenshotPixelStatus") if isinstance(controlled, dict) else "",
+        "worldCanvasPixelTarget": target_payload,
+        "pixelSampling": sampling
+        or {
+            "status": "blocked",
+            "blocker": blocker,
+            "pixelsSampled": False,
+            "sampleCount": 0,
+            "samplingMethod": None,
+        },
+        "unsupportedClaims": unsupported_claims,
+    }
+    return payload
+
+
+def write_blocker(blocker, blocker_detail, claim_scope_detail, prerequisite_status, exact_next_unblocker, controlled=None, target=None, sampling=None):
+    if observation_path.exists():
+        observation_path.unlink()
+    write_json(
+        blocker_path,
+        base_blocker(
+            blocker,
+            blocker_detail,
+            claim_scope_detail,
+            prerequisite_status,
+            exact_next_unblocker,
+            controlled=controlled,
+            target=target,
+            sampling=sampling,
+        ),
+    )
+
+
+def string_values(value):
+    if isinstance(value, dict):
+        for child in value.values():
+            yield from string_values(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from string_values(child)
+    elif isinstance(value, str):
+        yield value
+
+
+def sampler_overclaims(payload):
+    if payload.get("visibleRenderingCorrectnessEstablished") is True:
+        return True
+    return any(phrase in value.lower() for value in string_values(payload) for phrase in forbidden_claim_phrases)
+
+
+def point_inside(point, extents):
+    return (
+        is_number(point.get("x"))
+        and is_number(point.get("y"))
+        and extents["x"] <= point["x"] < extents["x"] + extents["width"]
+        and extents["y"] <= point["y"] < extents["y"] + extents["height"]
+    )
+
+
+def normalize_samples(payload, extents):
+    samples = payload.get("samples")
+    if not isinstance(samples, list) or not samples:
+        return None, "world-canvas-pixel-sampling-incomplete", "Sampler output did not include a non-empty samples list."
+    declared_count = payload.get("sampleCount")
+    if declared_count != len(samples):
+        return None, "world-canvas-pixel-sampling-incomplete", "Sampler sampleCount did not match the sample list length."
+    normalized = []
+    for index, sample in enumerate(samples):
+        if not isinstance(sample, dict):
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} is not an object."
+        if sample.get("checked") is not True:
+            return None, "world-canvas-pixel-samples-unchecked", f"Sampler sample {index} was not checked."
+        point = sample.get("point")
+        rgba = sample.get("rgba")
+        if not isinstance(point, dict) or not point_inside(point, extents):
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} point is outside the validated target."
+        if not isinstance(rgba, list) or len(rgba) != 4:
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} does not include an RGBA value."
+        if any(not isinstance(channel, int) or isinstance(channel, bool) or channel < 0 or channel > 255 for channel in rgba):
+            return None, "world-canvas-pixel-sampling-incomplete", f"Sampler sample {index} RGBA channels must be integers from 0 through 255."
+        normalized_sample = {
+            "point": {"x": point["x"], "y": point["y"]},
+            "rgba": list(rgba),
+            "checked": True,
+        }
+        if sample.get("name"):
+            normalized_sample["name"] = str(sample["name"])
+        normalized.append(normalized_sample)
+    return normalized, "", ""
+
+
+controlled, source_blocker, source_detail = read_controlled_display(controlled_display_path)
+if controlled is None:
+    write_blocker(
+        "world-canvas-pixel-target-not-ready",
+        source_detail,
+        "target-selection-blocked",
+        "unavailable",
+        "valid-controlled-display-pixel-observation-source-artifact",
+    )
+    raise SystemExit(0)
+
+valid_target, source_target = validated_target(controlled)
+if valid_target is None:
+    prerequisite_status = str(source_target.get("status") or "unavailable") if isinstance(source_target, dict) else "unavailable"
+    write_blocker(
+        "world-canvas-pixel-target-not-ready",
+        "Target-scoped pixel sampling requires exactly one visible/showing target with valid positive screen-coordinate extents.",
+        "target-selection-blocked",
+        prerequisite_status,
+        str(source_target.get("exactNextUnblocker") or "reliable-run-window-world-canvas-pixel-sampling-target") if isinstance(source_target, dict) else "reliable-run-window-world-canvas-pixel-sampling-target",
+        controlled=controlled,
+        target=source_target if isinstance(source_target, dict) else {},
+    )
+    raise SystemExit(0)
+
+if not sampler_path.is_file() or not os.access(sampler_path, os.X_OK):
+    write_blocker(
+        "world-canvas-pixel-sampler-unavailable",
+        "A valid world-canvas target was identified, but the target-scoped pixel sampler is unavailable or not executable.",
+        "target-ready-sampling-not-observed",
+        "target-ready",
+        "provide-world-canvas-pixel-sampler",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+with tempfile.TemporaryDirectory(prefix="alice-world-canvas-pixels-") as temp_dir:
+    target_path = Path(temp_dir) / "world-canvas-target.json"
+    sampler_output_path = Path(temp_dir) / "sampler-output.json"
+    write_json(target_path, valid_target)
+    try:
+        completed = subprocess.run(
+            [str(sampler_path), "--target-json", str(target_path), "--output", str(sampler_output_path)],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        write_blocker(
+            "world-canvas-pixel-sampling-failed",
+            f"Sampler could not run: {exc}",
+            "sampling-failed",
+            "target-ready",
+            "sample-run-window-world-canvas-pixels",
+            controlled=controlled,
+            target=valid_target,
+        )
+        raise SystemExit(0)
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or "Sampler exited non-zero.").strip()
+        write_blocker(
+            "world-canvas-pixel-sampling-failed",
+            detail[:500],
+            "sampling-failed",
+            "target-ready",
+            "sample-run-window-world-canvas-pixels",
+            controlled=controlled,
+            target=valid_target,
+        )
+        raise SystemExit(0)
+    try:
+        sampler_payload = json.loads(sampler_output_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        write_blocker(
+            "world-canvas-pixel-sampling-incomplete",
+            f"Sampler output was unreadable: {exc}",
+            "sampling-output-invalid",
+            "target-ready",
+            "complete-run-window-world-canvas-pixel-sample-set",
+            controlled=controlled,
+            target=valid_target,
+        )
+        raise SystemExit(0)
+
+if not isinstance(sampler_payload, dict) or sampler_payload.get("status") != "observed":
+    write_blocker(
+        "world-canvas-pixel-sampling-failed",
+        "Sampler output did not report status=observed.",
+        "sampling-failed",
+        "target-ready",
+        "sample-run-window-world-canvas-pixels",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+if sampler_overclaims(sampler_payload):
+    write_blocker(
+        "world-canvas-pixel-sampler-overclaimed",
+        "Sampler output attempted to assert a correctness claim instead of bounded raw pixel observation.",
+        "sampler-output-overclaimed",
+        "target-ready",
+        "remove-correctness-claims-from-sampler-output",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+samples, sample_blocker, sample_detail = normalize_samples(sampler_payload, valid_target["screenExtents"])
+if samples is None:
+    write_blocker(
+        sample_blocker,
+        sample_detail,
+        "sampling-output-invalid",
+        "target-ready",
+        "check-target-scoped-pixel-samples-before-claiming-observation"
+        if sample_blocker == "world-canvas-pixel-samples-unchecked"
+        else "complete-run-window-world-canvas-pixel-sample-set",
+        controlled=controlled,
+        target=valid_target,
+    )
+    raise SystemExit(0)
+
+sampling_method = str(sampler_payload.get("samplingMethod") or "target-scoped-controlled-display-raw-rgba")
+payload = {
+    "schemaVersion": 1,
+    "status": "observed",
+    "blocker": "none",
+    "blockerDetail": "",
+    "claim": "run-window-world-canvas-target-sampled-rendering-correctness-not-asserted",
+    "claimScope": CLAIM_SCOPE,
+    "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
+    "boundedClaim": "The run-window/world-canvas target was identified and sampled under controlled conditions.",
+    "sourceArtifact": SOURCE_ARTIFACT,
+    "targetSourceArtifact": TARGET_SOURCE_ARTIFACT,
+    "visibleRenderingCorrectnessEstablished": False,
+    "renderedWorldPixelsObserved": True,
+    "prerequisiteTargetStatus": "target-ready",
+    "sampleCount": len(samples),
+    "samplingMethod": sampling_method,
+    "samples": samples,
+    "worldCanvasPixelTarget": valid_target,
+    "pixelSampling": {
+        "status": "observed",
+        "pixelsSampled": True,
+        "samplesChecked": True,
+        "sampleCount": len(samples),
+        "samplingMethod": sampling_method,
+        "sampler": sampler_path.name,
+        "samplePoints": samples,
+        "samplePointRule": "inside-target-bounds-only",
+        "correctnessCheck": "not-performed",
+    },
+    "limitations": [
+        "Raw RGBA samples are bounded observation data only.",
+        "No color expectation, image baseline, visual diff, world execution assertion, or rendered-world oracle was applied.",
+    ],
+    "unsupportedClaims": unsupported_claims,
+}
+if blocker_path.exists():
+    blocker_path.unlink()
+write_json(observation_path, payload)
 PY
 }
 
@@ -1717,6 +2129,7 @@ PY
     printf 'visibleRenderingPixelSamplingStatus=blocked\n'
     printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
     printf 'visibleRenderingPixelSamplingBlocker=world-canvas-pixel-target-not-ready\n'
+    printf 'visibleRenderingCorrectnessEstablished=false\n'
     if [ -n "$timeout_seconds" ]; then
       printf 'timeoutSeconds=%s\n' "$timeout_seconds"
     fi
@@ -2849,13 +3262,17 @@ JSON
         "$screenshot_pixel_status" \
         "$runtime_display_artifact_path"
     fi
-    write_visible_rendering_pixel_sampling_blocker \
+    write_visible_rendering_pixel_sampling_evidence \
       "$run_dir" \
       "$run_dir/controlled-display-pixel-observation.json"
     local -a visible_rendering_pixel_sampling_fields
-    read_inventory_json_fields visible_rendering_pixel_sampling_fields "$run_dir/$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER" status blocker
+    if [ -f "$run_dir/$VISIBLE_RENDERING_PIXEL_OBSERVATION" ]; then
+      visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_OBSERVATION"
+    else
+      visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
+    fi
+    read_inventory_json_fields visible_rendering_pixel_sampling_fields "$run_dir/$visible_rendering_pixel_sampling_artifact" status blocker
     visible_rendering_pixel_sampling_status=${visible_rendering_pixel_sampling_fields[0]}
-    visible_rendering_pixel_sampling_artifact="$VISIBLE_RENDERING_PIXEL_SAMPLING_BLOCKER"
     visible_rendering_pixel_sampling_blocker=${visible_rendering_pixel_sampling_fields[1]}
     scenario_outcome=blocked
     if [ "$observation_status" = observed ] && [ "$runtime_display_status" = observed ] && [ "$visible_rendering_pixel_sampling_status" = observed ]; then
@@ -2874,6 +3291,7 @@ JSON
       printf 'visibleRenderingPixelSamplingStatus=%s\n' "$visible_rendering_pixel_sampling_status"
       printf 'visibleRenderingPixelSamplingArtifact=%s\n' "$visible_rendering_pixel_sampling_artifact"
       printf 'visibleRenderingPixelSamplingBlocker=%s\n' "$visible_rendering_pixel_sampling_blocker"
+      printf 'visibleRenderingCorrectnessEstablished=false\n'
     } > "$run_dir/status.txt.tmp"
     mv "$run_dir/status.txt.tmp" "$run_dir/status.txt"
   fi

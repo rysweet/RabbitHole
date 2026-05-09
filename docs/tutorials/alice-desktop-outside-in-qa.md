@@ -174,7 +174,7 @@ post-project-open-observation.json
 x-window-inventory.json
 controlled-display-pixel-observation.json
 visible-rendering-pixel-sampling-blocker.json
-visible-rendering-pixel-observation.json (planned)
+visible-rendering-pixel-observation.json
 launch.log
 xvfb.log
 screenshot.png or screenshot.xwd
@@ -189,20 +189,15 @@ python3 -m json.tool \
 sed -n '1,120p' <run-directory>/status.txt
 ```
 
-For the current implementation, accept this tutorial step as runtime/display and
-controlled-display evidence only when `status.txt` records
+Accept this tutorial step as runtime/display, controlled-display, and bounded
+sampling evidence only when `status.txt` records
+`outcome=passed`,
 `runtimeDisplayAccessibilityStatus=observed`,
 `controlledDisplayPixelStatus=observed`, and
-`visibleRenderingPixelSamplingStatus=blocked`; when
+`visibleRenderingPixelSamplingStatus=observed`; when
 `post-open-runtime-display-accessibility-evidence.json` records `status=observed`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount`
 greater than zero, and `blocker=none`; and when
-`visible-rendering-pixel-sampling-blocker.json` records
-`renderedWorldPixelsObserved=false` with either
-`world-canvas-pixel-target-not-ready` or
-`world-canvas-pixel-sampling-not-implemented`. [PLANNED] After the sampler
-lands, full pass acceptance also requires `status.txt` to record
-`outcome=passed` and `visibleRenderingPixelSamplingStatus=observed`, and
 `visible-rendering-pixel-observation.json` to record checked raw RGBA samples
 inside the validated Run-window/world-canvas target with
 `visibleRenderingCorrectnessEstablished=false`.

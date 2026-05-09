@@ -260,11 +260,11 @@ The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
 collects evidence for one bounded post-open rendering-adjacent step. It reuses
 the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and
 project-open setup, then runs a read-only AT-SPI probe against the live Alice
-accessibility tree. The current runner validates exactly one visible/showing
+accessibility tree. The runner validates exactly one visible/showing
 Run-window/world-canvas target with positive screen-coordinate extents, then
-fails closed at the sampling seam because the target-scoped pixel sampler is not
-implemented. The planned sampler will record raw RGBA samples inside that target
-under controlled conditions. Neither result is a full rendering, visible
+attempts target-scoped raw RGBA sampling inside that target under controlled
+conditions. If target validation or sampling cannot support that bounded
+observation, it writes the precise blocker instead. Neither result is a full rendering, visible
 rendering correctness, world execution, grading, lesson completion, Save, Select
 Project, installer, or decoder proof. For the complete artifact API and review contract,
 see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
@@ -296,7 +296,7 @@ post-open-runtime-display-accessibility-evidence.json
 runtime-display-accessibility-status.txt
 controlled-display-pixel-observation.json
 visible-rendering-pixel-sampling-blocker.json
-visible-rendering-pixel-observation.json (planned)
+visible-rendering-pixel-observation.json
 status.txt
 screenshot.png or screenshot.xwd
 ```
@@ -391,10 +391,9 @@ because it also records `controlledDisplayPixelStatus`,
 `controlledDisplayPixelBlocker`, `visibleRenderingPixelSamplingStatus`, and
 `visibleRenderingPixelSamplingArtifact`. Review `tab-click-observation.json`,
 `post-project-open-observation.json`, `controlled-display-pixel-observation.json`,
-and `visible-rendering-pixel-sampling-blocker.json` as supporting setup and the
-current fail-closed sampling artifact. [PLANNED]
-`visible-rendering-pixel-observation.json` becomes the bounded sampling artifact
-only after target-scoped pixel sampling is implemented.
+and `visible-rendering-pixel-sampling-blocker.json` or
+`visible-rendering-pixel-observation.json` as supporting setup and the bounded
+sampling result.
 
 To review the latest run directory without changing it:
 
@@ -408,20 +407,21 @@ python3 -m json.tool \
   "$run_dir/post-open-runtime-display-accessibility-evidence.json"
 ```
 
-Accept the current run as runtime/display and controlled-display evidence only
-when `status.txt` records `runtimeDisplayAccessibilityStatus=observed` and
-`controlledDisplayPixelStatus=observed`; the JSON decision artifact records
+Accept the run as runtime/display, controlled-display, and bounded sampling
+evidence only when `status.txt` records
+`outcome=passed`,
+`runtimeDisplayAccessibilityStatus=observed`,
+`controlledDisplayPixelStatus=observed`,
+`visibleRenderingPixelSamplingStatus=observed`, and
+`visibleRenderingCorrectnessEstablished=false`; the JSON decision artifact records
 `status=observed`, `blocker=none`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, and
 `runtimeDisplayCandidateCount` greater than zero; and
-`visible-rendering-pixel-sampling-blocker.json` records
-`renderedWorldPixelsObserved=false`. Target-ready runs should use
-`blocker=world-canvas-pixel-sampling-not-implemented` until the sampler exists.
-[PLANNED] After sampler implementation, accept the full run only when
 `visible-rendering-pixel-observation.json` records
 `visibleRenderingCorrectnessEstablished=false`, checked sample points inside the
-validated target, and raw RGBA values. Preserve `status=blocked` as the correct
-machine-readable gap report when the environment, post-open setup,
+validated target, and raw RGBA values. If the sampling status is blocked, review
+`visible-rendering-pixel-sampling-blocker.json` and preserve `status=blocked` as
+the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, target validation, or sampler is unavailable.
 
 ## Prepare evidence for manual workflows
