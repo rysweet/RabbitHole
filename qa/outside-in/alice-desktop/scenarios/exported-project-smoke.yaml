@@ -1,45 +1,46 @@
 id: alice-desktop-exported-project-smoke
-title: Exported Java project smoke
-workflow: exported-project-smoke
+title: Exported Ant project build smoke
+workflow: exported-project-ant-build-smoke
 automationMode: gated-command-smoke
 preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
-  - NetBeans export characterization tests are available in the checkout.
+  - NetBeans exported Ant template smoke tests are available in the checkout.
 userActions:
-  - Execute the checked-in generated-project smoke from the command line.
-  - Compile the exported Java project or generated source surrogate.
-  - Verify the generated launcher handoff or equivalent command-facing artifact.
+  - Execute the checked-in exported Ant/NetBeans template smoke from the command line.
+  - Run the focused no-Sims Maven command for Alice3ProjectTemplateAntSmokeTest.
+  - Verify Ant target output for generated classes and packaged JAR artifacts.
 expectedOutcomes:
   - The exported project smoke command exits successfully when the gate is enabled.
-  - Generated Java sources compile against the Alice story API classpath.
-  - Launcher or handoff evidence is recorded for review.
+  - Ant jar/build execution creates build/classes output for the generated project.
+  - The generated exported-project JAR is produced and contains the Alice launcher and program classes.
 automation:
   cwd: .
   argv:
     - mvn
     - -DincludeSims=false
     - -Dinstall4j.skip
+    - -DfailIfNoTests=false
     - -Dsurefire.failIfNoSpecifiedTests=false
     - -pl
     - netbeans
     - -am
-    - -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest
+    - -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest
     - test
   timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the generated project smoke command.
-    - Generated source or exported project artifact listing when available.
-    - Launcher handoff or compile evidence from the smoke output.
+    - command.log from the focused Alice3ProjectTemplateAntSmokeTest Maven command.
+    - Ant jar/build evidence showing build/classes output for Program and AliceJavaFXLauncher.
+    - Generated exported-project JAR evidence showing Alice launcher and program classes.
 fallback:
   mode: manual-evidence-required
   notes:
     - Leave the scenario gated unless the worktree is prepared for Maven NetBeans tests.
-    - If the command cannot run in the current environment, attach the lower-level characterization test name and failure log.
+    - If the command cannot run in the current environment, attach the exact Maven command, failing Ant target or prerequisite, and missing condition.
 supportingEvidence:
   - alice-desktop-launch
 tags:
