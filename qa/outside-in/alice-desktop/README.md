@@ -2,17 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md).
-For the complete scenario schema and runner interface, see the
-[Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
-
-Focused references:
-
-- [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md)
-- [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md)
-- [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md)
-- [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md)
-- [Save Proof Evidence](../../../docs/reference/save-proof-evidence.md) and [Save Menu Dialog Negative Artifact Contract](../../../docs/reference/save-menu-dialog-negative-artifact-contract.md)
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -108,7 +98,7 @@ Use one of the supported workflows:
 ```text
 archive-fixture-smoke
 export
-exported-project-smoke
+exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
@@ -157,12 +147,38 @@ assess learner work, or claim full first-lesson completion.
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
 
-The Save negative artifact contract is not a scenario and does not add a
-workflow. It calls `run-scenario.sh validate-save-proof-evidence` directly to
-prove missing, malformed, stale, blocked, partial, unknown-blocker, and
-internally inconsistent Save proof artifacts fail closed with explicit
-diagnostics. It does not run the desktop Save path or claim full desktop Save
-completion.
+To execute the exported Ant project build smoke:
+
+```bash
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-exported-project-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-smoke
+```
+
+The checked-in scenario maps to the focused no-Sims Ant/template Maven smoke:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
+  test
+```
+
+Passing evidence is limited to exported Ant build/runtime metadata behavior:
+generated classes, exported jar and manifest contents, resource packaging,
+runtime JVM metadata propagation up to the GUI launch boundary, Ant `jar`,
+`run`, `run-test-with-main`, `clean`, and probe markers. It is not installer
+validation, full GUI export journey coverage, visible rendering evidence, Sims
+coverage, or grading behavior. If target execution cannot complete, preserve
+`status.txt` and `command.log` with the exact command, failure point, and missing
+condition.
 
 To collect the narrow post-open runtime/display accessibility evidence:
 
@@ -382,7 +398,7 @@ Use one of the supported workflows:
 ```text
 archive-fixture-smoke
 export
-exported-project-smoke
+exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 future-ui-smoke
@@ -435,4 +451,20 @@ If Maven reports missing generated Tweedle parser classes, first check:
 ```bash
 git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
+```
+
+## Save negative artifact contract
+
+The Save negative artifact contract is not a scenario and does not add a
+workflow. It calls `run-scenario.sh validate-save-proof-evidence` directly to
+prove missing, malformed, stale, blocked, partial, unknown-blocker, and
+internally inconsistent Save proof artifacts fail closed with explicit
+diagnostics. It does not run the desktop Save path or claim full desktop Save
+completion.
+
+Run the focused contract directly or through the branch-installable wrapper:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
 ```
