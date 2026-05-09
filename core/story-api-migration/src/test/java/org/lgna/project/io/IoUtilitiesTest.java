@@ -119,6 +119,13 @@ public class IoUtilitiesTest {
     NamedUserType editedProgramType = editedProject.getProgramType();
     assertNotNull(editedProgramType);
     assertEquals(editedProgramName, editedProgramType.getName());
+    assertEquals(Project.SceneCameraType.WindowCamera, sceneCameraType(editedProject));
+    assertTrue(editedProject.getResources().isEmpty());
+    ProjectManifest editedReopenManifest = editedProject.createSaveManifest();
+    assertEquals(editedProgramName, editedReopenManifest.description.name);
+    assertEquals(IoUtilities.PROJECT_EXTENSION, editedReopenManifest.metadata.fileType);
+    assertEquals(Project.SceneCameraType.WindowCamera, editedReopenManifest.projectStructure.sceneCameraType);
+    assertTrue(editedReopenManifest.resources.isEmpty());
     try (ZipFile zipFile = new ZipFile(editedProjectFile)) {
       assertNotNull(zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
       ProjectManifest saveManifest = readProjectManifest(zipFile);
