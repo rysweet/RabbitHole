@@ -26,16 +26,17 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         for flag in (
             "-DincludeSims=false",
             "-Dinstall4j.skip",
+            "-Dcheckstyle.skip",
             "-Dmdep.skip=true",
             "-Pcoverage",
         ):
             with self.subTest(flag=flag):
                 self.assertIn(flag, coverage_command.group("command"))
 
-    def test_coverage_workflow_checkout_avoids_lfs_and_initializes_submodules(self) -> None:
+    def test_coverage_workflow_defers_submodule_initialization_until_maven_runs(self) -> None:
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
         checkout_step = re.search(
-            r"name: Check out source(?P<body>.*?)- name: Set up JDK 21",
+            r"name: Check out source(?P<body>.*?)- name: Initialize Tweedle grammar submodule",
             workflow,
             flags=re.DOTALL,
         )
@@ -44,8 +45,24 @@ class CoverageWorkflowContractTest(unittest.TestCase):
 
         self.assertIn("uses: actions/checkout@v4", checkout_step.group("body"))
         self.assertIn("lfs: false", checkout_step.group("body"))
-        self.assertIn("submodules: recursive", checkout_step.group("body"))
+        self.assertIn("submodules: false", checkout_step.group("body"))
         self.assertNotIn("git lfs", workflow.lower())
+
+        submodule_step = re.search(
+            r"name: Initialize Tweedle grammar submodule(?P<body>.*?)- name: Set up JDK 21",
+            workflow,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(submodule_step)
+        assert submodule_step is not None
+        self.assertIn(
+            "if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'",
+            submodule_step.group("body"),
+        )
+        self.assertIn(
+            "run: git submodule update --init tweedle-lang",
+            submodule_step.group("body"),
+        )
 
     def test_coverage_workflow_enforces_aggregate_and_module_ratchets(self) -> None:
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
@@ -55,6 +72,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
             "--min-module-line-percent core/model-loading=10.0",
             "--min-module-line-percent core/story-api-migration=75.0",
             "--min-module-line-percent core/tweedle=50.0",
+            "--min-module-line-percent core/scenegraph=10.0",
             "--min-module-line-percent netbeans=25.0",
         ]
 
