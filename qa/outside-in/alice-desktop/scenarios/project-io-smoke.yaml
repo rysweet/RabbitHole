@@ -1,5 +1,5 @@
 id: alice-desktop-project-io-smoke
-title: Archive-level project write, reopen, edit, write/reopen, and export smoke
+title: Archive-level project saving, reopening, editing, saving again, reopening again, and exporting smoke
 workflow: project-io-smoke
 automationMode: gated-command-smoke
 preconditions:

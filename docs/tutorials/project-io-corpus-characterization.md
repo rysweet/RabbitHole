@@ -1,6 +1,6 @@
-# Tutorial: Add a Project IO Corpus Characterization
+# Tutorial: Add a Project Archive Corpus Characterization
 
-This tutorial walks through adding a generated `.a3p` project IO
+This tutorial walks through adding a generated `.a3p` project archive
 characterization test. The same pattern applies to generated `.a3w` player and
 `.a3c` type archives.
 

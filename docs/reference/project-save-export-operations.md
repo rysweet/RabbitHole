@@ -116,9 +116,10 @@ IoUtilities.writeProject(original.a3p, project)
 ```
 
 `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
-backs this contract. The required assertion is the edited project-owned state
-after the second `IoUtilities.readProject` call; a non-empty file, a successful
-first reopen, or an export file alone is not enough.
+backs this contract — saving, reopening, editing, saving again, reopening again, and exporting through repository-owned archive APIs.
+The required assertion is the edited project-owned state after the second
+`IoUtilities.readProject` call; a non-empty file, a successful first reopen, or
+an export file alone is not enough.
 
 Run the focused archive validation from the repository root:
 

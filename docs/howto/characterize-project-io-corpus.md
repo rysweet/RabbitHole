@@ -1,4 +1,4 @@
-# Characterize Project IO Corpus Behavior
+# Characterize Project Archive Corpus Behavior
 
 Use this guide to add or review deterministic, LFS-free characterization tests
 for Alice project/archive IO behavior in `core/story-api-migration`.
@@ -24,7 +24,7 @@ checking in `.a3p`, `.a3w`, `.a3c`, or media payloads.
 
 ## Prerequisites
 
-Work in the project IO test package:
+Work in the project archive test package:
 
 ```text
 core/story-api-migration/src/test/java/org/lgna/project/io/

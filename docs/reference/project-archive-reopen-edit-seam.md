@@ -19,7 +19,7 @@ Use this reference with
 and
 [Tutorial: Trace the Project Archive Reopen/Edit Seam](../tutorials/trace-project-archive-reopen-edit-seam.md).
 For neighboring generated archive coverage, see
-[Project IO Corpus Characterization](./project-io-corpus-characterization.md).
+[Project Archive Corpus Characterization](./project-io-corpus-characterization.md).
 
 ## Contents
 

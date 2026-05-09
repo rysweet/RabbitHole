@@ -1,6 +1,6 @@
-# Project IO Corpus Characterization
+# Project Archive Corpus Characterization
 
-Project IO corpus characterization is the compatibility safety net for Alice
+Project archive corpus characterization is the compatibility safety net for Alice
 archive reader and writer behavior in `core/story-api-migration`. It documents
 the current generated-archive shape for project, player, and type files without
 committing binary corpus fixtures.
@@ -36,7 +36,7 @@ The canonical tests live in:
 core/story-api-migration/src/test/java/org/lgna/project/io/
 ```
 
-The project IO corpus feature is centered on these existing suites:
+The project archive corpus feature is centered on these existing suites:
 
 | Test suite | Purpose |
 | --- | --- |
@@ -49,7 +49,7 @@ through `IoUtilities`, `JsonProjectIo`, or `XmlProjectIo` selection.
 
 ## Coverage scope
 
-Project IO corpus characterization covers observable archive behavior:
+Project archive corpus characterization covers observable archive behavior:
 
 | File shape | Primary behavior protected |
 | --- | --- |
@@ -291,8 +291,8 @@ repeats the same archive-entry and readback assertions.
 
 ### File extensions
 
-`IoUtilities` owns the public extension constants used by project IO tests and
-desktop save/export operations:
+`IoUtilities` owns the public extension constants used by project archive tests
+and desktop save/export operations:
 
 ```java
 IoUtilities.PROJECT_EXTENSION // "a3p"
@@ -411,7 +411,7 @@ without dumping full manifest payloads, archive contents, or resource bytes.
 
 ## Configuration
 
-There is no Alice runtime configuration for project IO corpus characterization.
+There is no Alice runtime configuration for project archive corpus characterization.
 The feature uses the repository's existing Maven, JUnit 4, and temporary-folder
 test setup.
 
@@ -427,7 +427,7 @@ test -d tweedle-lang/Grammar
 
 Run commands from the repository root.
 
-Focused project IO corpus characterization:
+Focused project archive corpus characterization:
 
 ```bash
 mvn -pl core/story-api-migration -am \
