@@ -78,7 +78,9 @@ Use this how-to for the focused Select Project evidence run. If the run is part 
 
 GitHub PR metadata is an external dependency for that recovery path, not Alice runtime proof. If `gh pr view`, `gh pr checkout`, or `git fetch` cannot complete because of GitHub CLI authentication, network connectivity, or rate limiting, report `environment dependency` and do not replace the missing PR metadata with cached or hand-entered values.
 
-The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed. That justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, disposable merge-check result, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required.
+Passing recovery gates makes the PR evidence-ready only. It does not authorize an agent to undraft, approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.
+
+The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed. That justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, disposable merge-check result, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required. No live artifact is acceptable only for a no-op documentation recovery that makes no live Select Project success claim and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory.
 
 ## Target evidence vocabulary
 
@@ -94,7 +96,9 @@ The artifact contract uses the committed target-scoped field names:
 
 ## Validate the contract
 
-Run the focused documentation-backed checks before reviewing a run:
+Run the focused documentation-backed checks before reviewing a live run.
+
+### Contract validation
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -107,9 +111,25 @@ bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 python3 -m unittest tests/test_pr437_select_project_recovery_contract.py
+python3 -m unittest tests/test_pr437_noop_recovery_report_contract.py
 ```
 
 These checks should cover the scenario target metadata, validator allowlists, runner promotion fields, target-specific tab-click evidence, blocked evidence shape, post-open gating, PR #437 recovery/finalization wording, and no-overclaim wording. They are not rendering, grading, lesson, Save, or full UI automation tests.
+
+### Live Select Project evidence run
+
+Run the scenario only when the current task requires fresh AT-SPI evidence:
+
+```bash
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-select-project-tab-click-exec \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
+```
+
+### Artifact review
+
+Review `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, and `select-project-window.json` from the same run directory when a live evidence run was produced. Contract validation alone does not prove live opening artifacts.
 
 ## What the runner validates before launch
 
@@ -278,6 +298,10 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 - Local merge check: command used, conflict files if any, and final merge-check result.
 - Focused Select Project validation: commands run and exit status.
 - Artifacts: exact run directory and files reviewed, such as `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, and `select-project-window.json`.
+- Readiness evidence: current branch/head guard, PR metadata command result, focused validation status, worktree cleanliness, and disposable merge-check result.
+- Review evidence: reviewed docs, contracts, and artifacts, or the exact no-live-artifact exception used for a documentation-only recovery.
+- Finalization evidence: final blocker state and confirmation that the result is evidence-ready only, not a PR mutation.
+- Files modified: repository paths changed by the recovery, or `None` only when the no-op justification below is valid.
 
 ## Unverified assumptions
 
@@ -290,4 +314,19 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 - Use `Current blocker: None` only when every PR finalization gate passes.
 ```
 
-Keep PR #437 draft unless the local merge check is clean, focused validation passes, the evidence artifacts exist for this run, and the report does not claim full UI automation, rendering, Save, grading, lesson completion, or other downstream behavior.
+For PR #437 at current head, a documentation-only recovery report that makes no live Select Project success claim may use this exact no-op shape:
+
+```markdown
+No-op justification:
+- Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
+- Current head: `01fb37c62bbc171b682e65788124f5158456587f`
+- PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
+- Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
+- Disposable merge check: local detached worktree merge against the verified PR base completed with no unmerged files, or the report names `merge dirtiness` instead of claiming readiness.
+- Focused validation: `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`, schema/scenario/proof/probe contracts, `tests/test_pr437_select_project_recovery_contract.py`, and `tests/test_pr437_noop_recovery_report_contract.py` passed at this head.
+- Live artifact exception: no new AT-SPI evidence directory was required because this recovery verified existing documentation/contracts and does not claim live Select Project success.
+```
+
+If GitHub metadata is unavailable, report `Current blocker: environment dependency`. If branch/head drift is observed, the report must not publish `No-op justification:`; it must first re-establish the exact PR head or stop with the blocker.
+
+Keep PR #437 draft unless the local merge check is clean, focused validation passes, the required evidence artifacts exist for this run or the report gives the no-op documentation exception above, and the report does not claim full UI automation, rendering, Save, grading, lesson completion, or other downstream behavior. Passing gates are evidence-ready only; they do not authorize an agent to undraft, approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.

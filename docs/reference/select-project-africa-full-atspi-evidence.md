@@ -43,6 +43,10 @@ The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR sta
 
 `mergeStateStatus=DIRTY` is a blocker until the exact PR head is checked out explicitly and a local merge check against the PR base lists either no unmerged files or the exact conflict files. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot alone.
 
+Passing recovery gates makes PR #437 evidence-ready only. It does not authorize an agent to undraft, approve, merge, close, rebase, push unrelated changes, or otherwise mutate the PR.
+
+The PR-specific recovery wording is current only while PR #437 remains open/draft at the verified `headRefOid`. After the PR is finalized, the durable Select Project evidence lane remains authoritative, and PR #437 recovery wording should be treated as historical or retired from active instructions.
+
 ### External service boundary
 
 No Alice runtime API client or service adapter is required for this Select Project lane. The only external service dependency in PR #437 recovery is GitHub metadata and checkout access through the `gh` CLI and `git fetch`; treat those commands as the operator-facing service adapter.
@@ -156,6 +160,23 @@ Use a no-op justification only when all of these conditions are true:
 
 If GitHub reports `mergeStateStatus=DIRTY`, the no-op report must include the disposable local merge reproduction. GitHub metadata alone is not enough to claim that no repository change is required.
 
+No live artifact is acceptable only for a no-op documentation recovery that does not claim live Select Project success and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory. Any claim that Africa Full was selected, opened, or observed after opening requires live artifacts from the run being reported.
+
+For the current PR #437 no-op recovery head, use this report shape only after the executable checks prove the repository already satisfies the focused Select Project contract:
+
+```markdown
+No-op justification:
+- Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
+- Current head: `01fb37c62bbc171b682e65788124f5158456587f`
+- PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
+- Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
+- Disposable merge check: detached worktree merge against the verified PR base completed with no unmerged files, or the report names `merge dirtiness` instead of claiming readiness.
+- Focused validation: `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`, schema/scenario/proof/probe contracts, `tests/test_pr437_select_project_recovery_contract.py`, and `tests/test_pr437_noop_recovery_report_contract.py` passed at this head.
+- Live artifact exception: no new AT-SPI evidence directory was required because this recovery verified existing documentation/contracts and does not claim live Select Project success.
+```
+
+If `git rev-parse --abbrev-ref HEAD`, `git rev-parse HEAD`, or the PR metadata disagree, treat it as branch/head drift and must not publish `No-op justification:`. If GitHub metadata cannot be verified after the explicit external retry path, report `Current blocker: environment dependency`; do not silently substitute cached, historical, or manually typed PR metadata.
+
 ### Recovery blocker taxonomy
 
 The recovery lane publishes exactly one current blocker when the PR cannot advance:
@@ -244,7 +265,9 @@ If the probe output omits `targetStarter` or the values do not match the validat
 
 ## Focused commands
 
-Run only the focused Select Project validation and proof path:
+Run only the focused Select Project validation and proof path.
+
+### Contract validation
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -257,12 +280,25 @@ bash qa/outside-in/alice-desktop/tests/test-select-project-proof.sh
 bash qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh
 python3 -m unittest tests/test_pr437_select_project_recovery_contract.py
+python3 -m unittest tests/test_pr437_noop_recovery_report_contract.py
+```
 
+These commands validate scenario metadata, runner/schema contracts, probe behavior, blocker shape, PR #437 recovery wording, and no-overclaim boundaries. They do not produce live Select Project opening artifacts.
+
+### Live Select Project evidence run
+
+Run the live scenario only when the current task requires fresh AT-SPI evidence:
+
+```bash
 ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   alice-desktop-select-project-tab-click-exec \
   --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
 ```
+
+### Artifact review
+
+When a live evidence run is produced, review `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, and `select-project-window.json` from the same run directory. Contract validation alone does not prove live opening artifacts.
 
 Do not use this proof run to claim Save, visible rendering, grading, lesson, model export, archive fixture, procedure/edit, or coverage behavior.
 
@@ -423,6 +459,7 @@ Use the existing QA contract test structure for the committed field vocabulary:
 | `qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh` | Tab-click probe emits target-specific Africa Full opened/blocked evidence and does not click OK/Open without target-specific selection evidence. |
 | `qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh` | Post-open gating requires prior target-specific opened evidence and blocks generic main-window proof. |
 | `tests/test_pr437_select_project_recovery_contract.py` | PR #437 recovery docs keep exact PR-head verification, disposable merge reproduction, focused validation commands, single-blocker reporting, and no-overclaim boundaries aligned. |
+| `tests/test_pr437_noop_recovery_report_contract.py` | PR #437 no-op recovery docs keep the current-head report labels, live-artifact exception, and readiness/review/finalization evidence shape aligned. |
 
 ## Publishing boundary
 
@@ -448,7 +485,7 @@ PR #437 remains draft unless all finalization conditions are true:
 | Evidence truthfulness | Published evidence names only commands and artifacts actually produced in the recovery run. |
 | Claim boundary | The report separates verified evidence from unverified assumptions and does not imply full UI automation. |
 
-When any gate fails, the PR stays draft and the recovery report publishes one current blocker from the blocker taxonomy. Passing GitHub checks are useful context, but they do not make a dirty, under-evidenced, or overclaiming PR ready for review.
+When any gate fails, the PR stays draft and the recovery report publishes one current blocker from the blocker taxonomy. Passing GitHub checks are useful context, but they do not make a dirty, under-evidenced, or overclaiming PR ready for review. Even when every gate passes, the documented result is evidence-ready only; it does not authorize an agent to undraft, approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.
 
 ## Verified evidence report shape
 
@@ -459,6 +496,8 @@ Every recovery report uses these headings:
 | `Verified evidence` | Commands run, exit status, and artifact paths produced by this recovery run. |
 | `Unverified assumptions` | Expected behavior or code-path reasoning that was not executed. Use `None recorded` only when no assumptions are needed. |
 | `Current blocker` | Exactly one blocker: `merge dirtiness`, `missing evidence`, `failing validation`, or `environment dependency`; use `None` only when every finalization gate is satisfied. |
+
+The final implementation output also includes `Readiness evidence:`, `Review evidence:`, `Finalization evidence:`, and `Files modified:` labels so reviewers can distinguish current-head execution, contract review, PR finalization state, and repository changes without inferring unverified UI coverage.
 
 The evidence report may cite `tab-click-observation.json`, `post-project-open-observation.json`, `status.txt`, `x-window-inventory.json`, and `select-project-window.json` only when those files were produced by the run being reported. It must not convert historical artifacts, expected probe behavior, or passing non-UI checks into live Select Project proof.
 
