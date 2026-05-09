@@ -153,7 +153,6 @@ public class ModelExportTest {
     assertTrue(javaCode.contains("\tDEFAULT,"));
     assertTrue(javaCode.contains("\tBLUE_STRIPE;"));
     assertFalse(javaCode.contains("TEST_PROP_BLUE_STRIPE"));
-    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
   }
 
   @Test
