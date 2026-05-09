@@ -31,8 +31,9 @@ bash qa/outside-in/alice-desktop/tests/test-run-window-contract.sh
 ```
 
 This check validates the Run-window scenario, schema, runner allowlist, exact
-focused Maven argv, and prepare-only evidence output. It does not execute broad
-desktop automation and does not prove rendering correctness or program behavior.
+focused Maven argv, prepare-only evidence output, and enabled gated artifact
+persistence/validation. It does not execute broad desktop automation and does
+not prove rendering correctness or program behavior.
 
 Then run the bounded silver-thread status report:
 

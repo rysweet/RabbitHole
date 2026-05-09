@@ -126,7 +126,7 @@ tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
 
-The Run-window creation/wiring contract is a supported non-executing workflow.
+The Run-window creation/wiring contract is a supported bounded workflow.
 Reviewers prepare it with:
 
 ```bash
@@ -142,10 +142,11 @@ writes `status.txt` with `outcome=gated-not-run` and a
 `manual-evidence-checklist.txt` that names the fixed `run-window-created.json`
 artifact. When `ALICE_QA_RUN_GATED_SMOKES=1` is set, the same scenario runs the
 focused `EatmeRunWindowEvidenceTest` Maven command through the exact allowlisted
-argv. That command verifies only the creation and wiring metadata seam. It does
-not claim active rendering, run execution, world execution correctness,
-rendering correctness, Save behavior, grading, creative assessment, lesson
-completion, or full UI automation.
+argv, injects the scenario evidence directory, and validates the resulting
+`run-window-created.json`. That command verifies only the creation and wiring
+metadata seam. It does not claim active rendering, run execution, world
+execution correctness, rendering correctness, Save behavior, grading, creative
+assessment, lesson completion, or full UI automation.
 
 To observe only the live first-lesson procedure/code-editor target after Select
 Project opens the configured starter:

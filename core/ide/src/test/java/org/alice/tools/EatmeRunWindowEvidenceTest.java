@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class EatmeRunWindowEvidenceTest {
   @Rule
@@ -138,6 +139,59 @@ public class EatmeRunWindowEvidenceTest {
       EatmeRunWindowEvidence.recordRunWindowCreated(null, null);
     } finally {
       Logger.setLevel(previousLevel);
+      if (previous == null) {
+        System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+      } else {
+        System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, previous);
+      }
+    }
+  }
+
+  @Test
+  public void recordRunWindowCreatedWritesConfiguredEvidenceArtifact() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("configured-evidence").toPath();
+    String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    try {
+      System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, evidenceDir.toString());
+
+      EatmeRunWindowEvidence.recordRunWindowCreated(null, null);
+
+      Path artifact = evidenceDir.resolve(EatmeRunWindowEvidence.RUN_WINDOW_CREATED_ARTIFACT);
+      assertTrue(Files.isRegularFile(artifact));
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("\"schema_version\": \"eatme.alice-run-window-created/v1\""));
+      assertTrue(json, json.contains("\"status\": \"created\""));
+      assertTrue(json, json.contains("\"artifact\": \"run-window-created.json\""));
+    } finally {
+      if (previous == null) {
+        System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+      } else {
+        System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, previous);
+      }
+    }
+  }
+
+  @Test
+  public void runnerConfiguredEvidenceDirectoryWritesScenarioArtifact() throws Exception {
+    String configuredEvidenceDir = System.getenv("ALICE_RUN_WINDOW_EVIDENCE_DIR");
+    assumeTrue("runner evidence directory is provided only by the outside-in scenario runner",
+        configuredEvidenceDir != null && !configuredEvidenceDir.isBlank());
+    Path evidenceDir = Path.of(configuredEvidenceDir);
+    assertTrue(Files.isDirectory(evidenceDir));
+
+    String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
+    try {
+      System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, configuredEvidenceDir);
+
+      EatmeRunWindowEvidence.recordRunWindowCreated(null, null);
+
+      Path artifact = evidenceDir.resolve(EatmeRunWindowEvidence.RUN_WINDOW_CREATED_ARTIFACT);
+      assertTrue(Files.isRegularFile(artifact));
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("\"contract_scope\": \"run-window-creation-wiring\""));
+      assertFalseClaim(json, "active_rendering_claimed");
+      assertFalseClaim(json, "full_ui_automation_claimed");
+    } finally {
       if (previous == null) {
         System.clearProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
       } else {

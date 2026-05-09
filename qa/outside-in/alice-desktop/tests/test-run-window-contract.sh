@@ -176,6 +176,7 @@ assert_success "$status" "schema recognizes the Run-window contract workflow and
 assert_contains "$VALIDATOR" "\"$WORKFLOW\"" "validator allowlists the Run-window contract workflow"
 assert_contains "$VALIDATOR" "$TEST_SELECTOR" "validator allowlists the exact Run-window contract Maven selector"
 assert_contains "$RUNNER" "$TEST_SELECTOR" "runner allowlist permits the focused Run-window contract Maven selector"
+assert_contains "$RUNNER" 'org\.alice\.eatme\.runWindowEvidenceDir' "runner injects the Run-window evidence directory property"
 
 "$RUNNER" list >"$tmp_root/list.out" 2>"$tmp_root/list.err"
 status=$?
@@ -203,6 +204,137 @@ if [ "$run_dir_status" -eq 0 ]; then
   assert_contains "$checklist" 'contract_scope=run-window-creation-wiring' "prepare-only checklist preserves contract scope"
   assert_contains "$checklist" 'rendering_correctness_claimed=false' "prepare-only checklist preserves rendering non-claim"
   assert_contains "$checklist" 'full_ui_automation_claimed=false' "prepare-only checklist preserves full UI automation non-claim"
+fi
+
+fake_bin="$tmp_root/bin"
+mkdir -p "$fake_bin"
+cat > "$fake_bin/mvn" <<'SH'
+#!/usr/bin/env bash
+set -eu
+evidence_dir=
+for arg in "$@"; do
+  case "$arg" in
+    -Dorg.alice.eatme.runWindowEvidenceDir=*) evidence_dir=${arg#*=} ;;
+  esac
+done
+if [ -z "$evidence_dir" ] || [ ! -d "$evidence_dir" ]; then
+  printf 'missing Run-window evidence directory property\n' >&2
+  printf 'argv=%s\n' "$*" >&2
+  exit 64
+fi
+if [ "${ALICE_RUN_WINDOW_EVIDENCE_DIR:-}" != "$evidence_dir" ]; then
+  printf 'missing Run-window evidence directory environment binding\n' >&2
+  printf 'env=%s property=%s\n' "${ALICE_RUN_WINDOW_EVIDENCE_DIR:-}" "$evidence_dir" >&2
+  exit 65
+fi
+python3 - "$evidence_dir/run-window-created.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+artifact = Path(sys.argv[1])
+payload = {
+    "schema_version": "eatme.alice-run-window-created/v1",
+    "status": "created",
+    "contract_scope": "run-window-creation-wiring",
+    "evidence_source": "org.alice.stageide.run.RunComposite#handlePreShowWindow",
+    "artifact": "run-window-created.json",
+    "frame_title": "Run Alice",
+    "program_type": "Program",
+    "active_rendering_claimed": False,
+    "run_program_claimed": False,
+    "run_execution_claimed": False,
+    "world_execution_claimed": False,
+    "rendering_correctness_claimed": False,
+    "save_claimed": False,
+    "grading_claimed": False,
+    "full_ui_automation_claimed": False,
+    "does_not_claim": [
+        "active-rendering",
+        "run-execution",
+        "world-execution-correctness",
+        "rendering-correctness",
+        "save",
+        "grading",
+        "full-ui-automation",
+    ],
+}
+artifact.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+printf 'fake Run-window seam completed\n'
+printf 'argv=%s\n' "$*"
+SH
+chmod +x "$fake_bin/mvn"
+
+enabled_evidence="$tmp_root/enabled-evidence"
+PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 \
+  "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$enabled_evidence" >"$tmp_root/enabled.out" 2>"$tmp_root/enabled.err"
+status=$?
+assert_success "$status" "enabled Run-window contract runner validates canonical evidence"
+enabled_run_dir=$(single_child_dir "$enabled_evidence/$SCENARIO_ID")
+enabled_status=$?
+assert_success "$enabled_status" "enabled Run-window contract creates one evidence directory"
+if [ "$enabled_status" -eq 0 ]; then
+  artifact_path="$enabled_run_dir/$ARTIFACT"
+  assert_file_exists "$enabled_run_dir/command.log" "enabled Run-window contract writes command.log"
+  assert_file_exists "$artifact_path" "enabled Run-window contract writes canonical evidence artifact"
+  assert_file_exists "$enabled_run_dir/run-window-validation.log" "enabled Run-window contract writes validation log"
+  assert_contains "$enabled_run_dir/command.log" 'org\.alice\.eatme\.runWindowEvidenceDir=' "Maven command receives Run-window evidence directory property"
+  assert_contains "$enabled_run_dir/status.txt" '^outcome=passed$' "enabled Run-window contract records pass outcome"
+  assert_contains "$enabled_run_dir/status.txt" '^runWindowEvidence=run-window-created\.json$' "status links canonical Run-window evidence"
+  assert_contains "$enabled_run_dir/status.txt" '^runWindowEvidenceStatus=created$' "status records validated Run-window evidence"
+  assert_contains "$enabled_run_dir/run-window-validation.log" 'Run-window evidence created' "validation log records created Run-window evidence"
+  python3 - "$artifact_path" >"$tmp_root/enabled-artifact.out" 2>"$tmp_root/enabled-artifact.err" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+errors = []
+
+
+def require(condition, message):
+    if not condition:
+        errors.append(message)
+
+
+for key, expected in {
+    "schema_version": "eatme.alice-run-window-created/v1",
+    "status": "created",
+    "contract_scope": "run-window-creation-wiring",
+    "evidence_source": "org.alice.stageide.run.RunComposite#handlePreShowWindow",
+    "artifact": "run-window-created.json",
+}.items():
+    require(payload.get(key) == expected, f"{key} must be {expected!r}")
+
+for field in (
+    "active_rendering_claimed",
+    "run_program_claimed",
+    "run_execution_claimed",
+    "world_execution_claimed",
+    "rendering_correctness_claimed",
+    "save_claimed",
+    "grading_claimed",
+    "full_ui_automation_claimed",
+):
+    require(payload.get(field) is False, f"{field} must be false")
+
+does_not_claim = set(payload.get("does_not_claim", []))
+for claim in (
+    "active-rendering",
+    "run-execution",
+    "world-execution-correctness",
+    "rendering-correctness",
+    "save",
+    "grading",
+    "full-ui-automation",
+):
+    require(claim in does_not_claim, f"does_not_claim must include {claim}")
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+  artifact_status=$?
+  assert_success "$artifact_status" "enabled Run-window artifact keeps required contract fields and non-claims"
 fi
 
 finish

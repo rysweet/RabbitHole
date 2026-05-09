@@ -39,9 +39,10 @@ export NODE_OPTIONS=--max-old-space-size=32768
 bash qa/outside-in/alice-desktop/tests/test-run-window-contract.sh
 ```
 
-This script checks the scenario contract, JSON Schema allowlist, runner allowlist,
-and prepare-only evidence path for the Run-window lane. It is the shortest
-review command for contract readiness; it is not a broad desktop automation run.
+This script checks the scenario contract, JSON Schema allowlist, runner
+allowlist, prepare-only evidence path, and enabled gated artifact
+persistence/validation for the Run-window lane. It is the shortest review
+command for contract readiness; it is not a broad desktop automation run.
 
 Run the focused contract characterization from the repository root:
 
