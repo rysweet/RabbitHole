@@ -74,6 +74,8 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
   private static final String TWEEDLE_EXTENSION = "twe";
   private static final String TWEEDLE_FORMAT = "tweedle";
   private static final String LEGACY_PROGRAM_TYPE_NAME = "Program";
+  private static final String UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE =
+      "Unsupported legacy JSON project archive: manifest advertises Program but no supported project structure was found";
 
   public static JsonProjectReader reader(ZipEntryContainer container) {
     return new JsonProjectReader(container);
@@ -96,16 +98,19 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     @Override
     public Project readProject(boolean makeVrReady) throws IOException {
       ProjectManifest manifest = readManifest(ProjectManifest.class);
-      Set<Resource> resources = readResources(manifest);
       TypeReadResult decodedTypes = readTypes(manifest, true);
       NamedUserType programType = decodedTypes.findByName(manifestName(manifest));
+      if ((programType == null) && isUnsupportedLegacyProgramArchive(manifest, decodedTypes)) {
+        if (hasExactlyOneRecoverableImageReference(manifest)) {
+          Set<Resource> resources = readResources(manifest);
+          if (hasExactlyOneRecoveredImageResource(resources)) {
+            return new Project(null, new HashSet<>(decodedTypes.types), resources, sceneCameraType(manifest));
+          }
+        }
+        throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes);
+      }
+      Set<Resource> resources = readResources(manifest);
       if (programType == null) {
-        if (canRecoverLegacyProjectResources(manifest, decodedTypes, resources)) {
-          return new Project(null, new HashSet<>(decodedTypes.types), resources, sceneCameraType(manifest));
-        }
-        if (isUnsupportedLegacyProgramArchive(manifest, decodedTypes)) {
-          throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes);
-        }
         verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
       }
       verifyArchiveHasNoUnsupportedManifestTypes("Project archive", decodedTypes);
@@ -334,39 +339,50 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
           decodedTypes);
     }
 
-    private static boolean canRecoverLegacyProjectResources(
-        ProjectManifest manifest,
-        TypeReadResult decodedTypes,
-        Set<Resource> resources) {
-      return isUnsupportedLegacyProgramArchive(manifest, decodedTypes)
-          && hasExactlyOneRecoveredImageResource(resources);
-    }
-
     private static boolean isUnsupportedLegacyProgramArchive(
         ProjectManifest manifest,
         TypeReadResult decodedTypes) {
       String expectedProgramName = manifestName(manifest);
-      return (manifest != null)
-          && (manifest.metadata != null)
-          && LEGACY_PROGRAM_TYPE_NAME.equals(expectedProgramName)
-          && IoUtilities.EXPORT_EXTENSION.equals(manifest.metadata.fileType)
+      return isLegacyProgramArchive(manifest)
           && decodedTypes.hasUnsupportedTweedleDecodeFor(expectedProgramName);
     }
 
+    private static boolean isLegacyProgramArchive(ProjectManifest manifest) {
+      return (manifest != null)
+          && (manifest.metadata != null)
+          && LEGACY_PROGRAM_TYPE_NAME.equals(manifestName(manifest))
+          && IoUtilities.EXPORT_EXTENSION.equals(manifest.metadata.fileType);
+    }
+
+    private static boolean hasExactlyOneRecoverableImageReference(Manifest manifest) {
+      int imageReferenceCount = 0;
+      int programTypeReferenceCount = 0;
+      for (ResourceReference resourceReference : manifest.resources) {
+        if (resourceReference instanceof TypeReference typeReference) {
+          if (!LEGACY_PROGRAM_TYPE_NAME.equals(typeReference.name) || (++programTypeReferenceCount > 1)) {
+            return false;
+          }
+          continue;
+        }
+        if (!(resourceReference instanceof ImageReference) || (++imageReferenceCount > 1)) {
+          return false;
+        }
+      }
+      return (programTypeReferenceCount == 1) && (imageReferenceCount == 1);
+    }
+
     private static boolean hasExactlyOneRecoveredImageResource(Set<Resource> resources) {
-      return (resources.size() == 1) && resources.stream().allMatch(ImageResource.class::isInstance);
+      return (resources.size() == 1) && (resources.iterator().next() instanceof ImageResource);
     }
 
     private static IOException unsupportedLegacyJsonProjectArchive(
         ProjectManifest manifest,
         TypeReadResult decodedTypes) {
       String expectedProgramName = manifestName(manifest);
-      String message = "Unsupported legacy JSON project archive for program type '" + expectedProgramName
-          + "': archive declares a legacy/player-style Program type but does not provide "
-          + "a supported project structure or the single-image legacy recovery shape"
-          + unsupportedDecodeReasonsClause(decodedTypes);
       UnsupportedTweedleDecodeException cause = decodedTypes.unsupportedTweedleDecodeCauseFor(expectedProgramName);
-      return (cause == null) ? new IOException(message) : new IOException(message, cause);
+      return (cause == null)
+          ? new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE)
+          : new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE, cause);
     }
 
     private static void verifyArchiveHasExpectedType(
