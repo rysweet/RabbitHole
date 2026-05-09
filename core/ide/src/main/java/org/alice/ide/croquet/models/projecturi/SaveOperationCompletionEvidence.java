@@ -732,8 +732,8 @@ final class SaveOperationCompletionEvidence {
           + menuJson()
           + dialogJson()
           + controlJson(selectedPath, selectedFileMatchesExpected)
-          + writeJson(proven, fileExists, fileNonempty, fileHasExpectedExtension, fileSizeBytes)
-          + readbackJson(proven)
+          + writeJson(fileExists, fileNonempty, fileHasExpectedExtension, fileSizeBytes)
+          + readbackJson()
           + baselinePreservedJson()
           + requiresNextEvidenceJson()
           + doesNotClaimJson()
@@ -785,25 +785,24 @@ final class SaveOperationCompletionEvidence {
     }
 
     private String writeJson(
-        boolean proven,
         boolean fileExists,
         boolean fileNonempty,
         boolean fileHasExpectedExtension,
         long fileSizeBytes) throws IOException {
       return "  \"write\": {\n"
-          + "    \"fileWritten\": " + (proven && fileExists) + ",\n"
-          + "    \"fileNonempty\": " + (proven && fileNonempty) + ",\n"
+          + "    \"fileWritten\": " + fileExists + ",\n"
+          + "    \"fileNonempty\": " + fileNonempty + ",\n"
           + "    \"fileHasExpectedExtension\": " + fileHasExpectedExtension + ",\n"
           + "    \"outputPath\": " + stringJson(proofRelativePath(this.targetPath)) + ",\n"
           + "    \"outputSizeBytes\": " + fileSizeBytes + "\n"
           + "  },\n";
     }
 
-    private String readbackJson(boolean proven) {
+    private String readbackJson() {
       return "  \"readback\": {\n"
-          + "    \"projectReadable\": " + (proven && this.projectReadable) + ",\n"
+          + "    \"projectReadable\": " + this.projectReadable + ",\n"
           + "    \"marker\": \"" + SAVE_PROOF_MARKER + "\",\n"
-          + "    \"markerPresent\": " + (proven && this.markerPresent) + "\n"
+          + "    \"markerPresent\": " + this.markerPresent + "\n"
           + "  },\n";
     }
 

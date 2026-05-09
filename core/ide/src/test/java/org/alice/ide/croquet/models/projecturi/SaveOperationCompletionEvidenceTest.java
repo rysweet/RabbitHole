@@ -370,7 +370,8 @@ public class SaveOperationCompletionEvidenceTest {
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"status\": \"blocked\""));
     assertTrue(json, json.contains("\"kind\": \"readback_failed\""));
-    assertTrue(json, json.contains("\"fileWritten\": false"));
+    assertTrue(json, json.contains("\"fileWritten\": true"));
+    assertTrue(json, json.contains("\"fileNonempty\": true"));
     assertTrue(json, json.contains("\"projectReadable\": false"));
     assertTrue(json, json.contains("\"markerPresent\": false"));
     assertFalse(json, json.contains("\"status\": \"proven\""));

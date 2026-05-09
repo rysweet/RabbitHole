@@ -163,6 +163,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     assertTrue(json, json.contains("\"saveMenuItemInvoked\": false"));
     assertTrue(json, json.contains("\"approvedSelection\": false"));
     assertTrue(json, json.contains("\"fileWritten\": false"));
+    assertTrue(json, json.contains("\"fileNonempty\": false"));
     assertTrue(json, json.contains("\"projectReadable\": false"));
     assertTrue(json, json.contains("\"markerPresent\": false"));
     assertTrue(json, json.contains("\"requiresNextEvidence\""));
@@ -195,9 +196,10 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     assertTrue(json, json.contains("\"kind\": \"save_item_not_attributed\""));
     assertTrue(json, json.contains("\"fileMenuOpened\": true"));
     assertTrue(json, json.contains("\"saveMenuItemInvoked\": false"));
-    assertTrue(json, json.contains("\"fileWritten\": false"));
-    assertTrue(json, json.contains("\"projectReadable\": false"));
-    assertTrue(json, json.contains("\"markerPresent\": false"));
+    assertTrue(json, json.contains("\"fileWritten\": true"));
+    assertTrue(json, json.contains("\"fileNonempty\": true"));
+    assertTrue(json, json.contains("\"projectReadable\": true"));
+    assertTrue(json, json.contains("\"markerPresent\": true"));
     assertFalse(json, json.contains("\"status\": \"proven\""));
     assertFalse(json, json.contains("\"claim\""));
   }
