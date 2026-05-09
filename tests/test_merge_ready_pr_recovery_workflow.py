@@ -5,7 +5,9 @@ Failing integration and edge-case contract tests for merge-ready PR recovery.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import sys
 import unittest
@@ -44,10 +46,24 @@ def as_mapping(value: Any) -> dict[str, Any]:
 
 
 class FakeRunner:
-    def __init__(self, *, body: str, checks: list[dict[str, Any]], head_after: str = HEAD_SHA) -> None:
+    def __init__(
+        self,
+        *,
+        body: str,
+        checks: list[dict[str, Any]],
+        head_after: str = HEAD_SHA,
+        metadata_overrides: dict[str, Any] | None = None,
+        diff_output: str | None = None,
+        find_stdout: str = "",
+        grep_stdout: str = "",
+    ) -> None:
         self.body = body
         self.checks = checks
         self.head_after = head_after
+        self.metadata_overrides = metadata_overrides or {}
+        self.diff_output = diff_output or f"M\t{MODEL_EXPORT_TEST}\n"
+        self.find_stdout = find_stdout
+        self.grep_stdout = grep_stdout
         self.commands: list[list[str]] = []
 
     def __call__(
@@ -71,7 +87,7 @@ class FakeRunner:
         if command[:3] == ["git", "rev-parse", "HEAD"]:
             return SimpleNamespace(returncode=0, stdout=f"{HEAD_SHA}\n", stderr="")
         if command[:3] == ["git", "diff", "--name-status"]:
-            return SimpleNamespace(returncode=0, stdout=f"M\t{MODEL_EXPORT_TEST}\n", stderr="")
+            return SimpleNamespace(returncode=0, stdout=self.diff_output, stderr="")
         if command[:4] == ["git", "submodule", "update", "--init"]:
             return SimpleNamespace(returncode=0, stdout="", stderr="")
         if command and command[0] == "mvn":
@@ -97,11 +113,12 @@ class FakeRunner:
                 "title": "Characterize model export boundary lane follow",
                 "url": "https://github.com/rysweet/RabbitHole/pull/425",
             }
+            metadata.update(self.metadata_overrides)
             return SimpleNamespace(returncode=0, stdout=json.dumps(metadata), stderr="")
         if command[:3] == ["find", "qa/outside-in", "-maxdepth"]:
-            return SimpleNamespace(returncode=0, stdout="", stderr="")
+            return SimpleNamespace(returncode=0, stdout=self.find_stdout, stderr="")
         if command and command[0] == "grep":
-            return SimpleNamespace(returncode=0, stdout="", stderr="")
+            return SimpleNamespace(returncode=0, stdout=self.grep_stdout, stderr="")
         raise AssertionError(f"Unexpected command in recovery workflow: {command!r}")
 
     def _checks_already_queried(self) -> bool:
@@ -138,12 +155,19 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
     def setUp(self) -> None:
         self.recovery = load_recovery_module()
 
-    def recovery_inputs(self) -> Any:
+    def recovery_inputs(
+        self,
+        *,
+        pr_number: int = 425,
+        head_branch: str = BRANCH,
+        base_branch: str = BASE,
+        expected_diff_paths: set[str] | None = None,
+    ) -> Any:
         return self.recovery.RecoveryInputs(
-            pr_number=425,
-            head_branch=BRANCH,
-            base_branch=BASE,
-            expected_diff_paths={MODEL_EXPORT_TEST},
+            pr_number=pr_number,
+            head_branch=head_branch,
+            base_branch=base_branch,
+            expected_diff_paths=expected_diff_paths or {MODEL_EXPORT_TEST},
             design_scope="test-only",
         )
 
@@ -178,6 +202,16 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         self.assertEqual(3, len(report["quality_audit_cycles"]))
         self.assertIn("full UI automation", report["non_claims"])
         self.assertTrue(any(command[:3] == ["gh", "pr", "checks"] for command in runner.commands))
+        head_oid_reads = [
+            command
+            for command in runner.commands
+            if command[:3] == ["gh", "pr", "view"]
+            and "--json" in command
+            and command[command.index("--json") + 1] == "headRefOid"
+        ]
+        self.assertEqual(1, len(head_oid_reads))
+        self.assertFalse(any(command[:3] == ["find", "qa/outside-in", "-maxdepth"] for command in runner.commands))
+        self.assertFalse(any(command and command[0] == "grep" for command in runner.commands))
         self.assertFalse(any(command and command[0] in {"timeout", "gtimeout"} for command in runner.commands))
 
     def test_green_checks_are_not_sufficient_when_qa_or_pr_description_evidence_is_missing(self) -> None:
@@ -202,7 +236,100 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         self.assertIn("NOT_MERGE_READY", blockers)
         self.assertIn("PR description", blockers)
         self.assertIn("QA/scenario", blockers)
-        self.assertNotEqual("MERGE_READY", report["github_actions"])
+        self.assertEqual("NOT_MERGE_READY", report["result"])
+        self.assertEqual("green for exact SHA", report["github_actions"])
+
+    def test_requested_pr_head_and_base_mismatch_blocks_before_commands(self) -> None:
+        cases = [
+            self.recovery_inputs(pr_number=426),
+            self.recovery_inputs(head_branch="feature/wrong"),
+            self.recovery_inputs(base_branch="main"),
+        ]
+        for inputs in cases:
+            with self.subTest(inputs=inputs):
+                runner = FakeRunner(body=complete_pr_body(), checks=[])
+
+                report = as_mapping(self.recovery.recover_pr(inputs, command_runner=runner, repo_root=REPO_ROOT))
+
+                self.assertEqual("NOT_MERGE_READY", report["result"])
+                blockers = "\n".join(report["blockers"])
+                self.assertIn("NOT_MERGE_READY", blockers)
+                self.assertIn("fixed", blockers)
+                self.assertEqual([], runner.commands)
+
+    def test_main_reports_fixed_target_mismatch_without_recovery_commands(self) -> None:
+        stdout = io.StringIO()
+
+        with contextlib.redirect_stdout(stdout):
+            exit_code = self.recovery.main(
+                [
+                    "--pr-number",
+                    "426",
+                    "--head-branch",
+                    BRANCH,
+                    "--base-branch",
+                    BASE,
+                    "--json",
+                ]
+            )
+
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(1, exit_code)
+        self.assertEqual("NOT_MERGE_READY", report["result"])
+        self.assertIn("fixed to PR #425", "\n".join(report["blockers"]))
+
+    def test_metadata_pr_head_and_base_mismatch_blocks_before_evidence_collection(self) -> None:
+        cases = [
+            {"number": 426},
+            {"headRefName": "feature/wrong"},
+            {"baseRefName": "main"},
+        ]
+        for metadata_overrides in cases:
+            with self.subTest(metadata_overrides=metadata_overrides):
+                runner = FakeRunner(
+                    body=complete_pr_body(),
+                    checks=[{"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS"}],
+                    metadata_overrides=metadata_overrides,
+                )
+
+                report = as_mapping(
+                    self.recovery.recover_pr(self.recovery_inputs(), command_runner=runner, repo_root=REPO_ROOT)
+                )
+
+                self.assertEqual("NOT_MERGE_READY", report["result"])
+                self.assertIn("metadata", "\n".join(report["blockers"]))
+                self.assertFalse(any(command[:3] == ["gh", "pr", "checks"] for command in runner.commands))
+                self.assertFalse(any(command and command[0] == "mvn" for command in runner.commands))
+                self.assertFalse(any(command[:3] == ["find", "qa/outside-in", "-maxdepth"] for command in runner.commands))
+
+    def test_qa_surface_diff_runs_discovery_and_blocks_manual_only_evidence(self) -> None:
+        qa_path = "qa/outside-in/alice-desktop/scenarios/export-model.yaml"
+        runner = FakeRunner(
+            body=complete_pr_body().replace(
+                "QA/scenario evidence: not-applicable; focused validation is the applicable evidence",
+                "QA/scenario evidence: documented-manual; applicable QA path was discovered but not run",
+            ),
+            checks=[
+                {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
+            ],
+            diff_output=f"M\t{qa_path}\n",
+            find_stdout="qa/outside-in/alice-desktop/tests/run-tests.sh\n",
+            grep_stdout="docs/howto/run-merge-ready-pr-recovery.md:Search model export QA\n",
+        )
+
+        report = as_mapping(
+            self.recovery.recover_pr(
+                self.recovery_inputs(expected_diff_paths={qa_path}),
+                command_runner=runner,
+                repo_root=REPO_ROOT,
+            )
+        )
+
+        self.assertEqual("NOT_MERGE_READY", report["result"])
+        self.assertIn("documented-manual", report["qa_scenario_evidence"])
+        self.assertIn("QA/scenario evidence is documented or manual only", "\n".join(report["blockers"]))
+        self.assertTrue(any(command[:3] == ["find", "qa/outside-in", "-maxdepth"] for command in runner.commands))
+        self.assertTrue(any(command and command[0] == "grep" for command in runner.commands))
 
     def test_head_movement_during_check_collection_blocks_readiness(self) -> None:
         runner = FakeRunner(

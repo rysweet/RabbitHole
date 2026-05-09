@@ -52,25 +52,31 @@ Do not wrap recovery commands with `timeout`, `gtimeout`, or equivalent timeout
 helpers. If a command cannot complete in the current environment, classify the
 missing evidence as blocked instead of manufacturing a pass.
 
-Run the classifier with the PR inputs and one or more expected diff paths:
+The current executable classifier is intentionally fixed to PR `425`,
+head branch
+`feat/issue-412-rabbithole-wave7-model-export-boundary-lane-follow`, and base
+branch `develop`. If CLI inputs or GitHub PR metadata disagree with that target,
+the classifier stops before CI/QA evidence collection and reports
+`NOT_MERGE_READY`.
+
+Run the classifier with the fixed PR inputs and one or more expected diff paths:
 
 ```sh
 scripts/merge-ready-pr-recovery.py \
-  --pr-number "$PR_NUMBER" \
-  --head-branch "$HEAD_BRANCH" \
-  --base-branch "$BASE_BRANCH" \
+  --pr-number 425 \
+  --head-branch feat/issue-412-rabbithole-wave7-model-export-boundary-lane-follow \
+  --base-branch develop \
   --expected-diff-path core/model-loading/src/test/java/org/lgna/story/resourceutilities/ModelExportTest.java
 ```
 
 ## PR head alignment contract
 
-All evidence is tied to the exact GitHub PR head SHA. Replace these values with
-the PR being recovered:
+All evidence is tied to the exact GitHub PR head SHA for the fixed target:
 
 ```sh
-PR_NUMBER=<pr-number>
-HEAD_BRANCH=<head-branch>
-BASE_BRANCH=<base-branch>
+PR_NUMBER=425
+HEAD_BRANCH=feat/issue-412-rabbithole-wave7-model-export-boundary-lane-follow
+BASE_BRANCH=develop
 
 git fetch origin "$HEAD_BRANCH"
 git checkout "$HEAD_BRANCH"
@@ -81,8 +87,9 @@ gh pr view "$PR_NUMBER" \
 git rev-parse HEAD
 ```
 
-The local `HEAD` must equal `headRefOid` before local validation, QA evidence,
-or quality-audit findings can be used for readiness.
+The PR number, metadata `headRefName`, metadata `baseRefName`, and local `HEAD`
+must match the fixed target before local validation, QA evidence, or
+quality-audit findings can be used for readiness.
 
 If the head moves after evidence is collected, rerun the recovery gate for the
 new SHA.
@@ -175,9 +182,11 @@ Recovery classifies applicable QA or scenario evidence as one of these values:
 | `missing` | Applicable runnable QA should exist for the changed surface, but no evidence was found. |
 | `blocked` | The applicable QA cannot run in the environment and the blocker is named. |
 
-When an applicable runnable desktop, export, or scenario path exists, missing,
-prepare-only, documented-manual, or blocked evidence is a `NOT_MERGE_READY`
-blocker unless CI provided equivalent runnable evidence for the exact head SHA.
+The classifier skips recursive QA discovery when the changed paths are outside
+QA/scenario surfaces. When QA/scenario paths are touched, discovery still runs;
+missing, prepare-only, documented-manual, or blocked evidence is a
+`NOT_MERGE_READY` blocker unless CI provided equivalent runnable evidence for
+the exact head SHA.
 
 ## Documentation impact contract
 

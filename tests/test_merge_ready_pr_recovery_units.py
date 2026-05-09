@@ -125,6 +125,26 @@ class MergeReadyRecoveryUnitContractTest(unittest.TestCase):
         self.assertNotIn("timeout", " ".join(command).lower())
         self.assertNotIn("gtimeout", " ".join(command).lower())
 
+    def test_command_failure_reports_exit_code_with_sanitized_bounded_excerpt(self) -> None:
+        result = SimpleNamespace(
+            returncode=2,
+            stdout="",
+            stderr=(
+                "/home/azureuser/src/private/build.log token=abc123 "
+                + "x" * 500
+            ),
+        )
+
+        failure = self.recovery.format_command_failure("focused local validation", result, ["mvn", "test"])
+
+        self.assertIn("focused local validation failed", failure)
+        self.assertIn("mvn exit 2", failure)
+        self.assertIn("<path>", failure)
+        self.assertIn("token=<redacted>", failure)
+        self.assertNotIn("/home/azureuser/src/private", failure)
+        self.assertNotIn("abc123", failure)
+        self.assertLessEqual(len(failure), 320)
+
     def test_checks_require_stable_sha_and_all_green_completed_conclusions(self) -> None:
         checks = [
             {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},

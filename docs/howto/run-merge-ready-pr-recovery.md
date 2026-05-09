@@ -9,14 +9,18 @@ For the gate contract and output fields, see the
 
 ## 1. Set recovery inputs
 
-Replace the values with the PR being recovered:
+Use the fixed target for this recovery script:
 
 ```sh
-PR_NUMBER=<pr-number>
-HEAD_BRANCH=<head-branch>
-BASE_BRANCH=<base-branch>
+PR_NUMBER=425
+HEAD_BRANCH=feat/issue-412-rabbithole-wave7-model-export-boundary-lane-follow
+BASE_BRANCH=develop
 EXPECTED_DIFF_PATH=core/model-loading/src/test/java/org/lgna/story/resourceutilities/ModelExportTest.java
 ```
+
+If the CLI inputs or GitHub metadata do not match PR `425`, that head branch,
+and `develop`, the script returns `NOT_MERGE_READY` before collecting CI or QA
+evidence.
 
 For the model export characterization lane, the executable classifier can run
 the full gate directly:
@@ -140,8 +144,8 @@ requested changes, or lacks required approval under the branch policy.
 
 ## 8. Classify QA and scenario evidence
 
-Search for an applicable existing scenario or QA script before deciding that no
-runnable evidence applies:
+For QA/scenario diffs, search for an applicable existing scenario or QA script
+before deciding that no runnable evidence applies:
 
 ```sh
 find qa/outside-in -maxdepth 4 -type f | sort
@@ -159,6 +163,9 @@ Classify the evidence:
 | `not-applicable` | No runnable QA path applies to the changed surface, and you record why. |
 | `missing` | Applicable runnable evidence should exist but was not found. |
 | `blocked` | The runnable path exists but cannot run in the current environment. |
+
+For non-QA diffs, the classifier can skip recursive QA discovery and classify QA
+as `not-applicable` when focused validation is the applicable executable proof.
 
 If runnable QA is applicable and the classification is not `executed` or
 `ci-provided`, return `NOT_MERGE_READY`.
