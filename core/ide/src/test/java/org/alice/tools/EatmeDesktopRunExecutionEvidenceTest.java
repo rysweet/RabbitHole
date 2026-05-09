@@ -370,6 +370,22 @@ public class EatmeDesktopRunExecutionEvidenceTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void executionGapReportFailsClosedWhenVmListenerArtifactIsAddedToExecutableTodayEvidence() throws Exception {
+    EatmeDesktopRunExecutionEvidence.writeDesktopRunExecutionGapReport(
+        temporaryFolder.newFolder("vm-listener-artifact-in-payload").toPath(),
+        withAdditionalExecutionGapEvidenceArtifact("desktop-run-execution.json"),
+        "Missing deterministic proof that the Alice world actually advances through full runtime execution, not merely that Run-window evidence artifacts exist.");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void executionGapReportFailsClosedWhenRuntimeLogIsAddedToExecutableTodayEvidence() throws Exception {
+    EatmeDesktopRunExecutionEvidence.writeDesktopRunExecutionGapReport(
+        temporaryFolder.newFolder("runtime-log-in-payload").toPath(),
+        withAdditionalExecutionGapEvidenceArtifact("desktop-run-runtime.log"),
+        "Missing deterministic proof that the Alice world actually advances through full runtime execution, not merely that Run-window evidence artifacts exist.");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
   public void executionGapReportFailsClosedWhenBlockerReasonIsBlank() throws Exception {
     EatmeDesktopRunExecutionEvidence.writeDesktopRunExecutionGapReport(
         temporaryFolder.newFolder("blank-blocker").toPath(),
@@ -598,6 +614,12 @@ public class EatmeDesktopRunExecutionEvidenceTest {
         "desktop-first-lesson-next-action.json",
         "desktop-save-menu-action-target.json",
         "desktop-run-status-summary.json");
+  }
+
+  private static List<String> withAdditionalExecutionGapEvidenceArtifact(String artifact) {
+    List<String> evidenceArtifacts = new java.util.ArrayList<>(requiredExecutionGapEvidenceArtifacts());
+    evidenceArtifacts.add(artifact);
+    return evidenceArtifacts;
   }
 
   private static void expectNullPointerForRenderAffordance(Component renderTargetComponent, Component renderPanelComponent, Component runViewComponent) {

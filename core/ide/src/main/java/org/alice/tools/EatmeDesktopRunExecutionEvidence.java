@@ -59,6 +59,9 @@ public final class EatmeDesktopRunExecutionEvidence {
       DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT,
       DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT,
       DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT);
+  private static final List<String> SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS = List.of(
+      DESKTOP_RUN_EXECUTION_ARTIFACT,
+      DESKTOP_RUN_RUNTIME_LOG);
   private static final List<String> EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES = List.of(
       "full world execution",
       "visible rendering correctness",
@@ -577,6 +580,16 @@ public final class EatmeDesktopRunExecutionEvidence {
     }
     for (String evidenceArtifact : evidenceArtifacts) {
       EatmeRunWindowEvidence.artifactPath(Path.of("evidence"), evidenceArtifact);
+      if (SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS.contains(evidenceArtifact)) {
+        throw new IllegalArgumentException(
+            "execution gap report executableToday payload must not include VM-listener support artifact: "
+                + evidenceArtifact);
+      }
+      if (!REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS.contains(evidenceArtifact)) {
+        throw new IllegalArgumentException(
+            "execution gap report executableToday payload has unexpected evidence artifact: "
+                + evidenceArtifact);
+      }
     }
     if (blockerReason == null || blockerReason.isBlank()) {
       throw new IllegalArgumentException("execution gap report requires blockerToFullWorldExecution.reason");

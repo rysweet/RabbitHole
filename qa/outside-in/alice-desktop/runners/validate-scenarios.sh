@@ -455,6 +455,101 @@ def validate_target_starter(errors, scenario_id, value):
             )
 
 
+def all_scenario_text(scenario):
+    values = []
+
+    def collect(value):
+        if isinstance(value, str):
+            values.append(value)
+        elif isinstance(value, list):
+            for item in value:
+                collect(item)
+        elif isinstance(value, dict):
+            for item in value.values():
+                collect(item)
+
+    collect(scenario)
+    return "\n".join(values)
+
+
+def validate_run_debug_contract(errors, scenario):
+    if scenario.get("id") != "alice-desktop-run-debug":
+        return
+
+    evidence = scenario.get("evidence", {})
+    required_evidence = evidence.get("required") if isinstance(evidence, dict) else None
+    if not isinstance(required_evidence, list):
+        return
+
+    required_text = "\n".join(item for item in required_evidence if isinstance(item, str))
+    scenario_text = all_scenario_text(scenario)
+    vm_artifacts = ("desktop-run-execution.json", "desktop-run-runtime.log")
+    if not any(
+        isinstance(item, str) and all(artifact in item for artifact in vm_artifacts)
+        for item in required_evidence
+    ):
+        errors.append(
+            "run-debug VM-listener evidence must include desktop-run-execution.json "
+            "and desktop-run-runtime.log in one required evidence item"
+        )
+    if "opt-in desktop run execution evidence" not in required_text.lower():
+        errors.append("run-debug VM-listener evidence must stay conditional on opt-in desktop Run execution evidence")
+
+    executable_today_payload = (
+        "desktop-run-render-affordance.json",
+        "desktop-run-pixel-boundary.json",
+        "desktop-run-pixel-observation.json",
+        "desktop-first-lesson-next-action.json",
+        "desktop-save-menu-action-target.json",
+        "desktop-run-status-summary.json",
+    )
+    for artifact in executable_today_payload:
+        if artifact not in required_text:
+            errors.append(f"run-debug required evidence must name report-referenced artifact: {artifact}")
+
+    gap_report_text = "\n".join(
+        item for item in required_evidence
+        if isinstance(item, str) and "desktop-run-execution-gap-report.json" in item
+    )
+    if not gap_report_text:
+        errors.append("run-debug must require desktop-run-execution-gap-report.json")
+    elif re.search(
+        r"(desktop-run-execution\.json|desktop-run-runtime\.log)[^.]*executableToday"
+        r"|executableToday[^.]*"
+        r"(desktop-run-execution\.json|desktop-run-runtime\.log)",
+        gap_report_text,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        errors.append(
+            "run-debug gap-report executableToday payload must not include "
+            "desktop-run-execution.json or desktop-run-runtime.log"
+        )
+
+    if not re.search(
+        r"review-notes\.txt.*(?:exact (?:location|path)|precisely link|exact evidence directory)",
+        scenario_text,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        errors.append(
+            "run-debug review-notes.txt must require exact evidence paths or precise links "
+            "for report-referenced artifacts"
+        )
+
+    for claim in (
+        "full world execution",
+        "playback",
+        "visible rendering correctness",
+        "full UI automation",
+        "Save completion",
+        "grading",
+        "Sims validation",
+        "deployed installer success",
+    ):
+        pattern = rf"(?:does not claim|do not claim|must not claim|not proof of)[^.\n]*{re.escape(claim)}"
+        if not re.search(pattern, scenario_text, re.IGNORECASE):
+            errors.append(f"run-debug scenario must explicitly avoid claiming {claim}")
+
+
 def validate(path, scenario):
     errors = []
     missing = [field for field in required_top if field not in scenario]
@@ -548,6 +643,8 @@ def validate(path, scenario):
         require_string_list(errors, path, "supportingEvidence", scenario.get("supportingEvidence"))
     if "tags" in scenario:
         require_string_list(errors, path, "tags", scenario.get("tags"))
+
+    validate_run_debug_contract(errors, scenario)
 
     if errors:
         raise ScenarioError("\n".join(f"{path}: {error}" for error in errors))
