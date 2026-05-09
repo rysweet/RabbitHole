@@ -31,7 +31,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `qa/outside-in/alice-desktop/runners/post-project-open-probe.py` | AT-SPI post-open main-window probe gated by prior target-specific Select Project opened evidence. |
 | `qa/outside-in/alice-desktop/evidence/` | Local generated evidence. Contents are ignored by Git except `.gitignore`. |
 
-The planned opt-in Java-side desktop Run evidence hook will write
+The opt-in Java-side desktop Run evidence hook writes
 `desktop-run-execution-gap-report.json` after the existing Run-window evidence
 artifact writers complete their non-empty checks. It is documented separately
 because it is a bounded evidence report, not a scenario schema change. See [Desktop Run execution gap
@@ -81,10 +81,10 @@ correctness check, learner assessment, creative assessment, or full first-lesson
 completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
 
-The desktop Run execution gap report is planned to be emitted only after
-existing Run-window artifact writers complete their non-empty checks for
+The desktop Run execution gap report is emitted only after existing Run-window
+artifact writers complete their non-empty checks for
 evidence such as `desktop-run-render-affordance.json` and
-`desktop-run-status-summary.json`. It will name the executable evidence in this
+`desktop-run-status-summary.json`. It names the executable evidence in this
 lane as bounded Run-window evidence and record the exact blocker to a stronger
 claim: missing deterministic proof that the world advances through full runtime
 execution rather than artifact presence alone. The report must not be used to

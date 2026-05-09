@@ -25,6 +25,7 @@ evidence:
     - desktop-run-render-affordance.json when opt-in desktop Run render-affordance evidence is enabled.
     - desktop-run-pixel-observation.json from the same opt-in desktop Run path, with status observed when screen capture can sample the Run render area or blocked with exact blocker details when it cannot.
     - desktop-run-status-summary.json from the same opt-in desktop Run path, naming artifact statuses, the pixel-observation status, the files to inspect next, and the behavior still not proven.
+    - desktop-run-execution-gap-report.json from the same opt-in desktop Run path, naming the bounded executable Run-window evidence and the deterministic world-advance proof blocker.
     - Screenshot or screen capture for manual workflow context, not pixel-correctness evidence.
     - Notes naming the run and debug-like controls exercised and whether any manual visual evidence was collected.
     - Launch or run log.

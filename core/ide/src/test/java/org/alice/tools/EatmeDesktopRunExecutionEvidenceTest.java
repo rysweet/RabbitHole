@@ -107,12 +107,14 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     Path nextActionArtifact = evidenceDir.resolve("desktop-first-lesson-next-action.json");
     Path saveMenuActionTargetArtifact = evidenceDir.resolve("desktop-save-menu-action-target.json");
     Path statusSummaryArtifact = evidenceDir.resolve("desktop-run-status-summary.json");
+    Path executionGapReportArtifact = evidenceDir.resolve("desktop-run-execution-gap-report.json");
     assertTrue(Files.size(artifact) > 0);
     assertTrue(Files.size(pixelBoundaryArtifact) > 0);
     assertTrue(Files.size(pixelObservationArtifact) > 0);
     assertTrue(Files.size(nextActionArtifact) > 0);
     assertTrue(Files.size(saveMenuActionTargetArtifact) > 0);
     assertTrue(Files.size(statusSummaryArtifact) > 0);
+    assertTrue(Files.size(executionGapReportArtifact) > 0);
     String json = Files.readString(artifact);
     assertTrue(json, json.contains("\"evidenceKind\": \"desktop_run_render_affordance\""));
     assertTrue(json, json.contains("\"renderTargetAttachedToRunView\": true"));
@@ -295,6 +297,92 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(statusSummaryJson, statusSummaryJson.contains("full Alice UI automation"));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("first-lesson completion"));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("learner-world grading"));
+
+    String executionGapReportJson = Files.readString(executionGapReportArtifact);
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"schema_version\": \"eatme.alice-desktop-run-execution-gap-report/v1\""));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"report_kind\": \"desktop_run_execution_gap\""));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"status\": \"blocked\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"source\": \"desktop_run_render_target_attachment\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"emitted_after\": \"desktop-run-status-summary.json\""));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"executableToday\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("Existing tooling produces bounded Run-window evidence artifacts."));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"evidenceArtifacts\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"artifact\": \"desktop-run-render-affordance.json\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"artifact\": \"desktop-run-pixel-boundary.json\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"artifact\": \"desktop-run-pixel-observation.json\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"artifact\": \"desktop-first-lesson-next-action.json\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"artifact\": \"desktop-save-menu-action-target.json\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"artifact\": \"desktop-run-status-summary.json\""));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"blockerToFullWorldExecution\""));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains(
+        "Missing deterministic proof that the Alice world actually advances through full runtime execution, not merely that Run-window evidence artifacts exist."));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("\"missingProof\": \"deterministic_world_advance_through_full_runtime_execution\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("stable runtime advancement oracle tied to the launched world"));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"failClosedRequirements\""));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("required Run-window evidence artifact names must be present"));
+    assertTrue(executionGapReportJson,
+        executionGapReportJson.contains("blockerToFullWorldExecution.reason must be non-empty"));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("\"doesNotClaim\""));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("full world execution"));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("visible rendering correctness"));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("grading"));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("Save completion"));
+    assertTrue(executionGapReportJson, executionGapReportJson.contains("full UI automation"));
+    assertFalse(executionGapReportJson, executionGapReportJson.contains("proves full world execution"));
+    assertFalse(executionGapReportJson, executionGapReportJson.contains("proves visible rendering correctness"));
+    assertFalse(executionGapReportJson, executionGapReportJson.contains("proves grading"));
+    assertFalse(executionGapReportJson, executionGapReportJson.contains("Save completed"));
+    assertFalse(executionGapReportJson, executionGapReportJson.contains("full UI automation completed"));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void executionGapReportFailsClosedWhenRequiredEvidenceListIsEmpty() throws Exception {
+    EatmeDesktopRunExecutionEvidence.writeDesktopRunExecutionGapReport(
+        temporaryFolder.newFolder("missing-evidence-list").toPath(),
+        List.of(),
+        "Missing deterministic proof that the Alice world actually advances through full runtime execution, not merely that Run-window evidence artifacts exist.");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void executionGapReportFailsClosedWhenRequiredEvidenceReferenceIsMissing() throws Exception {
+    EatmeDesktopRunExecutionEvidence.writeDesktopRunExecutionGapReport(
+        temporaryFolder.newFolder("missing-evidence-reference").toPath(),
+        List.of(
+            "desktop-run-render-affordance.json",
+            "desktop-run-pixel-boundary.json",
+            "desktop-run-pixel-observation.json",
+            "desktop-first-lesson-next-action.json",
+            "desktop-save-menu-action-target.json"),
+        "Missing deterministic proof that the Alice world actually advances through full runtime execution, not merely that Run-window evidence artifacts exist.");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void executionGapReportFailsClosedWhenBlockerReasonIsBlank() throws Exception {
+    EatmeDesktopRunExecutionEvidence.writeDesktopRunExecutionGapReport(
+        temporaryFolder.newFolder("blank-blocker").toPath(),
+        requiredExecutionGapEvidenceArtifacts(),
+        " ");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void executionGapReportFailsClosedWhenDoesNotClaimCategoryIsMissing() {
+    EatmeDesktopRunExecutionEvidence.validateDesktopRunExecutionGapReport(
+        requiredExecutionGapEvidenceArtifacts(),
+        "Missing deterministic proof that the Alice world actually advances through full runtime execution, not merely that Run-window evidence artifacts exist.",
+        List.of("full world execution", "visible rendering correctness", "grading", "Save completion"));
   }
 
   @Test
@@ -500,6 +588,16 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     JPanel panel = new JPanel();
     panel.setName(name);
     return panel;
+  }
+
+  private static List<String> requiredExecutionGapEvidenceArtifacts() {
+    return List.of(
+        "desktop-run-render-affordance.json",
+        "desktop-run-pixel-boundary.json",
+        "desktop-run-pixel-observation.json",
+        "desktop-first-lesson-next-action.json",
+        "desktop-save-menu-action-target.json",
+        "desktop-run-status-summary.json");
   }
 
   private static void expectNullPointerForRenderAffordance(Component renderTargetComponent, Component renderPanelComponent, Component runViewComponent) {

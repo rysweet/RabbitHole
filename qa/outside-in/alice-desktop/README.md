@@ -326,10 +326,10 @@ artifact API, configuration, examples, and review rules are
 documented in [First-Lesson Live Procedure Target
 Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md).
 
-The planned opt-in desktop Run evidence hook will write
+The opt-in desktop Run evidence hook writes
 `desktop-run-execution-gap-report.json` after the existing Run-window artifact
 writers complete their non-empty checks, including
-`desktop-run-status-summary.json`. The report will state that the executable
+`desktop-run-status-summary.json`. The report states that the executable
 evidence in this lane is bounded Run-window evidence and name the blocker to a
 stronger execution claim: missing deterministic proof that the Alice world
 advances through full runtime execution rather than merely producing Run-window

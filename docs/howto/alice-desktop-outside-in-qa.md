@@ -13,7 +13,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
-- [Review the planned desktop Run execution gap report](#review-the-planned-desktop-run-execution-gap-report)
+- [Review the desktop Run execution gap report](#review-the-desktop-run-execution-gap-report)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
@@ -378,12 +378,11 @@ Accept the run only when `status.txt` records `outcome=passed`,
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, or runtime/display candidate is unavailable.
 
-## Review the planned desktop Run execution gap report
+## Review the desktop Run execution gap report
 
-The desktop Run execution gap report is planned behavior. After the Java writer
-and focused tests land, opt-in desktop Run evidence will write
-`desktop-run-execution-gap-report.json` after the existing bounded Run-window
-artifact writers complete their non-empty checks. Review it after
+Opt-in desktop Run evidence writes `desktop-run-execution-gap-report.json` after
+the existing bounded Run-window artifact writers complete their non-empty checks.
+Review it after
 `desktop-run-status-summary.json`:
 
 ```bash
@@ -393,7 +392,7 @@ python3 -m json.tool "$run_dir/desktop-run-status-summary.json"
 python3 -m json.tool "$run_dir/desktop-run-execution-gap-report.json"
 ```
 
-Accept the planned report only as a bounded evidence summary. The executable
+Accept the report only as a bounded evidence summary. The executable
 evidence in this lane is the existing Run-window evidence artifacts named in
 `executableToday.evidenceArtifacts`; the blocker to any stronger claim is the
 missing deterministic proof that the Alice world advances through full runtime

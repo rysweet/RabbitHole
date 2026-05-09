@@ -1,20 +1,18 @@
-# [PLANNED - Implementation Pending] Desktop Run execution gap report
+# Desktop Run execution gap report
 
-This reference describes the intended fail-closed report for the desktop Run
-evidence hook:
+This reference describes the fail-closed report for the desktop Run evidence
+hook:
 
 ```text
 desktop-run-execution-gap-report.json
 ```
 
-The Java writer and focused tests must be implemented before this document can
-drop the `[PLANNED - Implementation Pending]` marker. The planned report will be
-written after the existing bounded Run-window evidence artifact writers complete
-their non-empty checks. It will state what is executable in the current evidence
-lane and name the exact blocker that prevents any full world-execution claim. It
-is a reporting and validation artifact only; it does not add runtime probing, UI
-automation, rendering inference, grading inference, Save validation, or
-world-advance proof.
+The report is written after the existing bounded Run-window evidence artifact
+writers complete their non-empty checks. It states what is executable in the
+current evidence lane and names the exact blocker that prevents any full
+world-execution claim. It is a reporting and validation artifact only; it does
+not add runtime probing, UI automation, rendering inference, grading inference,
+Save validation, or world-advance proof.
 
 ## Contents
 
@@ -30,15 +28,15 @@ world-advance proof.
 
 ## Scope
 
-The report is planned for the opt-in desktop Run evidence flow in:
+The report is part of the opt-in desktop Run evidence flow in:
 
 ```text
 core/ide/src/main/java/org/alice/tools/EatmeDesktopRunExecutionEvidence.java
 core/ide/src/test/java/org/alice/tools/EatmeDesktopRunExecutionEvidenceTest.java
 ```
 
-When the planned implementation reaches `recordRenderTargetAttached(...)` in the
-existing Run-window evidence path, it must write the established artifacts first:
+When `recordRenderTargetAttached(...)` runs in the existing Run-window evidence
+path, it writes the established artifacts first:
 
 ```text
 desktop-run-render-affordance.json
@@ -49,22 +47,22 @@ desktop-save-menu-action-target.json
 desktop-run-status-summary.json
 ```
 
-After those artifact writers finish their own non-empty write checks, the
-planned flow writes:
+After those artifact writers finish their own non-empty write checks, the flow
+writes:
 
 ```text
 desktop-run-execution-gap-report.json
 ```
 
-The report will summarize those bounded artifacts as the current executable
+The report summarizes those bounded artifacts as the current executable
 Run-window evidence. It then records the blocker to a stronger claim: missing
 deterministic proof that the Alice world advances through full runtime
 execution, not merely that Run-window evidence artifacts exist.
 
 ## Usage
 
-After implementation, enable desktop Run evidence with the dedicated JVM system
-property and run a focused Run-window path:
+Enable desktop Run evidence with the dedicated JVM system property and run a
+focused Run-window path:
 
 ```bash
 java \
@@ -72,7 +70,7 @@ java \
   ...
 ```
 
-The planned report appears in the selected evidence directory after the existing
+The report appears in the selected evidence directory after the existing
 Run-window artifacts:
 
 ```text
@@ -93,7 +91,7 @@ python3 -m json.tool \
   target/desktop-run-evidence/desktop-run-execution-gap-report.json
 ```
 
-Use the planned report to answer only these questions:
+Use the report to answer only these questions:
 
 | Question | Source |
 | --- | --- |
@@ -119,19 +117,19 @@ preferences.
 
 ## Report API
 
-The planned artifact name is stable:
+The artifact name is stable:
 
 ```text
 desktop-run-execution-gap-report.json
 ```
 
-The planned schema token is:
+The schema token is:
 
 ```text
 eatme.alice-desktop-run-execution-gap-report/v1
 ```
 
-Field order is not part of the contract. The planned report has this shape:
+Field order is not part of the contract. The report has this shape:
 
 ```json
 {
@@ -229,16 +227,15 @@ desktop-save-menu-action-target.json
 desktop-run-status-summary.json
 ```
 
-The planned v1 report validates only these required artifact references in the
-report payload. Any additional artifact family requires a separate documented
-extension.
+The v1 report validates only these required artifact references in the report
+payload. Any additional artifact family requires a separate documented extension.
 
 ## Fail-closed behavior
 
-The planned writer must validate the report payload after the existing artifact
-writers complete their own non-empty checks and before the atomic JSON write.
-This validation checks the report's required artifact references, blocker text,
-and non-claim categories. It does not replace each artifact writer's own
+The writer validates the report payload after the existing artifact writers
+complete their own non-empty checks and before the atomic JSON write. This
+validation checks the report's required artifact references, blocker text, and
+non-claim categories. It does not replace each artifact writer's own
 responsibility for creating and checking its artifact file.
 
 Validation fails closed for the report when any required condition is missing:
@@ -260,7 +257,7 @@ execution proof gap.
 
 ## Examples
 
-### Review bounded Run-window evidence after implementation
+### Review bounded Run-window evidence
 
 ```bash
 run_dir=target/desktop-run-evidence
@@ -280,7 +277,7 @@ world execution blocked until deterministic world-advance proof exists.
 Rejected review wording:
 
 ```text
-The run proves the world executed correctly and rendered correctly.
+Any wording that treats the report as proof of full execution or rendering correctness.
 ```
 
 ### Use the report in QA notes
@@ -301,7 +298,7 @@ unsupportedClaims:
   - full UI automation
 ```
 
-### Validate the focused implementation contract after implementation
+### Validate the focused implementation contract
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn \
@@ -329,8 +326,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 
 ## Validation commands
 
-After the Java writer and tests are implemented, run the focused `core/ide`
-validation from the repository root:
+Run the focused `core/ide` validation from the repository root:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn \
@@ -361,7 +357,7 @@ test -d tweedle-lang/Grammar
 
 | Symptom | Meaning | Next check |
 | --- | --- | --- |
-| `desktop-run-execution-gap-report.json` is missing | The planned implementation is not present, the desktop Run evidence hook did not reach the post-summary report step, evidence was not enabled, or validation failed closed. | Check whether the Java writer has landed, then check the evidence directory property, existing Run-window artifacts, and test logs. |
+| `desktop-run-execution-gap-report.json` is missing | The desktop Run evidence hook did not reach the post-summary report step, evidence was not enabled, or validation failed closed. | Check the evidence directory property, existing Run-window artifacts, and test logs. |
 | Report exists but omits a required artifact name | The report is invalid. | Run `EatmeDesktopRunExecutionEvidenceTest`; fix the required artifact list before review. |
 | Report has an empty blocker reason | The report is invalid. | Restore the deterministic world-advance blocker text. |
 | Report omits a prohibited claim category | The report is invalid. | Restore all required `doesNotClaim` entries. |
