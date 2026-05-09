@@ -1,0 +1,42 @@
+name: archive-player-boundary-evidence
+description: "Validates PR #438 archive/player boundary fail-closed wiring through existing QA entry points only; it does not validate visible rendering, rendered pixels, visible desktop windows, save behavior, project grading, creative assessment, full lesson completion, or the full Alice desktop workflow."
+config:
+  timeout: 180000
+environment:
+  requires: []
+agents:
+  - id: alice-desktop-qa-cli
+    type: cli
+    config:
+      workingDirectory: .
+metadata:
+  priority: medium
+  tags:
+    - cli
+    - gadugi
+    - pr-438
+    - archive-player-boundary
+    - archive-boundary-evidence-contract
+steps:
+  - name: validate-desktop-outside-in-catalog
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+    timeout: 60000
+  - name: prepare-archive-player-boundary-evidence
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/run-scenario.sh
+      args:
+        - run
+        - alice-desktop-archive-fixture-smoke
+        - --prepare-only
+        - --evidence-dir
+        - qa/outside-in/alice-desktop/evidence/gadugi-archive-player-boundary
+    timeout: 60000
+  - name: run-desktop-outside-in-contract-tests
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/tests/run-tests.sh
+    timeout: 120000
+assertions: []
