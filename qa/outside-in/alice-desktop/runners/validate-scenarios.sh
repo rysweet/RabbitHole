@@ -76,6 +76,10 @@ mode_values = {
     "xvfb-real-alice",
     "manual-evidence-required",
 }
+no_timeout_workflows = {
+    "project-io-smoke",
+    "save-menu-dialog-write-proof",
+}
 allowed_automation = {
     (
         "alice-ide",
@@ -135,8 +139,7 @@ allowed_automation = {
         ".",
         (
             "mvn",
-            "-DincludeSims=false",
-            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
             "-Dsurefire.failIfNoSpecifiedTests=false",
             "-pl",
             "core/story-api-migration",
@@ -520,9 +523,9 @@ def validate(path, scenario):
         for field in ("cwd", "argv", "readyWaitSeconds"):
             if field not in automation:
                 errors.append(f"automation must include {field} when present")
-        if workflow == "save-menu-dialog-write-proof":
+        if workflow in no_timeout_workflows:
             if "timeoutSeconds" in automation:
-                errors.append("save-menu-dialog-write-proof must not include automation.timeoutSeconds")
+                errors.append(f"{workflow} must not include automation.timeoutSeconds")
         elif "timeoutSeconds" not in automation:
             errors.append("automation must include timeoutSeconds when present")
         validate_automation_cwd(errors, automation.get("cwd"))

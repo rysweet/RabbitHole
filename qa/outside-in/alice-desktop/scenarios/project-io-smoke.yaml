@@ -22,15 +22,13 @@ automation:
   cwd: .
   argv:
     - mvn
-    - -DincludeSims=false
-    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
     - -Dsurefire.failIfNoSpecifiedTests=false
     - -pl
     - core/story-api-migration
     - -am
     - -Dtest=org.lgna.project.io.IoUtilitiesTest
     - test
-  timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:

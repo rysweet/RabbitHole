@@ -400,7 +400,7 @@ supportingEvidence:
 | --- | --- | --- |
 | `automation.cwd` | string | Repository-relative working directory for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`; absolute paths, `..`, and realpath escapes outside the repository are rejected. |
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
-| `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke` except `save-menu-dialog-write-proof`, where workflow-level timeouts are invalid. |
+| `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and for timeout-managed `gated-command-smoke` workflows. Invalid for no-timeout workflows such as `save-menu-dialog-write-proof` and `project-io-smoke`. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec`. |
 | `targetStarter.repositoryPath` | string | Repository-relative path recorded as target evidence metadata. For the Select Project AT-SPI target scenario and first-lesson live target observation this must be `core/resources/src/application/resources/starter-projects/AfricaFull.a3p`. |
@@ -409,7 +409,7 @@ supportingEvidence:
 
 `automation` is required when `automationMode` is `xvfb-real-alice` or `gated-command-smoke`. Manual scenarios do not need an `automation` block because the runner generates a checklist instead of driving Swing interactions. Automation must be represented as `argv`; shell command strings are not accepted, including in custom catalogs selected with `ALICE_QA_SCENARIO_DIR`.
 
-The `save-menu-dialog-write-proof` workflow is the no-timeout exception. Its scenario omits `automation.timeoutSeconds`, and the runner does not wrap the Maven argv in shell `timeout`. Validator and runner contract tests reject timeout wiring for that workflow while preserving timeout requirements for the other argv-backed scenarios.
+The `save-menu-dialog-write-proof` and `project-io-smoke` workflows are no-timeout command smokes. Their scenarios omit `automation.timeoutSeconds`, and the runner does not wrap their Maven argv in shell `timeout`. Validator and runner contract tests reject timeout wiring for those workflows while preserving timeout requirements for timeout-managed argv-backed scenarios.
 
 ### Workflow values
 
@@ -451,7 +451,7 @@ wizard-palette-completion-smoke
 | --- | --- |
 | `xvfb-real-alice` | Starts Xvfb, launches Alice through the allowed scenario argv, waits for readiness, and captures environment data, logs, status, and screenshot when the launch reaches evidence capture. This is a launch evidence check, not a full semantic oracle for every startup log condition. |
 | `manual-evidence-required` | Writes a structured checklist for human execution and evidence collection. Checklist generation does not complete the scenario. |
-| `gated-command-smoke` | Writes environment, status, and checklist evidence by default without running heavy commands. When `ALICE_QA_RUN_GATED_SMOKES=1`, runs the configured command under `timeout`, captures `command.log`, and records pass/fail status. |
+| `gated-command-smoke` | Writes environment, status, and checklist evidence by default without running heavy commands. When `ALICE_QA_RUN_GATED_SMOKES=1`, runs the configured command, captures `command.log`, and records pass/fail status. Most gated command smokes run under `timeout`; no-timeout smokes such as `save-menu-dialog-write-proof` and `project-io-smoke` run the configured command directly and record `timeoutPolicy=none`. |
 
 ## Evidence contract
 
@@ -482,7 +482,7 @@ Gated command smoke preparation includes:
 | Artifact | Description |
 | --- | --- |
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
-| `status.txt` | Scenario ID, automation mode, `outcome=gated-not-run`, gate name, skip mode, command, working directory, timeout, and generated checklist name. |
+| `status.txt` | Scenario ID, automation mode, `outcome=gated-not-run`, gate name, skip mode, command, working directory, timeout or no-timeout policy, and generated checklist name. |
 | `manual-evidence-checklist.txt` | Review checklist describing what evidence is required when the gate is enabled or fulfilled elsewhere. |
 
 Enabled gated command smoke execution also includes:
@@ -490,7 +490,7 @@ Enabled gated command smoke execution also includes:
 | Artifact | Description |
 | --- | --- |
 | `command.log` | Captured stdout/stderr for the configured command. |
-| `status.txt` | Scenario ID, automation mode, command, working directory, timeout, command log name, exit code, and `outcome=passed` or `outcome=failed`. |
+| `status.txt` | Scenario ID, automation mode, command, working directory, timeout or no-timeout policy, command log name, exit code, and `outcome=passed` or `outcome=failed`. |
 
 Successful `xvfb-real-alice` evidence capture can include these common and scenario-specific artifacts:
 

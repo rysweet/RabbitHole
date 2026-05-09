@@ -60,6 +60,12 @@ if [ -n "${ALICE_QA_FAKE_PACKAGE_MARKER:-}" ]; then
 fi
 SH
 chmod +x "$fake_bin/mvn"
+cat > "$fake_bin/timeout" <<'SH'
+#!/usr/bin/env bash
+printf 'timeout should not wrap project-io smoke\n' >&2
+exit 99
+SH
+chmod +x "$fake_bin/timeout"
 
 enabled_evidence="$tmp_root/enabled-evidence"
 PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 \
@@ -75,6 +81,9 @@ assert_contains "$enabled_run_dir/command.log" 'IoUtilitiesTest' "saving, reopen
 assert_contains "$enabled_run_dir/status.txt" '^outcome=passed$' "enabled gated command records pass outcome"
 assert_not_contains "$enabled_run_dir/status.txt" '^outcome=gated-not-run$' "enabled gated command is not reported as a skip"
 assert_contains "$enabled_run_dir/status.txt" '^exitCode=0$' "enabled gated command records exit code"
+assert_contains "$enabled_run_dir/status.txt" '^timeoutPolicy=none$' "project IO smoke records no-timeout policy"
+assert_not_contains "$enabled_run_dir/status.txt" '^timeoutSeconds=' "project IO smoke omits workflow timeout"
+rm -f "$fake_bin/timeout"
 
 package_enabled_evidence="$tmp_root/package-enabled-evidence"
 PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 ALICE_QA_FAKE_PACKAGE_MARKER="$package_marker" \

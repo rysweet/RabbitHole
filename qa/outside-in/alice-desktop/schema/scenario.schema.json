@@ -228,10 +228,7 @@
                   "const": "mvn"
                 },
                 {
-                  "const": "-DincludeSims=false"
-                },
-                {
-                  "const": "-Dinstall4j.skip"
+                  "const": "-DfailIfNoTests=false"
                 },
                 {
                   "const": "-Dsurefire.failIfNoSpecifiedTests=false"
@@ -253,8 +250,8 @@
                 }
               ],
               "items": false,
-              "minItems": 9,
-              "maxItems": 9
+              "minItems": 8,
+              "maxItems": 8
             },
             {
               "prefixItems": [
@@ -721,7 +718,10 @@
       "if": {
         "properties": {
           "workflow": {
-            "const": "save-menu-dialog-write-proof"
+            "enum": [
+              "project-io-smoke",
+              "save-menu-dialog-write-proof"
+            ]
           }
         },
         "required": [

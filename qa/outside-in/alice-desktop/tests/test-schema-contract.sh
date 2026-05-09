@@ -153,8 +153,7 @@ expected_argv = {
     ),
     (
         "mvn",
-        "-DincludeSims=false",
-        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
         "-Dsurefire.failIfNoSpecifiedTests=false",
         "-pl",
         "core/story-api-migration",
