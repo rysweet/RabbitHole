@@ -27,8 +27,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import javax.imageio.ImageIO;
 
 public final class EatmeDesktopRunExecutionEvidence {
@@ -59,9 +61,13 @@ public final class EatmeDesktopRunExecutionEvidence {
       DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT,
       DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT,
       DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT);
+  private static final Set<String> REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACT_SET =
+      Set.copyOf(REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS);
   private static final List<String> SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS = List.of(
       DESKTOP_RUN_EXECUTION_ARTIFACT,
       DESKTOP_RUN_RUNTIME_LOG);
+  private static final Set<String> SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACT_SET =
+      Set.copyOf(SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS);
   private static final List<String> EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES = List.of(
       "full world execution",
       "visible rendering correctness",
@@ -572,20 +578,21 @@ public final class EatmeDesktopRunExecutionEvidence {
     if (evidenceArtifacts == null || evidenceArtifacts.isEmpty()) {
       throw new IllegalArgumentException("execution gap report requires bounded Run-window evidence artifacts");
     }
+    Set<String> evidenceArtifactSet = new HashSet<>(evidenceArtifacts);
     for (String requiredArtifact : REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS) {
-      if (!evidenceArtifacts.contains(requiredArtifact)) {
+      if (!evidenceArtifactSet.contains(requiredArtifact)) {
         throw new IllegalArgumentException(
             "execution gap report missing required evidence artifact: " + requiredArtifact);
       }
     }
     for (String evidenceArtifact : evidenceArtifacts) {
       EatmeRunWindowEvidence.artifactPath(Path.of("evidence"), evidenceArtifact);
-      if (SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS.contains(evidenceArtifact)) {
+      if (SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACT_SET.contains(evidenceArtifact)) {
         throw new IllegalArgumentException(
             "execution gap report executableToday payload must not include VM-listener support artifact: "
                 + evidenceArtifact);
       }
-      if (!REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS.contains(evidenceArtifact)) {
+      if (!REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACT_SET.contains(evidenceArtifact)) {
         throw new IllegalArgumentException(
             "execution gap report executableToday payload has unexpected evidence artifact: "
                 + evidenceArtifact);
@@ -597,8 +604,9 @@ public final class EatmeDesktopRunExecutionEvidence {
     if (doesNotClaim == null) {
       throw new IllegalArgumentException("execution gap report requires doesNotClaim categories");
     }
+    Set<String> doesNotClaimSet = new HashSet<>(doesNotClaim);
     for (String prohibitedClaimCategory : EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES) {
-      if (!doesNotClaim.contains(prohibitedClaimCategory)) {
+      if (!doesNotClaimSet.contains(prohibitedClaimCategory)) {
         throw new IllegalArgumentException(
             "execution gap report missing doesNotClaim category: " + prohibitedClaimCategory);
       }
@@ -874,23 +882,26 @@ public final class EatmeDesktopRunExecutionEvidence {
       String blockerPrefix,
       String statePrefix) {
     List<BlockerDetail> blockers = new ArrayList<>();
-    if (!component.isDisplayable()) {
+    boolean displayable = component.isDisplayable();
+    boolean showing = component.isShowing();
+    int width = component.getWidth();
+    int height = component.getHeight();
+    if (!displayable) {
       blockers.add(new BlockerDetail(
           blockerPrefix + "_not_displayable",
           statePrefix + "Displayable=false",
           statePrefix + "Displayable=true"));
     }
-    if (!component.isShowing()) {
+    if (!showing) {
       blockers.add(new BlockerDetail(
           blockerPrefix + "_not_showing",
           statePrefix + "Showing=false",
           statePrefix + "Showing=true"));
     }
-    if (component.getWidth() <= 0 || component.getHeight() <= 0) {
+    if (width <= 0 || height <= 0) {
       blockers.add(new BlockerDetail(
           blockerPrefix + "_has_no_positive_size",
-          statePrefix + "Width=" + component.getWidth()
-              + ", " + statePrefix + "Height=" + component.getHeight(),
+          statePrefix + "Width=" + width + ", " + statePrefix + "Height=" + height,
           statePrefix + "Width>0 and " + statePrefix + "Height>0"));
     }
     return blockers;
@@ -935,7 +946,8 @@ public final class EatmeDesktopRunExecutionEvidence {
   }
 
   private static String runtimeLog(String programTypeName, List<String> events) {
-    StringBuilder builder = new StringBuilder();
+    int programTypeNameLength = programTypeName != null ? programTypeName.length() : 4;
+    StringBuilder builder = new StringBuilder(96 + programTypeNameLength + (events.size() * 32));
     builder.append("schema_version=eatme.alice-desktop-run-execution-log/v1\n");
     builder.append("program_type=").append(programTypeName).append('\n');
     builder.append("recorded_at=").append(Instant.now()).append('\n');

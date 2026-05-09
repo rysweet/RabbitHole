@@ -96,10 +96,7 @@ assert_success "$?" "Run execution gap scenario keeps bounded artifact and non-c
 "$RUNNER" run "$SCENARIO_ID" --prepare-only --evidence-dir "$tmp_root/evidence" >"$tmp_root/runner.out" 2>"$tmp_root/runner.err"
 status=$?
 assert_success "$status" "runner prepares the Run execution gap manual checklist"
-checklist=$(find "$tmp_root/evidence" -name manual-evidence-checklist.txt -type f | sort | head -n 1)
-if [ -z "$checklist" ]; then
-    checklist="$tmp_root/evidence/manual-evidence-checklist.txt"
-fi
+checklist=$(sed -n 's/^Manual scenario prepared: //p' "$tmp_root/runner.out")
 assert_file_exists "$checklist" "Run execution gap manual checklist exists"
 
 python3 - "$checklist" >"$tmp_root/run-gap-checklist.out" 2>"$tmp_root/run-gap-checklist.err" <<'PY'

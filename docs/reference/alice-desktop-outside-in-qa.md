@@ -63,16 +63,13 @@ report](./desktop-run-execution-gap-report.md).
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
 | `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Action-seam contract for observing the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and recording either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
-| `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
+| `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Covers controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
 | `alice-desktop-save-menu-dialog-write-proof` | `save-menu-dialog-write-proof` | `gated-command-smoke` | Attempts one bounded rendered File-menu Save -> controlled chooser -> written `.a3p` -> readback marker path through `RobotSaveMenuDialogWriteReadbackProofTest`; only a validated `status: "proven"` artifact completes it. |
 | `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` | `gated-command-smoke` | Covers unsupported adjacent Tweedle method-call boundaries for the narrow decoder slice. |
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
-| `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
-| `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
-
 The first-lesson live procedure target action seam is a read-only contract. It
 records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
 procedure/code-editor target and whether that target is ready for a public

@@ -131,9 +131,7 @@ def evaluate_no_op_guard(
     del launcher_cwd
     repo_path = Path(resolution.resolvedRepoPath)
     status_short = _git(repo_path, "status", "--short")
-    unstaged_stat = _git(repo_path, "diff", "--stat")
-    staged_stat = _git(repo_path, "diff", "--cached", "--stat")
-    diff_stat = "\n".join(part for part in (unstaged_stat, staged_stat) if part)
+    diff_stat = _git(repo_path, "diff", "--stat", "HEAD")
     files_modified = _parse_status_paths(status_short)
     outcome = "changes-present" if status_short or diff_stat else "no-changes"
     return NoOpGuardResult(
