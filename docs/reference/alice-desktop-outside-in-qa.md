@@ -75,6 +75,25 @@ correctness check, learner assessment, creative assessment, or full first-lesson
 completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
 
+The menu/action smoke is a gated command contract for the headless-safe
+`AliceMenuBarContractTest` only. When `ALICE_QA_RUN_GATED_SMOKES=1`, the runner
+executes the checked-in scenario argv. With `NODE_OPTIONS` set in the
+environment, that argv is equivalent to:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+The accepted evidence is `status.txt`, `command.log`, and Maven/Surefire output
+naming `AliceMenuBarContractTest`. It proves only Window menu model registration
+and menu-bar membership lookup. It is not full UI automation, rendered menu
+verification, Save completion, first-lesson completion, deployed installer
+success, or Sims validation.
+
 ## Learner-world boundary
 
 RabbitHole learner-world QA currently supports setup/open/save evidence review

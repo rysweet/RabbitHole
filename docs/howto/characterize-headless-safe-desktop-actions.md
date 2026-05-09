@@ -49,13 +49,15 @@ Use `AliceMenuBarContractTest` when the behavior is about Window menu availabili
 Run it directly:
 
 ```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl core/ide -am \
-  -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
   -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
   test
 ```
+
+Accept this result only for Window menu model registration and menu-bar membership lookup. Do not cite it as full UI automation, visible rendering, Save completion, first-lesson completion, deployed installer success, or Sims validation.
 
 ### Save, Save As, and Export flow
 
@@ -132,6 +134,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
 Enable the gated command only in a prepared checkout:
 
 ```bash
+export NODE_OPTIONS=--max-old-space-size=32768
 ALICE_QA_RUN_GATED_SMOKES=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
@@ -149,7 +152,18 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh list
 qa/outside-in/alice-desktop/tests/run-tests.sh
 ```
 
-Run the touched Maven module:
+For a menu/action-only change, run the focused Maven contract:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+Run the full touched Maven module only when the implementation changes more than the bounded menu/action contract:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip \
@@ -176,5 +190,6 @@ A finished desktop action characterization has:
 | Behavior preservation | Graphical Alice behavior is unchanged unless the change is explicitly a headless diagnostic. |
 | Headless safety | CI either runs display-free tests through seams or fails desktop launch clearly before Swing/JavaFX startup. |
 | Meaningful assertions | Tests assert prompt, cancel, retry, wait-cursor, action registration, or activity outcome behavior. |
+| Menu/action claim boundary | `AliceMenuBarContractTest` claims only Window menu model registration and membership lookup. |
 | Outside-in evidence | Any QA scenario change validates through the checked-in runners and tests. |
 | No duplicate lane work | The change builds on existing menu/action, archive, Tweedle, coverage, export/package, and resource-manifest characterization instead of recreating it. |

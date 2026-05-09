@@ -125,6 +125,46 @@ tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
 
+### Menu/action contract smoke
+
+`alice-desktop-menu-action-smoke` is the outside-in entry point for the bounded
+Window menu model contract. It is a gated command smoke that runs
+`AliceMenuBarContractTest`; it does not drive a live Swing menu, inspect rendered
+pixels, complete Save, complete the first lesson, validate a deployed installer,
+or validate Sims.
+
+Prepare the smoke without executing Maven:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/menu-action
+```
+
+Execute the focused command:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/menu-action
+```
+
+With `NODE_OPTIONS` set in the environment, the checked-in scenario argv is
+equivalent to:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+Accepted evidence is limited to `status.txt`, `command.log`, and test output
+naming `AliceMenuBarContractTest`. The claim is only that the Window menu model
+is registered and reachable through menu-bar membership lookup.
+
 To observe only the live first-lesson procedure/code-editor target after Select
 Project opens the configured starter:
 

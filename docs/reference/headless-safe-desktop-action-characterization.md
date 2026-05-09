@@ -1,6 +1,6 @@
 # Headless-Safe Desktop Action Characterization
 
-This reference is the build contract for the desktop action characterization lane: required headless-safe startup behavior, existing Croquet action-flow seams, outside-in QA evidence, configuration, and compatibility rules.
+This reference is the build contract for the desktop action characterization lane: bounded menu/action registration behavior, required headless-safe startup behavior, existing Croquet action-flow seams, outside-in QA evidence, configuration, and compatibility rules.
 
 ## Contents
 
@@ -12,6 +12,7 @@ This reference is the build contract for the desktop action characterization lan
 - [Outside-in QA usage](#outside-in-qa-usage)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
+- [Readiness evidence contract](#readiness-evidence-contract)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
 
@@ -24,11 +25,13 @@ It covers:
 | Area | Contract |
 | --- | --- |
 | JavaFX/Swing startup | Alice detects a truly headless environment before starting Swing or JavaFX desktop UI work and fails with a clear diagnostic instead of an obscure toolkit stack trace. |
-| Menu/action registration | The Alice desktop menu bar registers the Window menu model and exposes it through menu-bar membership lookup. |
+| Menu/action registration | The Alice desktop menu bar registers the Window menu model and exposes it through menu-bar membership lookup without requiring Swing or JavaFX display automation. |
 | Save and export flow | Save, Save As, and Export keep their prompt, cancel, wait-cursor, retry, and `UserActivity` finish/cancel behavior. |
 | Outside-in evidence | Desktop action smoke evidence is collected through the checked-in Alice desktop QA runner, not through ad hoc shell commands. |
 
 This lane builds on the existing Alice desktop outside-in QA lane and the project save/export operation characterization. It does not recreate archive/resource-manifest, Tweedle recovery, coverage-ratchet, NetBeans Ant export/package, or baseline menu/action work that is already covered elsewhere.
+
+The menu/action contract slice is intentionally narrower than full desktop QA. It does not prove full UI automation, visible rendering, deployed installer behavior, Sims validation, Save completion, first-lesson completion, or successful invocation of arbitrary menu actions.
 
 ## Artifact inventory
 
@@ -74,7 +77,14 @@ The guard is intentionally narrow. It does not convert Alice into a headless app
 
 ### Menu/action registration
 
-`AliceMenuBarContractTest` characterizes Window menu registration without requiring a display. The test constructs the desktop menu-bar model, locates the registered `WindowMenuModel`, and verifies that it is reachable through menu-bar membership lookup. It does not assert full menu order, invoke menu actions, validate visible UI rendering, or exercise Save/File-menu behavior.
+`AliceMenuBarContractTest` characterizes Window menu registration without requiring a display. The test constructs the desktop menu-bar model, locates the registered `WindowMenuModel`, and verifies that it is reachable through menu-bar membership lookup.
+
+| Assertion | Contract |
+| --- | --- |
+| Menu model registration | The Alice menu-bar model contains the Window menu model. |
+| Membership lookup | The registered Window menu model is discoverable through the menu-bar membership API used by desktop menu construction. |
+| Headless safety | The test runs as a `core/ide` Maven test and does not launch JavaFX, require Xvfb, or inspect painted Swing widgets. |
+| Claim boundary | The result is not a full menu order assertion, full UI automation proof, rendered-menu proof, Save/File-menu proof, first-lesson proof, deployed installer proof, or Sims validation. |
 
 ### Save and export action journey
 
@@ -157,6 +167,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-actio
 `--prepare-only` records intentional gated smoke preparation. To execute the focused command in a prepared checkout:
 
 ```bash
+export NODE_OPTIONS=--max-old-space-size=32768
 ALICE_QA_RUN_GATED_SMOKES=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
@@ -195,14 +206,25 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Run the focused action characterization:
+Run only the focused menu/action contract:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+Run broader Save/export action-flow characterization only when those flows change:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip \
   -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest,org.alice.ide.croquet.models.projecturi.SaveOperationFlowTest \
+  -Dtest=org.alice.ide.croquet.models.projecturi.SaveOperationFlowTest \
   test
 ```
 
@@ -242,6 +264,22 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   test
 ```
+
+## Readiness evidence contract
+
+Menu/action readiness evidence is written only after the focused Maven contract
+passes and the worktree is clean. The evidence statement contains:
+
+| Field | Meaning |
+| --- | --- |
+| `head` | Exact validated Git commit SHA from `git rev-parse HEAD`. |
+| `command` | The exact focused Maven command from [Validation commands](#validation-commands). |
+| `result` | Bounded pass statement for `AliceMenuBarContractTest`. |
+| `scope` | Window menu model registration and menu-bar membership lookup only. |
+| `nonClaims` | Full UI automation, rendered menu correctness, Save completion, first-lesson completion, deployed installer success, and Sims validation are not claimed. |
+
+Do not publish readiness evidence for a dirty worktree, a failed focused Maven
+contract, or a different command selector.
 
 ## Compatibility rules
 
