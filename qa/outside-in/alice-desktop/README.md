@@ -117,6 +117,7 @@ project-io-smoke
 run-debug
 save-load
 save-menu-dialog-write-proof
+save-negative-artifact-contract
 scene-creation
 select-project-atk-exec-smoke
 select-project-interaction-smoke
@@ -416,6 +417,7 @@ project-io-smoke
 run-debug
 save-load
 save-menu-dialog-write-proof
+save-negative-artifact-contract
 scene-creation
 select-project-atk-exec-smoke
 select-project-interaction-smoke

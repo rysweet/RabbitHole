@@ -66,6 +66,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
 | `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
 | `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
+| `alice-desktop-save-negative-artifact-contract` | `save-negative-artifact-contract` | `manual-evidence-required` | Proves the `validate-save-proof-evidence` seam rejects missing context, missing, wrong-name, symlinked, malformed, non-object, stale, future-dated, identity-mismatched, blocked, unknown-blocker, partial, and inconsistent Save proof artifacts with explicit diagnostics. |
 
 The first-lesson live procedure target action seam is a read-only contract. It
 records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
@@ -441,6 +442,7 @@ project-io-smoke
 run-debug
 save-load
 save-menu-dialog-write-proof
+save-negative-artifact-contract
 scene-creation
 select-project-atk-exec-smoke
 select-project-interaction-smoke
@@ -601,7 +603,7 @@ reviewed assessment contract and evidence mapping exist.
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
 | Save menu dialog write/readback proof | Evidence contract: `status.txt`, `command.log`, focused Robot Save menu/dialog/write/readback proof test output naming `RobotSaveMenuDialogWriteReadbackProofTest`, and fresh canonical `robot-save-menu-dialog-write-readback-proof.json` evidence with `schemaVersion=eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1`, matching `scenario` and `runId`, `status=proven`, all required menu/dialog/control/write/readback marker flags true, an existing `.a3p` output with matching size, and marker readback verified. Missing, stale, blocked, partial, internally inconsistent, or unknown-blocker artifacts fail closed. Stale `StageIdeSaveMenuDoClickToWriteProofTest` output or `save-menu-dialog-write-proof.json` artifacts do not satisfy this scenario. See [Save Proof Evidence](./save-proof-evidence.md). |
-| Save menu dialog negative artifact contract | `test-save-menu-dialog-negative-artifact-contract.sh` output proving the existing `validate-save-proof-evidence` seam rejects missing context, missing, wrong-name, symlinked, malformed, non-object, stale, future-dated, identity-mismatched, blocked, unknown-blocker, partial, and inconsistent Save proof artifacts with explicit diagnostics. This is not a scenario/workflow and is not Save completion evidence. See [Save Menu Dialog Negative Artifact Contract](./save-menu-dialog-negative-artifact-contract.md). |
+| Save menu dialog negative artifact contract | `status.txt`, `command.log`, and `test-save-menu-dialog-negative-artifact-contract.sh` output proving the `validate-save-proof-evidence` seam rejects missing context, missing, wrong-name, symlinked, malformed, non-object, stale, future-dated, identity-mismatched, blocked, unknown-blocker, partial, and inconsistent Save proof artifacts with explicit diagnostics. This is not Save completion evidence. See [Save Menu Dialog Negative Artifact Contract](./save-menu-dialog-negative-artifact-contract.md). |
 | Wizard/palette/completion smoke | `status.txt`, `command.log`, focused test output for wizard validation, palette wiring, and completion resources; manual screenshot notes when desktop evidence is added. |
 
 ## Scenario authoring rules

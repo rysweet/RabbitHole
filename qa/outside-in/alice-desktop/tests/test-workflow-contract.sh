@@ -77,6 +77,7 @@ required_workflows = [
     "run-debug",
     "save-load",
     "save-menu-dialog-write-proof",
+    "save-negative-artifact-contract",
     "select-project-atk-exec-smoke",
     "select-project-interaction-smoke",
     "select-project-tab-click-smoke",
@@ -95,6 +96,7 @@ manual_scenarios = [
 ]
 manual_command_scenarios = [
     "alice-desktop-procedure-edit-seam-smoke",
+    "alice-desktop-save-negative-artifact-contract",
 ]
 gated_scenarios = [
     "alice-desktop-exported-project-smoke",
