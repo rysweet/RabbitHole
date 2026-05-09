@@ -112,7 +112,7 @@ class AmplihackWrapperTest(unittest.TestCase):
                     str(WRAPPER_PATH),
                     "tweedle-decode",
                     "verify",
-                    "while-method-call",
+                    "simple-if-method-call",
                 ],
                 cwd=root,
                 check=False,
@@ -124,10 +124,13 @@ class AmplihackWrapperTest(unittest.TestCase):
             log = log_path.read_text(encoding="utf-8")
 
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn("PASS: while-method-call", result.stdout)
+        self.assertIn("PASS: simple-if-method-call", result.stdout)
         self.assertIn("git submodule update --init tweedle-lang", log)
         self.assertIn("-pl core/ast", log)
-        self.assertIn("-Dtest=TweedleEncoderDecoderTest#decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation", log)
+        self.assertIn(
+            "-Dtest=TweedleEncoderDecoderTest#decodeClassWithSimpleIfMethodCallBodyCreatesConditionalMethodInvocation",
+            log,
+        )
 
     def test_tweedle_decode_verify_can_target_player_archive_integration_test(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

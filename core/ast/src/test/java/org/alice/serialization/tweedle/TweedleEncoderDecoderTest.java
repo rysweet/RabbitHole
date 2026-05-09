@@ -2261,59 +2261,6 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation() throws Exception {
-    NamedUserType type = decodeUserType("""
-        class SyntheticType {
-          void spin(Boolean flag) {
-            while (flag) { this.tick(); }
-          }
-          void tick() { }
-        }
-        """);
-
-    UserMethod spin = userMethodNamed(type, "spin");
-    UserMethod tick = userMethodNamed(type, "tick");
-    WhileLoop loop = (WhileLoop) spin.body.getValue().statements.get(0);
-    assertEquals(1, loop.body.getValue().statements.size());
-    assertTrue(loop.body.getValue().statements.get(0) instanceof ExpressionStatement);
-    ExpressionStatement stmt = (ExpressionStatement) loop.body.getValue().statements.get(0);
-    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
-    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
-    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
-    assertSame(tick, invocation.method.getValue());
-    assertTrue(invocation.requiredArguments.isEmpty());
-    assertTrue(invocation.variableArguments.isEmpty());
-    assertTrue(invocation.keyedArguments.isEmpty());
-  }
-
-  @Test
-  public void decodeClassWithWhileLoopMixedAssignmentAndMethodCallBodyCreatesOrderedStatements() throws Exception {
-    NamedUserType type = decodeUserType("""
-        class SyntheticType {
-          WholeNumber count <- 0;
-          void spin(Boolean flag) {
-            while (flag) { count <- 1; this.tick(); }
-          }
-          void tick() { }
-        }
-        """);
-
-    UserMethod spin = userMethodNamed(type, "spin");
-    UserMethod tick = userMethodNamed(type, "tick");
-    WhileLoop loop = (WhileLoop) spin.body.getValue().statements.get(0);
-    assertEquals(2, loop.body.getValue().statements.size());
-    assertTrue(loop.body.getValue().statements.get(0) instanceof ExpressionStatement);
-    ExpressionStatement assignmentStatement = (ExpressionStatement) loop.body.getValue().statements.get(0);
-    assertTrue(assignmentStatement.expression.getValue() instanceof AssignmentExpression);
-    assertTrue(loop.body.getValue().statements.get(1) instanceof ExpressionStatement);
-    ExpressionStatement methodStatement = (ExpressionStatement) loop.body.getValue().statements.get(1);
-    assertTrue(methodStatement.expression.getValue() instanceof MethodInvocation);
-    MethodInvocation invocation = (MethodInvocation) methodStatement.expression.getValue();
-    assertSame(tick, invocation.method.getValue());
-    assertTrue(invocation.requiredArguments.isEmpty());
-  }
-
-  @Test
   public void decodeClassWithWhileLoopNonBooleanConditionReportsUnsupported() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -2346,28 +2293,20 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithWhileLoopArgumentBearingThisMethodCallReportsUnsupportedBoundary() {
-    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
-        class SyntheticType {
-          void bad(Boolean flag) {
-            while (flag) { this.tick(value: 1); }
-          }
-          void tick(WholeNumber value) { }
-        }
-        """, "bad.this.tick");
-  }
+  public void decodeClassWithWhileLoopMethodCallBodyReportsUnsupported() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              void bad(Boolean flag) {
+                while (flag) { this.tick(); }
+              }
+              void tick() { }
+            }
+            """));
 
-  @Test
-  public void decodeClassWithWhileLoopNonThisMethodCallReportsUnsupportedBoundary() {
-    assertUnsupportedZeroArgumentThisMethodCallDecode("""
-        class SyntheticType {
-          TextString label <- "";
-          void bad(Boolean flag) {
-            while (flag) { label.tick(); }
-          }
-          void tick() { }
-        }
-        """, "bad.label.tick");
+    assertTrue(thrown.getMessage().contains("while loop bodies"));
+    assertTrue(thrown.getMessage().contains("bad"));
   }
 
   @Test

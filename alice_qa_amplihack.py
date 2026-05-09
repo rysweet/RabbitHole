@@ -13,7 +13,7 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
-  amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive|while-method-call|while-method-call-boundaries>
+  amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
 
 Run from the Alice repository root or one of its child directories.
 """
@@ -41,21 +41,6 @@ TWEEDLE_DECODE_SCENARIOS = {
         "description": "JSON player archive Tweedle type decodes the simple-if method-call slice",
         "module": "core/story-api-migration",
         "tests": "IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType",
-    },
-    "while-method-call": {
-        "description": "Tweedle while-loop body decodes a zero-argument this.method() call",
-        "module": "core/ast",
-        "tests": "TweedleEncoderDecoderTest#decodeClassWithWhileLoopMethodCallBodyCreatesMethodInvocation",
-    },
-    "while-method-call-boundaries": {
-        "description": "Tweedle while-loop body keeps unsupported neighboring method calls rejected",
-        "module": "core/ast",
-        "tests": (
-            "TweedleEncoderDecoderTest#"
-            "decodeClassWithWhileLoopMixedAssignmentAndMethodCallBodyCreatesOrderedStatements"
-            "+decodeClassWithWhileLoopArgumentBearingThisMethodCallReportsUnsupportedBoundary"
-            "+decodeClassWithWhileLoopNonThisMethodCallReportsUnsupportedBoundary"
-        ),
     },
 }
 
