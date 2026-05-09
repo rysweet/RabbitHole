@@ -1,0 +1,96 @@
+{
+  "blocker": "none",
+  "blockerDetail": "",
+  "claim": "run-window-world-canvas-target-sampled-rendering-correctness-not-asserted",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
+  "generatedFiles": [
+    "screenshot.png",
+    "visible-rendering-pixel-observation.json"
+  ],
+  "limitations": [
+    "Render evidence shows artifacts were produced and pixels were captured only.",
+    "It does not establish visible correctness."
+  ],
+  "pixelSampling": {
+    "correctnessCheck": "not-performed",
+    "pixelSampleEvidence": "raw-rgba-values-only",
+    "pixelsSampled": true,
+    "sampleCount": 1,
+    "samplePointRule": "inside-target-bounds-only",
+    "samplesChecked": true,
+    "samplingMethod": "fixture-rgba-samples",
+    "status": "observed"
+  },
+  "renderArtifacts": [
+    {
+      "kind": "screenshot",
+      "path": "screenshot.png",
+      "supports": "artifact-production-only"
+    },
+    {
+      "kind": "json",
+      "path": "visible-rendering-pixel-observation.json",
+      "supports": "bounded-raw-pixel-capture-only"
+    }
+  ],
+  "renderedWorldPixelsObserved": true,
+  "sampleCount": 1,
+  "samples": [
+    {
+      "checked": true,
+      "point": {
+        "x": 161,
+        "y": 121
+      },
+      "rgba": [
+        16,
+        32,
+        48,
+        255
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshot": {
+    "dimensions": {
+      "height": 480,
+      "width": 640
+    },
+    "metadataSource": "screenshot-pixels.txt.raw",
+    "path": "screenshot.png",
+    "status": "screenshot-captured",
+    "tool": "import"
+  },
+  "sourceArtifact": "controlled-display-pixel-observation.json",
+  "status": "observed",
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness"
+  ],
+  "visibleRenderingCorrectnessEstablished": false,
+  "worldCanvasPixelTarget": {
+    "candidateName": "Scene display",
+    "candidatePath": "application/0/3",
+    "candidateRole": "canvas",
+    "candidateStates": [
+      "enabled",
+      "showing",
+      "visible"
+    ],
+    "geometryStatus": "available",
+    "identified": true,
+    "runtimeDisplayCandidateCount": 1,
+    "screenExtents": {
+      "coordinateType": "screen",
+      "height": 240,
+      "width": 320,
+      "x": 160,
+      "y": 120
+    },
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents",
+    "sourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+    "status": "target-ready"
+  }
+}
