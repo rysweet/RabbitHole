@@ -3,6 +3,16 @@
 Use this guide when a change touches `ProjectMigrationManager`, migration
 ordering, text migration helpers, or a protected migration hotspot.
 
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [1. Identify the migration behavior](#1-identify-the-migration-behavior)
+- [2. Build the smallest generated fixture](#2-build-the-smallest-generated-fixture)
+- [3. Migrate from the source version that proves the behavior](#3-migrate-from-the-source-version-that-proves-the-behavior)
+- [4. Assert final output and rejected intermediates](#4-assert-final-output-and-rejected-intermediates)
+- [5. Validate the characterization](#5-validate-the-characterization)
+- [Review checklist](#review-checklist)
+
 ## Prerequisites
 
 Start from a branch based on current `develop` and initialize the grammar
@@ -19,17 +29,23 @@ The characterization suite is documented in the
 For a guided example, use the
 [ProjectMigrationManager migration tutorial](../tutorials/project-migration-manager-characterization.md).
 
-## 1. Identify the migration seam
+## 1. Identify the migration behavior
 
 Choose one observable compatibility behavior that already exists in
-`ProjectMigrationManager`.
+`ProjectMigrationManager`. Keep table-level invariants separate from concrete
+rewrite seams so the test name and assertion explain what behavior is protected.
 
-Good seams are:
+Baseline invariants protect the migration table itself:
 
-| Seam | Good characterization |
+| Invariant | Good characterization |
 | --- | --- |
 | Result-version ordering | Assert that text and AST migration result versions are valid, round-trippable, and strictly increasing. |
 | Applicability threshold | Assert that a migration applies only when the saved project version is older than its result version. |
+
+Concrete migration seams protect selected compatibility rewrites:
+
+| Seam | Good characterization |
+| --- | --- |
 | Legacy class rename | Start before the rename and assert the final migrated class name. |
 | Multi-step resource consolidation | Assert the final resource name and the absence of old and intermediate names. |
 | Boundary rewrite | Assert the rewrite before the boundary and unchanged selected text at or after the boundary. |
@@ -65,7 +81,7 @@ String source = "name=\"BONE_PILE\">\n<declaringClass name=\"org.lgna.story.reso
 Keep fixtures deterministic and generated in Java source. Do not copy Alice
 sample projects or investigation artifacts into the test tree.
 
-## 3. Migrate from the source version that proves the seam
+## 3. Migrate from the source version that proves the behavior
 
 Use the saved project version that makes the intended migrations applicable.
 For the legacy dresser cascade, start before the package move:
@@ -73,6 +89,10 @@ For the legacy dresser cascade, start before the package move:
 ```java
 String migrated = migrateWithoutTestLogNoise(source, "3.1.19.0.0");
 ```
+
+`migrateWithoutTestLogNoise` is a private helper in
+`ProjectMigrationManagerTest`, not production API. It only mutes test log output
+while still calling the production `ProjectMigrationManager` migration path.
 
 For the `3.2.111.0.0` BonePile boundary, assert both sides of the gate:
 
@@ -144,4 +164,3 @@ Before merging a migration characterization or refactor, confirm:
 | Are expected final names asserted? | Yes. |
 | Are obsolete or intermediate names rejected where the seam has intermediates? | Yes. |
 | Does production behavior remain compatible with the current Alice baseline? | Yes. |
-

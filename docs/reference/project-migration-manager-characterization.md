@@ -41,6 +41,16 @@ large migration table and does not add external archive fixtures.
 Production code is intentionally unchanged; this documents existing protected
 migration hotspots through characterization coverage.
 
+The repository-owned feature surface is:
+
+| Surface | Role |
+| --- | --- |
+| `ProjectMigrationManagerTest` | Executable characterization for table invariants, version gates, selected rewrite cascades, and the BonePile boundary. |
+| Reference documentation | Durable contract for the protected behavior and compatibility rules. |
+| Tutorial documentation | Guided example for adding generated XML-string migration characterization. |
+| How-to documentation | Task checklist for adding or reviewing migration characterization. |
+| Documentation index | Discoverability link for the reference, tutorial, and how-to. |
+
 The covered surface is deliberately narrow:
 
 | Scope | Contract |

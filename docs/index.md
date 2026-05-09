@@ -4,7 +4,7 @@ Alice modernization documentation describes durable behavior, repo-owned
 contracts, contributor workflows, and compatibility characterization for this
 repository.
 
-## Project save and export characterization
+## Project save, export, and migration characterization
 
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, and characterization seams.
 - [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Implemented contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.

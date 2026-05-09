@@ -147,7 +147,8 @@ The first assertion verifies the `BONE_PILE`/`BonesResource` rewrite. The second
 and third assertions verify that this selected `3.2.111.0.0` rewrite is not
 back-applied when the source project is at the boundary or later.
 
-The helper suppresses migration log noise while still exercising the production
+The helper is private to `ProjectMigrationManagerTest`; it is not production
+API. It suppresses migration log noise while still exercising the production
 manager:
 
 ```java
