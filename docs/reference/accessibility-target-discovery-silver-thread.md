@@ -126,7 +126,7 @@ The gate checks these live inputs:
 | Local branch | The current branch is `feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow`. |
 | PR identity | `gh pr view 419` returns PR number `419`, URL `https://github.com/rysweet/RabbitHole/pull/419`, and the expected head branch. |
 | Head alignment | `git rev-parse HEAD` exactly matches the PR `headRefOid`. |
-| PR body evidence | The PR body contains the live head SHA and names `test-pr419-current-head-readiness-gate-contract.sh`. |
+| PR body evidence | The PR body contains the live head SHA, names `test-pr419-current-head-readiness-gate-contract.sh`, and records the live `mergeStateStatus=CLEAN` / `mergeable=MERGEABLE` result. |
 | Conflict state | `git diff --name-only --diff-filter=U` returns no unmerged paths, and the docs/QA conflict-marker scan finds no merge markers. |
 | Mergeability | The PR metadata reports `mergeStateStatus=CLEAN` and `mergeable=MERGEABLE`. |
 | Checks | The PR check rollup is readable, completed, and successful. |
@@ -363,7 +363,8 @@ Interpret the result strictly:
    discovery evidence and structured blockers.
 
 6. For PR419 finalization, push the final branch head, update the PR body with
-   that exact head SHA and the current-head gate evidence, then run
+   that exact head SHA, the current-head gate evidence, and the live
+   `mergeStateStatus=CLEAN` / `mergeable=MERGEABLE` result, then run
    `test-pr419-current-head-readiness-gate-contract.sh`. Treat a passing gate
    plus confirmed live GitHub mergeability as `MERGE_READY`; treat any failure,
    stale evidence, or missing mergeability confirmation as `NOT_MERGE_READY` and

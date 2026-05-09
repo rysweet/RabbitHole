@@ -33,6 +33,7 @@ pr_merge_state=
 pr_mergeable=
 pr_body_has_current_head=
 pr_body_has_gate_evidence=
+pr_body_has_mergeability_evidence=
 GH_NO_UPDATE_NOTIFIER=1 gh pr view "$PR_NUMBER" \
   --json number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body \
   >"$pr_metadata" \
@@ -61,6 +62,7 @@ field_values = (
     metadata.get("mergeable") or "",
     "true" if local_head in body else "false",
     "true" if "test-pr419-current-head-readiness-gate-contract.sh" in body else "false",
+    "true" if "mergeStateStatus=CLEAN" in body and "mergeable=MERGEABLE" in body else "false",
 )
 Path(fields_path).write_text("\t".join(field_values) + "\n", encoding="utf-8")
 with Path(checks_path).open("w", encoding="utf-8") as checks_file:
@@ -79,7 +81,7 @@ PY
   pr_parse_status=$?
   if [ "$pr_parse_status" -eq 0 ]; then
     tab=$(printf '\t')
-    IFS=$tab read -r pr_number pr_url pr_branch pr_head pr_merge_state pr_mergeable pr_body_has_current_head pr_body_has_gate_evidence <"$pr_fields"
+    IFS=$tab read -r pr_number pr_url pr_branch pr_head pr_merge_state pr_mergeable pr_body_has_current_head pr_body_has_gate_evidence pr_body_has_mergeability_evidence <"$pr_fields"
   fi
 else
   pr_parse_status=1
@@ -148,6 +150,12 @@ else
   fail "PR419 body names the current-head readiness gate contract"
 fi
 
+if [ "$pr_body_has_mergeability_evidence" = "true" ]; then
+  pass "PR419 body names the live mergeability result for the current head"
+else
+  fail "PR419 body names the live mergeability result for the current head"
+fi
+
 unmerged_paths=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=U)
 if [ -z "$unmerged_paths" ]; then
   pass "current-head gate has no unmerged paths"
@@ -183,6 +191,7 @@ assert_literal_in_file "$EVIDENCE_LOG" "mergeStateStatus,mergeable" "evidence lo
 assert_literal_in_file "$EVIDENCE_LOG" "live GitHub mergeability" "evidence log records live mergeability requirement"
 assert_literal_in_file "$EVIDENCE_LOG" "Tracked evidence must not store or predict the current PR head SHA." "evidence log rejects static current-head SHA proof"
 assert_literal_in_file "$EVIDENCE_LOG" "The PR body must be updated after the final commit to name the live head SHA and focused gate evidence." "evidence log records PR body live-head requirement"
+assert_literal_in_file "$EVIDENCE_LOG" "The PR body must also name the live mergeability result" "evidence log records PR body live mergeability requirement"
 assert_literal_in_file "$EVIDENCE_LOG" "green checks are necessary but not sufficient" "evidence log does not infer readiness from green checks alone"
 
 for component in PRHeadAlignment EvidenceCollector QAValidationRunner QualityAuditCycleRecorder ReadinessGate; do

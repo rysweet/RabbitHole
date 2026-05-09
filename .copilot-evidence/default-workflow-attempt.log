@@ -71,6 +71,9 @@ Current-head merge-ready gate model:
   number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body` response.
 - Tracked evidence must not store or predict the current PR head SHA.
 - The PR body must be updated after the final commit to name the live head SHA and focused gate evidence.
+- The PR body must also name the live mergeability result
+  (`mergeStateStatus=CLEAN`, `mergeable=MERGEABLE`) after the final commit; the
+  gate independently re-reads those fields at runtime.
 - GitHub Actions check rollup and live GitHub mergeability are read from the live PR metadata response.
 - Readiness rule: green checks are necessary but not sufficient; runnable QA,
   clean live GitHub mergeability, docs impact, focused diff/review, PR description,
