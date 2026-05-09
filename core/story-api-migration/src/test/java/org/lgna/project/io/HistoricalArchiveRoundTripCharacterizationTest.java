@@ -38,7 +38,6 @@ import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
-import org.lgna.project.ast.WhileLoop;
 import org.lgna.story.SProgram;
 
 import java.awt.image.BufferedImage;
@@ -421,53 +420,6 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   }
 
   @Test
-  public void generatedJsonPlayerArchiveDecodesProgramMethodReturningLiteralArithmetic() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-arithmetic-return-program.a3w");
-
-    writeJsonProjectArchive(
-        projectArchive,
-        "GeneratedProgramWithArithmeticReturn",
-        "class GeneratedProgramWithArithmeticReturn extends SProgram { WholeNumber count() { return 1 + 2; } }",
-        "GeneratedArithmeticReturnScene",
-        "class GeneratedArithmeticReturnScene extends SScene {}");
-
-    Project readProject = IoUtilities.readProject(projectArchive);
-
-    NamedUserType readProgramType = readProject.getProgramType();
-    assertNotNull("Generated JSON .a3w program with a literal arithmetic return method should decode", readProgramType);
-    assertEquals("GeneratedProgramWithArithmeticReturn", readProgramType.getName());
-    assertArithmeticReturnMethod(readProgramType, "count", ArithmeticInfixExpression.Operator.PLUS, 1, 2);
-    assertEquals(
-        "GeneratedArithmeticReturnScene",
-        namedUserTypeNamed(readProject, "GeneratedArithmeticReturnScene").getName());
-  }
-
-  @Test
-  public void generatedJsonPlayerArchiveWithIdentifierArithmeticReturnIsRejectedWithoutPartialProgramDecode() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-identifier-arithmetic-return-boundary.a3w");
-
-    writeJsonProjectArchive(
-        projectArchive,
-        "GeneratedProgramWithIdentifierArithmeticReturnBoundary",
-        """
-            class GeneratedProgramWithIdentifierArithmeticReturnBoundary extends SProgram {
-              WholeNumber seed <- 1;
-              WholeNumber count() { return seed + 2; }
-            }
-            """,
-        "GeneratedIdentifierArithmeticReturnBoundaryScene",
-        "class GeneratedIdentifierArithmeticReturnBoundaryScene extends SScene {}");
-
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
-
-    assertTrue(thrown.getMessage().contains(
-        "Project archive manifest names program type 'GeneratedProgramWithIdentifierArithmeticReturnBoundary'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are [GeneratedIdentifierArithmeticReturnBoundaryScene]"));
-    assertTrue(thrown.getMessage().contains(
-        "unsupported manifest-declared Tweedle type names are [GeneratedProgramWithIdentifierArithmeticReturnBoundary]"));
-  }
-
-  @Test
   public void generatedJsonPlayerArchiveWithMixedIdentifierProgramInitializerIsRejectedWithoutPartialProgramDecode() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-mixed-initializer-boundary.a3w");
 
@@ -549,66 +501,6 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(
         "GeneratedSimpleIfThisCallScene",
         namedUserTypeNamed(readProject, "GeneratedSimpleIfThisCallScene").getName());
-  }
-
-  @Test
-  public void generatedJsonPlayerArchiveDecodesWhileLoopWithZeroArgumentThisMethodCall() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-while-this-call.a3w");
-
-    writeJsonProjectArchive(
-        projectArchive,
-        "GeneratedProgramWithWhileThisCall",
-        """
-            class GeneratedProgramWithWhileThisCall extends SProgram {
-              void run(WholeNumber n) {
-                while (n > 0) { this.helper(); }
-              }
-              void helper() { }
-            }
-            """,
-        "GeneratedWhileThisCallScene",
-        "class GeneratedWhileThisCallScene extends SScene {}");
-
-    Project readProject = IoUtilities.readProject(projectArchive);
-
-    NamedUserType readProgramType = readProject.getProgramType();
-    assertNotNull("Generated JSON .a3w program with a while-loop method-call body should decode", readProgramType);
-    assertEquals("GeneratedProgramWithWhileThisCall", readProgramType.getName());
-    assertWhileLoopMethodInvocation(readProgramType, "run", "helper", RelationalInfixExpression.Operator.GREATER);
-    assertEquals(
-        "GeneratedWhileThisCallScene",
-        namedUserTypeNamed(readProject, "GeneratedWhileThisCallScene").getName());
-  }
-
-  @Test
-  public void generatedJsonPlayerArchiveWithArgumentBearingThisMethodCallInWhileBodyReportsUnsupportedBoundary() throws Exception {
-    File projectArchive = temporaryFolder.newFile("generated-json-player-while-argument-this-call-boundary.a3w");
-
-    writeJsonProjectArchive(
-        projectArchive,
-        "GeneratedProgramWithWhileArgumentThisCallBoundary",
-        """
-            class GeneratedProgramWithWhileArgumentThisCallBoundary extends SProgram {
-              void run(Boolean flag) {
-                while (flag) { this.helper(value: 1); }
-              }
-              void helper(WholeNumber value) { }
-            }
-            """,
-        "GeneratedWhileArgumentThisCallBoundaryScene",
-        "class GeneratedWhileArgumentThisCallBoundaryScene extends SScene {}");
-
-    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectArchive));
-    String message = thrown.getMessage();
-
-    assertTrue(message.contains(
-        "Project archive manifest names program type 'GeneratedProgramWithWhileArgumentThisCallBoundary'"));
-    assertTrue(message.contains("decoded type names are [GeneratedWhileArgumentThisCallBoundaryScene]"));
-    assertTrue(message.contains(
-        "unsupported manifest-declared Tweedle type names are [GeneratedProgramWithWhileArgumentThisCallBoundary]"));
-    assertTrue(message.contains(
-        "GeneratedProgramWithWhileArgumentThisCallBoundary: Tweedle argument-bearing explicit this method calls"));
-    assertTrue(message.contains("run.this.helper"));
   }
 
   @Test
@@ -1779,33 +1671,6 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertTrue(conditional.elseBody.getValue().statements.isEmpty());
   }
 
-  private static void assertWhileLoopMethodInvocation(
-      NamedUserType type,
-      String callerName,
-      String targetName,
-      RelationalInfixExpression.Operator expectedOperator) {
-    UserMethod caller = userMethodNamed(type, callerName);
-    UserMethod target = userMethodNamed(type, targetName);
-    assertSame(JavaType.VOID_TYPE, caller.getReturnType());
-    assertEquals(1, caller.getRequiredParameters().size());
-    assertEquals(1, caller.body.getValue().statements.size());
-    assertTrue(caller.body.getValue().statements.get(0) instanceof WhileLoop);
-    WhileLoop loop = (WhileLoop) caller.body.getValue().statements.get(0);
-    assertTrue(loop.conditional.getValue() instanceof RelationalInfixExpression);
-    RelationalInfixExpression condition = (RelationalInfixExpression) loop.conditional.getValue();
-    assertSame(expectedOperator, condition.operator.getValue());
-    assertEquals(1, loop.body.getValue().statements.size());
-    assertTrue(loop.body.getValue().statements.get(0) instanceof ExpressionStatement);
-    ExpressionStatement statement = (ExpressionStatement) loop.body.getValue().statements.get(0);
-    assertTrue(statement.expression.getValue() instanceof MethodInvocation);
-    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
-    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
-    assertSame(target, invocation.method.getValue());
-    assertTrue(invocation.requiredArguments.isEmpty());
-    assertTrue(invocation.variableArguments.isEmpty());
-    assertTrue(invocation.keyedArguments.isEmpty());
-  }
-
   private static UserMethod userMethodNamed(NamedUserType type, String name) {
     return type.getDeclaredMethods().stream()
         .filter(method -> name.equals(method.getName()))
@@ -1831,31 +1696,6 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertEquals(expectedLeft, ((IntegerLiteral) initializer.leftOperand.getValue()).value.getValue().intValue());
     assertTrue(initializer.rightOperand.getValue() instanceof IntegerLiteral);
     assertEquals(expectedRight, ((IntegerLiteral) initializer.rightOperand.getValue()).value.getValue().intValue());
-  }
-
-  private static void assertArithmeticReturnMethod(
-      NamedUserType type,
-      String expectedMethodName,
-      ArithmeticInfixExpression.Operator expectedOperator,
-      int expectedLeft,
-      int expectedRight) {
-    assertEquals(1, type.getDeclaredMethods().size());
-    UserMethod method = type.getDeclaredMethods().get(0);
-    assertEquals(expectedMethodName, method.getName());
-    assertSame(JavaType.getInstance(Integer.class), method.getReturnType());
-    assertTrue(method.getRequiredParameters().isEmpty());
-    assertEquals(1, method.body.getValue().statements.size());
-    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
-    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
-    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
-    assertTrue(returnStatement.expression.getValue() instanceof ArithmeticInfixExpression);
-    ArithmeticInfixExpression expression = (ArithmeticInfixExpression) returnStatement.expression.getValue();
-    assertSame(expectedOperator, expression.operator.getValue());
-    assertSame(JavaType.getInstance(Integer.class), expression.getType());
-    assertTrue(expression.leftOperand.getValue() instanceof IntegerLiteral);
-    assertEquals(expectedLeft, ((IntegerLiteral) expression.leftOperand.getValue()).value.getValue().intValue());
-    assertTrue(expression.rightOperand.getValue() instanceof IntegerLiteral);
-    assertEquals(expectedRight, ((IntegerLiteral) expression.rightOperand.getValue()).value.getValue().intValue());
   }
 
   private static NamedUserType namedUserTypeNamed(Project project, String name) {

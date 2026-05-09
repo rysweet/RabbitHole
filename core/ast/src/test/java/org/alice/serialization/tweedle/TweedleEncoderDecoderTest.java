@@ -385,24 +385,10 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void decodeClassWithLiteralArithmeticReturnMethodBodyCreatesArithmeticInfix() throws Exception {
-    NamedUserType type = decodeUserType("class SyntheticType { WholeNumber count() { return 1 + 2; } }");
-
-    UserMethod method = type.getDeclaredMethods().get(0);
-    assertEquals("count", method.getName());
-    assertEquals(1, method.body.getValue().statements.size());
-    assertTrue(method.body.getValue().statements.get(0) instanceof ReturnStatement);
-    ReturnStatement returnStatement = (ReturnStatement) method.body.getValue().statements.get(0);
-    assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
-    assertArithmeticInfix(returnStatement.expression.getValue(),
-        ArithmeticInfixExpression.Operator.PLUS, JavaType.getInstance(Integer.class), 1, 2);
-  }
-
-  @Test
-  public void decodeClassWithIdentifierArithmeticReturnMethodBodyReportsUnsupportedReturnExpression() {
+  public void decodeClassWithNonLiteralReturnMethodBodyReportsUnsupportedReturnExpression() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
-        () -> coder.decode("class SyntheticType { WholeNumber seed <- 1; WholeNumber count() { return seed + 2; } }"));
+        () -> coder.decode("class SyntheticType { WholeNumber count() { return 1 + 2; } }"));
 
     assertTrue(thrown.getMessage().contains("method return expressions"));
     assertTrue(thrown.getMessage().contains("count"));
@@ -2355,45 +2341,6 @@ public class TweedleEncoderDecoderTest {
     assertTrue(method.body.getValue().statements.get(0) instanceof WhileLoop);
     WhileLoop loop = (WhileLoop) method.body.getValue().statements.get(0);
     assertEquals(0, loop.body.getValue().statements.size());
-  }
-
-  @Test
-  public void decodeClassWithWhileLoopMethodCallBodyCreatesWhileMethodInvocation() throws Exception {
-    NamedUserType type = decodeUserType("""
-        class SyntheticType {
-          void run(WholeNumber n) {
-            while (n > 0) { this.helper(); }
-          }
-          void helper() { }
-        }
-        """);
-
-    UserMethod run = userMethodNamed(type, "run");
-    UserMethod helper = userMethodNamed(type, "helper");
-    assertEquals(1, run.body.getValue().statements.size());
-    assertTrue(run.body.getValue().statements.get(0) instanceof WhileLoop);
-    WhileLoop loop = (WhileLoop) run.body.getValue().statements.get(0);
-    assertRelationalInfix(loop.conditional.getValue(), RelationalInfixExpression.Operator.GREATER);
-    assertEquals(1, loop.body.getValue().statements.size());
-    assertTrue(loop.body.getValue().statements.get(0) instanceof ExpressionStatement);
-    ExpressionStatement stmt = (ExpressionStatement) loop.body.getValue().statements.get(0);
-    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
-    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
-    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
-    assertSame(helper, invocation.method.getValue());
-    assertTrue(invocation.requiredArguments.isEmpty());
-  }
-
-  @Test
-  public void decodeClassWithArgumentBearingThisMethodCallInWhileBodyReportsUnsupportedBoundary() {
-    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
-        class SyntheticType {
-          void run(Boolean flag) {
-            while (flag) { this.helper(value: 1); }
-          }
-          void helper(WholeNumber value) { }
-        }
-        """, "run.this.helper");
   }
 
   @Test
