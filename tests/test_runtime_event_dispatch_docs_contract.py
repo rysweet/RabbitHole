@@ -2,6 +2,7 @@ import argparse
 import contextlib
 import functools
 import io
+import re
 import subprocess
 import sys
 import tempfile
@@ -15,7 +16,11 @@ REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "generated-story-api-listene
 INDEX_PATH = REPO_ROOT / "docs" / "index.md"
 TEST_BRANCH = "runtime-event-dispatch-guard-test-branch"
 RECOVERY_BRANCH = "wave6-runtime-event-dispatch-1778302300"
-RECOVERY_HEAD = "c1e22a22d58e61115cf5e52ee919d5b648f1d54b"
+RECOVERY_PR_NUMBER = "403"
+RECOVERY_PR_HEAD_COMMAND = (
+    f'EXPECTED_PR_HEAD="$(gh pr view {RECOVERY_PR_NUMBER} --json headRefOid --jq .headRefOid)"'
+)
+RECOVERY_HEAD_CHECK = 'test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"'
 NON_CLAIM_TERMS = [
     "desktop runtime execution",
     "full world playback",
@@ -323,10 +328,10 @@ class RuntimeEventDispatchPr403RecoveryContractTest(unittest.TestCase):
             "# Runtime Event Dispatch PR Recovery",
             "PR #403",
             RECOVERY_BRANCH,
-            RECOVERY_HEAD,
+            RECOVERY_PR_HEAD_COMMAND,
             'test "$(git rev-parse --abbrev-ref HEAD)" = '
             f'"{RECOVERY_BRANCH}"',
-            f'test "$(git rev-parse HEAD)" = "{RECOVERY_HEAD}"',
+            RECOVERY_HEAD_CHECK,
             "git submodule update --init tweedle-lang",
             "NODE_OPTIONS=--max-old-space-size=32768 "
             "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
@@ -345,24 +350,34 @@ class RuntimeEventDispatchPr403RecoveryContractTest(unittest.TestCase):
             "python3 -m unittest tests.test_runtime_event_dispatch_docs_contract",
             "python3 tests/test_runtime_event_dispatch_docs_contract.py "
             f"--guard-check --worktree . --expected-branch {RECOVERY_BRANCH} "
-            f"--expected-head {RECOVERY_HEAD}",
+            '--expected-head "$EXPECTED_PR_HEAD"',
         ]
         for expected_text in required_evidence:
             with self.subTest(expected_text=expected_text):
                 self.assertIn(expected_text, reference)
 
+    def test_reference_pr403_recovery_section_does_not_pin_a_stale_sha(self) -> None:
+        reference = reference_text()
+        recovery_section = reference.split("## Runtime Event Dispatch PR Recovery", 1)[1].split(
+            "## Feature intent",
+            1,
+        )[0]
+
+        self.assertNotRegex(recovery_section, re.compile(r"\b[0-9a-f]{40}\b"))
+
     def test_reference_documents_no_manual_merge_and_noop_finalization_boundary(self) -> None:
         reference = reference_text()
+        normalized_reference = " ".join(reference.split())
 
         required_boundary_text = [
             "Do not manually merge PR #403",
             "No-op justification:",
-            RECOVERY_HEAD,
-            "no repository changes are required",
+            "checked-out HEAD matches the live PR head",
         ]
         for expected_text in required_boundary_text:
             with self.subTest(expected_text=expected_text):
                 self.assertIn(expected_text, reference)
+        self.assertIn("no pending repository changes remain", normalized_reference)
 
         bounded_non_claims = [
             "full UI automation",
