@@ -79,7 +79,11 @@ public final class EatmeRunWindowEvidence {
   }
 
   private static Path validateEvidenceDir(Path evidenceDir) throws IOException {
-    Path evidenceRoot = evidenceDir.toRealPath();
+    Path evidencePath = evidenceDir.toAbsolutePath().normalize();
+    if (Files.isSymbolicLink(evidencePath)) {
+      throw new IOException("Run-window evidence path must not be a symbolic link: " + evidenceDir);
+    }
+    Path evidenceRoot = evidencePath.toRealPath();
     if (!Files.isDirectory(evidenceRoot)) {
       throw new IOException("Run-window evidence path is not a directory: " + evidenceDir);
     }

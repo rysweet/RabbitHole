@@ -80,8 +80,9 @@ Seam](./first-lesson-live-procedure-target-observation.md).
 The Run-window contract scenario is a non-executing creation/wiring lane: its
 default `--prepare-only` path records scenario wiring and checklist evidence, and
 its gated command runs only the focused `EatmeRunWindowEvidenceTest` seam test.
-It does not claim active rendering, runtime semantic correctness, rendering
-correctness, Save behavior, grading, or full UI automation.
+It does not claim active rendering, run execution, world execution correctness,
+rendering correctness, Save behavior, grading, creative assessment, lesson
+completion, or full UI automation.
 
 ## Learner-world boundary
 
@@ -508,6 +509,10 @@ The artifact is a creation/wiring metadata record. It is not a render-affordance
 artifact, runtime result, Save artifact, grading artifact, screenshot, pixel
 sample, or full UI automation transcript.
 
+For the dedicated usage guide, artifact API, Java seam API, configuration, path
+safety rules, examples, and tutorial, see [Run-Window Creation/Wiring
+Contract](./run-window-creation-wiring-contract.md).
+
 Required `run-window-created.json` fields:
 
 | Field | Type | Required value or meaning |
@@ -688,7 +693,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
 12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
 13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-world grading, rubric scoring, correctness assessment, or creative assessment.
-14. Keeps any future Run-window contract narrow: do not use `run-window-created.json`, the scenario checklist, or the focused seam test to claim active rendering, runtime semantic correctness, rendering correctness, Save behavior, grading, or full UI automation.
+14. Keeps any future Run-window contract narrow: do not use `run-window-created.json`, the scenario checklist, or the focused seam test to claim active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, creative assessment, lesson completion, or full UI automation.
 
 ## Extension rules
 

@@ -113,6 +113,21 @@ public class EatmeRunWindowEvidenceTest {
   }
 
   @Test
+  public void rejectsSymlinkEvidenceDirectoryWithoutWritingOutsideScratchRoot() throws Exception {
+    Path scratchRoot = temporaryFolder.newFolder("scratch-root").toPath();
+    Path outsideEvidenceTarget = temporaryFolder.newFolder("outside-evidence-target").toPath();
+    Path symlinkEvidenceDir = scratchRoot.resolve("linked-evidence");
+    Files.createSymbolicLink(symlinkEvidenceDir, outsideEvidenceTarget);
+
+    try {
+      EatmeRunWindowEvidence.writeRunWindowCreated(symlinkEvidenceDir, "Run Alice", "Program");
+      fail("symlink evidence directory should be rejected");
+    } catch (IOException expected) {
+      assertTrue(Files.notExists(outsideEvidenceTarget.resolve(EatmeRunWindowEvidence.RUN_WINDOW_CREATED_ARTIFACT)));
+    }
+  }
+
+  @Test
   public void recordRunWindowCreatedDoesNotAbortWindowCreationWhenConfiguredPathIsInvalid() {
     String previous = System.getProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY);
     Level previousLevel = Logger.getLevel();

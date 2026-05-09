@@ -262,8 +262,11 @@ Run-window-created evidence seam. It verifies that the Run-window creation
 hook can write a fixed `run-window-created.json` artifact with schema version,
 creation status, contract scope, source metadata, optional frame/program display
 metadata, path-safe artifact naming, JSON escaping, false capability booleans,
-and explicit non-claim boundaries. It does not verify active rendering, runtime
-semantics, rendering correctness, Save behavior, grading, or full UI automation.
+and explicit non-claim boundaries. It does not verify active rendering, run
+execution, world execution correctness, rendering correctness, Save behavior,
+grading, creative assessment, lesson completion, or full UI automation.
+For focused review steps, see [Review the Run-Window Creation/Wiring
+Contract](./review-run-window-creation-wiring-contract.md).
 
 Prepare the scenario without executing the focused Maven command:
 
@@ -285,8 +288,8 @@ qa/outside-in/alice-desktop/evidence/run-window-contract/alice-desktop-run-windo
 
 `status.txt` records `automationMode=gated-command-smoke`,
 `outcome=gated-not-run`, the fixed allowlisted Maven argv, and the checklist
-name. This is the expected prepare-only result; it proves scenario
-wiring and review instructions, not the artifact contents.
+name. This is the expected prepare-only result; it verifies scenario wiring and
+review instructions, not the artifact contents.
 
 Run the focused contract check in a prepared worktree:
 
