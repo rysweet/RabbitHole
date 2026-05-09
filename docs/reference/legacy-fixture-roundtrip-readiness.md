@@ -376,9 +376,11 @@ The merge-ready evidence block should include:
 | Focused scope | The note repeats the non-claims for full historical migration, full Tweedle decode, full player decode, arbitrary user archive support, and desktop UI behavior. |
 
 The evidence block should not treat a clean focused review as a substitute for
-current-base mergeability. If the target branch has changed since that review,
-update the branch, rerun the focused evidence that can be affected by the merge,
-and refresh the PR body before claiming strict merge-ready status.
+current-base mergeability. A clean focused current-head review is not
+merge-ready evidence after the target branch changes. If the target branch has
+changed since that review, update the branch, rerun the focused evidence that
+can be affected by the merge, and refresh the PR body before claiming strict
+merge-ready status.
 
 ## Examples
 

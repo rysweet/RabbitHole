@@ -95,6 +95,10 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
             "Resolve conflicts only in the bounded legacy fixture round-trip lane",
             normalized,
         )
+        self.assertIn(
+            "A clean focused current-head review is not merge-ready evidence after the target branch changes.",
+            normalized,
+        )
         self.assertIn("Do not wrap this focused gate in an external timeout helper", normalized)
         self.assertIn(FOCUSED_MAVEN_COMMAND, normalized)
         for area in EVIDENCE_AREAS:
