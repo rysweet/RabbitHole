@@ -103,10 +103,20 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
 
         self.assertIn("workflow-accepted no-op justification", text)
         self.assertIn("current-head run proves that no repository change is needed", text)
+        self.assertIn("no repository files are modified", text)
         self.assertIn("exact PR metadata command", text)
         self.assertIn("worktree cleanliness", text)
-        self.assertIn("disposable merge-check result", text)
+        self.assertIn("conditional merge-check evidence", text)
         self.assertIn("reviewed artifacts or the explicit reason no live artifact was required", text)
+        self.assertIn("focused pushed-change summary path", text)
+
+    def test_merge_check_is_conditional_for_clean_green_pr_metadata(self) -> None:
+        text = f"{self.howto}\n{self.reference}"
+
+        self.assertIn("does not require a disposable local merge check", text)
+        self.assertIn("Run the conditional local merge check only when GitHub reports `DIRTY`", text)
+        self.assertIn("mergeability metadata is unavailable/ambiguous", text)
+        self.assertIn("If PR metadata cannot be verified at all", text)
 
     def test_github_external_service_boundary_uses_retry_and_explicit_failure(self) -> None:
         text = self.reference

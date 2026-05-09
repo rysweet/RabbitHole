@@ -107,6 +107,36 @@ class Pr437NoopRecoveryReportContractTest(unittest.TestCase):
         self.assertIn("evidence-ready only", self.combined)
         self.assertIn("does not authorize an agent to approve, merge, close, rebase", self.combined)
 
+    def test_noop_and_edit_push_paths_are_not_conflated(self) -> None:
+        """Regression contract: no-op reports cannot describe pushed repository edits."""
+        for no_op_rule in [
+            "no repository files are modified",
+            "`git status --short --branch` showed no repository changes",
+            "do not publish `No-op justification:`; use the focused pushed-change summary path instead",
+        ]:
+            with self.subTest(no_op_rule=no_op_rule):
+                self.assertIn(no_op_rule, self.combined)
+
+        for edit_push_rule in [
+            "Report path: `EDIT_AND_PUSH`",
+            "Files modified: list the repository paths changed by the recovery",
+            "after the commit/push",
+        ]:
+            with self.subTest(edit_push_rule=edit_push_rule):
+                self.assertIn(edit_push_rule, self.combined)
+
+        self.assertNotIn("documented no-op report changes", self.combined)
+
+    def test_clean_green_metadata_skips_unconditional_disposable_merge_check(self) -> None:
+        """Regression contract: CLEAN/SUCCESS metadata does not require local merge reproduction."""
+        for merge_rule in [
+            "`mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is merge-ready evidence and does not require a disposable local merge check",
+            "Run the conditional local merge check only when GitHub reports `DIRTY`",
+            "mergeability metadata is unavailable/ambiguous after the head and base are verified",
+        ]:
+            with self.subTest(merge_rule=merge_rule):
+                self.assertIn(merge_rule, self.combined)
+
 
 if __name__ == "__main__":
     unittest.main()

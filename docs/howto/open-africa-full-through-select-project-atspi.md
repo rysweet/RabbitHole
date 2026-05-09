@@ -80,7 +80,7 @@ GitHub PR metadata is an external dependency for that recovery path, not Alice r
 
 Passing recovery gates makes the PR evidence-ready only. It does not authorize an agent to approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.
 
-The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed. At the verified head, `mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is merge-ready evidence. Empty `reviewDecision` is owner-free/unset metadata; report it honestly and do not describe it as approval. The no-op justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, merge-ready GitHub evidence, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required. No live artifact is acceptable only for a no-op documentation recovery that makes no live Select Project success claim and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory.
+The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed and no repository files are modified. At the verified head, `mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is merge-ready evidence and does not require a disposable local merge check. Run the conditional local merge check only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after the head and base are verified. Empty `reviewDecision` is owner-free/unset metadata; report it honestly and do not describe it as approval. The no-op justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, merge-ready GitHub evidence or conditional merge-check evidence, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required. No live artifact is acceptable only for a no-op documentation recovery that makes no live Select Project success claim and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory. If the recovery edits docs, tests, contracts, or other repository files, use the focused pushed-change summary path from the reference contract instead of `No-op justification:`.
 
 ## Target evidence vocabulary
 
@@ -295,13 +295,13 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 
 - PR state: open state, `headRefName`, `headRefOid`, `baseRefName`, `isDraft`, `mergeStateStatus`, owner-free/unset review decision when empty, and check summary from a successful `gh pr view`.
 - Local PR head: `git rev-parse HEAD` value and confirmation that it matches `headRefOid`.
-- Merge-ready evidence: `mergeStateStatus=CLEAN`, required checks completed with `SUCCESS`, and branch refs pointing at the verified head; if GitHub reports `DIRTY`, include the local merge check command, conflict files if any, and final merge-check result.
+- Merge-ready evidence: `mergeStateStatus=CLEAN`, required checks completed with `SUCCESS`, and branch refs pointing at the verified head; if GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after head/base verification, include the local merge check command, conflict files if any, and final merge-check result.
 - Focused Select Project validation: commands run and exit status.
 - Artifacts: exact run directory and files reviewed, such as `status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, and `select-project-window.json`.
-- Readiness evidence: current branch/head guard, PR metadata command result, focused validation status, worktree cleanliness, and disposable merge-check result.
+- Readiness evidence: current branch/head guard, PR metadata command result, focused validation status, worktree cleanliness, and merge-ready GitHub evidence or conditional merge-check evidence.
 - Review evidence: reviewed docs, contracts, and artifacts, or the exact no-live-artifact exception used for a documentation-only recovery.
 - Finalization evidence: final blocker state and confirmation that the result is evidence-ready only, not a PR mutation.
-- Files modified: repository paths changed by the recovery, or `None` only when the no-op justification below is valid.
+- Files modified: repository paths changed by the recovery; use `None` only when the no-op justification below is valid and `git status --short --branch` shows no repository changes.
 
 ## Unverified assumptions
 
@@ -314,7 +314,7 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 - Use `Current blocker: None` only when every PR finalization gate passes.
 ```
 
-For PR #437 at the verified current head, use the canonical [`No-op justification:` shape](../reference/select-project-africa-full-atspi-evidence.md#workflow-accepted-no-op-justification) only for a documentation-only recovery that makes no live Select Project success claim.
+For PR #437 at the verified current head, use the canonical [`No-op justification:` shape](../reference/select-project-africa-full-atspi-evidence.md#workflow-accepted-no-op-justification) only for a documentation-only recovery that makes no live Select Project success claim and leaves repository files unchanged. If the recovery edits and pushes docs/contracts, use the [`EDIT_AND_PUSH` focused pushed-change summary](../reference/select-project-africa-full-atspi-evidence.md#focused-pushed-change-summary).
 
 If GitHub metadata is unavailable, report `Current blocker: environment dependency`. If branch/head drift is observed, the report must not publish `No-op justification:`; it must first re-establish the exact PR head or stop with the blocker.
 

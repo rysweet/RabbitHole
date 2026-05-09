@@ -26,7 +26,7 @@ The lane is intentionally narrow. It records target identification, target-speci
 
 ## PR #437 recovery contract
 
-The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. Do not merge manually. Do not use timeout wrappers. It starts from the GitHub PR head, reproduces merge state locally, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker.
+The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. Do not merge manually. Do not use timeout wrappers. It starts from the GitHub PR head, records current GitHub merge/check/review metadata, runs a disposable local merge check only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after the head and base are verified, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker.
 
 The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR state snapshot records:
 
@@ -34,14 +34,14 @@ The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR sta
 | --- | --- |
 | `state` | GitHub open state. The PR must still be open before recovery evidence can support finalization. |
 | `headRefName` | Branch checked out for recovery work. Do not infer this from the current local branch. |
-| `headRefOid` | Exact PR head commit. The checked-out local `git rev-parse HEAD` value must match this SHA before validation or merge checks count as PR evidence. |
+| `headRefOid` | Exact PR head commit. The checked-out local `git rev-parse HEAD` value must match this SHA before validation or conditional merge checks count as PR evidence. |
 | `baseRefName` | Branch used for local merge reproduction. |
 | `isDraft` | Current draft state metadata. `false` is required for the current owner-free merge-ready report, but draft state alone never proves evidence quality. |
 | `mergeStateStatus` | GitHub mergeability signal. `CLEAN` is merge-ready evidence when the current required checks are also `SUCCESS`; `DIRTY` remains actionable until locally reproduced or disproved. |
 | `reviewDecision` | Current review decision metadata. An empty value means owner-free/unset and must be reported honestly instead of being converted into approval. |
 | `statusCheckRollup` | Current GitHub check context. Required checks must be `SUCCESS` for the merge-ready report; passing checks do not override missing focused evidence or overbroad claims. |
 
-`mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is the merge-ready signal for the current PR head. `mergeStateStatus=DIRTY` is a blocker until the exact PR head is checked out explicitly and a local merge check against the PR base lists either no unmerged files or the exact conflict files. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot that is not tied to the local `HEAD`.
+`mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is the merge-ready signal for the current PR head and does not require a disposable local merge check. `mergeStateStatus=DIRTY`, or unavailable/ambiguous mergeability metadata after the exact PR head and base are known, requires a local merge check against the PR base before the report can name either no merge blocker or exact conflict files. If PR metadata cannot be verified at all after the explicit retry path, the blocker is `environment dependency`, not a guessed local merge result. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot that is not tied to the local `HEAD`.
 
 Passing recovery gates makes PR #437 evidence-ready only. It does not authorize an agent to approve, merge, close, rebase, push unrelated changes, or otherwise mutate the PR.
 
@@ -55,7 +55,7 @@ Read-only GitHub metadata and fetch calls may be retried for transient GitHub CL
 
 Do not use gh auth status --show-token, print tokens, or include authentication output in evidence. Record only the command shape, exit status, PR fields, and non-secret error category needed to explain the blocker.
 
-### Local PR head and merge check
+### Local PR head and conditional merge check
 
 Start from the PR's recorded head commit, then prove the local checkout matches it:
 
@@ -95,6 +95,8 @@ test "$LOCAL_HEAD_SHA" = "$PR_HEAD_OID"
 with_external_retry git fetch origin "$BASE_REF"
 git status --short --branch
 ```
+
+When this metadata reports `mergeStateStatus=CLEAN` and the required checks are `SUCCESS`, the current-head report records that GitHub evidence and skips the disposable worktree. Run the disposable worktree block below only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after `headRefOid` and `baseRefName` have been verified.
 
 Use a disposable worktree for merge reproduction so the PR checkout stays reviewable. Always abort the no-commit merge before removing the disposable worktree; a clean `git merge --no-commit --no-ff` still leaves staged merge results.
 
@@ -149,20 +151,20 @@ If the conflict touches behavior-sensitive Alice code and no characterization or
 
 ### Workflow-accepted no-op justification
 
-The recovery lane may publish a no-op justification only when a current-head run proves that no repository change is needed. A no-op report is still evidence, not an assumption: it records the exact PR metadata command, exact local head SHA, worktree cleanliness, disposable merge-check result, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required.
+The recovery lane may publish a no-op justification only when a current-head run proves that no repository change is needed and no repository files are modified. A no-op report is still evidence, not an assumption: it records the exact PR metadata command, exact local head SHA, worktree cleanliness, merge-ready GitHub evidence or conditional merge-check evidence, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required.
 
 Use a no-op justification only when all of these conditions are true:
 
 | Condition | Required evidence |
 | --- | --- |
 | Exact PR head | `gh pr view` reports `headRefOid`, and local `git rev-parse HEAD` matches it exactly. |
-| Clean worktree | `git status --short --branch` has no uncommitted repository changes unrelated to the no-op report. |
-| Merge readiness | GitHub reports `mergeStateStatus=CLEAN`, and every required status check in `statusCheckRollup` has `status=COMPLETED` and `conclusion=SUCCESS`; if GitHub reports `DIRTY`, the report names one `merge dirtiness` blocker instead of claiming readiness. |
+| Clean worktree | `git status --short --branch` has no repository changes. The recovery did not edit, commit, or push docs, tests, contracts, or other files. |
+| Merge readiness | GitHub reports `mergeStateStatus=CLEAN`, and every required status check in `statusCheckRollup` has `status=COMPLETED` and `conclusion=SUCCESS`; no disposable local merge check is required for this path. If GitHub reports `DIRTY`, or mergeability metadata is unavailable/ambiguous after the head and base are verified, the report includes the conditional local merge-check command/result or names one `merge dirtiness` blocker instead of claiming readiness. |
 | Review metadata | `reviewDecision` is recorded exactly. Empty review decision is reported as owner-free/unset and is not described as approval. |
 | Focused validation | The Select Project scenario/schema/probe checks in [Focused commands](#focused-commands) pass, or the report names `failing validation`. |
 | Evidence boundary | The report separates verified evidence from unverified assumptions and makes no full UI automation, rendering, Save, grading, creative-assessment, or lesson-completion claim. |
 
-If GitHub reports `mergeStateStatus=DIRTY`, the no-op report must include the disposable local merge reproduction. GitHub metadata alone is not enough to claim that no repository change is required.
+If GitHub reports `mergeStateStatus=DIRTY`, the no-op report must include the disposable local merge reproduction. GitHub metadata alone is not enough to claim that no repository change is required on the dirty path. If the recovery changes docs, tests, contracts, or any other repository file, do not publish `No-op justification:`; use the focused pushed-change summary path instead.
 
 No live artifact is acceptable only for a no-op documentation recovery that does not claim live Select Project success and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory. Any claim that Africa Full was selected, opened, or observed after opening requires live artifacts from the run being reported.
 
@@ -173,7 +175,7 @@ No-op justification:
 - Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
 - Current head: `<verified headRefOid matching git rev-parse HEAD>`
 - PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
-- Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
+- Worktree cleanliness: `git status --short --branch` showed no repository changes.
 - Merge-ready evidence: `mergeStateStatus=CLEAN`, every required check in `statusCheckRollup` completed with `SUCCESS`, and branch refs point at the verified head.
 - Review metadata: `reviewDecision` is empty/owner-free; report it as unset and do not claim approval.
 - Focused validation: `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`, schema/scenario/proof/probe contracts, `tests/test_pr437_select_project_recovery_contract.py`, and `tests/test_pr437_noop_recovery_report_contract.py` passed at this head.
@@ -181,6 +183,22 @@ No-op justification:
 ```
 
 If `git rev-parse --abbrev-ref HEAD`, `git rev-parse HEAD`, or the PR metadata disagree, treat it as branch/head drift and must not publish `No-op justification:`. If GitHub metadata cannot be verified after the explicit external retry path, report `Current blocker: environment dependency`; do not silently substitute cached, historical, or manually typed PR metadata.
+
+### Focused pushed-change summary
+
+Use the focused pushed-change summary path, not `No-op justification:`, when recovery edits and pushes documentation, tests, contracts, or other repository files. This path can still be merge-ready and owner-free, but it is an `EDIT_AND_PUSH` report because repository contents changed.
+
+```markdown
+Report path: `EDIT_AND_PUSH`
+- Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
+- Current head: `<verified headRefOid matching git rev-parse HEAD after push>`
+- PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
+- Worktree cleanliness: `git status --short --branch` showed no uncommitted repository changes after the commit/push.
+- Merge-ready evidence: `mergeStateStatus=CLEAN`, every required check in `statusCheckRollup` completed with `SUCCESS`, and branch refs point at the verified pushed head; include the conditional local merge-check result only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after head/base verification.
+- Review metadata: `reviewDecision` is empty/owner-free; report it as unset and do not claim approval.
+- Focused validation: focused Select Project documentation/schema/probe contracts passed at this head.
+- Files modified: list the repository paths changed by the recovery.
+```
 
 ### Recovery blocker taxonomy
 
