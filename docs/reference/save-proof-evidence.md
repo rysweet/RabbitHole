@@ -78,7 +78,7 @@ The blocker object must include non-empty `kind`, `observed`, and `required` fie
 
 ## Fail-closed validation
 
-`run-scenario.sh validate-save-proof-evidence` rejects missing, invalid, stale, future-dated, partial, blocked, unknown-blocker, or internally inconsistent artifacts. It checks the canonical filename, rejects symlinked artifacts, checks scenario/workflow/runId identity, freshness, required proven flags, output file existence and size, readback marker fields, and blocker shape.
+`run-scenario.sh validate-save-proof-evidence` rejects missing, invalid, stale, future-dated, partial, blocked, unknown-blocker, or internally inconsistent artifacts. It requires scenario/workflow/runId/started-at context, checks the canonical filename, rejects symlinked artifacts, checks scenario/workflow/runId identity, freshness, required proven flags, output file existence and size, readback marker fields, and blocker shape.
 
 Freshness allows at most 300 seconds of future timestamp skew for `generatedAtUtc` or artifact mtime. Anything older than the supplied command start time, or more than 300 seconds ahead of the validator clock, is rejected.
 

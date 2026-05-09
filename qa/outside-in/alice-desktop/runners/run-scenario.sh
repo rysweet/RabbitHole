@@ -705,6 +705,23 @@ validate_save_proof_evidence() {
     esac
   done
 
+  if [ -z "$scenario" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --scenario' >&2
+    return 2
+  fi
+  if [ -z "$workflow" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --workflow' >&2
+    return 2
+  fi
+  if [ -z "$run_id" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --run-id' >&2
+    return 2
+  fi
+  if [ -z "$started_at_epoch" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --started-at-epoch' >&2
+    return 2
+  fi
+
   python3 - "$artifact_path" "$scenario" "$workflow" "$run_id" "$started_at_epoch" <<'PY'
 import json
 import re

@@ -56,6 +56,41 @@ assert_fixture_rejected() {
   assert_validation_failure_contains "$artifact_path" "$label" "$expected_pattern" "$started_at_epoch" "$expected_scenario" "$expected_workflow" "$expected_run_id"
 }
 
+assert_required_context_failure_contains() {
+  local label=$1
+  local expected_pattern=$2
+  shift 2
+
+  local output_path="$tmp_root/$label.out"
+  local status
+
+  if "$RUNNER" validate-save-proof-evidence "$artifact_path" "$@" >"$output_path" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+
+  assert_failure "$status" "$label is rejected before Save proof artifact validation"
+  assert_contains "$output_path" "$expected_pattern" "$label rejection gives an explicit required-context diagnostic"
+}
+
+assert_required_context_failure_contains "missing-scenario-context" 'requires --scenario' \
+  --workflow "$WORKFLOW" \
+  --run-id contract-run-1 \
+  --started-at-epoch 4102444800
+assert_required_context_failure_contains "missing-workflow-context" 'requires --workflow' \
+  --scenario "$SCENARIO_ID" \
+  --run-id contract-run-1 \
+  --started-at-epoch 4102444800
+assert_required_context_failure_contains "missing-run-id-context" 'requires --run-id' \
+  --scenario "$SCENARIO_ID" \
+  --workflow "$WORKFLOW" \
+  --started-at-epoch 4102444800
+assert_required_context_failure_contains "missing-started-at-context" 'requires --started-at-epoch' \
+  --scenario "$SCENARIO_ID" \
+  --workflow "$WORKFLOW" \
+  --run-id contract-run-1
+
 assert_validation_failure_contains "$artifact_path" "missing-artifact" 'missing Save proof evidence artifact|No such file|not found'
 
 wrong_name_artifact="$tmp_root/non-canonical-save-proof.json"

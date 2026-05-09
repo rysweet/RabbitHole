@@ -77,6 +77,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh validate-save-proof-evidence
 
 ### Arguments
 
+All context options are required so the validator can bind the artifact to one
+specific scenario run and reject stale evidence.
+
 | Argument | Meaning |
 | --- | --- |
 | `<artifact-path>` | Path to the canonical `robot-save-menu-dialog-write-readback-proof.json` artifact. The basename must match the canonical artifact name. |
