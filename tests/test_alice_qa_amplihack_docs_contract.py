@@ -1,5 +1,6 @@
 import re
 import unittest
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -19,12 +20,22 @@ NEGATIVE_CONTRACT_DOCS = [
 ]
 
 
+@lru_cache(maxsize=None)
+def read_doc(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+@lru_cache(maxsize=None)
+def normalized_doc(path: Path) -> str:
+    return re.sub(r"\s+", " ", read_doc(path))
+
+
 class AliceQaAmplihackDocsContractTest(unittest.TestCase):
     def test_branch_installable_examples_accept_branch_or_commit_tokens(self) -> None:
         stale_examples = []
 
         for path in CLI_DOCS:
-            text = path.read_text(encoding="utf-8")
+            text = read_doc(path)
             with self.subTest(path=path.relative_to(REPO_ROOT)):
                 if "amplihack alice-qa" in text:
                     self.assertIn("<branch-or-commit>", text)
@@ -42,8 +53,8 @@ class AliceQaAmplihackDocsContractTest(unittest.TestCase):
 
     def test_negative_save_contract_docs_keep_cli_wrapper_bounded_to_artifact_validation(self) -> None:
         for path in NEGATIVE_CONTRACT_DOCS:
-            text = path.read_text(encoding="utf-8")
-            normalized = re.sub(r"\s+", " ", text)
+            text = read_doc(path)
+            normalized = normalized_doc(path)
 
             with self.subTest(path=path.relative_to(REPO_ROOT)):
                 self.assertIn("amplihack alice-qa save-negative-contract", text)
@@ -59,8 +70,7 @@ class AliceQaAmplihackDocsContractTest(unittest.TestCase):
 
     def test_shared_qa_docs_do_not_claim_cli_wrapper_proves_desktop_save_completion(self) -> None:
         reference = REPO_ROOT / "docs" / "reference" / "alice-desktop-outside-in-qa.md"
-        text = reference.read_text(encoding="utf-8")
-        normalized = re.sub(r"\s+", " ", text)
+        normalized = normalized_doc(reference)
 
         self.assertIn(
             "Proves invalid Save proof artifacts fail closed with explicit diagnostics; "
