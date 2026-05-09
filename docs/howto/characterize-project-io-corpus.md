@@ -175,11 +175,15 @@ For resource-bearing fixtures, assert:
 - AST `ResourceExpression` binding to the decoded resource object when the
   archive contains a resource expression.
 
-For JSON/player archives with unsupported Tweedle, assert the resource values
-directly on the returned project resources and assert that the program type is
-`null`. That pairing is the current honest boundary: resources are readable, but
-the unsupported manifest-declared Tweedle program is not decoded into an
-editable Alice program type.
+For JSON/player archives with unsupported Tweedle, first decide whether the
+fixture is the exact legacy image-resource compatibility shape. Only a `.a3w`
+archive named `Program` with exactly one `Program` type reference, exactly one
+valid image reference, and unsupported `Program` Tweedle source should read back
+as a resource-only project with `null` program type. Nearby unsupported shapes
+fail closed with `IOException`.
+
+See [Characterize the Archive/Player Boundary](./characterize-archive-player-boundary.md)
+for the focused decision table and assertions.
 
 For round-trip coverage, write the decoded object to a second archive and repeat
 the same archive-entry and readback assertions.

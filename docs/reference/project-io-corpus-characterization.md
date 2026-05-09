@@ -168,7 +168,7 @@ boundaries:
 | Manifest entry | Current readback behavior |
 | --- | --- |
 | `TypeReference` with format `tweedle` and supported `src/<Program>.twe` source | `IoUtilities.readProject(File)` returns a project with a decoded program type. |
-| `TypeReference` with format `tweedle` and unsupported Tweedle members in `src/<Program>.twe` | Generated named archives fail with `IOException` instead of returning a partial project whose program type is `null`. The legacy player-resource recovery path is narrower: a `.a3w` archive named `Program` with exactly one recovered image resource can still return a resource-only project with no program type. |
+| `TypeReference` with format `tweedle` and unsupported Tweedle members in `src/<Program>.twe` | Generated named archives fail with `IOException` instead of returning a partial project whose program type is `null`. The legacy player-resource recovery path is narrower: a `.a3w` archive named `Program` with exactly one `Program` type reference and exactly one recovered image resource can still return a resource-only project with no program type. |
 | Valid image resource reference with matching archive data and supported Tweedle source | Resource identity, name, original file name, content type, and bytes remain readable through `IoUtilities.readProject(File)`. |
 
 This boundary keeps player/export resource compatibility honest. Tests may
@@ -214,6 +214,9 @@ are resolved, and which archive failures should remain clear `IOException`s at
 the `IoUtilities` boundary. It should also decide whether the legacy
 resource-only player recovery path stays as-is, becomes more explicit, or is
 retired behind new compatibility tests.
+
+For the focused legacy player boundary, see
+[Archive/Player Boundary](./archive-player-boundary.md).
 
 ### Type `.a3c` XML fallback archive
 
