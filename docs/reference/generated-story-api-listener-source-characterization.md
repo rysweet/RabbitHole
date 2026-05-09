@@ -25,6 +25,7 @@ Tweedle/player decoding or full first-lesson completion.
 - [Generated-source contract](#generated-source-contract)
 - [Headless event-seam contract](#headless-event-seam-contract)
 - [Executable characterization](#executable-characterization)
+- [Executable test suite and success conditions](#executable-test-suite-and-success-conditions)
 - [QA scenario metadata](#qa-scenario-metadata)
 - [Evidence links](#evidence-links)
 - [API reference](#api-reference)
@@ -232,9 +233,10 @@ ProjectCodeGeneratorStoryApiGeneratedSourceTest.generatedSyntheticSceneListenerR
 ProjectCodeGeneratorStoryApiGeneratedSourceTest.generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch
 ```
 
-`headlessStaticStoryMethodNotifiesListenerAroundBlockAndCommentStatements`
-succeeds when:
-The lane covers this bounded workflow:
+`headlessStaticStoryMethodNotifiesListenerAroundBlockAndCommentStatements`,
+`generatedSyntheticSceneListenerRegistrationSourceCompiles`, and
+`generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch` succeed
+when the lane covers this bounded workflow:
 
 1. Build deterministic AST fixtures in memory.
 2. Generate Java source with `JavaCodeGenerator` or
@@ -328,7 +330,7 @@ implementation seams. They do not prove full event-loop scheduling, visible UI
 behavior, lesson completion, grading, Save behavior, or complete world runtime
 correctness.
 
-## Executable characterization
+## Executable test suite and success conditions
 
 The focused executable tests are:
 
@@ -485,8 +487,13 @@ mvn -pl core/ast -am \
   test
 ```
 
-Run the focused NetBeans generated listener source and dispatch
-characterization:
+Run the focused core AST source-code-generator characterization:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=SourceCodeGeneratorTest \
   test
 ```
@@ -539,13 +546,6 @@ executed:BlockStatement
 This proves statement listener dispatch for the small method body only. It is
 not evidence that a rendered world played correctly.
 
-### Expected generated `Scene.java` listener registration shape
-
-The source-only generated-listener characterization accepts listener
-registration shaped exactly like the current executable assertions:
-
-```java
-void handleActiveChanged(Boolean isActive,Integer activationCount) {
 Repository documentation defines the stable source-generator contract. It is not
 the place for point-in-time PR status, timestamps, commit SHAs, or copied CI
 logs.
@@ -667,28 +667,6 @@ Use this flow when changing virtual-machine listener dispatch, generated Story
 API listener source, or scene activation dispatch.
 
 ### Step 1: Resolve the linked worktree
-The `null` listeners are intentional in this fixture. They keep the generated
-source deterministic and focused on source generation for listener registration
-calls.
-
-### Lambda listener payload source
-
-A payload-probe fixture accepts generated source with this shape-only fragment:
-
-```java
-this.addSceneActivationListener((SceneActivationEvent p0) ->
-  ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationEventPayload(p0));
-```
-
-The test then invokes the handler seam directly and asserts that the same event
-object reaches the generated listener body.
-
-## Review checklist: source generation
-
-Use this checklist when changing source generation near the AST generator,
-NetBeans project generator, Story API calls, or listener registration.
-
-### 1. Start from a no-Sims checkout
 
 From the checkout you intend to validate:
 
@@ -724,6 +702,42 @@ If this fails, inspect listener registration, statement event order, and listene
 removal before changing broader runtime code.
 
 ### Step 4: Run the focused generated-listener proof
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl netbeans -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest \
+  test
+```
+
+If generated-source assertions fail, inspect the generated `Scene.java` first.
+If compilation succeeds but the latch is not released, verify that the generated
+registration method was invoked and that dispatch still flows through
+`EventManager.sceneActivated()`. Do not replace the dispatch proof with direct
+listener invocation.
+
+### Step 5: Keep claims bounded
+
+Review notes may claim headless virtual-machine listener dispatch,
+compiler-valid generated listener registration source, and one generated scene
+activation listener callback through the headless runtime seam. They must not
+claim desktop runtime execution, full world playback, visible correctness,
+grading, Save completion, exported launcher behavior, or full UI automation.
+
+## Review checklist: source generation
+
+Use this checklist when changing source generation near the AST generator,
+NetBeans project generator, Story API calls, or listener registration.
+
+### 1. Start from a no-Sims checkout
+
+```bash
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+```
+
 Do not fetch Git LFS assets or Sims payloads for these tests. The fixtures create
 the Alice projects they need.
 
@@ -735,19 +749,6 @@ smallest failing generated snippet or generated file.
 
 ### 3. Inspect generated source before runtime seams
 
-If generated-source assertions fail, inspect `Scene.java` first. If compilation
-succeeds but the latch is not released, verify that the generated registration
-method was invoked and that dispatch still flows through
-`EventManager.sceneActivated()`. Do not replace the dispatch proof with direct
-listener invocation.
-
-### Step 5: Keep claims bounded
-
-Review notes may claim headless virtual-machine listener dispatch,
-compiler-valid generated listener registration source, and one generated scene
-activation listener callback through the headless runtime seam. They must not
-claim desktop runtime execution, full world playback, visible correctness,
-grading, Save completion, exported launcher behavior, or full UI automation.
 For Story API listener failures, inspect the generated `Scene.java` assertion
 first. Runtime seam failures are useful only after the generated source compiles
 and contains the expected listener lambda or method call.
