@@ -257,7 +257,8 @@ This artifact records fail-closed sampling outcomes:
     "blocker": "world-canvas-pixel-target-not-ready",
     "pixelsSampled": false,
     "sampleCount": 0,
-    "samplingMethod": null
+    "samplingMethod": null,
+    "correctnessCheck": "not-performed"
   }
 }
 ```
