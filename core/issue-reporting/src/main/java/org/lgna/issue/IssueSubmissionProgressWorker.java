@@ -90,7 +90,7 @@ public class IssueSubmissionProgressWorker extends WorkerWithProgress<Boolean, S
   protected final Boolean do_onBackgroundThread() throws Exception {
     this.publishProgressMessage(START_MESSAGE);
     Issue.Builder issueBuilder = this.createIssueBuilder();
-    boolean rv = this.doInternal_onBackgroundThread(issueBuilder);
+    Boolean rv = this.doInternal_onBackgroundThread(issueBuilder);
     this.publishProgressMessage(END_MESSAGE);
     return rv;
   }

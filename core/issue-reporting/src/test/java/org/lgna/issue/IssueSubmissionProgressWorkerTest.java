@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 public class IssueSubmissionProgressWorkerTest {
   private static final List<String> EXPECTED_PROGRESS_MESSAGES = List.of("START_MESSAGE", "submission:true", "END_MESSAGE");
@@ -55,18 +56,50 @@ public class IssueSubmissionProgressWorkerTest {
     assertSame(throwable, capturedIssue.getThrowable());
   }
 
+  @Test
+  public void backgroundSubmissionPropagatesSubmissionExceptionWithoutPublishingCompletion() throws Exception {
+    Thread thread = new Thread("issue-reporting-worker-failure");
+    Throwable throwable = new UnsupportedOperationException("failure source");
+    RuntimeException submissionException = new IllegalStateException("submission failed");
+    RecordingIssueSubmissionProgressWorker worker = new RecordingIssueSubmissionProgressWorker(thread, throwable, true, false, submissionException);
+
+    try {
+      worker.do_onBackgroundThread();
+      fail("Expected submission exception");
+    } catch (RuntimeException e) {
+      assertSame(submissionException, e);
+    }
+
+    assertEquals(List.of("START_MESSAGE", "submission:true"), worker.progressMessages);
+    Issue capturedIssue = worker.capturedIssueBuilder.build();
+    assertEquals(IssueType.BUG, capturedIssue.getType());
+    assertSame(thread, capturedIssue.getThread());
+    assertSame(throwable, capturedIssue.getThrowable());
+  }
+
   private static final class RecordingIssueSubmissionProgressWorker extends IssueSubmissionProgressWorker {
     private final Boolean submissionResult;
+    private final RuntimeException submissionException;
     private final Thread thread;
     private final Throwable throwable;
     private final List<String> progressMessages = new ArrayList<>(EXPECTED_PROGRESS_MESSAGES.size());
     private Issue.Builder capturedIssueBuilder;
 
     private RecordingIssueSubmissionProgressWorker(Thread thread, Throwable throwable, boolean isProjectAttachmentDesired, boolean submissionResult) {
+      this(thread, throwable, isProjectAttachmentDesired, submissionResult, null);
+    }
+
+    private RecordingIssueSubmissionProgressWorker(
+        Thread thread,
+        Throwable throwable,
+        boolean isProjectAttachmentDesired,
+        boolean submissionResult,
+        RuntimeException submissionException) {
       super(null, isProjectAttachmentDesired);
       this.thread = thread;
       this.throwable = throwable;
       this.submissionResult = Boolean.valueOf(submissionResult);
+      this.submissionException = submissionException;
     }
 
     @Override
@@ -84,6 +117,9 @@ public class IssueSubmissionProgressWorkerTest {
     protected Boolean doInternal_onBackgroundThread(Issue.Builder issueBuilder) {
       this.capturedIssueBuilder = issueBuilder;
       this.publishProgressMessage("submission:" + this.isProjectAttachmentDesired);
+      if (this.submissionException != null) {
+        throw this.submissionException;
+      }
       return this.submissionResult;
     }
 
