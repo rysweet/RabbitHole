@@ -11,11 +11,147 @@ CONTROLLED_ARTIFACT=controlled-display-pixel-observation.json
 BLOCKER_ARTIFACT=visible-rendering-pixel-target-blocker.json
 PIXEL_SAMPLING_BLOCKER_ARTIFACT=visible-rendering-pixel-sampling-blocker.json
 FIXTURE_DIR="$SCRIPT_DIR/fixtures/visible-rendering"
+VALID_NONCLAIM_FIXTURE="$FIXTURE_DIR/valid-nonclaim-render-evidence.json"
+INVALID_OVERCLAIM_FIXTURE="$FIXTURE_DIR/invalid-overclaim-render-evidence.json"
+VALID_NEGATED_WORDING_FIXTURE="$FIXTURE_DIR/valid-negated-nonclaim-render-wording.txt"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 
 tmp_root=$(create_scratch_root "$SCRIPT_DIR") || exit 1
 trap 'rm -rf "$tmp_root"' EXIT
+
+assert_render_nonclaim_json() {
+  local artifact=$1
+  local label=$2
+
+  python3 - "$artifact" "$label" <<'PY'
+import json
+import re
+import sys
+
+path, label = sys.argv[1:3]
+payload = json.load(open(path, encoding="utf-8"))
+errors = []
+
+positive_correctness_patterns = (
+    re.compile(r"\b(proves?|proved|establish(?:es|ed)?|confirms?|validates?|verifies?)\b.{0,80}\b(visible|visual|rendered|rendering)\b.{0,60}\b(correct|correctness|correctly|valid|passed)\b"),
+    re.compile(r"\b(visible|visual|rendered|rendering)\b.{0,60}\b(correct|correctness|correctly)\b.{0,60}\b(proven|proved|established|confirmed|validated|verified|passed)\b"),
+    re.compile(r"\bvisibly correct\b"),
+)
+negation_markers = (
+    "cannot ",
+    "can not ",
+    "does not ",
+    "do not ",
+    "did not ",
+    "must not ",
+    "not ",
+    "no ",
+    "never ",
+    "without ",
+    "unsupported",
+    "nonclaim",
+    "not-asserted",
+)
+render_evidence_keys = {
+    "generatedFiles",
+    "pixelObservation",
+    "pixelSampling",
+    "renderArtifacts",
+    "renderedWorldPixelsObserved",
+    "sampleCount",
+    "sampledPixels",
+    "samples",
+    "screenshot",
+    "screenshotFile",
+    "screenshotPath",
+    "sourceArtifact",
+    "worldCanvasPixelTarget",
+}
+
+
+def sentences(text):
+    return [part.strip().lower() for part in re.split(r"(?<=[.!?])\s+|\n+", text) if part.strip()]
+
+
+def is_negated(sentence):
+    return any(marker in sentence for marker in negation_markers)
+
+
+def has_render_evidence(value):
+    if isinstance(value, dict):
+        return any(key in render_evidence_keys or has_render_evidence(child) for key, child in value.items())
+    if isinstance(value, list):
+        return any(has_render_evidence(child) for child in value)
+    return False
+
+
+def explicit_visible_correctness_observation(value):
+    evidence = value.get("visibleCorrectnessObservationEvidence") if isinstance(value, dict) else None
+    return isinstance(evidence, dict) and evidence.get("status") == "observed"
+
+
+def string_values(value, key_path=()):
+    if key_path and key_path[-1] == "unsupportedClaims":
+        return
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield from string_values(child, key_path + (str(key),))
+    elif isinstance(value, list):
+        for child in value:
+            yield from string_values(child, key_path)
+    elif isinstance(value, str):
+        yield value
+
+
+def correctness_checks(value):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "correctnessCheck":
+                yield child
+            yield from correctness_checks(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from correctness_checks(child)
+
+
+def unsupported_claims_document_boundary(value):
+    claims = value.get("unsupportedClaims") if isinstance(value, dict) else None
+    return isinstance(claims, list) and "full-visible-rendering-correctness" in claims
+
+
+def text_documents_boundary(value):
+    return any(
+        ("visible" in sentence or "visual" in sentence or "render" in sentence)
+        and ("correct" in sentence or "correctness" in sentence)
+        and is_negated(sentence)
+        for text in string_values(value)
+        for sentence in sentences(text)
+    )
+
+
+if has_render_evidence(payload) and not explicit_visible_correctness_observation(payload):
+    if payload.get("visibleRenderingCorrectnessEstablished") is not False:
+        errors.append(f"{label} must keep visibleRenderingCorrectnessEstablished=false without observation evidence")
+    for value in correctness_checks(payload):
+        if value != "not-performed":
+            errors.append(f"{label} correctnessCheck must be not-performed without observation evidence")
+    if not unsupported_claims_document_boundary(payload) and not text_documents_boundary(payload):
+        errors.append(f"{label} must document the visible-correctness nonclaim boundary")
+
+for text in string_values(payload):
+    for sentence in sentences(text):
+        if is_negated(sentence):
+            continue
+        for pattern in positive_correctness_patterns:
+            if pattern.search(sentence):
+                errors.append(f"{label} must not make positive visible-correctness claims from render evidence: {sentence}")
+                break
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+}
 
 python3 - \
   "$FIXTURE_DIR/world-canvas-pixel-target-ready.json" \
@@ -143,6 +279,179 @@ PY
 fixture_status=$?
 assert_success "$fixture_status" "fixture contract covers target-ready and exact blocker world-canvas pixel-target shapes"
 
+python3 - \
+  "$VALID_NONCLAIM_FIXTURE" \
+  "$INVALID_OVERCLAIM_FIXTURE" \
+  "$VALID_NEGATED_WORDING_FIXTURE" \
+  >"$tmp_root/render-nonclaim-fixtures.out" \
+  2>"$tmp_root/render-nonclaim-fixtures.err" <<'PY'
+import json
+import re
+import sys
+
+valid_path, invalid_path, wording_path = sys.argv[1:4]
+valid = json.load(open(valid_path, encoding="utf-8"))
+invalid = json.load(open(invalid_path, encoding="utf-8"))
+wording = open(wording_path, encoding="utf-8").read()
+errors = []
+
+positive_correctness_patterns = (
+    re.compile(r"\b(proves?|proved|establish(?:es|ed)?|confirms?|validates?|verifies?)\b.{0,80}\b(visible|visual|rendered|rendering)\b.{0,60}\b(correct|correctness|correctly|valid|passed)\b"),
+    re.compile(r"\b(visible|visual|rendered|rendering)\b.{0,60}\b(correct|correctness|correctly)\b.{0,60}\b(proven|proved|established|confirmed|validated|verified|passed)\b"),
+    re.compile(r"\bvisibly correct\b"),
+)
+negation_markers = (
+    "cannot ",
+    "can not ",
+    "does not ",
+    "do not ",
+    "did not ",
+    "must not ",
+    "not ",
+    "no ",
+    "never ",
+    "without ",
+    "unsupported",
+    "nonclaim",
+    "not-asserted",
+)
+render_evidence_keys = {
+    "generatedFiles",
+    "pixelObservation",
+    "pixelSampling",
+    "renderArtifacts",
+    "renderedWorldPixelsObserved",
+    "sampleCount",
+    "sampledPixels",
+    "samples",
+    "screenshot",
+    "screenshotFile",
+    "screenshotPath",
+    "sourceArtifact",
+    "worldCanvasPixelTarget",
+}
+
+
+def require(condition, message):
+    if not condition:
+        errors.append(message)
+
+
+def sentences(text):
+    return [part.strip().lower() for part in re.split(r"(?<=[.!?])\s+|\n+", text) if part.strip()]
+
+
+def is_negated(sentence):
+    return any(marker in sentence for marker in negation_markers)
+
+
+def positive_claim_errors(text, label):
+    found = []
+    for sentence in sentences(text):
+        if is_negated(sentence):
+            continue
+        for pattern in positive_correctness_patterns:
+            if pattern.search(sentence):
+                found.append(f"{label} must not make positive visible-correctness claims from render evidence: {sentence}")
+                break
+    return found
+
+
+def string_values(value, key_path=()):
+    if key_path and key_path[-1] == "unsupportedClaims":
+        return
+    if isinstance(value, dict):
+        for key, child in value.items():
+            yield from string_values(child, key_path + (str(key),))
+    elif isinstance(value, list):
+        for child in value:
+            yield from string_values(child, key_path)
+    elif isinstance(value, str):
+        yield value
+
+
+def has_render_evidence(value):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in render_evidence_keys:
+                return True
+            if has_render_evidence(child):
+                return True
+    elif isinstance(value, list):
+        return any(has_render_evidence(child) for child in value)
+    return False
+
+
+def explicit_visible_correctness_observation(payload):
+    evidence = payload.get("visibleCorrectnessObservationEvidence")
+    return isinstance(evidence, dict) and evidence.get("status") == "observed"
+
+
+def correctness_checks(value):
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "correctnessCheck":
+                yield child
+            yield from correctness_checks(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from correctness_checks(child)
+
+
+def documents_nonclaim_boundary(payload):
+    unsupported = payload.get("unsupportedClaims")
+    if isinstance(unsupported, list) and "full-visible-rendering-correctness" in unsupported:
+        return True
+    return any(
+        ("visible" in sentence or "visual" in sentence or "render" in sentence)
+        and ("correct" in sentence or "correctness" in sentence)
+        and is_negated(sentence)
+        for value in string_values(payload)
+        for sentence in sentences(value)
+    )
+
+
+def check_nonclaim_payload(payload, label):
+    local_errors = []
+    if not has_render_evidence(payload):
+        local_errors.append(f"{label} must exercise render evidence fields")
+    if payload.get("visibleRenderingCorrectnessEstablished") is True and not explicit_visible_correctness_observation(payload):
+        local_errors.append(f"{label} must not establish visible correctness without schema-backed observation evidence")
+    if has_render_evidence(payload) and not explicit_visible_correctness_observation(payload):
+        if payload.get("visibleRenderingCorrectnessEstablished") is not False:
+            local_errors.append(f"{label} render evidence must explicitly keep visibleRenderingCorrectnessEstablished=false")
+        if not documents_nonclaim_boundary(payload):
+            local_errors.append(f"{label} render evidence must document the visible-correctness nonclaim boundary")
+        for correctness_check in correctness_checks(payload):
+            if correctness_check != "not-performed":
+                local_errors.append(f"{label} correctnessCheck must be not-performed without observation evidence")
+    for value in string_values(payload):
+        local_errors.extend(positive_claim_errors(value, label))
+    return local_errors
+
+
+valid_errors = check_nonclaim_payload(valid, "valid nonclaim fixture")
+require(not valid_errors, "\n".join(valid_errors))
+
+invalid_errors = check_nonclaim_payload(invalid, "invalid overclaim fixture")
+require(invalid.get("expectedContractResult") == "rejected", "invalid overclaim fixture must be explicitly marked as a negative fixture")
+require(invalid_errors, "invalid overclaim fixture must be rejected by the nonclaim contract")
+require(
+    any("must not establish visible correctness" in error or "positive visible-correctness claims" in error for error in invalid_errors),
+    "invalid overclaim fixture must fail for visible-correctness overclaim semantics",
+)
+
+wording_errors = positive_claim_errors(wording, "valid negated wording fixture")
+require(not wording_errors, "\n".join(wording_errors))
+require("does not establish visible correctness" in wording.lower(), "negated wording fixture must include the allowed nonclaim boundary wording")
+require("do not prove the rendered result was visibly correct" in wording.lower(), "negated wording fixture must cover render-output overclaim wording in negated form")
+
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+render_nonclaim_fixture_status=$?
+assert_success "$render_nonclaim_fixture_status" "render nonclaim fixtures reject overclaims while allowing explicit negated wording"
+
 evidence_dir="$tmp_root/no-xvfb-evidence"
 ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$evidence_dir" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
 status=$?
@@ -194,6 +503,10 @@ require(
     "controlled artifact must use the narrow screenshot-consistency claim scope",
 )
 require(controlled.get("claim") == "no-visible-pixel-proof", "blocked controlled artifact must not claim visible pixels")
+require(
+    controlled.get("visibleRenderingCorrectnessEstablished") is False,
+    "blocked controlled render evidence must explicitly keep visibleRenderingCorrectnessEstablished=false",
+)
 
 screenshot = controlled.get("screenshot")
 require(isinstance(screenshot, dict), "controlled artifact must include screenshot metadata")
@@ -245,6 +558,10 @@ if isinstance(unsupported, list):
 
 require(blocker.get("schemaVersion") == 1, "blocker artifact must have schemaVersion=1")
 require(blocker.get("status") == "blocked", "blocker artifact must be blocked")
+require(
+    blocker.get("visibleRenderingCorrectnessEstablished") is False,
+    "target blocker render evidence must explicitly keep visibleRenderingCorrectnessEstablished=false",
+)
 require(blocker.get("sourceArtifact") == controlled_name, "blocker artifact must point to controlled artifact")
 require(
     blocker.get("missingTarget") == "run-window-world-canvas-screen-extents",
@@ -281,12 +598,23 @@ sampling = sampling_blocker.get("pixelSampling")
 require(isinstance(sampling, dict), "pixel sampling artifact must include pixelSampling object")
 if isinstance(sampling, dict):
     require(sampling.get("pixelsSampled") is False, "blocked pixelSampling must not claim sampled pixels")
+    require(
+        sampling.get("correctnessCheck") == "not-performed",
+        "blocked pixelSampling must explicitly record correctnessCheck=not-performed",
+    )
 
 if errors:
     raise AssertionError("\n".join(errors))
 PY
   artifact_status=$?
   assert_success "$artifact_status" "visible-rendering artifacts preserve narrow screenshot and blocker contract"
+  for artifact in "$controlled" "$blocker" "$sampling_blocker"; do
+    assert_render_nonclaim_json "$artifact" "fallback ${artifact##*/}" \
+      >"$tmp_root/fallback-${artifact##*/}.nonclaim.out" \
+      2>"$tmp_root/fallback-${artifact##*/}.nonclaim.err"
+    status=$?
+    assert_success "$status" "fallback ${artifact##*/} preserves render evidence as a visible-correctness nonclaim"
+  done
 else
   fail "visible-rendering fallback artifacts could not be inspected"
 fi
@@ -367,6 +695,10 @@ require(
     controlled.get("claim") == "controlled-display-pixels-observed-rendering-not-asserted",
     "observed artifact must avoid world-rendering claims",
 )
+require(
+    controlled.get("visibleRenderingCorrectnessEstablished") is False,
+    "observed screenshot/render evidence must explicitly keep visibleRenderingCorrectnessEstablished=false",
+)
 require(controlled.get("screenshotFile") == "screenshot.png", "top-level screenshotFile must be relative")
 require(controlled.get("xvfbExecutable") == "Xvfb", "xvfbExecutable must not expose an absolute path")
 
@@ -414,6 +746,10 @@ if isinstance(unsupported, list):
     require("full-ui-automation" in unsupported, "unsupported claims must include full UI automation")
 
 require(blocker.get("status") == "blocked", "visible-rendering blocker must remain blocked")
+require(
+    blocker.get("visibleRenderingCorrectnessEstablished") is False,
+    "visible-rendering blocker must explicitly keep visibleRenderingCorrectnessEstablished=false",
+)
 require(blocker.get("screenshotPath") == "screenshot.png", "blocker screenshot path must be relative")
 require(
     blocker.get("missingTarget") == "run-window-world-canvas-screen-extents",
@@ -429,6 +765,13 @@ if errors:
 PY
   observed_artifact_status=$?
   assert_success "$observed_artifact_status" "observed screenshot-consistency artifact records relative paths, dimensions, and non-claims"
+  for artifact in "$observed_fixture_dir/$CONTROLLED_ARTIFACT" "$observed_fixture_dir/$BLOCKER_ARTIFACT"; do
+    assert_render_nonclaim_json "$artifact" "observed fixture ${artifact##*/}" \
+      >"$tmp_root/observed-${artifact##*/}.nonclaim.out" \
+      2>"$tmp_root/observed-${artifact##*/}.nonclaim.err"
+    status=$?
+    assert_success "$status" "observed fixture ${artifact##*/} preserves render evidence as a visible-correctness nonclaim"
+  done
 else
   fail "observed screenshot-consistency fixture could not be inspected"
 fi
@@ -528,6 +871,10 @@ def numeric(value):
 
 
 require(isinstance(target, dict), "controlled artifact must include target object")
+require(
+    controlled.get("visibleRenderingCorrectnessEstablished") is False,
+    "target-ready controlled render evidence must explicitly keep visibleRenderingCorrectnessEstablished=false",
+)
 if isinstance(target, dict):
     require(target.get("identified") is True, "target-ready writer must identify exactly one target")
     require(target.get("status") == "target-ready", "target-ready writer must use status=target-ready")
@@ -554,6 +901,11 @@ if errors:
 PY
   target_ready_status=$?
   assert_success "$target_ready_status" "target-ready writer output matches pixel-sampling target contract"
+  assert_render_nonclaim_json "$target_ready_dir/$CONTROLLED_ARTIFACT" "target-ready controlled artifact" \
+    >"$tmp_root/target-ready-controlled.nonclaim.out" \
+    2>"$tmp_root/target-ready-controlled.nonclaim.err"
+  status=$?
+  assert_success "$status" "target-ready controlled artifact preserves render evidence as a visible-correctness nonclaim"
 fi
 
 target_ready_sampling_dir="$tmp_root/target-ready-sampling-fixture"
@@ -640,6 +992,10 @@ if isinstance(sampling, dict):
     require(sampling.get("pixelsSampled") is False, "pixelSampling must not claim sampled pixels")
     require(sampling.get("sampleCount") == 0, "pixelSampling sampleCount must be zero")
     require(sampling.get("samplingMethod") is None, "pixelSampling must not name a sampling method")
+    require(
+        sampling.get("correctnessCheck") == "not-performed",
+        "pixelSampling must explicitly record correctnessCheck=not-performed",
+    )
 unsupported = payload.get("unsupportedClaims")
 require(isinstance(unsupported, list), "pixel sampling blocker must list unsupportedClaims")
 if isinstance(unsupported, list):
@@ -655,6 +1011,11 @@ if errors:
 PY
   target_ready_sampling_status=$?
   assert_success "$target_ready_sampling_status" "target-ready pixel sampling blocker records fail-closed non-claim semantics"
+  assert_render_nonclaim_json "$target_ready_sampling_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" "target-ready sampling blocker" \
+    >"$tmp_root/target-ready-sampling.nonclaim.out" \
+    2>"$tmp_root/target-ready-sampling.nonclaim.err"
+  status=$?
+  assert_success "$status" "target-ready sampling blocker preserves render evidence as a visible-correctness nonclaim"
 else
   fail "target-ready pixel sampling blocker artifact could not be inspected"
 fi
@@ -740,6 +1101,11 @@ EOF
   ' _ "$RUNNER" "$case_dir" "$source_path" >"$case_dir/writer.out" 2>"$case_dir/writer.err"
   status=$?
   assert_success "$status" "pixel sampling blocker writes fail-closed artifact for $source_case source"
+  assert_render_nonclaim_json "$case_dir/$PIXEL_SAMPLING_BLOCKER_ARTIFACT" "$source_case source pixel sampling blocker" \
+    >"$case_dir/nonclaim.out" \
+    2>"$case_dir/nonclaim.err"
+  status=$?
+  assert_success "$status" "$source_case source pixel sampling blocker preserves render evidence as a visible-correctness nonclaim"
 done
 
 python3 - \
@@ -787,6 +1153,7 @@ for source_case in ("missing", "malformed", "array", "scalar", "wrong-name-targe
         require(sampling.get("pixelsSampled") is False, f"{source_case} pixelSampling must not claim sampled pixels")
         require(sampling.get("sampleCount") == 0, f"{source_case} pixelSampling must keep zero samples")
         require(sampling.get("samplingMethod") is None, f"{source_case} pixelSampling must not name a sampling method")
+        require(sampling.get("correctnessCheck") == "not-performed", f"{source_case} pixelSampling must record correctnessCheck=not-performed")
     require(isinstance(unsupported, list), f"{source_case} blocker must list unsupportedClaims")
     if isinstance(unsupported, list):
         for claim in (
@@ -882,6 +1249,11 @@ if errors:
 PY
   target_blocked_status=$?
   assert_success "$target_blocked_status" "target blocker writer output preserves exact blocker contract"
+  assert_render_nonclaim_json "$target_blocked_dir/$BLOCKER_ARTIFACT" "target blocked blocker" \
+    >"$tmp_root/target-blocked.nonclaim.out" \
+    2>"$tmp_root/target-blocked.nonclaim.err"
+  status=$?
+  assert_success "$status" "target blocked blocker preserves render evidence as a visible-correctness nonclaim"
 fi
 
 target_multiple_missing_dir="$tmp_root/target-multiple-missing-fixture"
@@ -990,6 +1362,13 @@ if controlled.get("claim") != "controlled-display-pixels-observed-rendering-not-
 PY
   target_multiple_missing_status=$?
   assert_success "$target_multiple_missing_status" "multiple missing-extents candidates do not produce ambiguity or readiness"
+  for artifact in "$target_multiple_missing_dir/$CONTROLLED_ARTIFACT" "$target_multiple_missing_dir/$BLOCKER_ARTIFACT"; do
+    assert_render_nonclaim_json "$artifact" "multiple missing ${artifact##*/}" \
+      >"$tmp_root/multiple-missing-${artifact##*/}.nonclaim.out" \
+      2>"$tmp_root/multiple-missing-${artifact##*/}.nonclaim.err"
+    status=$?
+    assert_success "$status" "multiple missing ${artifact##*/} preserves render evidence as a visible-correctness nonclaim"
+  done
 fi
 
 target_multiple_invalid_dir="$tmp_root/target-multiple-invalid-fixture"
@@ -1120,6 +1499,13 @@ for label, payload in (("controlled", controlled), ("blocker", blocker)):
 PY
   target_multiple_invalid_status=$?
   assert_success "$target_multiple_invalid_status" "multiple invalid-extents candidates do not produce ambiguity or readiness"
+  for artifact in "$target_multiple_invalid_dir/$CONTROLLED_ARTIFACT" "$target_multiple_invalid_dir/$BLOCKER_ARTIFACT"; do
+    assert_render_nonclaim_json "$artifact" "multiple invalid ${artifact##*/}" \
+      >"$tmp_root/multiple-invalid-${artifact##*/}.nonclaim.out" \
+      2>"$tmp_root/multiple-invalid-${artifact##*/}.nonclaim.err"
+    status=$?
+    assert_success "$status" "multiple invalid ${artifact##*/} preserves render evidence as a visible-correctness nonclaim"
+  done
 fi
 
 target_ambiguous_dir="$tmp_root/target-ambiguous-fixture"
@@ -1237,6 +1623,13 @@ if controlled.get("claim") != "controlled-display-pixels-observed-rendering-not-
 PY
   target_ambiguous_status=$?
   assert_success "$target_ambiguous_status" "ambiguous target writers preserve fail-closed geometry status"
+  for artifact in "$target_ambiguous_dir/$CONTROLLED_ARTIFACT" "$target_ambiguous_dir/$BLOCKER_ARTIFACT"; do
+    assert_render_nonclaim_json "$artifact" "ambiguous ${artifact##*/}" \
+      >"$tmp_root/ambiguous-${artifact##*/}.nonclaim.out" \
+      2>"$tmp_root/ambiguous-${artifact##*/}.nonclaim.err"
+    status=$?
+    assert_success "$status" "ambiguous ${artifact##*/} preserves render evidence as a visible-correctness nonclaim"
+  done
 fi
 
 assert_contains "$RUNNER" 'screenshot-pixels\.txt\.raw' "runner derives screenshot dimensions from the existing screenshot analysis artifact"

@@ -1134,6 +1134,7 @@ payload = {
     "claim": value("CONTROLLED_DISPLAY_CLAIM"),
     "readyStatus": value("CONTROLLED_DISPLAY_READY_STATUS"),
     "processStatus": value("CONTROLLED_DISPLAY_PROCESS_STATUS"),
+    "visibleRenderingCorrectnessEstablished": False,
     "screenshotStatus": screenshot_status,
     "screenshotFile": relative_path_or_empty(value("CONTROLLED_DISPLAY_SCREENSHOT_FILE")),
     "xvfbExecutable": executable_name_or_empty(value("CONTROLLED_DISPLAY_XVFB_EXECUTABLE")),
@@ -1345,6 +1346,7 @@ payload = {
     "runtimeDisplayCandidateCount": candidate_count,
     "geometryStatus": geometry_status,
     "worldCanvasPixelTarget": target,
+    "visibleRenderingCorrectnessEstablished": False,
     "unsupportedClaims": unsupported_claims,
 }
 with output_path.open("w", encoding="utf-8") as stream:
@@ -1459,6 +1461,7 @@ payload = {
         "pixelsSampled": False,
         "sampleCount": 0,
         "samplingMethod": None,
+        "correctnessCheck": "not-performed",
     },
     "unsupportedClaims": unsupported_claims,
 }
@@ -1628,6 +1631,7 @@ def base_blocker(blocker, blocker_detail, claim_scope_detail, prerequisite_statu
             "pixelsSampled": False,
             "sampleCount": 0,
             "samplingMethod": None,
+            "correctnessCheck": "not-performed",
         },
         "unsupportedClaims": unsupported_claims,
     }

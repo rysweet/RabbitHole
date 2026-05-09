@@ -346,6 +346,7 @@ import sys
 payload = json.load(open(sys.argv[1], encoding="utf-8"))
 source_artifact = sys.argv[2]
 target = payload.get("worldCanvasPixelTarget")
+pixel_sampling = payload.get("pixelSampling")
 samples = payload.get("samples")
 unsupported = payload.get("unsupportedClaims")
 errors = []
@@ -369,6 +370,9 @@ require(payload.get("visibleRenderingCorrectnessEstablished") is False, "observa
 require(payload.get("renderedWorldPixelsObserved") is True, "observation may only claim raw sampled pixels were observed")
 require(payload.get("sampleCount") == 3, "observation must preserve checked sample count")
 require(payload.get("samplingMethod") == "stub-rgba-fixture", "observation must preserve sampler method")
+require(isinstance(pixel_sampling, dict), "observation must include pixelSampling decision object")
+if isinstance(pixel_sampling, dict):
+    require(pixel_sampling.get("correctnessCheck") == "not-performed", "pixelSampling must explicitly record correctnessCheck=not-performed")
 require(isinstance(target, dict), "observation must preserve validated worldCanvasPixelTarget")
 if isinstance(target, dict):
     require(target.get("identified") is True, "observation target must be identified")
