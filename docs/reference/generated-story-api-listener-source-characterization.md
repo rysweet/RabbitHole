@@ -17,6 +17,7 @@ full UI automation evidence.
 ## Contents
 
 - [Feature intent](#feature-intent)
+- [Runtime Event Dispatch PR Recovery](#runtime-event-dispatch-pr-recovery)
 - [Core AST virtual-machine event contract](#core-ast-virtual-machine-event-contract)
 - [Generated listener source contract](#generated-listener-source-contract)
 - [Headless scene activation dispatch contract](#headless-scene-activation-dispatch-contract)
@@ -28,6 +29,60 @@ full UI automation evidence.
 - [Tutorial: review the characterization lane](#tutorial-review-the-characterization-lane)
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
+
+## Runtime Event Dispatch PR Recovery
+
+PR #403 is recovered on branch `wave6-runtime-event-dispatch-1778302300` at
+head `c1e22a22d58e61115cf5e52ee919d5b648f1d54b`.
+
+The recovery scope is intentionally narrow: it validates the
+runtime-event-dispatch silver thread using executable current-head evidence. It
+does not expand the feature area, does not manually merge the PR, and does not
+claim full UI automation, rendering correctness, grading behavior,
+creative assessment, or lesson completion.
+
+Verify the branch and current head before relying on this evidence:
+
+```bash
+test "$(git rev-parse --abbrev-ref HEAD)" = "wave6-runtime-event-dispatch-1778302300"
+test "$(git rev-parse HEAD)" = "c1e22a22d58e61115cf5e52ee919d5b648f1d54b"
+```
+
+Initialize the required Tweedle grammar submodule:
+
+```bash
+git submodule update --init tweedle-lang
+```
+
+Run readiness evidence:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+```
+
+Run runtime-event-dispatch and generated-listener evidence:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest test -q
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+```
+
+Run documentation-boundary evidence:
+
+```bash
+python3 -m unittest tests.test_runtime_event_dispatch_docs_contract
+python3 tests/test_runtime_event_dispatch_docs_contract.py --guard-check --worktree . --expected-branch wave6-runtime-event-dispatch-1778302300 --expected-head c1e22a22d58e61115cf5e52ee919d5b648f1d54b
+```
+
+Do not manually merge PR #403. Finalization must stay tied to executable
+current-head evidence from the named readiness, runtime-event-dispatch,
+generated listener, and documentation-boundary checks.
+
+No-op justification: at current head
+`c1e22a22d58e61115cf5e52ee919d5b648f1d54b` on branch
+`wave6-runtime-event-dispatch-1778302300`, no repository changes are required
+for PR #403 recovery when the named current-head checks pass.
 
 ## Feature intent
 
@@ -216,8 +271,8 @@ The Python TDD/no-op guard is
 `tests/test_runtime_event_dispatch_docs_contract.py`. It fails closed when the
 checked path is not inside a Git worktree, uses
 `git rev-parse --show-toplevel` to resolve the actual linked-worktree root,
-verifies the expected branch, and runs status or no-op checks with
-`git -C "$WORKTREE_ROOT" ...`. It must not silently fall back to a parent
+verifies the expected branch and recovery HEAD, and runs status or no-op checks
+with `git -C "$WORKTREE_ROOT" ...`. It must not silently fall back to a parent
 directory, a non-git path, or an unlinked workspace.
 
 Initialize the Tweedle grammar submodule before Maven validation:

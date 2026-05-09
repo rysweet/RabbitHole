@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import functools
 import io
 import subprocess
 import sys
@@ -13,6 +14,8 @@ CONTRACT_PATH = REPO_ROOT / "tests" / "test_runtime_event_dispatch_docs_contract
 REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "generated-story-api-listener-source-characterization.md"
 INDEX_PATH = REPO_ROOT / "docs" / "index.md"
 TEST_BRANCH = "runtime-event-dispatch-guard-test-branch"
+RECOVERY_BRANCH = "wave6-runtime-event-dispatch-1778302300"
+RECOVERY_HEAD = "c1e22a22d58e61115cf5e52ee919d5b648f1d54b"
 NON_CLAIM_TERMS = [
     "desktop runtime execution",
     "full world playback",
@@ -21,6 +24,16 @@ NON_CLAIM_TERMS = [
     "Save completion",
     "full UI automation",
 ]
+
+
+@functools.cache
+def reference_text() -> str:
+    return REFERENCE_PATH.read_text(encoding="utf-8")
+
+
+@functools.cache
+def docs_index_text() -> str:
+    return INDEX_PATH.read_text(encoding="utf-8")
 
 
 def git_command(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -45,25 +58,24 @@ def resolve_git_root(worktree: Path) -> tuple[Path | None, int]:
     return Path(resolved.stdout.strip()).resolve(), 0
 
 
-def verify_expected_branch(root: Path, expected_branch: str) -> int:
-    branch = git_command("branch", "--show-current", cwd=root)
-    if branch.returncode != 0:
-        print(f"Unable to determine branch for Git worktree {root}.", file=sys.stderr)
-        if branch.stderr:
-            print(branch.stderr.strip(), file=sys.stderr)
-        return branch.returncode
+def verify_git_value(root: Path, git_args: tuple[str, ...], expected: str, label: str) -> int:
+    result = git_command(*git_args, cwd=root)
+    if result.returncode != 0:
+        print(f"Unable to determine {label} for Git worktree {root}.", file=sys.stderr)
+        if result.stderr:
+            print(result.stderr.strip(), file=sys.stderr)
+        return result.returncode
 
-    actual_branch = branch.stdout.strip()
-    if actual_branch != expected_branch:
+    actual = result.stdout.strip()
+    if actual != expected:
         print(
-            f"Git worktree {root} is on branch {actual_branch!r}; "
-            f"expected branch {expected_branch!r}.",
+            f"Git worktree {root} is at {label} {actual!r}; "
+            f"expected {label} {expected!r}.",
             file=sys.stderr,
         )
         return 1
 
-    print(f"Resolved Git worktree root: {root}")
-    print(f"Verified expected branch: {actual_branch}")
+    print(f"Verified expected {label}: {actual}")
     return 0
 
 
@@ -87,15 +99,25 @@ def verify_no_pending_changes(root: Path) -> int:
     return 0
 
 
-def run_noop_guard(worktree: Path, expected_branch: str, check_only: bool) -> int:
+def run_noop_guard(
+    worktree: Path,
+    expected_branch: str,
+    expected_head: str | None,
+    check_only: bool,
+) -> int:
     root, exit_code = resolve_git_root(worktree)
     if exit_code != 0:
         return exit_code
 
     assert root is not None
-    exit_code = verify_expected_branch(root, expected_branch)
+    print(f"Resolved Git worktree root: {root}")
+    exit_code = verify_git_value(root, ("branch", "--show-current"), expected_branch, "branch")
     if exit_code != 0:
         return exit_code
+    if expected_head is not None:
+        exit_code = verify_git_value(root, ("rev-parse", "HEAD"), expected_head, "HEAD")
+        if exit_code != 0:
+            return exit_code
     if check_only:
         return 0
 
@@ -109,6 +131,7 @@ def parse_guard_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--guard-check", action="store_true")
     parser.add_argument("--worktree", type=Path, required=True)
     parser.add_argument("--expected-branch", required=True)
+    parser.add_argument("--expected-head")
     parser.add_argument("--check-only", action="store_true")
     return parser.parse_args(argv)
 
@@ -119,7 +142,12 @@ def main(argv: list[str]) -> int:
         return 0
 
     args = parse_guard_args(argv)
-    return run_noop_guard(args.worktree, args.expected_branch, args.check_only)
+    return run_noop_guard(
+        args.worktree,
+        args.expected_branch,
+        args.expected_head,
+        args.check_only,
+    )
 
 
 def run_guard(*args: str) -> subprocess.CompletedProcess[str]:
@@ -127,7 +155,10 @@ def run_guard(*args: str) -> subprocess.CompletedProcess[str]:
     stdout = io.StringIO()
     stderr = io.StringIO()
     with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-        returncode = main(guard_args)
+        try:
+            returncode = main(guard_args)
+        except SystemExit as exc:
+            returncode = exc.code if isinstance(exc.code, int) else 1
     return subprocess.CompletedProcess(
         [sys.executable, str(CONTRACT_PATH), *guard_args],
         returncode,
@@ -138,7 +169,7 @@ def run_guard(*args: str) -> subprocess.CompletedProcess[str]:
 
 class RuntimeEventDispatchDocsContractTest(unittest.TestCase):
     def test_reference_is_linked_from_docs_index_with_bounded_headless_wording(self) -> None:
-        index = INDEX_PATH.read_text(encoding="utf-8")
+        index = docs_index_text()
 
         self.assertIn(
             "[Headless Runtime Dispatch and Generated Story API Listener Source Characterization]"
@@ -148,7 +179,7 @@ class RuntimeEventDispatchDocsContractTest(unittest.TestCase):
         self.assertIn("bounded headless virtual-machine listener dispatch", index)
 
     def test_reference_names_guard_path_and_git_root_resolution_contract(self) -> None:
-        reference = REFERENCE_PATH.read_text(encoding="utf-8")
+        reference = reference_text()
 
         self.assertIn("tests/test_runtime_event_dispatch_docs_contract.py", reference)
         self.assertIn("git rev-parse --show-toplevel", reference)
@@ -158,7 +189,7 @@ class RuntimeEventDispatchDocsContractTest(unittest.TestCase):
         self.assertIn("not silently fall back", reference)
 
     def test_reference_keeps_claims_inside_headless_characterization_scope(self) -> None:
-        reference = REFERENCE_PATH.read_text(encoding="utf-8")
+        reference = reference_text()
 
         for non_claim in NON_CLAIM_TERMS:
             with self.subTest(non_claim=non_claim):
@@ -176,6 +207,24 @@ class RuntimeEventDispatchNoOpGuardContractTest(unittest.TestCase):
         worktree_path = root / "docs"
         worktree_path.mkdir()
         return worktree_path
+
+    def commit_empty_guard_head(self, directory: str) -> str:
+        root = Path(directory)
+        commit = git_command(
+            "-c",
+            "user.email=runtime-event-dispatch@example.invalid",
+            "-c",
+            "user.name=Runtime Event Dispatch Test",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "initial guard commit",
+            cwd=root,
+        )
+        self.assertEqual(0, commit.returncode, commit.stderr + commit.stdout)
+        head = git_command("rev-parse", "HEAD", cwd=root)
+        self.assertEqual(0, head.returncode, head.stderr + head.stdout)
+        return head.stdout.strip()
 
     def test_guard_accepts_linked_worktree_and_reports_resolved_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -223,6 +272,108 @@ class RuntimeEventDispatchNoOpGuardContractTest(unittest.TestCase):
         combined_output = result.stdout + result.stderr
         self.assertIn("expected branch", combined_output)
         self.assertIn("not-the-runtime-event-dispatch-branch", combined_output)
+
+    def test_guard_accepts_expected_head_for_current_head_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worktree_path = self.create_guard_worktree(directory)
+            expected_head = self.commit_empty_guard_head(directory)
+
+            result = run_guard(
+                "--worktree",
+                str(worktree_path),
+                "--expected-branch",
+                TEST_BRANCH,
+                "--expected-head",
+                expected_head,
+                "--check-only",
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+        self.assertIn(expected_head, result.stdout)
+
+    def test_guard_rejects_unexpected_head_before_status_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worktree_path = self.create_guard_worktree(directory)
+            self.commit_empty_guard_head(directory)
+            (worktree_path / "dirty-marker.txt").write_text("dirty", encoding="utf-8")
+
+            unexpected_head = "0" * 40
+            result = run_guard(
+                "--worktree",
+                str(worktree_path),
+                "--expected-branch",
+                TEST_BRANCH,
+                "--expected-head",
+                unexpected_head,
+                "--check-only",
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = result.stdout + result.stderr
+        self.assertIn("expected HEAD", combined_output)
+        self.assertIn(unexpected_head, combined_output)
+        self.assertNotIn("has changes", combined_output)
+
+
+class RuntimeEventDispatchPr403RecoveryContractTest(unittest.TestCase):
+    def test_reference_documents_pr403_current_head_recovery_evidence(self) -> None:
+        reference = reference_text()
+
+        required_evidence = [
+            "# Runtime Event Dispatch PR Recovery",
+            "PR #403",
+            RECOVERY_BRANCH,
+            RECOVERY_HEAD,
+            'test "$(git rev-parse --abbrev-ref HEAD)" = '
+            f'"{RECOVERY_BRANCH}"',
+            f'test "$(git rev-parse HEAD)" = "{RECOVERY_HEAD}"',
+            "git submodule update --init tweedle-lang",
+            "NODE_OPTIONS=--max-old-space-size=32768 "
+            "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+            "NODE_OPTIONS=--max-old-space-size=32768 "
+            "bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh",
+            "NODE_OPTIONS=--max-old-space-size=32768 "
+            "mvn -pl core/ast -am -DfailIfNoTests=false "
+            "-Dsurefire.failIfNoSpecifiedTests=false "
+            "-Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest "
+            "test -q",
+            "NODE_OPTIONS=--max-old-space-size=32768 "
+            "mvn -pl netbeans -am -DfailIfNoTests=false "
+            "-Dsurefire.failIfNoSpecifiedTests=false "
+            "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest "
+            "test -q",
+            "python3 -m unittest tests.test_runtime_event_dispatch_docs_contract",
+            "python3 tests/test_runtime_event_dispatch_docs_contract.py "
+            f"--guard-check --worktree . --expected-branch {RECOVERY_BRANCH} "
+            f"--expected-head {RECOVERY_HEAD}",
+        ]
+        for expected_text in required_evidence:
+            with self.subTest(expected_text=expected_text):
+                self.assertIn(expected_text, reference)
+
+    def test_reference_documents_no_manual_merge_and_noop_finalization_boundary(self) -> None:
+        reference = reference_text()
+
+        required_boundary_text = [
+            "Do not manually merge PR #403",
+            "No-op justification:",
+            RECOVERY_HEAD,
+            "no repository changes are required",
+        ]
+        for expected_text in required_boundary_text:
+            with self.subTest(expected_text=expected_text):
+                self.assertIn(expected_text, reference)
+
+        bounded_non_claims = [
+            "full UI automation",
+            "rendering correctness",
+            "grading",
+            "creative assessment",
+            "lesson completion",
+        ]
+        for non_claim in bounded_non_claims:
+            with self.subTest(non_claim=non_claim):
+                self.assertIn(non_claim, reference)
 
 
 if __name__ == "__main__":
