@@ -20,7 +20,7 @@ NEGATIVE_CONTRACT_DOCS = [
 
 
 class AliceQaAmplihackDocsContractTest(unittest.TestCase):
-    def test_branch_installable_examples_accept_branch_or_commit_placeholders(self) -> None:
+    def test_branch_installable_examples_accept_branch_or_commit_tokens(self) -> None:
         stale_examples = []
 
         for path in CLI_DOCS:
