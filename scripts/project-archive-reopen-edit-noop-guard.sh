@@ -244,8 +244,16 @@ is_recovery_scope_path() {
     docs/tutorials/project-io-corpus-characterization.md|\
     docs/tutorials/trace-project-archive-reopen-edit-seam.md|\
     pyproject.toml|\
+    qa/outside-in/alice-desktop/runners/run-scenario.sh|\
+    qa/outside-in/alice-desktop/runners/validate-scenarios.sh|\
     qa/outside-in/alice-desktop/scenarios/project-io-smoke.yaml|\
+    qa/outside-in/alice-desktop/schema/scenario.schema.json|\
+    qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh|\
+    qa/outside-in/alice-desktop/tests/test-schema-contract.sh|\
+    qa/outside-in/alice-desktop/tests/test-workflow-contract.sh|\
+    scripts/pr402_finalization_gate.py|\
     scripts/project-archive-reopen-edit-noop-guard.sh|\
+    tests/test_pr402_workflow_finalization_contract.py|\
     tests/test_project_archive_reopen_edit_noop_guard.py)
       return 0
       ;;
