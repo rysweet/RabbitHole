@@ -154,22 +154,27 @@ The formal-spec lane has no runtime configuration.
 | Gherkin execution | None. The `.feature` file is a committed acceptance contract and is not wired to Cucumber. |
 | TLA+ execution | Optional local TLC invocation using `BackupLoadRecovery.cfg`; no Maven or CI plugin is required. |
 | Java validation | Existing Maven/JUnit module tests. |
-| Reference consistency check | The named Python unittest modules below; no extra dependency, network access, generated artifact, Cucumber execution, TLC execution, Maven invocation, UI automation, rendering check, Save completion check, grading check, or Tweedle decode is part of this check. |
+| Reference consistency check | The named Python unittest modules below verify documentation and artifact wiring markers only. They do not prove full behavior and require no extra dependency, network access, generated artifact, Cucumber execution, TLC execution, Maven invocation, UI automation, rendering check, Save completion check, grading check, or Tweedle decode. |
 
 ## Focused validation commands
 
-Run commands from the repository root.
+Run commands from the repository root. Initialize the Tweedle grammar submodule
+before Maven validation so reactor checks can find the generated-parser grammar
+inputs.
 
 ```shell
+git submodule update --init tweedle-lang
 NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_formal_spec_contracts_reference tests.test_pr426_formal_contract_wiring
 NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest -Dsurefire.failIfNoSpecifiedTests=false test
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectLoadFailurePlanTest,ProjectLoadFailureDispatchPlanTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectLoadFailurePlanTest,ProjectLoadFailureDispatchPlanTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-The Maven flags keep upstream reactor modules without tests or without the named
-tests from failing the focused run.
+The Python checks keep this reference linked to the named formal/spec artifacts.
+The Maven commands are the focused behavioral checks. The Maven flags keep
+upstream reactor modules without tests or without the named tests from failing
+the focused run.
 
 Run the TLA+ model when `tla2tools.jar` is available.
 

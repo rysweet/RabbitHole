@@ -72,7 +72,9 @@ These tests characterize the same rules:
 Run the focused validation:
 
 ```shell
+git submodule update --init tweedle-lang
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
+  -DfailIfNoTests=false \
   -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
@@ -116,8 +118,9 @@ The acceptance scenarios describe the observable archive contract:
 Run the focused validation:
 
 ```shell
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+git submodule update --init tweedle-lang
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
 ## Check the complete recovery model
