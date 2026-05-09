@@ -109,6 +109,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         }
         throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes);
       }
+      if ((programType != null) && isLegacyProgramArchive(manifest)) {
+        verifyLegacyProgramArchiveHasOnlyReadableResources(manifest);
+      }
       Set<Resource> resources = readResources(manifest);
       if (programType == null) {
         verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
@@ -375,6 +378,28 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       return (resources.size() == 1) && (resources.iterator().next() instanceof ImageResource);
     }
 
+    private static void verifyLegacyProgramArchiveHasOnlyReadableResources(ProjectManifest manifest) throws IOException {
+      List<String> unsupportedResources = unsupportedLegacyProgramResourceReferences(manifest);
+      if (!unsupportedResources.isEmpty()) {
+        throw new IOException(
+            UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE
+                + ": unsupported player resource references "
+                + unsupportedResources);
+      }
+    }
+
+    private static List<String> unsupportedLegacyProgramResourceReferences(ProjectManifest manifest) {
+      List<String> unsupportedResources = new ArrayList<>();
+      for (ResourceReference resourceReference : manifest.resources) {
+        if (!(resourceReference instanceof TypeReference)
+            && !(resourceReference instanceof ImageReference)
+            && !(resourceReference instanceof AudioReference)) {
+          unsupportedResources.add(resourceReferenceContext(resourceReference));
+        }
+      }
+      return unsupportedResources;
+    }
+
     private static IOException unsupportedLegacyJsonProjectArchive(
         ProjectManifest manifest,
         TypeReadResult decodedTypes) {
@@ -447,6 +472,17 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
       if ((typeReference.file != null) && !typeReference.file.isEmpty()) {
         sb.append(" at archive entry '").append(typeReference.file).append("'");
+      }
+      return sb.toString();
+    }
+
+    private static String resourceReferenceContext(ResourceReference resourceReference) {
+      StringBuilder sb = new StringBuilder(resourceReference.getContentType());
+      if ((resourceReference.name != null) && !resourceReference.name.isEmpty()) {
+        sb.append(" '").append(resourceReference.name).append("'");
+      }
+      if ((resourceReference.file != null) && !resourceReference.file.isEmpty()) {
+        sb.append(" at archive entry '").append(resourceReference.file).append("'");
       }
       return sb.toString();
     }

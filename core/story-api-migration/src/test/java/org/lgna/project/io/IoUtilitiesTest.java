@@ -933,6 +933,38 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void legacyProgramJsonArchiveWithModelReferenceFailsClosedInsteadOfDroppingModel() throws Exception {
+    TypeReference typeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
+    ModelReference modelReference = new ModelReference();
+    modelReference.name = "LegacyModel";
+    modelReference.format = "gltf";
+    modelReference.file = "models/LegacyModel/LegacyModel.gltf";
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "Program";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    manifest.resources.add(typeReference);
+    manifest.resources.add(modelReference);
+    File exportFile = temporaryFolder.newFile("legacy-program-model-resource.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class Program { WholeNumber count; }");
+      writeZipEntry(zipOutputStream, modelReference.file, "{}");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue(thrown.getMessage().contains(
+        "Unsupported legacy JSON project archive: manifest advertises Program but no supported project structure was found"));
+    assertTrue(thrown.getMessage().contains("unsupported player resource references"));
+    assertTrue(thrown.getMessage().contains("model 'LegacyModel' at archive entry 'models/LegacyModel/LegacyModel.gltf'"));
+  }
+
+  @Test
   public void jsonPlayerManifestTypeReadsFieldAndKeepsResourcesReadable() throws Exception {
     String programName = "ProgramWithField";
     TypeReference typeReference = new TypeReference(programName, "src/" + programName + ".twe", "tweedle");

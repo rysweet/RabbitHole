@@ -179,6 +179,56 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertIn("-pl core/story-api-migration", log)
         self.assertIn("-Dtest=IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType", log)
 
+    def test_tweedle_decode_verify_can_target_legacy_program_model_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            bin_dir = root / "bin"
+            log_path = root / "commands.log"
+            write_executable(
+                bin_dir / "git",
+                textwrap.dedent(
+                    f"""\
+                    #!/usr/bin/env bash
+                    echo git "$@" >> {log_path}
+                    """
+                ),
+            )
+            write_executable(
+                bin_dir / "mvn",
+                textwrap.dedent(
+                    f"""\
+                    #!/usr/bin/env bash
+                    echo mvn "$@" >> {log_path}
+                    """
+                ),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "tweedle-decode",
+                    "verify",
+                    "legacy-program-model-boundary",
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+
+            log = log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("PASS: legacy-program-model-boundary", result.stdout)
+        self.assertIn("-pl core/story-api-migration", log)
+        self.assertIn(
+            "-Dtest=IoUtilitiesTest#legacyProgramJsonArchiveWithModelReferenceFailsClosedInsteadOfDroppingModel",
+            log,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
