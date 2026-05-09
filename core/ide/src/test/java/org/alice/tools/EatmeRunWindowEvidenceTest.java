@@ -114,6 +114,25 @@ public class EatmeRunWindowEvidenceTest {
   }
 
   @Test
+  public void replacesHardLinkedArtifactWithoutMutatingLinkedTarget() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("hardlink-evidence").toPath();
+    Path outsideArtifact = temporaryFolder.newFile("outside-hardlinked-run-window-created.json").toPath();
+    Files.writeString(outsideArtifact, "outside");
+    Path hardLinkedArtifact = evidenceDir.resolve(EatmeRunWindowEvidence.RUN_WINDOW_CREATED_ARTIFACT);
+    try {
+      Files.createLink(hardLinkedArtifact, outsideArtifact);
+    } catch (IOException | SecurityException | UnsupportedOperationException ex) {
+      assumeTrue("hard links are unavailable in this test environment", false);
+    }
+
+    EatmeRunWindowEvidence.writeRunWindowCreated(evidenceDir, "Run Alice", "Program");
+
+    assertEquals("outside", Files.readString(outsideArtifact));
+    String json = Files.readString(hardLinkedArtifact);
+    assertTrue(json, json.contains("\"status\": \"created\""));
+  }
+
+  @Test
   public void rejectsSymlinkEvidenceDirectoryWithoutWritingOutsideScratchRoot() throws Exception {
     Path scratchRoot = temporaryFolder.newFolder("scratch-root").toPath();
     Path outsideEvidenceTarget = temporaryFolder.newFolder("outside-evidence-target").toPath();
