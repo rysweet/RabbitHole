@@ -378,26 +378,10 @@ extensions, or desktop automation hooks.
 
 ### Expected headless scene activation observation
 
-The generated-listener runtime characterization follows this shape:
-
-```java
-CountDownLatch callbackObserved = new CountDownLatch(1);
-AtomicReference<SceneActivationEvent> observedEvent = new AtomicReference<>();
-
-Scene scene = loadGeneratedScene();
-invokeGeneratedListenerRegistration(scene, callbackObserved, observedEvent);
-
-EventManager eventManager = getExistingRuntimeEventManager(scene);
-eventManager.sceneActivated();
-
-assertTrue(callbackObserved.await(5, TimeUnit.SECONDS));
-assertEquals(1, observedCallbackCount.get());
-assertTrue(observedEvent.get() instanceof SceneActivationEvent);
-```
-
-The example describes the contract, not a new public API. Implementations should
-use the exact existing method signatures and payload types exposed by the runtime
-seam.
+The generated-listener runtime characterization loads the generated scene, invokes
+the generated registration path, fires `EventManager.sceneActivated()`, then
+asserts one callback and a `SceneActivationEvent` payload through the exact
+existing runtime seam. This example describes the contract, not a new public API.
 
 ### Review checklist
 
