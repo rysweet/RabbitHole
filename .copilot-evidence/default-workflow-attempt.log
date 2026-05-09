@@ -1,7 +1,7 @@
 Default-workflow readiness evidence for PR #423
 Recorded at: 2026-05-09T17:55:13Z
-Validated source tree: PR head 80355ceaeb11dc54c66d7db3bd9434e933939b0f plus the
-blocking evidence/tutorial fixes recorded in this artifact refresh.
+Validated source tree: the PR branch after the Step 17e blocking
+evidence/tutorial fixes recorded in this artifact refresh.
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
@@ -17,8 +17,8 @@ Scope:
     characterized AssignmentExpression constructor shape.
 - This evidence refresh is committed with the blocker fixes, so the final commit
   SHA changes after this file is written. The validated source tree is therefore
-  identified by branch, base PR head, and the blocker-fix scope above instead of
-  by a self-referential final commit SHA.
+  identified by branch and the blocker-fix scope above instead of by a
+  self-referential final commit SHA.
 - This log is retained as PR-specific review evidence for PR #423. Durable
   repository docs describe stable contracts and do not carry point-in-time PR
   status.
