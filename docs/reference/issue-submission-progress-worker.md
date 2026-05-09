@@ -12,6 +12,7 @@ This reference describes the `core/issue-reporting` background submission worker
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
 - [Workflow evidence requirements](#workflow-evidence-requirements)
+- [PR #428 merge-ready gate](#pr-428-merge-ready-gate)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
 
@@ -180,6 +181,120 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 | PR description | The PR body names the exact head validated, focused and module validation commands, docs impact, scenario applicability, diff scope, quality-audit cycles, GitHub Actions status, and bounded non-claims. |
 | Finalization | `git --no-pager status --short --branch`, `gh pr view <PR_NUMBER>`, and `gh pr checks <PR_NUMBER> --watch=false` describe the open PR state and checks without manually merging the PR. |
 | Claim boundary | Handoff notes cite only the worker seam, background ordering, attachment intent, exception propagation, source review, and Maven/PR-check evidence. They do not claim rendered UI automation, real issue-service submission, grading, or full end-to-end coverage. |
+
+## PR #428 merge-ready gate
+
+`scripts/pr428_merge_ready_gate.py` is the executable readiness contract for the recovered PR #428 branch. It treats green GitHub checks as one input, not as the whole readiness decision. The gate is ready only when branch sync, diff scope, focused validation, docs impact, scenario applicability, quality-audit cycles, GitHub Actions, and the PR description all describe the same current PR head.
+
+Run it from the repository root with a JSON evidence package:
+
+```bash
+python3 scripts/pr428_merge_ready_gate.py /path/to/pr428-evidence.json
+```
+
+The command prints a JSON result and exits non-zero when any required evidence is missing, stale, malformed, or over-broad:
+
+```json
+{
+  "blockers": [],
+  "ready": true
+}
+```
+
+### Evidence package API
+
+The evidence package is an object with these fields:
+
+| Field | Required shape | Accepted meaning |
+| --- | --- | --- |
+| `branch.current_ref` | String | Must be `origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa`. |
+| `branch.local_head` | String SHA | Local branch head used for validation. |
+| `branch.remote_head` | String SHA | Current remote PR branch head. Must match `local_head`. |
+| `branch.manual_merge_seen` | Boolean | Must be `false`; readiness is based on the preserved PR branch, not a manually merged replacement branch. |
+| `diff_files` | Array of repository-relative paths | Must stay within the worker, focused test, directly related docs, `pyproject.toml` metadata, and the PR #428 gate/test files. |
+| `runnable_evidence` | Array of command-result objects | Must include the focused worker Maven command, `passed: true`, and the current head SHA. Timeout wrappers are rejected. |
+| `docs_impact.assessed` | Boolean | Must be `true`, with changed or reviewed docs listed when applicable. |
+| `scenario_evidence` | Object | Must be a passing direct scenario or an explicit `not_applicable` reason naming the non-UI issue-reporting worker seam. |
+| `quality_audit_cycles` | Array | Must contain at least three SEEK / VALIDATE / FIX cycles and a clean final cycle. |
+| `github_checks` | Array | Every reported check must be completed and green, skipped, or neutral. |
+| `pr_description` | String | Must include current-head evidence, focused validation, docs impact, scenario applicability, diff scope, quality audit, current GitHub Actions status, and bounded non-claims. |
+| `expected_head_sha` | Optional string SHA | Overrides the expected current head. When omitted, the gate uses `branch.remote_head`. |
+
+### Example evidence package
+
+```json
+{
+  "branch": {
+    "current_ref": "origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa",
+    "local_head": "<current-pr-head-sha>",
+    "remote_head": "<current-pr-head-sha>",
+    "manual_merge_seen": false
+  },
+  "diff_files": [
+    "core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java",
+    "core/issue-reporting/src/test/java/org/lgna/issue/IssueSubmissionProgressWorkerTest.java",
+    "docs/reference/issue-submission-progress-worker.md",
+    "docs/howto/characterize-issue-submission-progress-worker.md",
+    "docs/tutorials/trace-issue-submission-progress-worker.md",
+    "docs/index.md",
+    "pyproject.toml",
+    "scripts/pr428_merge_ready_gate.py",
+    "tests/test_pr428_merge_ready_gate.py"
+  ],
+  "runnable_evidence": [
+    {
+      "command": "NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/issue-reporting -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test",
+      "passed": true,
+      "head_sha": "<current-pr-head-sha>"
+    }
+  ],
+  "docs_impact": {
+    "assessed": true,
+    "files": [
+      "docs/reference/issue-submission-progress-worker.md",
+      "docs/howto/characterize-issue-submission-progress-worker.md",
+      "docs/tutorials/trace-issue-submission-progress-worker.md",
+      "docs/index.md"
+    ]
+  },
+  "scenario_evidence": {
+    "applicability": "not_applicable",
+    "reason": "No Alice desktop workflow impact because IssueSubmissionProgressWorker is a non-UI issue-reporting worker seam."
+  },
+  "quality_audit_cycles": [
+    {
+      "seek": "worker seam",
+      "validate": "source review",
+      "fix": "none",
+      "clean": true
+    },
+    {
+      "seek": "docs claims",
+      "validate": "bounded-claim scan",
+      "fix": "none",
+      "clean": true
+    },
+    {
+      "seek": "evidence gates",
+      "validate": "PR body review",
+      "fix": "none",
+      "clean": true
+    }
+  ],
+  "github_checks": [
+    {
+      "name": "build",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS"
+    }
+  ],
+  "pr_description": "Head validated: <current-pr-head-sha>\nFocused validation: NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/issue-reporting -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test passed.\nDocs impact: reference, how-to, tutorial, and index reviewed.\nScenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.\nDiff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, test, and metadata files.\nQuality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.\nGitHub Actions: all current-head checks completed successfully.\nDoes not claim full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, project archive attachment contents, real issue-service submission, or full Tweedle/player decode."
+}
+```
+
+### Gate behavior
+
+Every blocker is reported as `NOT_MERGE_READY: ...`. Rate-limit output, missing owner evidence, stale head SHAs, unrelated diff files, timeout-wrapped validation, vague scenario non-applicability, pending checks, and overclaims in the PR description all block readiness. A no-op handoff is valid only when this current head/base pair already satisfies the same evidence contract.
 
 ## Compatibility rules
 

@@ -10,6 +10,7 @@ This tutorial walks through the focused issue-reporting worker seam that protect
 - [Trace attachment intent](#trace-attachment-intent)
 - [Trace a failing delegate](#trace-a-failing-delegate)
 - [Run the focused check](#run-the-focused-check)
+- [Trace the merge-ready evidence gate](#trace-the-merge-ready-evidence-gate)
 
 ## Start with the worker boundary
 
@@ -112,3 +113,54 @@ mvn -pl core/issue-reporting -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 ```
+
+## Trace the merge-ready evidence gate
+
+The PR #428 gate is a second seam around review evidence. It does not test more product behavior. It verifies that the handoff for this worker change is current, bounded, and honest.
+
+Open the gate:
+
+```text
+scripts/pr428_merge_ready_gate.py
+```
+
+Read the evidence checks as a checklist:
+
+```text
+branch head matches remote PR head
+diff files stay inside the worker lane
+focused worker Maven command passed on this head
+docs impact was assessed
+desktop scenario evidence is direct or explicitly not applicable
+three SEEK / VALIDATE / FIX cycles are recorded
+GitHub checks are completed and green, skipped, or neutral
+PR description contains the same current-head evidence and bounded non-claims
+```
+
+Then run the gate against the evidence package:
+
+```bash
+python3 scripts/pr428_merge_ready_gate.py /path/to/pr428-evidence.json
+```
+
+A ready result is explicit:
+
+```json
+{
+  "blockers": [],
+  "ready": true
+}
+```
+
+A blocked result starts each reason with `NOT_MERGE_READY`. For example, stale validation from an older commit blocks the PR even if GitHub checks are green:
+
+```json
+{
+  "blockers": [
+    "NOT_MERGE_READY: runnable evidence must be from the current head <current-pr-head-sha>, got <stale-sha>"
+  ],
+  "ready": false
+}
+```
+
+Treat a blocked gate as an evidence problem to fix on the current PR branch, not as permission to widen this worker seam or recreate the PR.

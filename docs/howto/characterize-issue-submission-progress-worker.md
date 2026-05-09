@@ -10,6 +10,7 @@ Use this guide to add or review focused `IssueSubmissionProgressWorker` characte
 - [Keep the boundary narrow](#keep-the-boundary-narrow)
 - [Assess scenario applicability](#assess-scenario-applicability)
 - [Run validation](#run-validation)
+- [Run the PR #428 merge-ready gate](#run-the-pr-428-merge-ready-gate)
 - [Prepare handoff evidence](#prepare-handoff-evidence)
 - [Review the result](#review-the-result)
 
@@ -153,6 +154,37 @@ mvn -pl core/issue-reporting -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 ```
+
+## Run the PR #428 merge-ready gate
+
+For the recovered PR #428 branch, build a current-head evidence package after validation and check it with the repository-owned gate:
+
+```bash
+python3 scripts/pr428_merge_ready_gate.py /path/to/pr428-evidence.json
+```
+
+The evidence file should be generated or edited outside the source tree unless it is intentionally part of reviewed evidence. It records:
+
+| Evidence | Source command or review |
+| --- | --- |
+| Current PR head | `git --no-pager rev-parse HEAD` after fetching the PR branch. |
+| Current base | `git --no-pager rev-parse origin/develop` after fetching `origin/develop`. |
+| Diff scope | `git --no-pager diff --name-only origin/develop...HEAD`. |
+| Focused validation | The exact `IssueSubmissionProgressWorkerTest` Maven command and passing result from this head. |
+| Module validation | The full `core/issue-reporting` Maven command and passing result when issue-reporting production code changed. |
+| Docs impact | This reference, how-to, tutorial, index, or an explicit no-op docs assessment. |
+| Scenario applicability | A direct worker scenario result, or the non-applicable worker-seam statement below. |
+| Quality audit | At least three SEEK / VALIDATE / FIX cycles with a clean final cycle. |
+| GitHub Actions | `gh pr checks 428 --watch=false --json name,state,bucket` or equivalent check-run evidence. |
+| PR body | The exact PR description text that reviewers see for the current head. |
+
+Use this scenario statement when no Alice desktop scenario directly exercises bug-report submission through the worker:
+
+```text
+Scenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.
+```
+
+If the gate prints any `NOT_MERGE_READY` blocker, update the missing or stale evidence instead of broadening the worker scope. Do not use unrelated launch, Save, lesson, render, wrapper-smoke, or coverage-ratchet checks as substitutes for the focused worker evidence.
 
 ## Prepare handoff evidence
 
