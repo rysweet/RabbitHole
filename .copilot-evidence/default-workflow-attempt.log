@@ -62,28 +62,36 @@ Intentional changes:
 - Step 9 current-head simplification adds a focused merge-ready gate contract
   with direct shell assertions instead of an embedded assertion program.
 - Step 9b current-head gate performance optimization caches PR number, URL,
-  branch, body, head, live GitHub mergeability, and check-rollup metadata from one `gh pr view` call
-  instead of repeating network requests.
+  branch, body, head, live GitHub mergeability, review evidence, and check-rollup
+  metadata from one `gh pr view` call instead of repeating network requests.
+- Step 6c documentation refinement documents the review evidence gate,
+  owner-free no-op finalization guard retry, final re-query requirement,
+  PR-specific evidence scope, and merge-only current-head refresh wording.
 
 Current-head merge-ready gate model:
 - Live current-head proof is generated transiently by test-pr419-current-head-readiness-gate-contract.sh at runtime
-  from `git rev-parse HEAD` and one cached `gh pr view 419 --json
-  number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body` response.
+  from `git rev-parse HEAD` and one cached `gh pr view 419 --repo rysweet/RabbitHole --json
+  number,url,headRefName,headRefOid,mergeStateStatus,mergeable,reviewDecision,latestReviews,statusCheckRollup,body` response.
 - Tracked evidence must not store or predict the current PR head SHA.
 - The PR body must be updated after the final commit to name the live head SHA and focused gate evidence.
 - The PR body must also name the live mergeability result
   (`mergeStateStatus=CLEAN`, `mergeable=MERGEABLE`) after the final commit; the
   gate independently re-reads those fields at runtime.
-- GitHub Actions check rollup and live GitHub mergeability are read from the live PR metadata response.
+- GitHub Actions check rollup, review evidence, and live GitHub mergeability are
+  read from the live PR metadata response.
+- `reviewDecision` and `latestReviews` are fail-closed review evidence; any
+  `CHANGES_REQUESTED` state blocks readiness.
 - Readiness rule: green checks are necessary but not sufficient; runnable QA,
-  clean live GitHub mergeability, docs impact, focused diff/review, PR description,
-  audit-cycle, and bounded-claim evidence must also be current and explicit.
+  clean live GitHub mergeability, non-blocking review evidence, docs impact,
+  focused diff/review, PR description, audit-cycle, and bounded-claim evidence
+  must also be current and explicit.
 - PR description evidence is evaluated live by requiring the PR body to contain
   the current PR/local head SHA and the current-head readiness gate contract.
 - Focused diff review evidence: local review stayed limited to PR recovery and
   readiness evidence surfaces; no manual merge was performed.
 - Docs impact evidence: the silver-thread reference now documents the current-head
-  readiness gate and its `MERGE_READY`/`NOT_MERGE_READY` decision boundary.
+  readiness gate, review evidence gate, no-op finalization guard, final re-query
+  requirement, and its `MERGE_READY`/`NOT_MERGE_READY` decision boundary.
 - Bounded claim evidence: this gate does not claim full UI automation, visible
   rendering correctness, grading, creative assessment, full lesson completion, or
   full Tweedle/player decode.
@@ -101,10 +109,11 @@ ReadinessGate: applied the missing-evidence policy and refused to infer readines
 from green checks alone.
 
 Cycle 1 SEEK: current PR head alignment and GitHub Actions freshness.
-Cycle 1 VALIDATE: the live gate uses `gh pr view 419 --json
-number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body`
+Cycle 1 VALIDATE: the live gate uses `gh pr view 419 --repo rysweet/RabbitHole --json
+number,url,headRefName,headRefOid,mergeStateStatus,mergeable,reviewDecision,latestReviews,statusCheckRollup,body`
 and `git rev-parse HEAD` to compare the current PR head, PR body evidence, live
-mergeability, and check rollup without relying on tracked SHA text.
+mergeability, review evidence, and check rollup without relying on tracked SHA
+text.
 Cycle 1 FIX: no repository code fix; recorded that green checks are required but
 not sufficient for merge readiness.
 
@@ -201,9 +210,9 @@ Observed validation outcomes:
   point-in-time claims.
 - The PR419 current-head readiness gate contract generates live proof from
   cached PR metadata and verifies PR number/URL, PR head alignment, PR body
-  current-head evidence, live GitHub mergeability, completed green GitHub
-  Actions, focused QA/scenario evidence, documented audit cycles, and bounded
-  claims.
+  current-head evidence, live GitHub mergeability, review evidence with no
+  changes-requested blocker, completed green GitHub Actions, focused QA/scenario
+  evidence, documented audit cycles, and bounded claims.
 - Step 13 outside-in scenario 1 passed from the PR branch through uvx; uv resolved
   git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
   to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack alice-qa validate`
@@ -237,46 +246,3 @@ Explicit non-claims:
 - This evidence does not claim deployed installer success or deployment
   readiness.
 - This evidence does not claim broad accessibility compliance.
-
-Default-workflow recovery/finalization for PR #389
-Recorded at: 2026-05-09T03:55:00Z
-Starting PR head verified: b183575ca623d07affb296fe753d30860cad4832
-Base branch verified: develop
-
-Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope covers the exported-project Ant build smoke workflow rename/wiring,
-  the runner and validator argv allowlists, schema/workflow contract tests, and
-  documentation/evidence-boundary updates.
-- A stale wording blocker was fixed so the docs no longer say the Ant target
-  execution remains unwired.
-
-Validation completed:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-schema-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-gadugi-exported-launcher-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/run-tests.sh
-- ALICE_QA_RUN_GATED_SMOKES=1 NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-exported-project-smoke --evidence-dir /tmp/rabbithole-pr389-exported-ant-evidence
-- git diff --check origin/develop...HEAD
-- git merge-tree clean check against origin/develop
-
-Result:
-- Prior manual-fallback marker is cleared by default-workflow-owned evidence.
-- Focused QA contracts passed.
-- The gated exported Ant project smoke passed with status.txt outcome=passed,
-  exitCode=0, and Alice3ProjectTemplateAntSmokeTest tests run: 7, failures: 0,
-  errors: 0, skipped: 0.
-- No Ant log contained Java Result.
-- GitHub PR checks for build, package-netbeans, test, and GitGuardian passed at
-  pushed head 96f0834e5259f0b1b96fcbf4e73dd250f0902ab5; coverage was still
-  in progress at the time of base-merge refresh.
-
-Limits:
-- The exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest
-  Ant build/JAR/probe behavior.
-- This evidence does not claim full GUI export journey validation.
-- This evidence does not claim deployed installer validation.
-- This evidence does not claim visible rendering or Sims validation.

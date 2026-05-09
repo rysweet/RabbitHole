@@ -12,8 +12,9 @@ HOWTO_DOC="$REPO_ROOT/docs/howto/alice-desktop-outside-in-qa.md"
 POST_OPEN_REFERENCE_DOC="$REPO_ROOT/docs/reference/post-open-runtime-display-accessibility-evidence.md"
 NONCLAIM_REFERENCE_DOC="$REPO_ROOT/docs/reference/visible-rendering-evidence-nonclaim-contract.md"
 QA_REFERENCE_DOC="$REPO_ROOT/docs/reference/alice-desktop-outside-in-qa.md"
+SILVER_THREAD_DOC="$REPO_ROOT/docs/reference/accessibility-target-discovery-silver-thread.md"
 
-for doc in "$HOWTO_DOC" "$POST_OPEN_REFERENCE_DOC" "$NONCLAIM_REFERENCE_DOC" "$QA_REFERENCE_DOC"; do
+for doc in "$HOWTO_DOC" "$POST_OPEN_REFERENCE_DOC" "$NONCLAIM_REFERENCE_DOC" "$QA_REFERENCE_DOC" "$SILVER_THREAD_DOC"; do
   assert_file_exists "$doc" "current-head evidence docs refinement input exists: ${doc#$REPO_ROOT/}"
 done
 
@@ -86,6 +87,14 @@ assert_literal_in_file \
 assert_literal_in_file "$HOWTO_DOC" "if rg '(<{7}|={7}|>{7})' docs qa pyproject.toml; then" "how-to shows fail-on-match conflict-marker check"
 assert_literal_in_file "$HOWTO_DOC" "conflict markers remain" "how-to names the conflict-marker failure"
 assert_literal_in_file "$HOWTO_DOC" "should print no paths or marker" "how-to explains rg no-match success output"
+assert_literal_in_file "$QA_REFERENCE_DOC" "Merge \`origin/develop\` into that branch; do not rebase shared PR history for" "QA reference uses merge-only current-head refresh guidance"
+assert_literal_absent_from_file "$QA_REFERENCE_DOC" "Merge or rebase \`origin/develop\`" "QA reference does not preserve merge-or-rebase guidance"
+assert_literal_in_file "$SILVER_THREAD_DOC" "reviewDecision,latestReviews" "silver-thread reference documents review evidence fields"
+assert_literal_in_file "$SILVER_THREAD_DOC" "CHANGES_REQUESTED" "silver-thread reference documents changes-requested blocker"
+assert_literal_in_file "$SILVER_THREAD_DOC" "No-op finalization" "silver-thread reference documents no-op finalization"
+assert_literal_in_file "$SILVER_THREAD_DOC" "owner-free" "silver-thread reference documents owner-free no-op guard"
+assert_literal_in_file "$SILVER_THREAD_DOC" "final re-query" "silver-thread reference documents final re-query"
+assert_literal_in_file "$SILVER_THREAD_DOC" "runtime input" "silver-thread reference treats expected head as runtime input"
 
 assert_no_adjacent_sampling_results "$HOWTO_DOC" "how-to does not list pixel observation and sampling blocker as simultaneous artifacts"
 assert_no_adjacent_sampling_results "$POST_OPEN_REFERENCE_DOC" "post-open reference does not list pixel observation and sampling blocker as simultaneous artifacts"

@@ -20,6 +20,8 @@ general accessibility compliance.
 - [Evidence lanes](#evidence-lanes)
 - [Readiness evidence record](#readiness-evidence-record)
 - [Current-head readiness gate](#current-head-readiness-gate)
+- [Review evidence gate](#review-evidence-gate)
+- [No-op finalization](#no-op-finalization)
 - [Artifact API](#artifact-api)
 - [Configuration](#configuration)
 - [Examples](#examples)
@@ -115,20 +117,23 @@ For PR419, `test-pr419-current-head-readiness-gate-contract.sh` is the
 current-head merge-ready gate. It is run only after the final branch commit is
 pushed and the PR body names that live head SHA plus the focused gate evidence.
 It generates transient current-head proof at runtime from `git rev-parse HEAD`
-and one cached `gh pr view 419 --json
-number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body`
-response. Tracked evidence must not store or predict the current PR head SHA.
+and one cached `gh pr view 419 --repo rysweet/RabbitHole --json
+number,url,headRefName,headRefOid,mergeStateStatus,mergeable,reviewDecision,latestReviews,statusCheckRollup,body`
+response. Tracked evidence must not store or predict the current PR head SHA;
+the expected head for any finalization pass is a runtime input from the request
+or live PR metadata, not durable documentation content.
 
 The gate checks these live inputs:
 
 | Input | Required condition |
 | --- | --- |
 | Local branch | The current branch is `feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow`. |
-| PR identity | `gh pr view 419` returns PR number `419`, URL `https://github.com/rysweet/RabbitHole/pull/419`, and the expected head branch. |
+| PR identity | `gh pr view 419 --repo rysweet/RabbitHole` returns PR number `419`, URL `https://github.com/rysweet/RabbitHole/pull/419`, and the expected head branch. |
 | Head alignment | `git rev-parse HEAD` exactly matches the PR `headRefOid`. |
 | PR body evidence | The PR body contains the live head SHA, names `test-pr419-current-head-readiness-gate-contract.sh`, and records the live `mergeStateStatus=CLEAN` / `mergeable=MERGEABLE` result. |
 | Conflict state | `git diff --name-only --diff-filter=U` returns no unmerged paths, and the docs/QA conflict-marker scan finds no merge markers. |
 | Mergeability | The PR metadata reports `mergeStateStatus=CLEAN` and `mergeable=MERGEABLE`. |
+| Review evidence | The PR metadata includes `reviewDecision` and readable `latestReviews`; `CHANGES_REQUESTED` in either source is a fail-closed blocker. Empty or null `reviewDecision` is allowed only when `latestReviews` is readable and has no changes-requested review. |
 | Checks | The PR check rollup is readable, completed, and successful. |
 | Evidence log | `.copilot-evidence/default-workflow-attempt.log` records the focused validation commands, current-head gate model, quality-audit cycles, bounded claims, no-timeout-wrapper posture, and no manual PR merge. |
 | Documentation | This reference names the transient current-head proof model and both readiness outcomes. |
@@ -136,6 +141,55 @@ The gate checks these live inputs:
 Final PR readiness requires live GitHub mergeability. The current-head gate
 queries `mergeStateStatus` and `mergeable` directly and fails unless both prove
 that PR419 is cleanly mergeable.
+
+## Review evidence gate
+
+Review evidence is part of the same current-head decision. The gate reads
+`reviewDecision` and `latestReviews` from GitHub with the PR head, mergeability,
+check rollup, and body fields. Missing review fields, unreadable latest reviews,
+or any `CHANGES_REQUESTED` state is `NOT_MERGE_READY`.
+
+Allowed non-blocking review states are:
+
+| Review state | Gate meaning |
+| --- | --- |
+| Empty or null `reviewDecision` with readable empty `latestReviews` | No blocking review decision is present. |
+| `APPROVED` | The review decision is non-blocking. |
+| `REVIEW_REQUIRED` | Required approval may still be needed, but it is not a changes-requested blocker; the gate still requires clean mergeability and green checks. |
+| Latest review states other than `CHANGES_REQUESTED` | Non-blocking for this lane unless another gate input fails. |
+
+Do not infer review readiness from absent JSON fields or from green checks alone.
+If GitHub cannot return review metadata, report the missing metadata as the
+blocker instead of treating the PR as merge-ready.
+
+## No-op finalization
+
+Use no-op finalization when the finalization request supplies an expected PR head
+and the live PR already matches that head, has clean mergeability, has completed
+successful checks, has no blocking review evidence, and the bounded
+accessibility-target discovery scope is unchanged. In that case no additional QA
+rerun, push, or manual PR merge is required.
+
+The no-op guard is owner-free: it relies on PR number, expected head, live PR
+metadata, and repository scope, not on a named reviewer or assignee. If the first
+metadata read is ambiguous, stale, or incomplete, perform an immediate final
+`gh pr view` re-query before reporting the no-op result. The final report may
+name the runtime expected head that was checked, but durable docs and tracked
+evidence must not hard-code or predict it.
+
+This final re-query is the no-op guard retry. It is review metadata collection,
+not a repository runtime retry path or product integration behavior.
+
+No-op finalization is still fail-closed:
+
+| Input | No-op requirement |
+| --- | --- |
+| Head | Live `headRefOid` exactly matches the expected head from the finalization request. |
+| Mergeability | Live `mergeStateStatus=CLEAN` and `mergeable=MERGEABLE`. |
+| Reviews | Live `reviewDecision`/`latestReviews` has no `CHANGES_REQUESTED` blocker and is readable. |
+| Checks | Live `statusCheckRollup` is readable, completed, and successful. |
+| Scope | The finalization does not expand beyond accessibility target discovery and structured blockers. |
+| Final read | A final re-query immediately precedes the no-op report. |
 
 The gate is a readiness decision contract, not a merge command. It never runs
 `gh pr merge`, never merges PR419 into `develop`, never rebases, never
@@ -377,15 +431,17 @@ The accessibility target discovery lane uses two different proof levels:
 | Proof level | Source | Valid claim |
 | --- | --- | --- |
 | Static silver-thread contract | `test-accessibility-target-discovery-silver-thread.sh` | Checked-in launch, run/runtime, and Select Project artifacts expose the expected target discovery fields, structured blockers, and bounded wording. |
-| PR419 current-head gate | `test-pr419-current-head-readiness-gate-contract.sh` | The final live PR419 head is aligned with the local worktree, PR body evidence, completed green checks, focused evidence log, bounded documentation, and GitHub mergeability. |
+| PR419 current-head gate | `test-pr419-current-head-readiness-gate-contract.sh` | The final live PR419 head is aligned with the local worktree, PR body evidence, completed green checks, review evidence, focused evidence log, bounded documentation, and GitHub mergeability. |
+| PR419 no-op finalization | Live `gh pr view` metadata re-query | The live PR419 head already matches the expected runtime head, has clean mergeability, green checks, non-blocking reviews, unchanged bounded scope, and needs no additional push, QA rerun, or manual PR merge before reporting. |
 
 `MERGE_READY` is available only as a reviewer decision after the current-head
 gate passes on the final pushed PR419 head, including the live GitHub
 mergeability assertion. `NOT_MERGE_READY` is the correct result for stale PR body evidence,
 different local and remote heads, pending or failed checks, unresolved conflicts,
 missing focused validation evidence, missing audit cycles, missing mergeability
-confirmation, or any claim that expands beyond accessibility target discovery
-and structured blockers.
+confirmation, blocking or unreadable review evidence, missing final re-query for
+no-op finalization, or any claim that expands beyond accessibility target
+discovery and structured blockers.
 
 ## Claim boundaries
 
@@ -408,6 +464,9 @@ The implemented contract may claim only:
   current-head proof produced by `test-pr419-current-head-readiness-gate-contract.sh`
   after the final commit is pushed and the PR body names that live head SHA. A
   failed gate is a `NOT_MERGE_READY` blocker, not an implied pass.
+- No-op PR419 finalization may be reported only after a final live metadata
+  re-query proves the expected runtime head, mergeability, checks, review
+  evidence, and bounded scope still match.
 
 The implemented contract must not claim:
 

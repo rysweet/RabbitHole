@@ -12,8 +12,9 @@ EVIDENCE_LOG="$REPO_ROOT/.copilot-evidence/default-workflow-attempt.log"
 HOWTO_DOC="$REPO_ROOT/docs/howto/alice-desktop-outside-in-qa.md"
 POST_OPEN_REFERENCE_DOC="$REPO_ROOT/docs/reference/post-open-runtime-display-accessibility-evidence.md"
 NONCLAIM_REFERENCE_DOC="$REPO_ROOT/docs/reference/visible-rendering-evidence-nonclaim-contract.md"
+SILVER_THREAD_DOC="$REPO_ROOT/docs/reference/accessibility-target-discovery-silver-thread.md"
 
-for input in "$EVIDENCE_LOG" "$HOWTO_DOC" "$POST_OPEN_REFERENCE_DOC" "$NONCLAIM_REFERENCE_DOC"; do
+for input in "$EVIDENCE_LOG" "$HOWTO_DOC" "$POST_OPEN_REFERENCE_DOC" "$NONCLAIM_REFERENCE_DOC" "$SILVER_THREAD_DOC"; do
   assert_file_exists "$input" "PR419 finalization contract input exists: ${input#$REPO_ROOT/}"
 done
 
@@ -24,7 +25,7 @@ current_branch=$(git -C "$REPO_ROOT" branch --show-current)
 unmerged_paths=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=U)
 
 combined_docs="$tmp_root/pr419-finalization-docs.txt"
-cat "$EVIDENCE_LOG" "$HOWTO_DOC" "$POST_OPEN_REFERENCE_DOC" "$NONCLAIM_REFERENCE_DOC" >"$combined_docs"
+cat "$EVIDENCE_LOG" "$HOWTO_DOC" "$POST_OPEN_REFERENCE_DOC" "$NONCLAIM_REFERENCE_DOC" "$SILVER_THREAD_DOC" >"$combined_docs"
 
 assert_nonclaim_wording() {
   local claim=$1
@@ -65,6 +66,14 @@ assert_literal_in_file "$EVIDENCE_LOG" "introduces no API client implementation,
 assert_literal_in_file "$EVIDENCE_LOG" "not a repository runtime integration; no retry path was added." "evidence log avoids retry-path overclaim"
 assert_literal_in_file "$EVIDENCE_LOG" "Unmerged-path check: git diff --name-only --diff-filter=U produced no output." "evidence log records unmerged-path check"
 assert_literal_in_file "$EVIDENCE_LOG" "Conflict-marker check: rg '(<{7}|={7}|>{7})' docs qa pyproject.toml produced no output." "evidence log records conflict-marker check"
+assert_literal_absent_from_file "$EVIDENCE_LOG" "PR #389" "PR419 finalization evidence excludes unrelated PR389 evidence"
+assert_literal_absent_from_file "$EVIDENCE_LOG" "pull/389" "PR419 finalization evidence excludes unrelated PR389 URLs"
+assert_literal_in_file "$SILVER_THREAD_DOC" "No-op finalization" "silver-thread doc has no-op finalization section"
+assert_literal_in_file "$SILVER_THREAD_DOC" "owner-free" "silver-thread doc documents owner-free no-op guard"
+assert_literal_in_file "$SILVER_THREAD_DOC" "final re-query" "silver-thread doc documents final re-query"
+assert_literal_in_file "$SILVER_THREAD_DOC" "reviewDecision" "silver-thread doc documents review decision evidence"
+assert_literal_in_file "$SILVER_THREAD_DOC" "latestReviews" "silver-thread doc documents latest review evidence"
+assert_literal_in_file "$SILVER_THREAD_DOC" "CHANGES_REQUESTED" "silver-thread doc documents changes-requested blocker"
 
 for command in \
   "NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh" \

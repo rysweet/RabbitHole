@@ -591,9 +591,10 @@ The current-head refresh workflow is:
 
 1. Fetch `origin/develop` and the PR ref.
 2. Check out the PR branch or PR ref.
-3. Merge or rebase `origin/develop` into that branch.
-4. Resolve all conflicts and verify no merge/rebase state, unmerged path, or
-   conflict marker remains.
+3. Merge `origin/develop` into that branch; do not rebase shared PR history for
+   this lane.
+4. Resolve all conflicts and verify no merge state, unmerged path, or conflict
+   marker remains.
 5. Validate the scenario catalog and focused contract checks.
 6. Run the target scenario when live prerequisites are available, or preserve the
    exact blocked current-head artifact when they are not.

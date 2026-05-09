@@ -31,11 +31,15 @@ pr_branch=
 pr_head=
 pr_merge_state=
 pr_mergeable=
+pr_review_decision_present=
+pr_review_decision=
+pr_latest_reviews_readable=
+pr_latest_reviews_changes_requested=
 pr_body_has_current_head=
 pr_body_has_gate_evidence=
 pr_body_has_mergeability_evidence=
-GH_NO_UPDATE_NOTIFIER=1 gh pr view "$PR_NUMBER" \
-  --json number,url,headRefName,headRefOid,mergeStateStatus,mergeable,statusCheckRollup,body \
+GH_NO_UPDATE_NOTIFIER=1 gh pr view "$PR_NUMBER" --repo rysweet/RabbitHole \
+  --json number,url,headRefName,headRefOid,mergeStateStatus,mergeable,reviewDecision,latestReviews,statusCheckRollup,body \
   >"$pr_metadata" \
   2>"$tmp_root/pr-metadata.err"
 pr_metadata_status=$?
@@ -52,6 +56,19 @@ metadata_path, local_head, fields_path, checks_path = sys.argv[1:5]
 metadata = json.loads(Path(metadata_path).read_text(encoding="utf-8"))
 body = metadata.get("body") or ""
 checks = metadata.get("statusCheckRollup") or []
+review_decision_present = "reviewDecision" in metadata
+review_decision_value = metadata.get("reviewDecision")
+review_decision = "__NONE__" if review_decision_value in (None, "") else str(review_decision_value)
+latest_reviews = metadata.get("latestReviews")
+latest_reviews_readable = isinstance(latest_reviews, list)
+latest_reviews_changes_requested = "false"
+if not latest_reviews_readable:
+    latest_reviews_changes_requested = "unknown"
+else:
+    for review in latest_reviews:
+        if isinstance(review, dict) and str(review.get("state") or "") == "CHANGES_REQUESTED":
+            latest_reviews_changes_requested = "true"
+            break
 
 field_values = (
     str(metadata.get("number") or ""),
@@ -60,6 +77,10 @@ field_values = (
     metadata.get("headRefOid") or "",
     metadata.get("mergeStateStatus") or "",
     metadata.get("mergeable") or "",
+    "true" if review_decision_present else "false",
+    review_decision,
+    "true" if latest_reviews_readable else "false",
+    latest_reviews_changes_requested,
     "true" if local_head in body else "false",
     "true" if "test-pr419-current-head-readiness-gate-contract.sh" in body else "false",
     "true" if "mergeStateStatus=CLEAN" in body and "mergeable=MERGEABLE" in body else "false",
@@ -81,7 +102,7 @@ PY
   pr_parse_status=$?
   if [ "$pr_parse_status" -eq 0 ]; then
     tab=$(printf '\t')
-    IFS=$tab read -r pr_number pr_url pr_branch pr_head pr_merge_state pr_mergeable pr_body_has_current_head pr_body_has_gate_evidence pr_body_has_mergeability_evidence <"$pr_fields"
+    IFS=$tab read -r pr_number pr_url pr_branch pr_head pr_merge_state pr_mergeable pr_review_decision_present pr_review_decision pr_latest_reviews_readable pr_latest_reviews_changes_requested pr_body_has_current_head pr_body_has_gate_evidence pr_body_has_mergeability_evidence <"$pr_fields"
   fi
 else
   pr_parse_status=1
@@ -138,6 +159,30 @@ else
   fail "PR419 live GitHub mergeability is clean (mergeStateStatus=$pr_merge_state, mergeable=$pr_mergeable)"
 fi
 
+if [ "$pr_review_decision_present" = "true" ]; then
+  pass "PR419 reviewDecision field can be read from cached metadata"
+else
+  fail "PR419 reviewDecision field can be read from cached metadata"
+fi
+
+if [ "$pr_latest_reviews_readable" = "true" ]; then
+  pass "PR419 latestReviews can be read from cached metadata"
+else
+  fail "PR419 latestReviews can be read from cached metadata"
+fi
+
+if [ "$pr_review_decision" = "CHANGES_REQUESTED" ] || [ "$pr_latest_reviews_changes_requested" != "false" ]; then
+  fail "PR419 review evidence has no changes-requested blocker (reviewDecision=$pr_review_decision, latestReviewsChangesRequested=$pr_latest_reviews_changes_requested)"
+else
+  pass "PR419 review evidence has no changes-requested blocker"
+fi
+
+if [ "$pr_review_decision" = "__NONE__" ] || [ "$pr_review_decision" = "APPROVED" ] || [ "$pr_review_decision" = "REVIEW_REQUIRED" ]; then
+  pass "PR419 reviewDecision is an allowed non-blocking state"
+else
+  fail "PR419 reviewDecision is an allowed non-blocking state (got $pr_review_decision)"
+fi
+
 if [ "$pr_body_has_current_head" = "true" ]; then
   pass "PR419 body contains current-head evidence for the live PR head"
 else
@@ -187,8 +232,10 @@ fi
 
 assert_literal_in_file "$EVIDENCE_LOG" "Current-head merge-ready gate model:" "evidence log has current-head gate model section"
 assert_literal_in_file "$EVIDENCE_LOG" "Live current-head proof is generated transiently by test-pr419-current-head-readiness-gate-contract.sh at runtime" "evidence log keeps live proof transient"
-assert_literal_in_file "$EVIDENCE_LOG" "mergeStateStatus,mergeable" "evidence log records live mergeability fields"
+assert_literal_in_file "$EVIDENCE_LOG" "mergeStateStatus,mergeable,reviewDecision,latestReviews" "evidence log records live mergeability and review fields"
 assert_literal_in_file "$EVIDENCE_LOG" "live GitHub mergeability" "evidence log records live mergeability requirement"
+assert_literal_in_file "$EVIDENCE_LOG" "review evidence" "evidence log records review evidence requirement"
+assert_literal_in_file "$EVIDENCE_LOG" "CHANGES_REQUESTED" "evidence log records changes-requested blocker"
 assert_literal_in_file "$EVIDENCE_LOG" "Tracked evidence must not store or predict the current PR head SHA." "evidence log rejects static current-head SHA proof"
 assert_literal_in_file "$EVIDENCE_LOG" "The PR body must be updated after the final commit to name the live head SHA and focused gate evidence." "evidence log records PR body live-head requirement"
 assert_literal_in_file "$EVIDENCE_LOG" "The PR body must also name the live mergeability result" "evidence log records PR body live mergeability requirement"
@@ -232,6 +279,10 @@ done
 assert_literal_in_file "$SILVER_THREAD_DOC" "test-pr419-current-head-readiness-gate-contract.sh" "reference doc names current-head gate contract"
 assert_literal_in_file "$SILVER_THREAD_DOC" "transient current-head proof" "reference doc describes transient current-head proof"
 assert_literal_in_file "$SILVER_THREAD_DOC" "mergeStateStatus,mergeable" "reference doc names live mergeability fields"
+assert_literal_in_file "$SILVER_THREAD_DOC" "reviewDecision,latestReviews" "reference doc names live review evidence fields"
+assert_literal_in_file "$SILVER_THREAD_DOC" "CHANGES_REQUESTED" "reference doc names changes-requested review blocker"
+assert_literal_in_file "$SILVER_THREAD_DOC" "No-op finalization" "reference doc documents no-op finalization"
+assert_literal_in_file "$SILVER_THREAD_DOC" "final re-query" "reference doc requires final no-op re-query"
 assert_literal_in_file "$SILVER_THREAD_DOC" "live GitHub mergeability" "reference doc requires live mergeability"
 assert_literal_in_file "$SILVER_THREAD_DOC" "MERGE_READY" "reference doc names merge-ready decision"
 assert_literal_in_file "$SILVER_THREAD_DOC" "NOT_MERGE_READY" "reference doc names not-merge-ready decision"

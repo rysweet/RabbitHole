@@ -169,6 +169,9 @@ for forbidden in (
     "PR #388",
     "PR388",
     "pull/388",
+    "PR #389",
+    "PR389",
+    "pull/389",
     "pre-finalization",
     "pre-finalization documentation recovery",
 ):
