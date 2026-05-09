@@ -81,19 +81,24 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 900
 ```
 
-Run the narrower procedure-edit seam smoke when the review is about edit
-artifact assertions and the precise desktop edit-action no-go artifact rather
-than the object-placement handoff:
+Run the narrower procedure-edit seam proof directly when the review is about
+edit artifact assertions rather than the object-placement handoff:
 
 ```bash
-rm -rf /tmp/alice-procedure-edit-seam
-ALICE_QA_RUN_GATED_SMOKES=1 \
 NODE_OPTIONS=--max-old-space-size=32768 \
-qa/outside-in/alice-desktop/runners/run-scenario.sh run \
-  alice-desktop-procedure-edit-seam-smoke \
-  --evidence-dir /tmp/alice-procedure-edit-seam \
-  --timeout-seconds 900
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.tools.EatmeEditProcedureTest#editsSceneProcedureAndWritesEatmeProofArtifacts \
+  test
 ```
+
+The `alice-desktop-procedure-edit-seam-smoke` QA scenario is
+`manual-evidence-required` and has no automation block or timeout fields. Use it
+as a manual evidence checklist: attach `status.txt`, `command.log`, and the
+focused Maven output or Surefire report naming
+`editsSceneProcedureAndWritesEatmeProofArtifacts`.
 
 Review the focused JUnit assertions as the durable handoff proof. The Maven test
 asserts the generated evidence files in a JUnit temporary workspace; the QA
@@ -129,7 +134,7 @@ Accepted success criteria:
 | Placement | `placed-project.a3p`, `placement.json`, and `scene.diff.json` exist in the evidence directory. |
 | Edit | `edited-project.a3p` and `first-lesson-code-editor-action-proof.json` exist in the evidence directory. |
 | AST assertion | Reopening `edited-project.a3p` finds the placed bunny field and the existing `scene.eatmeFirstLesson` method with the deterministic appended `Comment` statement. |
-| UI boundary | Successful runs do not emit `procedure-ui-action-no-go.json`. |
+| UI boundary | Successful runs emit only the focused action proof artifact and do not claim desktop UI action completion beyond the repository-owned backing seam. |
 
 The focused Maven test creates these artifacts inside a JUnit `TemporaryFolder`
 and asserts their contents before the workspace is discarded. The
@@ -230,9 +235,10 @@ Exit codes:
 | `2` | Invalid arguments, unsupported selector, unsupported edit spec, missing project, missing scene, or unsupported project version. |
 | `3` | Runtime procedure-edit failure. |
 
-The supported selector form is `scene.<methodName>`, where `<methodName>` is one
-Java-style identifier. `EatmeEditProcedure` finds that scene method or creates it
-when missing. The supported edit form is `append-comment:<non-blank text>`.
+The only supported selector is `scene.eatmeFirstLesson`.
+`EatmeEditProcedure` must find that existing scene method and fails closed when
+the target method is missing. The supported edit form is
+`append-comment:<non-blank text>`.
 
 The edit is accepted only after `edited-project.a3p` is written. Reopening the
 archive must show the selected scene method and the appended AST `Comment`
@@ -286,10 +292,9 @@ Project PID handling, launcher behavior, rendering, or broad desktop automation.
 ## Blocker contract
 
 The implemented proof emits `first-lesson-code-editor-action-proof.json` on
-success and does not emit `procedure-ui-action-no-go.json`. If object placement,
-project handoff, target lookup, backing selection, marker isolation, or AST
-editing cannot be exercised, the characterization must fail or surface that
-error directly; it must not write success-shaped evidence.
+success. If object placement, project handoff, target lookup, backing selection,
+marker isolation, or AST editing cannot be exercised, the characterization must
+fail or surface that error directly; it must not write success-shaped evidence.
 
 ## Evidence boundaries
 

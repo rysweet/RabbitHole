@@ -11,6 +11,7 @@ QA_REFERENCE_DOC="$BASE_DIR/../../../docs/reference/alice-desktop-outside-in-qa.
 QA_HOWTO_DOC="$BASE_DIR/../../../docs/howto/alice-desktop-outside-in-qa.md"
 QA_TUTORIAL_DOC="$BASE_DIR/../../../docs/tutorials/alice-desktop-outside-in-qa.md"
 README_DOC="$BASE_DIR/README.md"
+PROCEDURE_EDIT_SEAM_DOC="$BASE_DIR/../../../docs/reference/first-lesson-procedure-edit-seam.md"
 LEARNER_WORLD_BOUNDARY="$BASE_DIR/contracts/learner-world-assessment-boundary.json"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
@@ -26,7 +27,7 @@ assert_success "$status" "runner lists scenario catalog"
 status=$?
 assert_success "$status" "validator dumps scenario catalog for workflow checks"
 
-python3 - "$tmp_root/catalog.json" "$SCHEMA" "$VALIDATOR" "$QA_REFERENCE_DOC" "$QA_HOWTO_DOC" "$QA_TUTORIAL_DOC" "$README_DOC" "$LEARNER_WORLD_BOUNDARY" >"$tmp_root/workflow-contract.out" 2>"$tmp_root/workflow-contract.err" <<'PY'
+python3 - "$tmp_root/catalog.json" "$SCHEMA" "$VALIDATOR" "$QA_REFERENCE_DOC" "$QA_HOWTO_DOC" "$QA_TUTORIAL_DOC" "$README_DOC" "$PROCEDURE_EDIT_SEAM_DOC" "$LEARNER_WORLD_BOUNDARY" >"$tmp_root/workflow-contract.out" 2>"$tmp_root/workflow-contract.err" <<'PY'
 from collections import Counter
 import json
 import re
@@ -41,7 +42,8 @@ qa_reference_text = Path(sys.argv[4]).read_text(encoding="utf-8")
 qa_howto_text = Path(sys.argv[5]).read_text(encoding="utf-8")
 qa_tutorial_text = Path(sys.argv[6]).read_text(encoding="utf-8")
 readme_text = Path(sys.argv[7]).read_text(encoding="utf-8")
-learner_world_boundary_path = Path(sys.argv[8])
+procedure_edit_seam_text = Path(sys.argv[8]).read_text(encoding="utf-8")
+learner_world_boundary_path = Path(sys.argv[9])
 if learner_world_boundary_path.is_file():
     learner_world_boundary_text = learner_world_boundary_path.read_text(encoding="utf-8")
     learner_world_boundary = json.loads(learner_world_boundary_text)
@@ -179,6 +181,25 @@ for scenario_id in manual_command_scenarios:
         errors.append(f"{scenario_id} must require status.txt evidence")
     if not any(token in evidence_text for token in ("command.log", "artifact", "project", "failure")):
         errors.append(f"{scenario_id} must require command, artifact, project, or failure-path evidence")
+
+procedure_doc_normalized = re.sub(r"\s+", " ", procedure_edit_seam_text)
+if "alice-desktop-procedure-edit-seam-smoke --evidence-dir" in procedure_doc_normalized:
+    errors.append("procedure edit seam docs must not document the manual scenario as a timeout-based runner command")
+for forbidden in (
+    "procedure-ui-action-no-go.json",
+    "scene.<methodName>",
+    "creates it when missing",
+):
+    if forbidden in procedure_edit_seam_text:
+        errors.append(f"procedure edit seam docs must not contain stale contract wording: {forbidden}")
+for required in (
+    "`alice-desktop-procedure-edit-seam-smoke` QA scenario is `manual-evidence-required`",
+    "has no automation block or timeout fields",
+    "The only supported selector is `scene.eatmeFirstLesson`",
+    "fails closed when the target method is missing",
+):
+    if required not in procedure_doc_normalized:
+        errors.append(f"procedure edit seam docs must preserve current contract wording: {required}")
 
 instructor_student = catalog.get("alice-desktop-instructor-student-setup")
 if instructor_student is None:
