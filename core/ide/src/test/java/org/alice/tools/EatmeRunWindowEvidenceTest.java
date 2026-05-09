@@ -69,6 +69,17 @@ public class EatmeRunWindowEvidenceTest {
     assertTrue(json, json.contains("\"artifact\": \"run-window-created.json\""));
   }
 
+  @Test
+  public void writesEmptyStringsForUnavailableDisplayMetadata() throws Exception {
+    Path evidenceDir = temporaryFolder.newFolder("empty-metadata-evidence").toPath();
+
+    Path artifact = EatmeRunWindowEvidence.writeRunWindowCreated(evidenceDir, null, null);
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"frame_title\": \"\""));
+    assertTrue(json, json.contains("\"program_type\": \"\""));
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void rejectsParentArtifactPath() {
     EatmeRunWindowEvidence.artifactPath(temporaryFolder.getRoot().toPath(), "../run-window-created.json");

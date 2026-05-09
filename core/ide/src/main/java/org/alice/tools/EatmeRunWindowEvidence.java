@@ -131,6 +131,9 @@ public final class EatmeRunWindowEvidence {
   }
 
   static String escapeJson(String value) {
+    if (value == null) {
+      return "";
+    }
     StringBuilder escaped = new StringBuilder(value.length());
     for (int i = 0; i < value.length(); i++) {
       char ch = value.charAt(i);
@@ -161,10 +164,14 @@ public final class EatmeRunWindowEvidence {
   }
 
   private static String title(Frame frame) {
-    return frame != null ? frame.getTitle() : "";
+    return frame != null ? emptyIfNull(frame.getTitle()) : "";
   }
 
   static String typeName(NamedUserType programType) {
-    return programType != null ? programType.getName() : "";
+    return programType != null ? emptyIfNull(programType.getName()) : "";
+  }
+
+  private static String emptyIfNull(String value) {
+    return value != null ? value : "";
   }
 }
