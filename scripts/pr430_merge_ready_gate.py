@@ -41,6 +41,10 @@ SUPPORTED_DIFF_PATHS = (
     "scripts/pr430_merge_ready_gate.py",
     "tests/",
 )
+SUPPORTED_DIFF_PREFIXES = tuple(path for path in SUPPORTED_DIFF_PATHS if path.endswith("/"))
+SUPPORTED_DIFF_EXACT_PATHS = frozenset(
+    path for path in SUPPORTED_DIFF_PATHS if not path.endswith("/")
+)
 
 UNBOUNDED_CLAIM_RE = re.compile(
     r"\b(full\s+UI\s+automation|visible\s+rendering\s+correctness|grading|"
@@ -221,10 +225,7 @@ def _check_diff_scope(evidence: dict[str, Any], blockers: list[str]) -> None:
 def _is_supported_diff_path(path: str) -> bool:
     if not _is_safe_repo_relative_path(path):
         return False
-    return any(
-        path.startswith(allowed) if allowed.endswith("/") else path == allowed
-        for allowed in SUPPORTED_DIFF_PATHS
-    )
+    return path in SUPPORTED_DIFF_EXACT_PATHS or path.startswith(SUPPORTED_DIFF_PREFIXES)
 
 
 def _is_safe_repo_relative_path(path: str) -> bool:

@@ -4,13 +4,14 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from functools import lru_cache
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GATE_PATH = REPO_ROOT / "scripts" / "pr430_merge_ready_gate.py"
 PR_BRANCH = "feat/issue-407-rabbithole-wave7-save-negative-contract-lane-follo"
-HEAD_SHA = "2f6cd9a53ad4d319f2e4e64ca0f92da0299549cf"
+HEAD_SHA = "2dcf313222b18edff2247c7a856572519bc0873c"
 NEGATIVE_CONTRACT_COMMAND = (
     "NODE_OPTIONS=--max-old-space-size=32768 "
     "bash qa/outside-in/alice-desktop/tests/"
@@ -21,6 +22,7 @@ PYTHON_TEST_COMMAND = (
 )
 
 
+@lru_cache(maxsize=1)
 def load_gate_module():
     spec = importlib.util.spec_from_file_location("pr430_merge_ready_gate", GATE_PATH)
     assert spec is not None
@@ -412,6 +414,8 @@ class Pr430MergeReadyGateTest(unittest.TestCase):
         self.assertTrue(refreshed["pr_description"]["mentions_three_audit_cycles"])
         self.assertTrue(refreshed["pr_description"]["mentions_green_actions"])
         self.assertTrue(refreshed["pr_description"]["bounded_non_claims"])
+        refreshed["qa"]["scenario_evidence"]["status"] = "mutated"
+        self.assertEqual("passed", evidence["qa"]["scenario_evidence"]["status"])
 
     def test_github_client_retries_transient_failures_and_surfaces_permanent_errors(self) -> None:
         module = load_gate_module()
