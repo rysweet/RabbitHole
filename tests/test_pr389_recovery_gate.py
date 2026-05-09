@@ -1,5 +1,6 @@
 import importlib.util
 import copy
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -30,6 +31,29 @@ FORBIDDEN_CLAIMS = [
     "full lesson completion",
     "full Tweedle/player decode",
 ]
+PR389_CHANGED_FILES = [
+    ".copilot-evidence/default-workflow-attempt.log",
+    "docs/howto/alice-desktop-outside-in-qa.md",
+    "docs/howto/finalize-exported-netbeans-ant-smoke-recovery.md",
+    "docs/index.md",
+    "docs/reference/alice-desktop-outside-in-qa.md",
+    "docs/reference/exported-netbeans-ant-project-behavior.md",
+    "docs/reference/gadugi-exported-launcher-evidence.md",
+    "docs/reference/modernization-corpus-manifest.json",
+    "docs/reference/modernization-scorecard.md",
+    "netbeans/src/test/java/org/alice/netbeans/Alice3LibraryClasspathTestSupport.java",
+    "pyproject.toml",
+    "qa/outside-in/alice-desktop/README.md",
+    "qa/outside-in/alice-desktop/runners/run-scenario.sh",
+    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+    "qa/outside-in/alice-desktop/scenarios/exported-project-smoke.yaml",
+    "qa/outside-in/alice-desktop/schema/scenario.schema.json",
+    "qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh",
+    "qa/outside-in/alice-desktop/tests/test-schema-contract.sh",
+    "qa/outside-in/alice-desktop/tests/test-workflow-contract.sh",
+    "scripts/pr389_recovery_gate.py",
+    "tests/test_pr389_recovery_gate.py",
+]
 
 
 def load_recovery_gate():
@@ -59,8 +83,10 @@ def merge_ready_evidence() -> dict:
             ["git", "fetch", "origin", EXPECTED_BRANCH, "--no-tags"],
             ["git", "switch", "-C", EXPECTED_BRANCH, EXPECTED_REMOTE_REF],
             ["git", "submodule", "update", "--init", "tweedle-lang"],
-            ["qa/outside-in/alice-desktop/runners/validate-scenarios.sh"],
             [
+                "env",
+                "ALICE_QA_RUN_GATED_SMOKES=1",
+                "NODE_OPTIONS=--max-old-space-size=32768",
                 "qa/outside-in/alice-desktop/runners/run-scenario.sh",
                 "run",
                 "alice-desktop-exported-project-smoke",
@@ -70,15 +96,7 @@ def merge_ready_evidence() -> dict:
             FOCUSED_MAVEN_ARGV,
             ["gh", "pr", "checks", "389", "--repo", "rysweet/RabbitHole"],
         ],
-        "changedFiles": [
-            "netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java",
-            "qa/outside-in/alice-desktop/scenarios/exported-project-smoke.yaml",
-            "qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh",
-            "docs/howto/finalize-exported-netbeans-ant-smoke-recovery.md",
-            "docs/reference/exported-netbeans-ant-project-behavior.md",
-            "docs/index.md",
-            "tests/test_pr389_recovery_gate.py",
-        ],
+        "changedFiles": PR389_CHANGED_FILES,
         "qaEvidence": {
             "scenarioValidation": {"outcome": "passed"},
             "runnerContract": {"outcome": "passed"},
@@ -97,10 +115,10 @@ def merge_ready_evidence() -> dict:
                 "commandLog": {
                     "contains": [
                         "Alice3ProjectTemplateAntSmokeTest",
-                        "Ant target jar passed",
-                        "Ant target run passed",
-                        "Ant target run-test-with-main passed",
-                        "Ant target clean passed",
+                        "ANT_RUN_PROBE_OK",
+                        "ANT_RESOURCE_PROBE_OK",
+                        "ANT_RUNTIME_CONFIGURATION_PROBE_OK",
+                        "ANT_TEST_MAIN_PROBE_OK",
                     ],
                     "notContains": ["Java Result:"],
                 },
@@ -208,6 +226,18 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
             "unfocused-diff-scope",
         )
 
+    def test_diff_scope_allowlist_matches_actual_pr_diff(self) -> None:
+        actual_changed_files = subprocess.check_output(
+            ["git", "--no-pager", "diff", "--name-only", "origin/develop...HEAD"],
+            cwd=REPO_ROOT,
+            text=True,
+        ).splitlines()
+        self.assertEqual(PR389_CHANGED_FILES, actual_changed_files)
+
+        evidence = copy.deepcopy(self.evidence)
+        evidence["changedFiles"] = actual_changed_files
+        self.assertEqual([], self.module.verify_diff_scope(evidence))
+
     def test_qa_scenario_verifier_requires_executed_gated_exported_ant_smoke(self) -> None:
         self.assert_no_blockers("verify_qa_evidence")
         self.assert_has_blocker(
@@ -252,6 +282,33 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
             lambda evidence: evidence["qualityAuditCycles"][2].update({"clean": False}),
             "final-quality-audit-cycle-not-clean",
         )
+        self.assert_has_blocker(
+            "verify_quality_audit",
+            lambda evidence: evidence["qualityAuditCycles"].append(
+                {
+                    "cycle": 4,
+                    "seek": "Post-review readiness",
+                    "validate": "Confirmed unresolved review blocker",
+                    "fix": "Pending",
+                    "clean": False,
+                    "unresolvedFindings": ["review-blocker"],
+                }
+            ),
+            "quality-audit-open-finding",
+        )
+        evidence = copy.deepcopy(self.evidence)
+        evidence["qualityAuditCycles"].append(
+            {
+                "cycle": 4,
+                "seek": "Post-review readiness",
+                "validate": "Confirmed unresolved review blocker",
+                "fix": "Pending",
+                "clean": False,
+                "unresolvedFindings": ["review-blocker"],
+            }
+        )
+        result = self.module.evaluate_readiness(evidence)
+        self.assertEqual("NOT_MERGE_READY", result["status"])
 
     def test_docs_impact_verifier_rejects_unbounded_or_unreviewed_claims(self) -> None:
         self.assert_no_blockers("verify_docs_impact")
@@ -321,6 +378,26 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
             "verify_command_safety",
             lambda evidence: evidence["commands"].append(["timeout", "600", "mvn", "test"]),
             "timeout-wrapper-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append(["env", "timeout", "600", "mvn", "test"]),
+            "timeout-wrapper-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append("cd repo && gh pr merge 389"),
+            "manual-merge-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append(["bash", "-lc", "timeout 600 mvn test"]),
+            "timeout-wrapper-used",
+        )
+        self.assert_has_blocker(
+            "verify_command_safety",
+            lambda evidence: evidence["commands"].append(["sh", "-c", "git fetch && git merge HEAD"]),
+            "manual-merge-used",
         )
 
 

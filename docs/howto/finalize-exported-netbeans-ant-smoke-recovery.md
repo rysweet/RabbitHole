@@ -205,9 +205,10 @@ Use independent surfaces so the cycles are meaningful:
 | 2 | NetBeans Ant smoke behavior | Probe markers, Ant target failure handling, generated jar/resource assertions, no `Java Result:` leakage. |
 | 3 | Readiness and claim boundary | Docs wording, PR description evidence, GitHub Actions SHA match, diff scope, no overbroad claims. |
 
-The third cycle must be clean. If cycle 3 finds a confirmed issue, fix it and run
-a new third cycle until the final cycle is clean. If any confirmed issue remains
-unfixed, report `NOT_MERGE_READY: quality-audit-open-finding`.
+The last recorded cycle must be clean. If cycle 3 or a later cycle finds a
+confirmed issue, fix it and record another cycle until the final cycle has no
+open or unresolved findings. If any confirmed issue remains unfixed, report
+`NOT_MERGE_READY: quality-audit-open-finding`.
 
 Use this compact evidence format in the PR description or recovery handoff:
 
@@ -216,6 +217,8 @@ Quality audit:
 - Cycle 1 SEEK scenario/runner contract; VALIDATE <evidence>; FIX <result>.
 - Cycle 2 SEEK NetBeans Ant smoke behavior; VALIDATE <evidence>; FIX <result>.
 - Cycle 3 SEEK readiness and claim boundary; VALIDATE clean; FIX not-needed.
+- Cycle 4+ only when needed after review feedback; the highest-numbered cycle
+  is the final cycle and must be clean.
 ```
 
 ## Review documentation impact
@@ -275,7 +278,7 @@ head and include bounded evidence:
 | Diff scope | Short statement that the diff is scoped to exported NetBeans Ant smoke recovery, QA wiring, tests, and docs, or a named blocker. |
 | QA/scenario evidence | Scenario validation, contract tests, and gated `alice-desktop-exported-project-smoke` result. |
 | Maven evidence | Focused `Alice3ProjectTemplateAntSmokeTest` command and result. |
-| Quality audit | Three `SEEK -> VALIDATE -> FIX` cycles with a clean final cycle. |
+| Quality audit | At least three `SEEK -> VALIDATE -> FIX` cycles with a clean final cycle. |
 | Docs impact | `docs-updated` or `docs-not-needed` with file references. |
 | GitHub Actions | Required checks green for the exact head SHA. |
 | Claim boundary | Explicit non-claims for full UI automation, visible rendering correctness, grading, creative assessment, lesson completion, and full Tweedle/player decode. |

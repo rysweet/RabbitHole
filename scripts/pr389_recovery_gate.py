@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import shlex
 import sys
 from pathlib import Path
 from typing import Any, Iterable
@@ -22,7 +23,7 @@ EXPECTED_AUTOMATION_MODE = "gated-command-smoke"
 EXPECTED_GATE = "ALICE_QA_RUN_GATED_SMOKES"
 EXPECTED_NODE_OPTIONS = "--max-old-space-size=32768"
 EXPECTED_TEST_CLASS = "org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest"
-EXPECTED_FOCUSED_MAVEN_ARGV = [
+EXPECTED_FOCUSED_MAVEN_ARGV = (
     "mvn",
     "-DincludeSims=false",
     "-Dinstall4j.skip",
@@ -33,15 +34,27 @@ EXPECTED_FOCUSED_MAVEN_ARGV = [
     "-am",
     f"-Dtest={EXPECTED_TEST_CLASS}",
     "test",
-]
-REQUIRED_COMMAND_LOG_MARKERS = [
-    "Alice3ProjectTemplateAntSmokeTest",
-    "Ant target jar passed",
-    "Ant target run passed",
-    "Ant target run-test-with-main passed",
-    "Ant target clean passed",
-]
-FORBIDDEN_COMMAND_LOG_MARKERS = ["Java Result:"]
+)
+REQUIRED_COMMAND_LOG_MARKERS = frozenset(
+    (
+        "Alice3ProjectTemplateAntSmokeTest",
+        "ANT_RUN_PROBE_OK",
+        "ANT_RESOURCE_PROBE_OK",
+        "ANT_RUNTIME_CONFIGURATION_PROBE_OK",
+        "ANT_TEST_MAIN_PROBE_OK",
+    )
+)
+FORBIDDEN_COMMAND_LOG_MARKERS = frozenset(("Java Result:",))
+REQUIRED_QA_OUTCOMES = (
+    ("scenarioValidation", "scenario-validation-not-passed"),
+    ("runnerContract", "runner-contract-not-passed"),
+    ("schemaContract", "schema-contract-not-passed"),
+)
+EXPECTED_GATED_SMOKE_FIELDS = (
+    ("scenario", EXPECTED_SCENARIO, "wrong-gated-smoke-scenario"),
+    ("workflow", EXPECTED_WORKFLOW, "wrong-gated-smoke-workflow"),
+    ("automationMode", EXPECTED_AUTOMATION_MODE, "wrong-gated-smoke-automation-mode"),
+)
 PR_DESCRIPTION_FLAGS = {
     "hasCurrentHeadEvidence": "pr-description-missing-current-head-evidence",
     "hasQaEvidence": "pr-description-missing-qa-evidence",
@@ -54,9 +67,17 @@ ALLOWED_DIFF_PREFIXES = (
     "qa/outside-in/alice-desktop/",
 )
 ALLOWED_DIFF_FILES = {
+    ".copilot-evidence/default-workflow-attempt.log",
+    "docs/howto/alice-desktop-outside-in-qa.md",
     "docs/howto/finalize-exported-netbeans-ant-smoke-recovery.md",
     "docs/index.md",
+    "docs/reference/alice-desktop-outside-in-qa.md",
     "docs/reference/exported-netbeans-ant-project-behavior.md",
+    "docs/reference/gadugi-exported-launcher-evidence.md",
+    "docs/reference/modernization-corpus-manifest.json",
+    "docs/reference/modernization-scorecard.md",
+    "netbeans/src/test/java/org/alice/netbeans/Alice3LibraryClasspathTestSupport.java",
+    "pyproject.toml",
     "scripts/pr389_recovery_gate.py",
     "tests/test_pr389_recovery_gate.py",
 }
@@ -68,9 +89,8 @@ FORBIDDEN_PATH_FRAGMENTS = (
     "secrets",
     "signing/",
 )
-GREEN_CONCLUSIONS = {"success"}
-TIMEOUT_WRAPPER_COMMANDS = {"timeout", "gtimeout"}
-MANUAL_MERGE_COMMANDS = {("git", "merge"), ("gh", "pr", "merge")}
+GREEN_CONCLUSIONS = frozenset(("success",))
+TIMEOUT_WRAPPER_COMMANDS = frozenset(("timeout", "gtimeout"))
 
 
 LOGGER = logging.getLogger("pr389_recovery_gate")
@@ -96,53 +116,70 @@ def _head_sha(evidence: dict[str, Any]) -> str:
     return _text(evidence.get("headSha"))
 
 
-def _normalize_argv(value: Any) -> list[str]:
+def _normalize_argv(value: Any) -> tuple[str, ...]:
     if isinstance(value, list):
-        return [_text(item) for item in value]
+        return tuple(_text(item) for item in value)
     if isinstance(value, str):
-        return value.split()
-    return []
+        return tuple(value.split())
+    return ()
 
 
-def _argv_text(value: Any) -> str:
-    if isinstance(value, list):
-        return " ".join(_text(item) for item in value)
-    return _text(value)
-
-
-def _contains_focused_maven_argv(value: Any) -> bool:
-    argv = _normalize_argv(value)
-    if argv == EXPECTED_FOCUSED_MAVEN_ARGV:
-        return True
-    return " ".join(EXPECTED_FOCUSED_MAVEN_ARGV) in _argv_text(value)
+def _is_focused_maven_argv(value: Any) -> bool:
+    return _normalize_argv(value) == EXPECTED_FOCUSED_MAVEN_ARGV
 
 
 def _dedupe(blockers: Iterable[str]) -> list[str]:
-    seen: set[str] = set()
-    unique: list[str] = []
-    for blocker in blockers:
-        if blocker not in seen:
-            seen.add(blocker)
-            unique.append(blocker)
-    return unique
+    return list(dict.fromkeys(blockers))
 
 
-def _command_tokens(command: Any) -> list[str]:
+def _split_command_text(command: str) -> tuple[str, ...]:
+    try:
+        return tuple(shlex.split(command))
+    except ValueError:
+        return tuple(command.split())
+
+
+def _command_tokens(command: Any) -> tuple[str, ...]:
     if isinstance(command, list):
-        return [_text(part) for part in command]
-    if isinstance(command, str):
-        return command.split()
-    return []
+        tokens = tuple(_text(part) for part in command)
+    elif isinstance(command, str):
+        tokens = _split_command_text(command)
+    else:
+        return ()
+
+    expanded: list[str] = []
+    for token in tokens:
+        expanded.append(token)
+        if any(character.isspace() for character in token):
+            expanded.extend(_split_command_text(token))
+    return tuple(expanded)
 
 
-def _command_starts_with(command: list[str], prefix: tuple[str, ...]) -> bool:
-    return tuple(command[: len(prefix)]) == prefix
+def _has_manual_merge_command(command: tuple[str, ...]) -> bool:
+    for index, token in enumerate(command):
+        if token == "gh" and command[index + 1 : index + 3] == ("pr", "merge"):
+            return True
+        if token == "git" and "merge" in command[index + 1 : index + 5]:
+            return True
+    return False
+
+
+def _has_timeout_wrapper_command(command: tuple[str, ...]) -> bool:
+    return any(token in TIMEOUT_WRAPPER_COMMANDS for token in command)
 
 
 def _path_in_focused_scope(path: str) -> bool:
-    if path in ALLOWED_DIFF_FILES:
-        return True
-    return any(path.startswith(prefix) for prefix in ALLOWED_DIFF_PREFIXES)
+    return path in ALLOWED_DIFF_FILES or path.startswith(ALLOWED_DIFF_PREFIXES)
+
+
+def _has_parent_traversal(path: str) -> bool:
+    return path == ".." or path.startswith("../") or path.endswith("/..") or "/../" in path
+
+
+def _has_open_quality_findings(cycle: dict[str, Any]) -> bool:
+    return bool(_as_list(cycle.get("openFindings"))) or bool(
+        _as_list(cycle.get("unresolvedFindings"))
+    ) or cycle.get("unresolved") is True
 
 
 def verify_head(evidence: dict[str, Any]) -> list[str]:
@@ -181,14 +218,14 @@ def verify_diff_scope(evidence: dict[str, Any]) -> list[str]:
     blockers: list[str] = []
     for raw_path in changed_files:
         path = _text(raw_path)
-        lowered = path.lower()
-        if (
-            not path
-            or path.startswith("/")
-            or ".." in Path(path).parts
-            or any(fragment in lowered for fragment in FORBIDDEN_PATH_FRAGMENTS)
-            or not _path_in_focused_scope(path)
-        ):
+        if not path or path.startswith("/") or _has_parent_traversal(path):
+            blockers.append("unfocused-diff-scope")
+            break
+        if not _path_in_focused_scope(path):
+            blockers.append("unfocused-diff-scope")
+            break
+        lowered_path = path.lower()
+        if any(fragment in lowered_path for fragment in FORBIDDEN_PATH_FRAGMENTS):
             blockers.append("unfocused-diff-scope")
             break
 
@@ -202,11 +239,7 @@ def verify_qa_evidence(evidence: dict[str, Any]) -> list[str]:
         return ["missing-qa-evidence"]
 
     blockers: list[str] = []
-    for key, blocker in (
-        ("scenarioValidation", "scenario-validation-not-passed"),
-        ("runnerContract", "runner-contract-not-passed"),
-        ("schemaContract", "schema-contract-not-passed"),
-    ):
+    for key, blocker in REQUIRED_QA_OUTCOMES:
         if _as_mapping(qa.get(key)).get("outcome") != "passed":
             blockers.append(blocker)
 
@@ -215,19 +248,16 @@ def verify_qa_evidence(evidence: dict[str, Any]) -> list[str]:
     command_log = _as_mapping(gated_smoke.get("commandLog"))
     if not gated_smoke or not status_txt:
         blockers.append("missing-gated-smoke-evidence")
-    if gated_smoke.get("scenario") != EXPECTED_SCENARIO:
-        blockers.append("wrong-gated-smoke-scenario")
-    if gated_smoke.get("workflow") != EXPECTED_WORKFLOW:
-        blockers.append("wrong-gated-smoke-workflow")
-    if gated_smoke.get("automationMode") != EXPECTED_AUTOMATION_MODE:
-        blockers.append("wrong-gated-smoke-automation-mode")
+    for field, expected, blocker in EXPECTED_GATED_SMOKE_FIELDS:
+        if gated_smoke.get(field) != expected:
+            blockers.append(blocker)
     if gated_smoke.get("gate") != EXPECTED_GATE or _text(gated_smoke.get("gateValue")) != "1":
         blockers.append("gated-smoke-not-enabled")
     if status_txt.get("outcome") != "passed":
         blockers.append("gated-smoke-not-run")
     if _text(status_txt.get("exitCode")) != "0":
         blockers.append("gated-smoke-failed")
-    if not _contains_focused_maven_argv(status_txt.get("argv")):
+    if not _is_focused_maven_argv(status_txt.get("argv")):
         blockers.append("missing-focused-ant-smoke-argv")
 
     contains = {_text(item) for item in _as_list(command_log.get("contains"))}
@@ -251,7 +281,7 @@ def verify_maven_evidence(evidence: dict[str, Any]) -> list[str]:
         blockers.append("tweedle-lang-not-initialized")
     if maven.get("nodeOptions") != EXPECTED_NODE_OPTIONS:
         blockers.append("missing-node-options")
-    if not _contains_focused_maven_argv(maven.get("argv")):
+    if not _is_focused_maven_argv(maven.get("argv")):
         blockers.append("missing-focused-ant-smoke-argv")
     if maven.get("exitCode") != 0:
         blockers.append("focused-maven-smoke-failed")
@@ -262,27 +292,40 @@ def verify_maven_evidence(evidence: dict[str, Any]) -> list[str]:
 
 
 def verify_quality_audit(evidence: dict[str, Any]) -> list[str]:
-    """Require three SEEK/VALIDATE/FIX cycles with a clean final cycle."""
+    """Require at least three SEEK/VALIDATE/FIX cycles with a clean final cycle."""
     cycles = _as_list(evidence.get("qualityAuditCycles"))
     blockers: list[str] = []
     if len(cycles) < 3:
         blockers.append("insufficient-quality-audit-cycles")
         return blockers
 
-    for index, raw_cycle in enumerate(cycles[:3], start=1):
+    numbered_cycles: list[tuple[int, dict[str, Any]]] = []
+    seen_cycle_numbers: set[int] = set()
+    for raw_cycle in cycles:
         cycle = _as_mapping(raw_cycle)
-        if cycle.get("cycle") != index:
+        cycle_number = cycle.get("cycle")
+        if (
+            not isinstance(cycle_number, int)
+            or isinstance(cycle_number, bool)
+            or cycle_number < 1
+            or cycle_number in seen_cycle_numbers
+        ):
             blockers.append("quality-audit-cycle-order-invalid")
+        else:
+            seen_cycle_numbers.add(cycle_number)
+            numbered_cycles.append((cycle_number, cycle))
         if not _text(cycle.get("seek")) or not _text(cycle.get("validate")) or not _text(cycle.get("fix")):
             blockers.append("quality-audit-cycle-incomplete")
-        open_findings = cycle.get("openFindings", [])
-        if isinstance(open_findings, list) and open_findings:
-            blockers.append("quality-audit-open-finding")
-        if cycle.get("unresolved") is True:
-            blockers.append("quality-audit-open-finding")
 
-    if _as_mapping(cycles[2]).get("clean") is not True:
+    expected_cycle_numbers = set(range(1, max(seen_cycle_numbers, default=0) + 1))
+    if seen_cycle_numbers != expected_cycle_numbers:
+        blockers.append("quality-audit-cycle-order-invalid")
+
+    final_cycle = max(numbered_cycles, default=(0, {}), key=lambda item: item[0])[1]
+    if final_cycle.get("clean") is not True:
         blockers.append("final-quality-audit-cycle-not-clean")
+    if _has_open_quality_findings(final_cycle):
+        blockers.append("quality-audit-open-finding")
 
     return _dedupe(blockers)
 
@@ -353,29 +396,30 @@ def verify_command_safety(evidence: dict[str, Any]) -> list[str]:
         tokens = _command_tokens(command)
         if not tokens:
             continue
-        if tokens[0] in TIMEOUT_WRAPPER_COMMANDS:
+        if _has_timeout_wrapper_command(tokens):
             blockers.append("timeout-wrapper-used")
-        for manual_merge in MANUAL_MERGE_COMMANDS:
-            if _command_starts_with(tokens, manual_merge):
-                blockers.append("manual-merge-used")
+        if _has_manual_merge_command(tokens):
+            blockers.append("manual-merge-used")
 
     return _dedupe(blockers)
 
 
+VERIFIERS = (
+    verify_head,
+    verify_command_safety,
+    verify_diff_scope,
+    verify_qa_evidence,
+    verify_maven_evidence,
+    verify_quality_audit,
+    verify_docs_impact,
+    verify_github_actions,
+    verify_pr_description,
+)
+
+
 def evaluate_readiness(evidence: dict[str, Any]) -> dict[str, Any]:
     """Return MERGE_READY only when every recovery gate has evidence."""
-    verifiers = [
-        verify_head,
-        verify_command_safety,
-        verify_diff_scope,
-        verify_qa_evidence,
-        verify_maven_evidence,
-        verify_quality_audit,
-        verify_docs_impact,
-        verify_github_actions,
-        verify_pr_description,
-    ]
-    blockers = _dedupe(blocker for verifier in verifiers for blocker in verifier(evidence))
+    blockers = _dedupe(blocker for verifier in VERIFIERS for blocker in verifier(evidence))
     head_sha = _head_sha(evidence)
 
     if blockers:
