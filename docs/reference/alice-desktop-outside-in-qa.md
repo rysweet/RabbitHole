@@ -65,8 +65,6 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
 | `alice-desktop-model-export-boundary-smoke` | `model-export-boundary-smoke` | `gated-command-smoke` | Covers model resource export boundary characterization: XML generation, enum naming, generated Java compilation, bounding-box metadata, and thumbnail handling. |
-| `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
-| `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
 
 The first-lesson live procedure target action seam is a read-only contract. It
 records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
