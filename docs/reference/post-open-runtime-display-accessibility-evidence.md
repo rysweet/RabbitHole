@@ -28,6 +28,7 @@ active Select Project behavior, or decoder behavior.
 - [Controlled-display screenshot-consistency API](#controlled-display-screenshot-consistency-api)
 - [World-canvas pixel target readiness API](#world-canvas-pixel-target-readiness-api)
 - [World-canvas pixel sampling API](#world-canvas-pixel-sampling-api)
+- [Sampler CLI API](#sampler-cli-api)
 - [Review workflow](#review-workflow)
 - [Examples](#examples)
 - [Review rules](#review-rules)
@@ -715,8 +716,8 @@ visible/showing candidate has valid positive screen-coordinate extents:
 }
 ```
 
-Both examples are blockers. Neither example is a substitute for a pixel sampler,
-visible-rendering proof, rendered-world oracle, or world-canvas pixel
+Both examples are blockers. Neither example is a substitute for the bounded
+pixel-sampling artifact, a rendered-world oracle, or a world-canvas pixel
 correctness claim.
 
 ## World-canvas pixel sampling API
@@ -749,15 +750,23 @@ checked raw samples strictly inside the target bounds.
   "schemaVersion": 1,
   "status": "observed",
   "blocker": "none",
-  "claim": "run-window-world-canvas-target-sampled-rendering-correctness-not-established",
-  "claimScope": "visible-rendering-world-canvas-target-scoped-pixel-observation",
-  "claimScopeDetail": "raw-rgba-samples-only",
+  "blockerDetail": "",
+  "claim": "run-window-world-canvas-target-sampled-rendering-correctness-not-asserted",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
   "boundedClaim": "The run-window/world-canvas target was identified and sampled under controlled conditions.",
   "sourceArtifact": "controlled-display-pixel-observation.json",
   "targetSourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
   "visibleRenderingCorrectnessEstablished": false,
+  "renderedWorldPixelsObserved": true,
   "prerequisiteTargetStatus": "target-ready",
-  "sampleCount": 5,
+  "sampleCount": 3,
+  "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+  "samples": [
+    {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+    {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+    {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
+  ],
   "worldCanvasPixelTarget": {
     "identified": true,
     "status": "target-ready",
@@ -778,15 +787,13 @@ checked raw samples strictly inside the target bounds.
     "status": "observed",
     "pixelsSampled": true,
     "samplesChecked": true,
-    "sampleCount": 5,
-    "samplingMethod": "target-scoped-controlled-display-raw-rgba",
+    "sampleCount": 3,
+    "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
     "sampler": "world-canvas-pixel-sampler.py",
     "samplePoints": [
-      {"name": "center", "x": 642, "y": 509, "rgba": [32, 48, 64, 255]},
-      {"name": "upper-left-inset", "x": 145, "y": 189, "rgba": [31, 47, 63, 255]},
-      {"name": "upper-right-inset", "x": 1139, "y": 189, "rgba": [30, 46, 62, 255]},
-      {"name": "lower-left-inset", "x": 145, "y": 829, "rgba": [29, 45, 61, 255]},
-      {"name": "lower-right-inset", "x": 1139, "y": 829, "rgba": [28, 44, 60, 255]}
+      {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+      {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+      {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
     ],
     "samplePointRule": "inside-target-bounds-only",
     "correctnessCheck": "not-performed"
@@ -798,7 +805,12 @@ checked raw samples strictly inside the target bounds.
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
-    "rendered-world-correctness"
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
   ]
 }
 ```
@@ -810,11 +822,19 @@ Minimum fields for accepting bounded sampling observation:
   "schemaVersion": 1,
   "status": "observed",
   "blocker": "none",
-  "claimScope": "visible-rendering-world-canvas-target-scoped-pixel-observation",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
   "sourceArtifact": "controlled-display-pixel-observation.json",
   "visibleRenderingCorrectnessEstablished": false,
+  "renderedWorldPixelsObserved": true,
   "prerequisiteTargetStatus": "target-ready",
-  "sampleCount": 5,
+  "sampleCount": 3,
+  "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+  "samples": [
+    {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+    {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+    {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
+  ],
   "worldCanvasPixelTarget": {
     "identified": true,
     "status": "target-ready",
@@ -831,25 +851,35 @@ Minimum fields for accepting bounded sampling observation:
     "status": "observed",
     "pixelsSampled": true,
     "samplesChecked": true,
-    "sampleCount": 5,
-    "samplingMethod": "target-scoped-controlled-display-raw-rgba",
+    "sampleCount": 3,
+    "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
     "samplePoints": [
-      {"name": "center", "x": 642, "y": 509, "rgba": [32, 48, 64, 255]}
+      {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+      {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+      {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
     ],
     "correctnessCheck": "not-performed"
   },
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
-    "rendered-world-correctness"
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
   ]
 }
 ```
 
 Each sample point must be inside the validated screen extents. Each `rgba` value
-must contain four integers from 0 through 255. The runner rejects empty samples,
-mismatched `sampleCount`, missing RGBA values, out-of-bounds coordinates,
-unchecked samples, or any sampler output that attempts to assert correctness.
+must contain four integers from 0 through 255. The default sampler emits the
+center point plus upper-left and lower-right inset points when those coordinates
+are unique; very small targets may produce fewer unique checked samples. The
+runner rejects empty samples, mismatched `sampleCount`, missing RGBA values,
+out-of-bounds coordinates, unchecked samples, or any sampler output that attempts
+to assert correctness.
 
 ### Pixel-sampling blocker artifact
 
@@ -893,7 +923,12 @@ claim. It records `renderedWorldPixelsObserved=false` and
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
-    "rendered-world-correctness"
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
   ]
 }
 ```
@@ -905,15 +940,134 @@ Valid blocker values include:
 | `world-canvas-pixel-target-not-ready` | Target identification failed, was ambiguous, or had invalid geometry. | `reliable-run-window-world-canvas-pixel-sampling-target` |
 | `world-canvas-pixel-sampler-unavailable` | A target is ready, but no usable pixel sampler is available. | `provide-world-canvas-pixel-sampler` |
 | `world-canvas-pixel-sampling-failed` | The sampler ran but failed to capture raw pixels inside the target. | `sample-run-window-world-canvas-pixels` |
-| `world-canvas-pixel-sampling-incomplete` | The sampler returned fewer checked samples than requested or omitted required sample fields. | `complete-run-window-world-canvas-pixel-sample-set` |
+| `world-canvas-pixel-sampling-incomplete` | The sampler returned no samples, mismatched `sampleCount`, out-of-bounds points, malformed RGBA values, or omitted required sample fields. | `complete-run-window-world-canvas-pixel-sample-set` |
 | `world-canvas-pixel-samples-unchecked` | Samples were present but not checked for bounds, shape, and RGBA validity. | `check-target-scoped-pixel-samples-before-claiming-observation` |
 | `world-canvas-pixel-sampler-overclaimed` | The sampler attempted to assert correctness instead of raw bounded observation. | `remove-correctness-claims-from-sampler-output` |
 | `world-canvas-pixel-source-artifact-invalid` | The controlled-display source artifact is absent, malformed, or semantically invalid. | `valid-controlled-display-pixel-observation-source-artifact` |
 
-The `unsupportedClaims` values are an include-at-least set. A valid artifact may
-list additional unsupported claims, but it must not omit these three exclusions.
-Do not treat the controlled-display screenshot, target-ready geometry, or raw
-RGBA samples as rendered-world correctness.
+Pixel-sampling artifacts list the same unsupported claims the runner enforces:
+world-canvas pixel correctness, full visible rendering correctness,
+rendered-world correctness, full UI automation, world execution, grading, Save
+behavior, and first-lesson completion. Do not treat the controlled-display
+screenshot, target-ready geometry, or raw RGBA samples as rendered-world
+correctness.
+
+## Sampler CLI API
+
+`world-canvas-pixel-sampler.py` is the focused raw-pixel sampler used by
+`run-scenario.sh` after target readiness has already been established. It is also
+safe to run directly in contract tests or local diagnostics when you provide one
+validated target JSON file.
+
+```bash
+qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py \
+  --target-json target-ready.json \
+  --output sampler-output.json
+```
+
+The sampler reads from the current X display. It requires `xwd` and ImageMagick
+`convert` on `PATH`. It does not launch Alice, find a target, inspect AT-SPI,
+compare screenshots, apply color expectations, perform visual diffs, or decide
+whether rendering is correct.
+
+### Target input
+
+The input file must be a JSON object with positive screen-coordinate extents:
+
+```json
+{
+  "identified": true,
+  "status": "target-ready",
+  "screenExtents": {
+    "coordinateType": "screen",
+    "x": 160,
+    "y": 120,
+    "width": 320,
+    "height": 240
+  }
+}
+```
+
+Only `screenExtents` is required by the sampler. The runner supplies the full
+`worldCanvasPixelTarget` object from `controlled-display-pixel-observation.json`
+so the intermediate sampler output can be wrapped with source-artifact,
+target-readiness, unsupported-claim, and final status metadata.
+
+### Observed sampler output
+
+When capture succeeds, the direct sampler output is intentionally smaller than
+`visible-rendering-pixel-observation.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "sampleCount": 3,
+  "samples": [
+    {
+      "checked": true,
+      "name": "center",
+      "point": {
+        "x": 320,
+        "y": 240
+      },
+      "rgba": [32, 48, 64, 255]
+    },
+    {
+      "checked": true,
+      "name": "upper-left-inset",
+      "point": {
+        "x": 161,
+        "y": 121
+      },
+      "rgba": [31, 47, 63, 255]
+    },
+    {
+      "checked": true,
+      "name": "lower-right-inset",
+      "point": {
+        "x": 478,
+        "y": 358
+      },
+      "rgba": [28, 44, 60, 255]
+    }
+  ],
+  "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+  "status": "observed"
+}
+```
+
+The sampler chooses the center point plus upper-left and lower-right inset points
+that fit inside the validated target. Very small targets may produce fewer unique
+points because duplicate coordinates are collapsed. Each sample is raw RGBA data
+only.
+
+### Blocked sampler output
+
+The sampler writes a blocked JSON artifact instead of throwing a success-shaped
+result when input or capture is unusable:
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "blocked",
+  "blocker": "target-geometry-invalid",
+  "blockerDetail": "Target screenExtents must be positive screen coordinates."
+}
+```
+
+Direct sampler blocker values are:
+
+| Blocker | Meaning |
+| --- | --- |
+| `target-json-unreadable` | The target file could not be read or parsed as JSON. |
+| `target-json-invalid` | The parsed target is not a JSON object. |
+| `target-geometry-invalid` | `screenExtents` is missing, not screen coordinates, non-numeric, zero-sized, or negative. |
+| `pixel-sampling-failed` | `xwd`, `convert`, root-window capture, pixel extraction, or RGBA parsing failed. |
+
+The sampler exits after writing JSON for both observed and blocked outcomes. A
+blocked sampler output is not final scenario status; the runner converts it into
+`visible-rendering-pixel-sampling-blocker.json` and keeps
+`visibleRenderingCorrectnessEstablished=false`.
 
 ## Review workflow
 
