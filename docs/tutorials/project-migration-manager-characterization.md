@@ -297,5 +297,24 @@ it also covers branch, PR, and documentation contracts outside
 NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest discover -s tests
 ```
 
+### Validate the gadugi QA scenario
+
+The `migration-hotspot-characterization-smoke` gadugi scenario runs the same
+focused Maven command through the repository's 4-layer argv allowlist. After
+characterization changes, confirm it still validates:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 bash \
+qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+```
+
+The gadugi scenario targets the test class name, not individual test methods, so
+adding new `@Test` methods does not require scenario changes.
+
 When adding another migration characterization, keep the fixture small, generated
 in Java source, and tied to one observable migration behavior.

@@ -52,7 +52,8 @@ The repository-owned feature surface is:
 
 | Surface | Role |
 | --- | --- |
-| `ProjectMigrationManagerTest` | Executable characterization for table invariants, version gates, selected rewrite cascades, selected field/accessor rewrites, the BonePile boundary, and current-version pending-migration guards. |
+| `ProjectMigrationManagerTest` | Executable characterization for table invariants, version gates, selected rewrite cascades, selected field/accessor rewrites, the BonePile boundary, and current-version pending-migration guards (18 tests). |
+| `migration-hotspot-characterization-smoke` scenario | Gadugi QA gated-command-smoke that runs the focused Maven test through the 4-layer argv allowlist. |
 | Reference documentation | Durable contract for the protected behavior and compatibility rules. |
 | Tutorial documentation | Guided example for adding generated XML-string migration characterization. |
 | How-to documentation | Task checklist for adding or reviewing migration characterization. |
@@ -301,6 +302,79 @@ documentation contracts outside `ProjectMigrationManager`.
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest discover -s tests
 ```
+
+## QA automation
+
+The characterization has a gadugi QA scenario that gates the focused Maven test
+through the repository's allowlist infrastructure. The scenario file is:
+
+```text
+qa/outside-in/alice-desktop/scenarios/migration-hotspot-characterization-smoke.yaml
+```
+
+### Scenario properties
+
+| Property | Value |
+| --- | --- |
+| ID | `alice-desktop-migration-hotspot-characterization-smoke` |
+| Workflow | `migration-hotspot-characterization-smoke` |
+| Automation mode | `gated-command-smoke` |
+| Timeout | 600 seconds |
+| Argv tuple | 10 elements (see below) |
+| Fallback | `manual-evidence-required` |
+
+### Argv allowlist entry
+
+The 10-element argv tuple is validated identically across 4 enforcement points:
+
+1. `qa/outside-in/alice-desktop/schema/scenario.schema.json` — JSON Schema
+   `prefixItems` with `const` per element, `minItems: 10`, `maxItems: 10`,
+   `items: false`.
+2. `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` — Python set
+   equality check.
+3. `qa/outside-in/alice-desktop/runners/run-scenario.sh` — Bash exact-match
+   argument validation with `$# -eq 10`.
+4. `qa/outside-in/alice-desktop/tests/test-schema-contract.sh` — Python
+   `expected_argv` set equality.
+
+The tuple:
+
+```text
+("mvn", "-DincludeSims=false", "-Dinstall4j.skip", "-DfailIfNoTests=false",
+ "-Dsurefire.failIfNoSpecifiedTests=false", "-pl", "core/story-api-migration",
+ "-am", "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest", "test")
+```
+
+### Running the scenario
+
+Validate all scenarios including the migration hotspot smoke:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+Run the gated command directly:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh \
+  qa/outside-in/alice-desktop/scenarios/migration-hotspot-characterization-smoke.yaml
+```
+
+### Evidence artifacts
+
+The scenario collects three required evidence items:
+
+- `status.txt` — gated command exit status.
+- `command.log` — full Maven output from the characterization smoke.
+- Surefire report naming `ProjectMigrationManagerTest`.
+
+### Supporting evidence
+
+The scenario references `alice-desktop-archive-fixture-smoke` because the
+archive fixture smoke exercises the broader `core/story-api-migration` module
+that includes `ProjectMigrationManager`.
 
 ## Compatibility rules
 

@@ -186,6 +186,31 @@ mvn -pl core/story-api-migration -am \
   test
 ```
 
+## 7. Validate the gadugi QA scenario
+
+After updating characterization tests, confirm the gadugi QA scenario still
+passes. The `migration-hotspot-characterization-smoke` scenario runs the same
+focused Maven command through the repository's 4-layer argv allowlist.
+
+Validate all scenarios:
+
+```sh
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+Run the schema contract test to confirm argv set equality:
+
+```sh
+NODE_OPTIONS=--max-old-space-size=32768 bash \
+qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+```
+
+If the characterization gains or loses test methods, the gadugi scenario argv
+tuple does not change — it targets the test class, not individual methods. The
+scenario only needs updating if `ProjectMigrationManagerTest` moves to a
+different Maven module or is renamed.
+
 ## Review checklist
 
 Before merging a migration characterization or refactor, confirm:
@@ -198,3 +223,4 @@ Before merging a migration characterization or refactor, confirm:
 | Are expected final names asserted? | Yes. |
 | Are obsolete or intermediate names rejected where the seam has intermediates? | Yes. |
 | Does production behavior remain compatible with the current Alice baseline? | Yes. |
+| Does the gadugi QA scenario still validate? | Yes (`validate-scenarios.sh` and `test-schema-contract.sh` pass). |

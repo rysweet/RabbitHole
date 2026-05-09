@@ -36,6 +36,11 @@ EXPECTED_PR_SCOPE = {
     "docs/reference/project-migration-manager-characterization.md",
     "docs/tutorials/project-migration-manager-characterization.md",
     "pyproject.toml",
+    "qa/outside-in/alice-desktop/runners/run-scenario.sh",
+    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+    "qa/outside-in/alice-desktop/scenarios/migration-hotspot-characterization-smoke.yaml",
+    "qa/outside-in/alice-desktop/schema/scenario.schema.json",
+    "qa/outside-in/alice-desktop/tests/test-schema-contract.sh",
     "tests/test_pr424_migration_hotspot_recovery_contract.py",
 }
 EXPECTED_DOC_LINKS = [

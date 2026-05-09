@@ -49,7 +49,8 @@ The durable artifact stack is:
 | Reference | [`docs/reference/project-migration-manager-characterization.md`](../reference/project-migration-manager-characterization.md) | Full contract, API reference, configuration, compatibility rules, and examples. |
 | How-to | [`docs/howto/characterize-project-migration-manager.md`](../howto/characterize-project-migration-manager.md) | Step-by-step checklist for adding or reviewing migration characterization. |
 | Tutorial | [`docs/tutorials/project-migration-manager-characterization.md`](../tutorials/project-migration-manager-characterization.md) | Guided example walking through one concrete migration seam. |
-| Executable tests | `ProjectMigrationManagerTest` in `core/story-api-migration` | 12 focused Java characterization tests. |
+| Executable tests | `ProjectMigrationManagerTest` in `core/story-api-migration` | 18 focused Java characterization tests. |
+| QA automation | `migration-hotspot-characterization-smoke` gadugi scenario | Gated-command-smoke that runs the 18-test focused Maven command through the 4-layer argv allowlist. |
 | Repository contract | `tests/test_pr424_migration_hotspot_recovery_contract.py` | Python policy checks for diff scope, doc links, conflict markers, and test method presence. |
 
 ## What it protects
@@ -96,6 +97,28 @@ The [project IO corpus characterization](../reference/project-io-corpus-characte
 covers generated archive round-trips. Migration hotspot characterization is
 narrower: it protects individual text rewrites without requiring archive
 fixtures.
+
+## QA automation
+
+The migration hotspot characterization has a gadugi QA scenario that runs the
+focused Maven test command through the repository's 4-layer argv allowlist
+(`scenario.schema.json`, `validate-scenarios.sh`, `run-scenario.sh`,
+`test-schema-contract.sh`). The scenario is
+`migration-hotspot-characterization-smoke` with automation mode
+`gated-command-smoke`. When the gate is enabled, the scenario executes:
+
+```sh
+mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false \
+    -Dsurefire.failIfNoSpecifiedTests=false \
+    -pl core/story-api-migration -am \
+    -Dtest=org.lgna.project.migration.ProjectMigrationManagerTest test
+```
+
+The scenario collects `status.txt`, `command.log`, and surefire report evidence.
+It falls back to `manual-evidence-required` when the focused Maven smoke is
+unavailable. The scenario references `alice-desktop-archive-fixture-smoke` as
+supporting evidence because the archive fixture smoke exercises the broader story
+API migration module that includes `ProjectMigrationManager`.
 
 ## Safe refactoring rule
 
