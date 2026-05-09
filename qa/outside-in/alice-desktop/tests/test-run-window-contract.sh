@@ -4,9 +4,11 @@ set -u
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$BASE_DIR/../../.." && pwd)
 VALIDATOR="$BASE_DIR/runners/validate-scenarios.sh"
 RUNNER="$BASE_DIR/runners/run-scenario.sh"
 SCHEMA="$BASE_DIR/schema/scenario.schema.json"
+RUN_COMPOSITE="$REPO_ROOT/core/ide/src/main/java/org/alice/stageide/run/RunComposite.java"
 SCENARIO_ID=alice-desktop-run-window-contract
 WORKFLOW=run-window-contract
 SCENARIO_FILE="$BASE_DIR/scenarios/run-window-contract.yaml"
@@ -177,6 +179,47 @@ assert_contains "$VALIDATOR" "\"$WORKFLOW\"" "validator allowlists the Run-windo
 assert_contains "$VALIDATOR" "$TEST_SELECTOR" "validator allowlists the exact Run-window contract Maven selector"
 assert_contains "$RUNNER" "$TEST_SELECTOR" "runner allowlist permits the focused Run-window contract Maven selector"
 assert_contains "$RUNNER" 'org\.alice\.eatme\.runWindowEvidenceDir' "runner injects the Run-window evidence directory property"
+
+python3 - "$RUN_COMPOSITE" >"$tmp_root/run-composite-wiring.out" 2>"$tmp_root/run-composite-wiring.err" <<'PY'
+import sys
+from pathlib import Path
+
+source_path = Path(sys.argv[1])
+source = source_path.read_text(encoding="utf-8")
+method = "protected void handlePreShowWindow"
+method_start = source.find(method)
+if method_start < 0:
+    raise AssertionError("RunComposite must keep handlePreShowWindow as the Run-window creation hook")
+
+brace_start = source.find("{", method_start)
+if brace_start < 0:
+    raise AssertionError("RunComposite#handlePreShowWindow has no method body")
+
+depth = 0
+method_end = None
+for index in range(brace_start, len(source)):
+    char = source[index]
+    if char == "{":
+        depth += 1
+    elif char == "}":
+        depth -= 1
+        if depth == 0:
+            method_end = index
+            break
+
+if method_end is None:
+    raise AssertionError("RunComposite#handlePreShowWindow body is not balanced")
+
+body = source[brace_start:method_end + 1]
+required_call = "EatmeRunWindowEvidence.recordRunWindowCreated(frame, programType);"
+if required_call not in body:
+    raise AssertionError(
+        "RunComposite#handlePreShowWindow must call "
+        "EatmeRunWindowEvidence.recordRunWindowCreated(frame, programType)"
+    )
+PY
+status=$?
+assert_success "$status" "production Run-window hook calls the evidence recorder"
 
 "$RUNNER" list >"$tmp_root/list.out" 2>"$tmp_root/list.err"
 status=$?

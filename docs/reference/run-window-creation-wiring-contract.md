@@ -40,9 +40,9 @@ bash qa/outside-in/alice-desktop/tests/test-run-window-contract.sh
 ```
 
 This script checks the scenario contract, JSON Schema allowlist, runner
-allowlist, prepare-only evidence path, and enabled gated artifact
-persistence/validation for the Run-window lane. It is the shortest review
-command for contract readiness; it is not a broad desktop automation run.
+allowlist, production hook-to-recorder call, prepare-only evidence path, and
+enabled gated artifact persistence/validation for the Run-window lane. It is
+the shortest review command for contract readiness; it is not a broad desktop automation run.
 
 Run the focused contract characterization from the repository root:
 
@@ -157,6 +157,11 @@ Representative artifact:
 `EatmeRunWindowEvidence` is a product-adjacent evidence utility used by the
 desktop Run-window seam and focused characterization tests. It is not a public
 Alice authoring API.
+
+`RunComposite#handlePreShowWindow` is the production hook that calls
+`EatmeRunWindowEvidence.recordRunWindowCreated(frame, programType)`. The shell
+contract keeps that hook wired while the Java tests characterize the recorder
+and artifact behavior.
 
 | API | Behavior |
 | --- | --- |

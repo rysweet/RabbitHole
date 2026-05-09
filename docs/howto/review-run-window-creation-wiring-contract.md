@@ -1,8 +1,9 @@
 # Review the Run-Window Creation/Wiring Contract
 
 Use this guide to review the focused Run-window evidence lane. The lane verifies
-only that the Run-window creation hook can write the bounded
-`run-window-created.json` artifact through the expected seam.
+only that the production Run-window creation hook is wired to the bounded
+`run-window-created.json` evidence seam and that the scenario runner preserves
+and validates the artifact.
 
 For the complete artifact and API contract, see the [Run-Window
 Creation/Wiring Contract reference](../reference/run-window-creation-wiring-contract.md).
@@ -31,9 +32,10 @@ bash qa/outside-in/alice-desktop/tests/test-run-window-contract.sh
 ```
 
 This check validates the Run-window scenario, schema, runner allowlist, exact
-focused Maven argv, prepare-only evidence output, and enabled gated artifact
-persistence/validation. It does not execute broad desktop automation and does
-not prove rendering correctness or program behavior.
+focused Maven argv, production hook-to-recorder call, prepare-only evidence
+output, and enabled gated artifact persistence/validation. It does not execute
+broad desktop automation and does not prove rendering correctness or program
+behavior.
 
 Then run the bounded silver-thread status report:
 
@@ -78,6 +80,12 @@ Review the test as the executable contract for:
 | Escaping | Frame title and program type metadata cannot break JSON output. |
 | Path safety | Parent traversal, nested artifact paths, absolute artifact paths, missing directories, symlink evidence directories, and pre-existing artifact symlinks fail closed. |
 | Non-claims | The artifact names unsupported active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, creative assessment, lesson completion, and full UI automation boundaries. |
+
+The shell contract separately asserts that
+`RunComposite#handlePreShowWindow` still calls
+`EatmeRunWindowEvidence.recordRunWindowCreated(frame, programType)`. The Java
+seam proves the recorder behavior; the shell assertion prevents that seam from
+drifting away from the production Run-window hook.
 
 ## Validate scenario wiring
 
