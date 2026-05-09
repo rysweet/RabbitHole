@@ -275,7 +275,8 @@ public class Decoder {
           && expressionStatement.getExpression() instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
         statements.add(decodeMethodAssignmentStatement(method, assignment, allParameters, locals, fields));
       } else if (statement instanceof org.alice.tweedle.ast.ConditionalStatement conditionalStatement) {
-        statements.add(decodeIfStatement(method, allParameters, locals, fields, conditionalStatement));
+        statements.add(decodeIfStatement(
+            method, allParameters, locals, fields, declaringType, zeroArgumentMethods, conditionalStatement));
       } else if (statement instanceof org.alice.tweedle.ast.WhileLoop whileLoop) {
         if (returnType != JavaType.VOID_TYPE) {
           throw new UnsupportedTweedleDecodeException(
@@ -325,20 +326,51 @@ public class Decoder {
       UserParameter[] parameters,
       List<UserLocal> locals,
       List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods,
       org.alice.tweedle.ast.ConditionalStatement conditional) {
     Expression condition = decodeValueExpression(method.getName(), conditional.getCondition(), parameters, locals, fields);
     if (!JavaType.BOOLEAN_OBJECT_TYPE.isAssignableFrom(condition.getType())) {
       throw new UnsupportedTweedleDecodeException(
           "Tweedle if condition must be a Boolean expression: " + method.getName());
     }
-    BlockStatement thenBody = decodeConditionalBranchBody(method, parameters, locals, fields, conditional.getThenBlock());
-    BlockStatement elseBody = decodeConditionalBranchBody(method, parameters, locals, fields, conditional.getElseBlock());
+    BlockStatement thenBody = conditional.getElseBlock().isEmpty()
+        ? decodeSimpleIfBody(method, parameters, locals, fields, declaringType, zeroArgumentMethods, conditional.getThenBlock())
+        : decodeAssignmentOnlyConditionalBranchBody(method, parameters, locals, fields, conditional.getThenBlock());
+    BlockStatement elseBody =
+        decodeAssignmentOnlyConditionalBranchBody(method, parameters, locals, fields, conditional.getElseBlock());
     return new ConditionalStatement(
         new BooleanExpressionBodyPair[]{new BooleanExpressionBodyPair(condition, thenBody)},
         elseBody);
   }
 
-  private BlockStatement decodeConditionalBranchBody(
+  private BlockStatement decodeSimpleIfBody(
+      TweedleMethod method,
+      UserParameter[] parameters,
+      List<UserLocal> locals,
+      List<UserField> fields,
+      NamedUserType declaringType,
+      Map<String, UserMethod> zeroArgumentMethods,
+      List<TweedleStatement> statements) {
+    List<Statement> decoded = new ArrayList<>();
+    for (TweedleStatement statement : statements) {
+      if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
+          && expressionStatement.getExpression() instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
+        decoded.add(decodeMethodAssignmentStatement(method, assignment, parameters, locals, fields));
+      } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
+          && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
+        decoded.add(decodeZeroArgumentThisMethodCallStatement(
+            declaringType, method.getName(), methodCall, zeroArgumentMethods));
+      } else if (statement instanceof org.alice.tweedle.ast.ConditionalStatement) {
+        throw unsupportedSimpleIfBody(method);
+      } else {
+        throw unsupportedSimpleIfBody(method);
+      }
+    }
+    return new BlockStatement(decoded.toArray(Statement[]::new));
+  }
+
+  private BlockStatement decodeAssignmentOnlyConditionalBranchBody(
       TweedleMethod method,
       UserParameter[] parameters,
       List<UserLocal> locals,
@@ -1051,6 +1083,12 @@ public class Decoder {
   private UnsupportedTweedleDecodeException unsupportedMethodBody(TweedleMethod method) {
     return new UnsupportedTweedleDecodeException(
         "Tweedle method bodies are not yet supported by the AST decoder: " + method.getName());
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedSimpleIfBody(TweedleMethod method) {
+    return new UnsupportedTweedleDecodeException(
+        "Only assignment statements and explicit zero-argument this-method calls are supported "
+            + "in Tweedle simple if/else bodies by the AST decoder: " + method.getName());
   }
 
   private UnsupportedTweedleDecodeException unsupportedZeroArgumentThisMethodCall(

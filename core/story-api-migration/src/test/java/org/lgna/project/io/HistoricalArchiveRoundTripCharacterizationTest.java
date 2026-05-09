@@ -18,17 +18,21 @@ import org.lgna.project.ProjectVersion;
 import org.lgna.project.ast.ArithmeticInfixExpression;
 import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BlockStatement;
+import org.lgna.project.ast.BooleanExpressionBodyPair;
+import org.lgna.project.ast.ConditionalStatement;
 import org.lgna.project.ast.CrawlPolicy;
 import org.lgna.project.ast.ExpressionStatement;
 import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalDeclarationStatement;
+import org.lgna.project.ast.MethodInvocation;
 import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ResourceExpression;
 import org.lgna.project.ast.ReturnStatement;
+import org.lgna.project.ast.RelationalInfixExpression;
 import org.lgna.project.ast.StatementListProperty;
 import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
@@ -468,6 +472,35 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertFalse(message.contains("this.helper(value: 1)"));
     assertFalse(message.contains("void helper(WholeNumber value)"));
     assertFalse(message.contains("\n"));
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveDecodesSimpleIfWithZeroArgumentThisMethodCall() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-simple-if-this-call.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithSimpleIfThisCall",
+        """
+            class GeneratedProgramWithSimpleIfThisCall extends SProgram {
+              void run(WholeNumber n) {
+                if (n > 0) { this.helper(); }
+              }
+              void helper() { }
+            }
+            """,
+        "GeneratedSimpleIfThisCallScene",
+        "class GeneratedSimpleIfThisCallScene extends SScene {}");
+
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull("Generated JSON .a3w program with a simple if method body should decode", readProgramType);
+    assertEquals("GeneratedProgramWithSimpleIfThisCall", readProgramType.getName());
+    assertSimpleIfMethodInvocation(readProgramType, "run", "helper", RelationalInfixExpression.Operator.GREATER);
+    assertEquals(
+        "GeneratedSimpleIfThisCallScene",
+        namedUserTypeNamed(readProject, "GeneratedSimpleIfThisCallScene").getName());
   }
 
   @Test
@@ -1606,6 +1639,43 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertSame(JavaType.getInstance(Integer.class), returnStatement.expressionType.getValue());
     assertTrue(returnStatement.expression.getValue() instanceof FieldAccess);
     assertSame(field, ((FieldAccess) returnStatement.expression.getValue()).field.getValue());
+  }
+
+  private static void assertSimpleIfMethodInvocation(
+      NamedUserType type,
+      String callerName,
+      String targetName,
+      RelationalInfixExpression.Operator expectedOperator) {
+    UserMethod caller = userMethodNamed(type, callerName);
+    UserMethod target = userMethodNamed(type, targetName);
+    assertSame(JavaType.VOID_TYPE, caller.getReturnType());
+    assertEquals(1, caller.getRequiredParameters().size());
+    assertEquals(1, caller.body.getValue().statements.size());
+    assertTrue(caller.body.getValue().statements.get(0) instanceof ConditionalStatement);
+    ConditionalStatement conditional = (ConditionalStatement) caller.body.getValue().statements.get(0);
+    assertEquals(1, conditional.booleanExpressionBodyPairs.size());
+    BooleanExpressionBodyPair pair = conditional.booleanExpressionBodyPairs.get(0);
+    assertTrue(pair.expression.getValue() instanceof RelationalInfixExpression);
+    RelationalInfixExpression condition = (RelationalInfixExpression) pair.expression.getValue();
+    assertSame(expectedOperator, condition.operator.getValue());
+    assertEquals(1, pair.body.getValue().statements.size());
+    assertTrue(pair.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement statement = (ExpressionStatement) pair.body.getValue().statements.get(0);
+    assertTrue(statement.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(target, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+    assertTrue(conditional.elseBody.getValue().statements.isEmpty());
+  }
+
+  private static UserMethod userMethodNamed(NamedUserType type, String name) {
+    return type.getDeclaredMethods().stream()
+        .filter(method -> name.equals(method.getName()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("Missing method: " + name));
   }
 
   private static void assertArithmeticFieldInitializer(
