@@ -104,6 +104,8 @@ participation:
 4. Payload assertions stay within the existing event type. The current
    `SceneActivationEvent` exposes no scene-specific public properties, so the
    required payload assertion is object delivery and type.
+5. Listener registration alone does not synthesize a callback or payload before
+   the runtime dispatch seam fires.
 
 A direct `SceneActivationHandler.handleEventFire(...)` invocation may be useful
 as a lower-level helper characterization, but it does not satisfy this feature's
@@ -143,6 +145,8 @@ runtime feature test. It succeeds when:
    bounded timeout.
 5. The observed callback count and payload type assertions match the expected
    single scene activation dispatch.
+6. Pre-dispatch assertions confirm generated registration has not already
+   released the latch or recorded a runtime payload.
 
 The executable test intentionally keeps callback count and payload assertions in
 the same `EventManager.sceneActivated()` dispatch path. Direct

@@ -195,6 +195,14 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
         new URL[] {classesDirectory.toUri().toURL()},
         Thread.currentThread().getContextClassLoader())) {
       Object scene = instantiateGeneratedScene(classLoader);
+      assertEquals("Generated listener registration should not fire before runtime scene activation",
+          0,
+          sceneActivationRuntimeDispatchCount.get());
+      assertNull("Generated listener registration should not synthesize a runtime event payload",
+          recordedRuntimeSceneActivationEvent);
+      assertEquals("Generated listener should still be waiting for the runtime dispatch",
+          1,
+          sceneActivationRuntimeDispatchLatch.getCount());
       Object eventManager = eventManagerFor(scene);
       eventManager.getClass().getMethod("sceneActivated").invoke(eventManager);
       assertTrue("Generated scene activation listener should run when the runtime event fires",
