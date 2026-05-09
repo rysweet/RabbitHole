@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [develop]
 
+permissions:
+  contents: read
+
 concurrency:
   group: alice-test-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -18,18 +21,130 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: false
-          submodules: recursive
+          submodules: false
+          fetch-depth: 1
 
-      - name: Restore Maven cache fallback
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.m2/repository
-          key: setup-java-${{ runner.os }}-x64-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            setup-java-${{ runner.os }}-x64-maven-
-            setup-java-${{ runner.os }}-
+      - name: Classify pull request change scope
+        id: change-scope
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          changed_files="${RUNNER_TEMP}/ci-changed-files.txt"
+          : > "${changed_files}"
+
+          require_maven() {
+            local reason="$1"
+            {
+              printf 'maven-required=true\n'
+              printf 'reason=%s\n' "${reason}"
+            } >> "${GITHUB_OUTPUT}"
+            printf 'Maven validation required: %s\n' "${reason}"
+            if [[ -s "${changed_files}" ]]; then
+              printf 'Changed files:\n'
+              sed 's/^/- /' "${changed_files}"
+            else
+              printf 'Changed files: <unavailable>\n'
+            fi
+            exit 0
+          }
+
+          is_allowed_noop_path() {
+            local path="$1"
+            case "${path}" in
+              docs/*|LICENSE|LICENSE.md|NOTICE|NOTICE.md)
+                return 0
+                ;;
+              *.md)
+                [[ "${path}" != */* ]]
+                return
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          if [[ -z "${BASE_SHA}" || -z "${HEAD_SHA}" ]]; then
+            require_maven "pull request SHA metadata unavailable; diff uncertain"
+          fi
+
+          fetch_pr_commits() {
+            local attempt
+            local delay_seconds=2
+            for attempt in 1 2 3; do
+              if git fetch --no-tags --depth=1 origin "${BASE_SHA}" "${HEAD_SHA}"; then
+                return 0
+              fi
+              printf 'Exact pull request SHA fetch attempt %s failed.\n' "${attempt}"
+              if [[ "${attempt}" != "3" ]]; then
+                sleep "${delay_seconds}"
+                delay_seconds=$((delay_seconds * 2))
+              fi
+            done
+            return 1
+          }
+
+          if ! fetch_pr_commits; then
+            require_maven "failed to fetch exact pull request SHAs after retries; diff uncertain"
+          fi
+
+          diff_status="${RUNNER_TEMP}/ci-diff-status.txt"
+          if ! git diff --name-status -M -C "${BASE_SHA}" "${HEAD_SHA}" > "${diff_status}"; then
+            require_maven "git diff failed for exact pull request SHAs; diff uncertain"
+          fi
+
+          if [[ ! -s "${diff_status}" ]]; then
+            require_maven "empty pull request diff; default to validation"
+          fi
+
+          while IFS=$'\t' read -r status old_path new_path extra_path; do
+            [[ -n "${status}" ]] || require_maven "malformed empty diff status; validation required"
+            [[ -z "${extra_path:-}" ]] || require_maven "malformed diff row; validation required"
+
+            paths=()
+            case "${status}" in
+              R*|C*)
+                [[ -n "${old_path:-}" && -n "${new_path:-}" ]] || require_maven "malformed rename/copy diff row; validation required"
+                paths+=("${old_path}" "${new_path}")
+                ;;
+              A|M|D|T|U|X|B)
+                [[ -n "${old_path:-}" && -z "${new_path:-}" ]] || require_maven "malformed diff row; validation required"
+                paths+=("${old_path}")
+                ;;
+              *)
+                require_maven "unknown diff status '${status}'; validation required"
+                ;;
+            esac
+
+            for current_path in "${paths[@]}"; do
+              [[ -n "${current_path}" ]] || require_maven "malformed empty path; validation required"
+              [[ "${current_path}" != /* && "${current_path}" != *..* ]] || require_maven "invalid absolute or traversal path; validation required"
+              printf '%s\n' "${current_path}" >> "${changed_files}"
+              if ! is_allowed_noop_path "${current_path}"; then
+                require_maven "validation-impacting, mixed, or unknown path change"
+              fi
+            done
+          done < "${diff_status}"
+
+          {
+            printf 'maven-required=false\n'
+            printf 'reason=docs/license-only pull request changes\n'
+          } >> "${GITHUB_OUTPUT}"
+          printf 'Maven validation no-op allowed: docs/license-only pull request changes\n'
+          printf 'Changed files:\n'
+          sed 's/^/- /' "${changed_files}"
+
+      - name: Initialize Tweedle grammar submodule
+        if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
+        run: git submodule update --init tweedle-lang
 
       - name: Set up JDK 21
+        if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -37,7 +152,18 @@ jobs:
           cache: maven
 
       - name: Show Maven version
+        if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: mvn -v
 
       - name: Run no-Sims test baseline
-        run: mvn -DincludeSims=false -Dinstall4j.skip clean test
+        if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
+        run: mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip clean test
+
+      - name: Report Maven validation no-op
+        if: github.event_name == 'pull_request' && steps.change-scope.outputs.maven-required == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'Maven validation skipped: %s\n' "${{ steps.change-scope.outputs.reason }}"
+          printf 'changed files:\n'
+          sed 's/^/- /' "${RUNNER_TEMP}/ci-changed-files.txt"
