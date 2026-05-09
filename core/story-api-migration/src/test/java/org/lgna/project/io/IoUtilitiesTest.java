@@ -1051,6 +1051,68 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void unsupportedLegacyProgramJsonArchiveWithTwoImageReferencesDoesNotPartiallyRecover() throws Exception {
+    TypeReference typeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
+    ImageReference imageReference1 = imageReference(UUID.randomUUID(), "legacy-picture-1.png", "png");
+    ImageReference imageReference2 = imageReference(UUID.randomUUID(), "legacy-picture-2.png", "png");
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "Program";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    manifest.resources.add(typeReference);
+    manifest.resources.add(imageReference1);
+    manifest.resources.add(imageReference2);
+    File exportFile = temporaryFolder.newFile("unsupported-legacy-program-two-images.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class Program extends MissingSuper {}");
+      writeZipEntry(zipOutputStream, imageReference1.file, new byte[] {1, 2, 3});
+      writeZipEntry(zipOutputStream, imageReference2.file, new byte[] {4, 5, 6});
+    }
+
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
+  }
+
+  @Test
+  public void diagnosticNameFormatsResourceFileNameAndUuid() {
+    UUID uuid = UUID.randomUUID();
+    ImageResource resource = new ImageResource(uuid);
+    resource.setOriginalFileName("test-picture.png");
+
+    String diagnostic = ResourceExportNames.diagnosticName(resource);
+
+    assertEquals("test-picture.png (" + uuid + ")", diagnostic);
+  }
+
+  @Test
+  public void diagnosticNameReturnsNullPlaceholderForNullResource() {
+    assertEquals("<null>", ResourceExportNames.diagnosticName(null));
+  }
+
+  @Test
+  public void modelResourceCrawlerCollectsResourceExpressionResources() {
+    ImageResource imageResource = new ImageResource(UUID.randomUUID());
+    imageResource.setOriginalFileName("crawled.png");
+    imageResource.setContent("png", new byte[] {1});
+    NamedUserType type = programType("Program");
+    BlockStatement body = new BlockStatement();
+    UserLocal local = new UserLocal("res", ImageResource.class, true);
+    body.statements.add(new LocalDeclarationStatement(local, new ResourceExpression(ImageResource.class, imageResource)));
+    UserMethod method = new UserMethod("resourceMethod", Void.TYPE, new org.lgna.project.ast.UserParameter[0], body);
+    type.methods.add(method);
+
+    ModelResourceCrawler crawler = new ModelResourceCrawler();
+    type.crawl(crawler, CrawlPolicy.COMPLETE);
+
+    assertTrue(crawler.resources.contains(imageResource));
+    assertEquals(1, crawler.resources.size());
+  }
+
+  @Test
   public void jsonPlayerManifestTypeReadsFieldAndKeepsResourcesReadable() throws Exception {
     String programName = "ProgramWithField";
     TypeReference typeReference = new TypeReference(programName, "src/" + programName + ".twe", "tweedle");
