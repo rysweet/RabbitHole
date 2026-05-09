@@ -57,9 +57,11 @@ Project IO corpus characterization covers observable archive behavior:
 | `.a3c` type archive | Generated type archives preserve XML type payloads, include resource payloads when resource expressions exist, and use XML fallback readback. |
 
 This project archive reading coverage also protects current limitations. For
-example, a `.a3w` program whose Tweedle source contains resource-expression
-constructs remains at the currently documented decode boundary, while the binary
-resource data still reads back.
+example, `.a3w` programs whose Tweedle source contains unsupported
+resource-expression constructs remain at the currently documented decode
+boundary. Non-legacy generated player archives fail fast there; resource payloads
+are still archive-shape evidence, and only the legacy `Program` resource-recovery
+path can return a resource-only project.
 
 This is not a migration-manager refactor effort. `ProjectMigrationManager`
 refactors require characterization at the relevant IO seam first.
@@ -190,10 +192,11 @@ entry path, and 1.0-by-1.0 generated dimensions for the deterministic one-pixel
 fixture image.
 
 Resource-bearing `.a3w` characterization is intentionally narrower than the
-simple player archive round trip. Simple generated Tweedle source decodes back
-to a program type, but generated source containing the current resource
-expression shape remains undecoded; the archive still preserves and reads back
-the referenced binary resource.
+simple player archive round trip. Supported generated Tweedle source decodes
+back to a program type and can read manifest-backed resources. Unsupported
+generated source fails at the JSON/player read boundary for non-legacy archive
+names; the raw manifest and zip entries still prove the referenced binary
+resource was written, but they do not prove successful project readback.
 
 #### Manifest-declared Tweedle boundary with resources
 
@@ -539,6 +542,9 @@ Then the second archive preserves the same observable contract
 10. Missing or mismatched manifest-named JSON player program types fail fast with
     `IOException`; `IoUtilitiesTest` covers both the missing type-reference and
     mismatched program-name cases.
-11. Manifest-declared JSON player resources remain readable when an unsupported
-    Tweedle `TypeReference` leaves the program type undecoded; this is not a full
-    player-to-editor decode contract.
+11. The legacy JSON/player resource-recovery path is limited to the compatibility
+    archive named `Program` whose unsupported `Program` Tweedle source has exactly
+    one recovered image resource; it may return a resource-only project with no
+    program type. Non-legacy generated named player archives with unsupported
+    Tweedle fail fast with `IOException` instead of returning readable resources
+    with a null program type.

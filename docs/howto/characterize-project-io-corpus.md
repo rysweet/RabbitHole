@@ -120,9 +120,11 @@ Assert manifest metadata, scene-camera type, the `SceneGraphLibrary`
 prerequisite, and the Tweedle type reference.
 
 When a `.a3w` fixture includes resource-expression constructs, document the
-current decode boundary explicitly: simple program source can round trip, while
-unsupported resource-expression source currently leaves the program type
-undecoded even though binary resource data reads back.
+current decode boundary explicitly: supported simple program source can round
+trip with manifest-backed resources, while unsupported resource-expression
+source in a non-legacy generated archive fails fast at the project read boundary.
+Raw manifest and zip assertions may still document that binary resource data was
+written.
 
 For a manifest-declared type/resource boundary, keep the fixture small:
 
@@ -134,10 +136,12 @@ resources/<resource-name>
 ```
 
 Use a `manifest.json` that includes both a Tweedle `TypeReference` and a valid
-resource reference. If the Tweedle source contains an unsupported member, assert
-that `IoUtilities.readProject` returns no decoded program type while the resource
-identity, name, original file name, content type, and bytes are still readable.
-Do not describe that case as a full player archive program/type decode.
+resource reference. For ordinary generated archive names, use supported Tweedle
+source when asserting resource readback through `IoUtilities.readProject`. If the
+Tweedle source contains an unsupported member, assert `IOException` at the
+project read boundary and inspect the raw manifest and zip entries for
+archive-shape evidence. Only the separate legacy `Program` recovery path may
+assert resource readback with a null program type.
 
 For resource-bearing `.a3c` type archives:
 
@@ -176,11 +180,11 @@ For resource-bearing fixtures, assert:
 - AST `ResourceExpression` binding to the decoded resource object when the
   archive contains a resource expression.
 
-For JSON/player archives with unsupported Tweedle, assert the resource values
-directly on the returned project resources and assert that the program type is
-`null`. That pairing is the current honest boundary: resources are readable, but
-the unsupported manifest-declared Tweedle program is not decoded into an
-editable Alice program type.
+For JSON/player archives with unsupported Tweedle and non-legacy generated
+archive names, assert that `IoUtilities.readProject` throws `IOException` rather
+than returning a partial project. Assert resource values through returned project
+resources only when the Tweedle source is supported, or when the test explicitly
+targets the legacy `.a3w` `Program` resource-only recovery path.
 
 For round-trip coverage, write the decoded object to a second archive and repeat
 the same archive-entry and readback assertions.
