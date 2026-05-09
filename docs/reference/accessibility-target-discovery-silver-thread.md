@@ -42,6 +42,14 @@ NODE_OPTIONS=--max-old-space-size=32768 \
 qa/outside-in/alice-desktop/tests/run-tests.sh
 ```
 
+Run the PR419 current-head readiness gate after the final commit is pushed and
+the PR body has been updated with that final head SHA:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-pr419-current-head-readiness-gate-contract.sh
+```
+
 Use the focused contract when a pull request needs to prove that the checked-in
 launch, run/runtime, and Select Project evidence paths still expose the
 accessibility target discovery surface expected by reviewers. Use the lower-level
@@ -76,12 +84,12 @@ PR readiness evidence for this lane lives outside generated QA artifacts:
 .copilot-evidence/default-workflow-attempt.log
 ```
 
-The record is a bounded review handoff, not product behavior and not generated
-desktop evidence. It records a point-in-time PR419 readiness handoff with the
-PR, branch, base, checked branch HEAD SHA, `origin/develop` SHA, merge-base,
-commands, outcomes, and claim boundaries for the accessibility target discovery
-lane under review. Do not treat it as live-head readiness evidence for later
-commits unless those checks are rerun and recorded separately.
+The record is a bounded review handoff, not product behavior, not generated
+desktop evidence, and not live-head proof. It records a
+point-in-time PR419 readiness handoff with the PR, branch, base, checked branch
+HEAD SHA, `origin/develop` SHA, merge-base, commands, outcomes, and claim
+boundaries for the accessibility target discovery lane under review. Do not
+treat it as live-head readiness evidence for later commits.
 
 Every readiness record for this lane must include:
 
@@ -94,6 +102,16 @@ Every readiness record for this lane must include:
 | Outcomes | Pass or blocked result for each focused command. Blocked results name the missing dependency, target, or next unblocker. |
 | Scope | Discovered accessibility/runtime display target readiness and silver-thread review readiness only. |
 | Non-claims | Explicit exclusions for full UI automation, visible rendering correctness, full world execution, grading, Save completion, Sims validation, installer/deployment success, and broad accessibility compliance. |
+
+For PR419, `test-pr419-current-head-readiness-gate-contract.sh` is the
+current-head merge-ready gate. It generates transient current-head proof at
+runtime from `git rev-parse HEAD` and one cached `gh pr view 419 --json
+number,url,headRefName,headRefOid,statusCheckRollup,body` response. It checks PR
+number and URL, branch alignment, local HEAD versus PR head, PR body evidence
+for the live head SHA, green completed GitHub Actions, focused QA/scenario
+evidence, documentation impact evidence, diff/review evidence, bounded claims,
+and three SEEK/VALIDATE/FIX audit cycles. Tracked evidence must not store or
+predict the current PR head SHA.
 
 Do not use a readiness record to preserve screenshots, broad environment dumps,
 access tokens, unrelated desktop state, generated project data, or private user
@@ -297,6 +315,10 @@ The implemented contract may claim only:
 - PR readiness evidence in `.copilot-evidence/default-workflow-attempt.log`,
   when present, records only point-in-time silver-thread target discovery
   readiness for the existing PR branch.
+- Current-head PR419 readiness may be claimed only from the transient
+  current-head proof produced by `test-pr419-current-head-readiness-gate-contract.sh`
+  after the final commit is pushed and the PR body names that live head SHA. A
+  failed gate is a `NOT_MERGE_READY` blocker, not an implied pass.
 
 The implemented contract must not claim:
 

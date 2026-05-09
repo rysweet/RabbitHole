@@ -5,8 +5,8 @@ Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
 Base branch: develop
 Evidence stage: point-in-time PR419 readiness handoff
 Recorded PR branch HEAD at evidence collection: 01bfb5f2adb4eac47df3419145801375ee433fd6
-origin/develop at recovery: ea27623ec93673fe1e2f7937783926bce10ae69e
-merge-base(HEAD, origin/develop): ea27623ec93673fe1e2f7937783926bce10ae69e
+origin/develop at recovery: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
+merge-base(HEAD, origin/develop): 0366dfa17f0f41e2d878c293a6c33fb1f841993a
 
 Workflow readiness/review/finalization evidence:
 - Point-in-time evidence boundary: claims below apply only to the recorded branch head and commands listed in this recovery pass.
@@ -36,8 +36,9 @@ Intentional changes:
 - Standalone world-canvas pixel sampler blocker and observation artifacts now
   carry bounded sampling scope, non-correctness flags, and unsupported claim
   classes.
-- Readiness evidence and silver-thread documentation now name the final PR419
-  exact-head handoff and remove unrelated stale readiness language.
+- Readiness evidence and silver-thread documentation now separate the
+  point-in-time PR419 handoff from transient current-head gate evidence and
+  remove unrelated stale readiness language.
 - Step 9 simplification keeps probe/sampler responsibilities split without
   broadening claims, removes fake-sampler wording, and converts malformed sampler
   RGBA output into structured blocker evidence instead of an unhandled failure.
@@ -58,6 +59,69 @@ Intentional changes:
   not a repository runtime integration; no retry path was added.
 - Step 20 cleanup tightens readiness and sampler contract shell checks by
   removing success-shaped fallbacks while preserving the bounded evidence lane.
+- Step 9 current-head simplification adds a focused merge-ready gate contract
+  with direct shell assertions instead of an embedded assertion program.
+- Step 9b current-head gate performance optimization caches PR number, URL,
+  branch, body, head, and check-rollup metadata from one `gh pr view` call
+  instead of repeating network requests.
+
+Current-head merge-ready gate model:
+- Live current-head proof is generated transiently by test-pr419-current-head-readiness-gate-contract.sh at runtime
+  from `git rev-parse HEAD` and one cached `gh pr view 419 --json
+  number,url,headRefName,headRefOid,statusCheckRollup,body` response.
+- Tracked evidence must not store or predict the current PR head SHA.
+- The PR body must be updated after the final commit to name the live head SHA and focused gate evidence.
+- GitHub Actions check rollup is read from the live PR metadata response.
+- Readiness rule: green checks are necessary but not sufficient; runnable QA,
+  docs impact, focused diff/review, PR description, audit-cycle, and bounded-claim
+  evidence must also be current and explicit.
+- PR description evidence is evaluated live by requiring the PR body to contain
+  the current PR/local head SHA and the current-head readiness gate contract.
+- Focused diff review evidence: local review stayed limited to PR recovery and
+  readiness evidence surfaces; no manual merge was performed.
+- Docs impact evidence: the silver-thread reference now documents the current-head
+  readiness gate and its `MERGE_READY`/`NOT_MERGE_READY` decision boundary.
+- Bounded claim evidence: this gate does not claim full UI automation, visible
+  rendering correctness, grading, creative assessment, full lesson completion, or
+  full Tweedle/player decode.
+- This gate does not claim full lesson completion.
+- This gate does not claim full Tweedle/player decode.
+
+PRHeadAlignment: the live gate compares local HEAD and PR #419 headRefOid before
+readiness evaluation.
+EvidenceCollector: inspected PR body, GitHub Actions status, readiness docs, the
+focused PR diff scope, and `.copilot-evidence/default-workflow-attempt.log`.
+QAValidationRunner: reran focused repository-owned QA contracts with
+`NODE_OPTIONS=--max-old-space-size=32768`; no timeout wrapper was used.
+QualityAuditCycleRecorder: recorded three SEEK/VALIDATE/FIX cycles below.
+ReadinessGate: applied the missing-evidence policy and refused to infer readiness
+from green checks alone.
+
+Cycle 1 SEEK: current PR head alignment and GitHub Actions freshness.
+Cycle 1 VALIDATE: the live gate uses `gh pr view 419 --json
+number,url,headRefName,headRefOid,statusCheckRollup,body` and
+`git rev-parse HEAD` to compare the current PR head, PR body evidence, and check
+rollup without relying on tracked SHA text.
+Cycle 1 FIX: no repository code fix; recorded that green checks are required but
+not sufficient for merge readiness.
+
+Cycle 2 SEEK: absent or stale runnable QA, documentation, diff-review, and PR body
+evidence for the current head.
+Cycle 2 VALIDATE: focused commands below were rerun locally, the silver-thread
+documentation was updated, and the current-head gate checks PR body evidence at
+runtime.
+Cycle 2 FIX: added the current-head gate contract and documented the transient
+PR body evidence requirement.
+
+Cycle 3 SEEK: over-claims, template residue, repeated remote metadata reads, dead
+readiness code, timeout wrappers, manual merge shortcuts, and broad
+UI/rendering/grading/Tweedle claims.
+Cycle 3 VALIDATE: `git diff --check`, focused QA contracts, template-residue scan,
+and the current-head gate contract checked the changed readiness surfaces after
+PR metadata caching was introduced.
+Cycle 3 FIX: simplified the readiness gate to direct shell assertions, reused one
+cached GitHub metadata response for PR number, URL, branch, body, head, and check
+evaluation, and removed static current-head SHA assertions from tracked evidence.
 
 Scope inspected:
 - Full origin/develop...HEAD diff reviewed for the existing PR #419 branch.
@@ -93,6 +157,7 @@ Focused validation completed:
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-readiness-evidence-contract.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-current-head-evidence-doc-refinement-contract.sh
 - NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-finalization-evidence-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-current-head-readiness-gate-contract.sh
 - NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa validate
 - NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa run alice-desktop-post-open-runtime-display-accessibility-evidence --prepare-only
 - NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa run alice-desktop-run-debug
@@ -113,9 +178,10 @@ Observed validation outcomes:
 - The world-canvas pixel sampler contract passed and verifies target-scoped raw
   RGBA sample artifacts and explicit sampler blockers without promoting samples
   into rendering-correctness proof.
-- The sampler performance contract passed and verifies the standalone sampler
-  captures the root window once per target, then extracts all checked sample
-  points from that cached capture with one ImageMagick `convert` invocation.
+- The world-canvas pixel sampler contract passed and verifies the standalone
+  sampler captures the root window once per target, then extracts all checked
+  sample points from that cached capture with one ImageMagick `convert`
+  invocation.
 - The accessibility target discovery silver-thread contract passed and verifies
   checked-in launch, run/runtime, and Select Project target discovery markers,
   structured blockers, and bounded scope wording.
@@ -130,6 +196,10 @@ Observed validation outcomes:
   readiness/review/finalization fields, the requested branch, no unmerged paths,
   no recorded timeout-wrapper or manual PR-merge commands, and bounded
   point-in-time claims.
+- The PR419 current-head readiness gate contract generates live proof from
+  cached PR metadata and verifies PR number/URL, PR head alignment, PR body
+  current-head evidence, completed green GitHub Actions, focused QA/scenario
+  evidence, documented audit cycles, and bounded claims.
 - Step 13 outside-in scenario 1 passed from the PR branch through uvx; uv resolved
   git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
   to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack alice-qa validate`

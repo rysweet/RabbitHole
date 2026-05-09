@@ -103,6 +103,26 @@ require_literal(
     "Later commits must not reuse this record as live-head readiness evidence",
     "evidence log",
 )
+require_literal(
+    evidence,
+    "Current-head merge-ready gate model:",
+    "evidence log",
+)
+require_literal(
+    evidence,
+    "Live current-head proof is generated transiently by test-pr419-current-head-readiness-gate-contract.sh at runtime",
+    "evidence log",
+)
+require_literal(
+    evidence,
+    "Tracked evidence must not store or predict the current PR head SHA.",
+    "evidence log",
+)
+require_literal(
+    evidence,
+    "The PR body must be updated after the final commit to name the live head SHA and focused gate evidence.",
+    "evidence log",
+)
 require_literal(evidence, "Worktree end state:", "evidence log")
 require_literal(evidence, "Intentional changes:", "evidence log")
 require_literal(evidence, "Focused validation completed:", "evidence log")
@@ -123,6 +143,11 @@ for stale_live_head_claim in (
     "Local recovery changes in this worktree are not part of that pushed PR head yet",
     "refresh this log's exact HEAD and PR-head metadata to the post-commit SHA",
     "local worktree HEAD and upstream PR head both",
+    "Current-head merge-ready gate evidence:",
+    "PR #419 headRefOid:",
+    "Local HEAD at readiness gate:",
+    "Final PR head re-check matched local HEAD.",
+    "Local-only evidence blocker:",
 ):
     require(
         stale_live_head_claim not in evidence,
