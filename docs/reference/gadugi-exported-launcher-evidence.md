@@ -3,8 +3,7 @@
 This reference documents the Gadugi-compatible CLI scenario for exported
 launcher evidence checks. The scenario gives Gadugi tooling a repo-owned entry
 point for the Alice desktop outside-in QA lane without changing the custom Alice
-scenario schema or expanding the PR 423 source-code-generator characterization
-scope.
+scenario schema or expanding the source-code-generator characterization scope.
 
 Implementation files:
 
@@ -119,13 +118,14 @@ The Gadugi scenario is intentionally small and repo-local.
 | Working directory | `.` | Scenario commands run from the repository root. |
 | Interface | `cli` | The scenario is a command-line evidence check, not a browser, desktop, or rendering test. |
 | Scenario name | `exported-launcher-evidence` | Stable name used with `gadugi-test run -s exported-launcher-evidence`. |
-| Timeout | `180000` in the scenario, `300000` for the PR readiness wrapper run | The YAML keeps individual command timeouts short; the wrapper run leaves enough time for the delegated QA scripts. |
-| Tags | `cli`, `gadugi`, `pr-155`, `exported-launcher`, `launcher-evidence-contract` | `pr-155` is the historical Gadugi scenario identity retained by the existing QA contract; PR 423 references that inherited launcher-evidence lane without retargeting the scenario metadata. |
+| Timeout | `180000` in the scenario, `300000` for readiness wrapper runs | The YAML keeps individual command timeouts short; wrapper runs leave enough time for the delegated QA scripts. |
+| Tags | `cli`, `gadugi`, `pr-155`, `exported-launcher`, `launcher-evidence-contract` | `pr-155` is the historical Gadugi scenario identity retained by the existing QA contract; the source-generation characterization can reference that inherited launcher-evidence lane without retargeting the scenario metadata. |
 
 The `pr-155` tag and description text are historical scenario metadata, not a
-claim that PR 423 is PR 155. The PR 423 source-generation characterization uses
-this existing Gadugi lane as supporting launcher-evidence wiring. Retargeting the
-scenario identity would require coordinated changes to
+claim about the current review or source-generation characterization scope. The
+source-generation characterization uses this existing Gadugi lane as supporting
+launcher-evidence wiring. Retargeting the scenario identity would require
+coordinated changes to
 `exported-launcher-evidence.yaml` and
 `test-gadugi-exported-launcher-contract.sh`, which is outside this reference
 update.

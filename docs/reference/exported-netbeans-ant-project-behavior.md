@@ -1,7 +1,7 @@
 # Exported NetBeans Ant Project Behavior
 
 This reference documents the exported Alice 3 NetBeans Ant project behavior
-covered by the PR 423 source-code-generator characterization lane. It specifies
+covered by the source-code-generator characterization lane. It specifies
 generated project files, `AliceJavaFXLauncher` evidence markers, launcher-owned
 render-target marker observation, and deterministic no-go results. It does not
 claim full UI automation, full world execution, visible rendering correctness,
