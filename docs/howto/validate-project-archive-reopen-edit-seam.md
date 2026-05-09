@@ -281,8 +281,8 @@ Interpret it this way:
 
 | Result | Evidence requirement |
 | --- | --- |
-| Exit `0` | The worktree has uncommitted changes; list the relative paths under `Files modified` after reviewing that they are scoped to this seam. |
-| Exit `1` | The worktree is clean; include **No-op justification** tied to the exact current `HEAD`, merge-base status, diff scope, validation, and PR checks. |
+| Exit `0` | The worktree has only project archive reopen/edit recovery-scope changes; list the relative paths under `Files modified` after reviewing them. |
+| Exit `1` | The worktree is clean, or it contains unrelated dirty paths; include **No-op justification** for a clean worktree, or separate the unrelated paths before recording readiness. |
 | Exit `2` or `64` | Fix the command path or arguments before recording readiness evidence. |
 
 Use `--print-root` to confirm the guard is evaluating the intended linked

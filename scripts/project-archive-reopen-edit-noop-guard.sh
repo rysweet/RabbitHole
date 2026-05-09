@@ -8,7 +8,7 @@ Usage: project-archive-reopen-edit-noop-guard.sh [candidate-path] [--print-root]
 
 Resolves candidate-path through git rev-parse --show-toplevel and evaluates the
 actual linked worktree root. Without --print-root, exits non-zero when that
-worktree has no uncommitted changes unless exact-head no-op evidence is supplied.
+worktree has no scoped recovery changes unless exact-head no-op evidence is supplied.
 USAGE
 }
 
@@ -25,6 +25,35 @@ fail_usage() {
   echo "error: $*" >&2
   usage
   exit "$code"
+}
+
+is_recovery_scope_path() {
+  local path="$1"
+  case "$path" in
+    core/story-api-migration/src/main/java/org/lgna/project/io/*|\
+    core/story-api-migration/src/test/java/org/lgna/project/io/*|\
+    core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java|\
+    docs/howto/characterize-project-io-corpus.md|\
+    docs/howto/characterize-project-save-export-operations.md|\
+    docs/howto/validate-project-archive-reopen-edit-seam.md|\
+    docs/index.md|\
+    docs/reference/alice-desktop-outside-in-qa.md|\
+    docs/reference/pr-402-reopen-edit-recovery-output-contract.md|\
+    docs/reference/project-archive-reopen-edit-seam.md|\
+    docs/reference/project-io-corpus-characterization.md|\
+    docs/reference/project-save-export-operations.md|\
+    docs/tutorials/project-io-corpus-characterization.md|\
+    docs/tutorials/trace-project-archive-reopen-edit-seam.md|\
+    pyproject.toml|\
+    qa/outside-in/alice-desktop/scenarios/project-io-smoke.yaml|\
+    scripts/project-archive-reopen-edit-noop-guard.sh|\
+    tests/test_project_archive_reopen_edit_noop_guard.py)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 candidate_path="."
@@ -96,7 +125,27 @@ if [[ -n "$expected_head" ]]; then
   fi
 fi
 
-if [[ -n "$(git -C "$repo_root" status --short)" ]]; then
+worktree_status="$(git -C "$repo_root" status --short)"
+if [[ -n "$worktree_status" ]]; then
+  unscoped_changes=()
+  while IFS= read -r status_line; do
+    [[ -z "$status_line" ]] && continue
+    status_path="${status_line:3}"
+    if [[ "$status_path" == *" -> "* ]]; then
+      old_path="${status_path%% -> *}"
+      new_path="${status_path##* -> }"
+      if ! is_recovery_scope_path "$old_path" || ! is_recovery_scope_path "$new_path"; then
+        unscoped_changes+=("$status_line")
+      fi
+    elif ! is_recovery_scope_path "$status_path"; then
+      unscoped_changes+=("$status_line")
+    fi
+  done <<< "$worktree_status"
+
+  if [[ "${#unscoped_changes[@]}" -gt 0 ]]; then
+    fail 1 "uncommitted changes include paths outside project archive reopen/edit recovery scope: ${unscoped_changes[*]}"
+  fi
+
   exit 0
 fi
 

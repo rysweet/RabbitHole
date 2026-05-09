@@ -14,7 +14,7 @@ Use it with
 - [Configuration](#configuration)
 - [Evidence command API](#evidence-command-api)
 - [Accepted recovery outputs](#accepted-recovery-outputs)
-- [Exact-head no-op fixture](#exact-head-no-op-fixture)
+- [Exact-head no-op template](#exact-head-no-op-template)
 - [Failure handling](#failure-handling)
 - [Boundaries](#boundaries)
 
@@ -34,14 +34,14 @@ implementation output contains the explicit `No-op justification:` section and
 references the same 40-character head used for PR, local, and remote branch
 evidence.
 
-For this recovery, the required evidence anchor is:
+For this recovery, capture the required evidence anchor from the current refs:
 
 ```text
 PR: 402
 Branch: wave6-project-reopen-edit-chain-1778302300
 Base: develop
-Required head: 3b208a466ce2669e2f601194b9ec30582961bf8c
-Required merge-base/origin develop: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
+Required head: <exact current value from gh pr view 402 --json headRefOid --jq .headRefOid>
+Required merge-base/origin develop: <exact current value from git rev-parse origin/develop>
 ```
 
 ## Configuration
@@ -87,8 +87,7 @@ worktree_status="$(git status --short)"
 
 test "$local_head" = "$pr_head"
 test "$local_head" = "$remote_branch_head"
-test "$local_head" = "3b208a466ce2669e2f601194b9ec30582961bf8c"
-test "$origin_develop_head" = "0366dfa17f0f41e2d878c293a6c33fb1f841993a"
+test -n "$origin_develop_head"
 test "$merge_base" = "$origin_develop_head"
 ```
 
@@ -131,7 +130,7 @@ For a clean worktree, validate the final evidence file against the exact head:
 ```bash
 scripts/project-archive-reopen-edit-noop-guard.sh . \
   --allow-noop-evidence readiness-evidence.md \
-  --expected-head 3b208a466ce2669e2f601194b9ec30582961bf8c
+  --expected-head "$(git rev-parse HEAD)"
 ```
 
 ## Accepted recovery outputs
@@ -151,9 +150,9 @@ no-op guard.
 When no files change, replace `Files modified:` with this shape:
 
 ```text
-PR head: 3b208a466ce2669e2f601194b9ec30582961bf8c
-Local HEAD: 3b208a466ce2669e2f601194b9ec30582961bf8c
-Remote branch HEAD: 3b208a466ce2669e2f601194b9ec30582961bf8c
+PR head: <current PR head>
+Local HEAD: <current PR head>
+Remote branch HEAD: <current PR head>
 Checks:
   GitGuardian Security Checks successful at current PR head
   Alice Checkstyle CI/build (pull_request) successful at current PR head
@@ -162,13 +161,13 @@ Checks:
   Alice Test CI/test (pull_request) successful at current PR head
 No-op justification:
   PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
-  3b208a466ce2669e2f601194b9ec30582961bf8c, local HEAD matches both the PR head
+  <current PR head>, local HEAD matches both the PR head
   and remote branch head, origin/develop is
-  0366dfa17f0f41e2d878c293a6c33fb1f841993a, merge-base is
-  0366dfa17f0f41e2d878c293a6c33fb1f841993a, merge-base equals origin/develop,
+  <current origin/develop head>, merge-base is
+  <current origin/develop head>, merge-base equals origin/develop,
   the origin/develop...HEAD diff is limited to project archive reopen/edit
   characterization/readiness surfaces, focused archive reopen/edit validation
-  passed at 3b208a466ce2669e2f601194b9ec30582961bf8c, and the current PR checks
+  passed at <current PR head>, and the current PR checks
   GitGuardian Security Checks, Alice Checkstyle CI/build (pull_request), Alice
   Coverage Reports/coverage (pull_request), Alice NetBeans Package
   CI/package-netbeans (pull_request), and Alice Test CI/test (pull_request) are
@@ -187,7 +186,7 @@ Scope exclusions:
   player runtime behavior
 Stale evidence note:
   This no-op evidence is valid only for PR head, local HEAD, and remote branch
-  HEAD 3b208a466ce2669e2f601194b9ec30582961bf8c with the listed PR checks green;
+  HEAD <current PR head> with the listed PR checks green;
   refresh refs, rerun validation, and regenerate the evidence if any SHA or
   check state changes.
 ```
@@ -195,20 +194,21 @@ Stale evidence note:
 Do not include both `Files modified:` and `No-op justification:` in the same
 final implementation output.
 
-## Exact-head no-op fixture
+## Exact-head no-op template
 
-This fixture is valid only for the exact PR head and check state listed below.
-It becomes stale if any SHA changes or any PR check stops being successful.
+This template is valid only after replacing every placeholder with the exact PR
+head, branch head, merge-base, and check state collected for the current run. It
+becomes stale if any SHA changes or any PR check stops being successful.
 
 ```text
 PR: 402
 Branch: wave6-project-reopen-edit-chain-1778302300
 Base: develop
-PR head: 3b208a466ce2669e2f601194b9ec30582961bf8c
-Local HEAD: 3b208a466ce2669e2f601194b9ec30582961bf8c
-Remote branch HEAD: 3b208a466ce2669e2f601194b9ec30582961bf8c
-origin/develop HEAD: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
-Merge-base: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
+PR head: <current PR head>
+Local HEAD: <current PR head>
+Remote branch HEAD: <current PR head>
+origin/develop HEAD: <current origin/develop head>
+Merge-base: <current merge-base>
 Merge-base status: merge-base equals origin/develop
 Worktree status: clean
 Checks:
@@ -224,13 +224,13 @@ Validation:
 Result: passed with exit code 0
 No-op justification:
   PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
-  3b208a466ce2669e2f601194b9ec30582961bf8c, local HEAD matches both the PR head
+  <current PR head>, local HEAD matches both the PR head
   and remote branch head, origin/develop is
-  0366dfa17f0f41e2d878c293a6c33fb1f841993a, merge-base is
-  0366dfa17f0f41e2d878c293a6c33fb1f841993a, merge-base equals origin/develop,
+  <current origin/develop head>, merge-base is
+  <current merge-base>, merge-base equals origin/develop,
   the origin/develop...HEAD diff is limited to project archive reopen/edit
   characterization/readiness surfaces, focused archive reopen/edit validation
-  passed at 3b208a466ce2669e2f601194b9ec30582961bf8c, and the current PR checks
+  passed at <current PR head>, and the current PR checks
   GitGuardian Security Checks, Alice Checkstyle CI/build (pull_request), Alice
   Coverage Reports/coverage (pull_request), Alice NetBeans Package
   CI/package-netbeans (pull_request), and Alice Test CI/test (pull_request) are
@@ -249,7 +249,7 @@ Scope exclusions:
   player runtime behavior
 Stale evidence note:
   This no-op evidence is valid only for PR head, local HEAD, and remote branch
-  HEAD 3b208a466ce2669e2f601194b9ec30582961bf8c with the listed PR checks green;
+  HEAD <current PR head> with the listed PR checks green;
   refresh refs, rerun validation, and regenerate the evidence if any SHA or
   check state changes.
 ```

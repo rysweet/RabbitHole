@@ -262,7 +262,7 @@ fresh focused validation evidence.
 | Git/PR state verifier | Confirms PR `402`, branch `wave6-project-reopen-edit-chain-1778302300`, base `develop`, local `HEAD`, PR head SHA, remote branch head SHA, `origin/develop` head SHA, exact merge-base SHA, merge-base state, and local worktree status before reporting readiness. Repeats the local, remote branch, and PR head checks after any merge, push, or committed recovery change. |
 | Diff scope inspector | Reviews `origin/develop...HEAD` and groups changed files as implementation, characterization test, headless IDE bridge, QA metadata, documentation, or guard scope. Unrelated desktop, rendering, grading, Save-completion, or first-lesson changes are not part of this evidence. |
 | Validation runner | Runs focused `core/story-api-migration` archive reopen/edit validation with `NODE_OPTIONS=--max-old-space-size=32768` after any required sync. Runs `ProjectOpenSaveExportJourneyTest` too when the diff includes the headless `core/ide` bridge. |
-| No-op guard | Detects whether the worktree has uncommitted recovery changes. A clean worktree is valid only when the final output includes an exact-head no-op justification. |
+| No-op guard | Detects whether the worktree has uncommitted changes scoped to project archive reopen/edit recovery. A clean worktree is valid only when the final output includes an exact-head no-op justification; unrelated dirty paths are rejected instead of counted as recovery evidence. |
 | Evidence reporter | Records PR, branch, base, PR head, local HEAD, remote branch head, origin/develop head, merge-base SHA/status, worktree status, diff summary, validation result, check state, and either files modified or a no-op justification. |
 | CI/check reconciler | Inspects PR checks and resolves only blockers directly tied to project archive reopen/edit readiness. Pending unrelated checks are reported as pending, not converted into broad readiness claims. |
 
@@ -288,8 +288,8 @@ scripts/project-archive-reopen-edit-noop-guard.sh [candidate-path] --allow-noop-
 
 | Exit code | Meaning |
 | --- | --- |
-| `0` | `--print-root` succeeded, the resolved worktree has uncommitted changes, or a clean worktree has valid exact-head no-op evidence. |
-| `1` | The resolved worktree is clean and no valid no-op evidence was supplied. |
+| `0` | `--print-root` succeeded, the resolved worktree has only scoped project archive reopen/edit recovery changes, or a clean worktree has valid exact-head no-op evidence. |
+| `1` | The resolved worktree is clean with no valid no-op evidence, or it contains uncommitted paths outside the project archive reopen/edit recovery scope. |
 | `2` | The candidate path is missing or is not inside a git worktree. |
 | `64` | The command line is invalid. |
 

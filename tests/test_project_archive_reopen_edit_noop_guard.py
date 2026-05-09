@@ -121,6 +121,48 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         self.assertEqual(0, result.returncode)
         self.assertEqual(str(linked_worktree.resolve()), result.stdout.strip())
 
+    def test_guard_accepts_dirty_worktree_with_recovery_scope_change(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            scoped_file = linked_worktree / "docs" / "reference" / "pr-402-reopen-edit-recovery-output-contract.md"
+            scoped_file.write_text(
+                scoped_file.read_text(encoding="utf-8") + "\nScoped guard test change.\n",
+                encoding="utf-8",
+            )
+
+            result = self.run_guard(linked_worktree)
+
+        self.assertEqual("", result.stderr)
+        self.assertEqual(0, result.returncode)
+
+    def test_guard_rejects_dirty_worktree_with_only_unrelated_changes(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            unrelated_file = linked_worktree / "unrelated-review-note.txt"
+            unrelated_file.write_text("not part of the project archive reopen/edit seam\n", encoding="utf-8")
+
+            result = self.run_guard(linked_worktree)
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("outside project archive reopen/edit recovery scope", combined_output)
+        self.assertIn("unrelated-review-note.txt", combined_output)
+
+    def test_guard_rejects_dirty_worktree_mixing_scoped_and_unrelated_changes(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            scoped_file = linked_worktree / "scripts" / "project-archive-reopen-edit-noop-guard.sh"
+            scoped_file.write_text(
+                scoped_file.read_text(encoding="utf-8") + "\n# Scoped guard test change.\n",
+                encoding="utf-8",
+            )
+            unrelated_file = linked_worktree / "README-unrelated-review-note.txt"
+            unrelated_file.write_text("not part of the project archive reopen/edit seam\n", encoding="utf-8")
+
+            result = self.run_guard(linked_worktree)
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("outside project archive reopen/edit recovery scope", combined_output)
+        self.assertIn("readme-unrelated-review-note.txt", combined_output)
+
     def test_guard_accepts_clean_worktree_with_exact_head_noop_evidence(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -419,7 +461,11 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def linked_worktree(self) -> Iterator[Path]:
         if self._linked_worktree is None:
             self.fail("linked guard worktree was not initialized")
-        yield self._linked_worktree
+        self.clean_linked_worktree()
+        try:
+            yield self._linked_worktree
+        finally:
+            self.clean_linked_worktree()
 
     def linked_worktree_head(self) -> str:
         if self._linked_worktree_head is None:
@@ -435,6 +481,24 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             stderr=subprocess.PIPE,
             text=True,
         ).stdout.strip()
+
+    def clean_linked_worktree(self) -> None:
+        if self._linked_worktree is None:
+            self.fail("linked guard worktree was not initialized")
+        subprocess.run(
+            ["git", "-C", str(self._linked_worktree), "reset", "--hard"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self._linked_worktree), "clean", "-fd"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
 
     def write_evidence(self, linked_worktree: Path, evidence_text: str) -> Path:
         evidence_file = linked_worktree.parent / "readiness-evidence.md"
