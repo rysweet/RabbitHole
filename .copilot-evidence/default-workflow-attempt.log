@@ -1,15 +1,15 @@
 Default-workflow recovery evidence for PR #419
-Recorded at: 2026-05-09T12:45:52Z
+Recorded at: 2026-05-09T13:23:51Z
 PR: https://github.com/rysweet/RabbitHole/pull/419
 Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
 Base branch: develop
-Evidence stage: final PR419 exact-head readiness handoff
-Exact checked HEAD at final validation: b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6
-origin/develop at recovery: 0366dfa17f0f41e2d878c293a6c33fb1f841993a
-merge-base(HEAD, origin/develop): 0366dfa17f0f41e2d878c293a6c33fb1f841993a
+Evidence stage: point-in-time PR419 readiness handoff
+Recorded PR branch HEAD at evidence collection: 01bfb5f2adb4eac47df3419145801375ee433fd6
+origin/develop at recovery: ea27623ec93673fe1e2f7937783926bce10ae69e
+merge-base(HEAD, origin/develop): ea27623ec93673fe1e2f7937783926bce10ae69e
 
 Workflow readiness/review/finalization evidence:
-- Current-head evidence boundary: claims below apply only to commands listed in this recovery pass.
+- Point-in-time evidence boundary: claims below apply only to the recorded branch head and commands listed in this recovery pass.
 - No timeout wrappers were used; NODE_OPTIONS=--max-old-space-size=32768 was exported for focused checks.
 - No manual PR merge was performed for PR #419.
 - Unmerged-path check: git diff --name-only --diff-filter=U produced no output.
@@ -18,16 +18,17 @@ Workflow readiness/review/finalization evidence:
 Merge status:
 - The branch contains current origin/develop at the checked recovery
   point; no rebase was performed and no shared PR history was rewritten.
-- PR #419 points at the validated exact HEAD
-  b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 on the existing branch.
+- PR #419 was observed at the recorded branch HEAD above when this evidence
+  was collected. This record is point-in-time evidence, not a live-head
+  readiness claim for later commits.
 
 Worktree end state:
 - No unmerged path remains; the previous AA index state for
   docs/reference/visible-rendering-evidence-nonclaim-contract.md is resolved.
-- The existing PR branch is pushed at the validated exact HEAD above.
-- Local recovery changes in this worktree are not part of that pushed PR head yet;
-  they must stay bounded to the checks recorded here until they are committed and pushed through the normal PR branch flow.
-- After those local recovery changes are committed and pushed, refresh this log's exact HEAD and PR-head metadata to the post-commit SHA before describing the committed branch as final exact-head readiness.
+- The existing PR branch was pushed at the recorded branch HEAD above when
+  this evidence was collected.
+- Later commits must not reuse this record as live-head readiness evidence
+  unless their own checks are rerun and recorded separately.
 
 Intentional changes:
 - Runtime/display accessibility probe artifacts now state the target-discovery
@@ -118,9 +119,9 @@ Observed validation outcomes:
 - The accessibility target discovery silver-thread contract passed and verifies
   checked-in launch, run/runtime, and Select Project target discovery markers,
   structured blockers, and bounded scope wording.
-- The PR419 readiness evidence contract passed and verifies exact-head evidence
-  fields, stale-evidence removal, validation commands, worktree state, and
-  explicit non-claims.
+- The PR419 readiness evidence contract passed and verifies point-in-time
+  evidence fields, stale live-head claim removal, validation commands,
+  worktree state, and explicit non-claims.
 - The current-head evidence documentation refinement contract passed and verifies
   parameterized PR recovery instructions, external Git SHA review metadata,
   target-readiness blocker visibility, observation-or-blocker pixel sampling
@@ -128,7 +129,7 @@ Observed validation outcomes:
 - The PR419 finalization evidence contract passed and verifies workflow
   readiness/review/finalization fields, the requested branch, no unmerged paths,
   no recorded timeout-wrapper or manual PR-merge commands, and bounded
-  current-head claims.
+  point-in-time claims.
 - Step 13 outside-in scenario 1 passed from the PR branch through uvx; uv resolved
   git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
   to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack alice-qa validate`

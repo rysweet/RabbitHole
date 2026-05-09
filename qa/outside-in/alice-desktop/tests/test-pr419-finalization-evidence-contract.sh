@@ -53,8 +53,8 @@ assert_literal_in_file "$EVIDENCE_LOG" "Branch: $current_branch" "evidence log n
 assert_literal_in_file "$EVIDENCE_LOG" "Workflow readiness/review/finalization evidence:" "evidence log has finalization section"
 assert_literal_in_file \
   "$EVIDENCE_LOG" \
-  "Current-head evidence boundary: claims below apply only to commands listed in this recovery pass." \
-  "evidence log bounds current-head claims"
+  "Point-in-time evidence boundary: claims below apply only to the recorded branch head and commands listed in this recovery pass." \
+  "evidence log bounds point-in-time claims"
 assert_literal_in_file \
   "$EVIDENCE_LOG" \
   "No timeout wrappers were used; NODE_OPTIONS=--max-old-space-size=32768 was exported for focused checks." \

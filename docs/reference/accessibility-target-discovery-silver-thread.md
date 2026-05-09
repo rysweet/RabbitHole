@@ -77,11 +77,11 @@ PR readiness evidence for this lane lives outside generated QA artifacts:
 ```
 
 The record is a bounded review handoff, not product behavior and not generated
-desktop evidence. It records the final PR419 exact-head readiness handoff with
-the exact PR, branch, base, checked HEAD SHA, `origin/develop` SHA, merge-base,
+desktop evidence. It records a point-in-time PR419 readiness handoff with the
+PR, branch, base, checked branch HEAD SHA, `origin/develop` SHA, merge-base,
 commands, outcomes, and claim boundaries for the accessibility target discovery
-lane under review. Refresh it after changing recovery files so the checked HEAD,
-validation outcomes, and claim boundaries remain aligned.
+lane under review. Do not treat it as live-head readiness evidence for later
+commits unless those checks are rerun and recorded separately.
 
 Every readiness record for this lane must include:
 
