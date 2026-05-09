@@ -159,7 +159,10 @@ expected_outcomes = "\n".join(scenario["expectedOutcomes"])
 scenario_text = json.dumps(scenario, sort_keys=True)
 for required in (
     "generated LFS-independent .a3p, .a3c, and .a3w archive boundaries",
-    "unsupported method calls, complex or mixed initializers, resource initializer binding gaps, and unresolved parent cases fail explicitly",
+    "manifest-declared image resources",
+    "unsupported method calls, complex or mixed initializers, resource initializer binding gaps",
+    "unresolved parent cases",
+    "unsupported manifest-declared program and sibling Tweedle types fail explicitly",
 ):
     if required not in user_actions:
         raise AssertionError(f"archive fixture scenario must document bounded user action: {required}")
@@ -167,6 +170,8 @@ for required in (
     "Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.",
     "Generated XML fallback .a3c fixtures write, read, and preserve type resources through IoUtilities archive I/O.",
     "Simple supported .a3w fixtures export, read, re-export, and reread through IoUtilities with manifest-routed Tweedle source.",
+    "Generated JSON .a3w fixtures with unsupported resource initializers report explicit archive readback failures.",
+    "Supported generated JSON .a3w neighbors remain covered by the same focused characterization suite.",
 ):
     if required not in expected_outcomes:
         raise AssertionError(f"archive fixture scenario must document executable expected outcome: {required}")
@@ -181,6 +186,10 @@ for forbidden in (
         raise AssertionError(f"archive fixture scenario must not overclaim or keep stale wording: {forbidden}")
 if "archive-io" not in scenario.get("tags", []):
     raise AssertionError("archive fixture scenario must use the archive-io tag instead of project-io shorthand")
+if "archive-player-boundary" not in scenario.get("tags", []):
+    raise AssertionError("archive fixture scenario must preserve the player boundary tag")
+if "alice-desktop-tweedle-decoder-boundary-smoke" not in scenario.get("supportingEvidence", []):
+    raise AssertionError("archive fixture scenario must preserve decoder boundary supporting evidence")
 PY
 assert_success "$?" "Archive fixture scenario keeps bounded archive round-trip evidence wording"
 
