@@ -9,11 +9,12 @@ apply to the no-timeout default-workflow recovery extension.
 
 1. Tie local evidence to the current pull request head.
 2. Collect GitHub checks and mergeability for that head.
-3. Review focused diff scope.
-4. Run runnable QA evidence without outer command-level timeout wrappers.
-5. Review docs impact and pull request wording.
-6. Record three quality-audit cycles.
-7. Emit `MERGE_READY` only when every gate passes.
+3. Recover against the current `origin/develop` head when the PR is dirty.
+4. Review focused diff scope.
+5. Run runnable QA evidence without outer command-level timeout wrappers.
+6. Review docs impact and pull request wording.
+7. Record three quality-audit cycles.
+8. Emit `MERGE_READY` only when every gate passes.
 
 ## Step 1: Prepare the worktree
 
@@ -87,7 +88,42 @@ read-only GitHub `gh` service adapter. If the adapter cannot fetch current
 metadata after retrying transient failures, the recovery stays fail-closed with
 a `NOT_MERGE_READY` blocker.
 
-## Step 4: Review diff scope
+## Step 4: Recover against current develop
+
+Fetch the target branch and record the base head:
+
+```bash
+base_branch=develop
+git fetch origin "$base_branch"
+git rev-parse "origin/$base_branch"
+```
+
+If the recovery task names an expected develop SHA, compare it before resolving
+conflicts:
+
+```bash
+test "$(git rev-parse "origin/$base_branch")" = "$expected_develop_head"
+```
+
+When the pull request is dirty, update the PR branch with the current base:
+
+```bash
+git merge --no-ff "origin/$base_branch"
+```
+
+Resolve conflicts only in the pull request branch. For shared docs and QA files,
+prefer current develop unless that would remove the PR's bounded Run-window/debug
+evidence contract. Restored wording must preserve the deterministic
+world-advance blocker and must not claim full world execution, playback, visible
+rendering correctness, full UI automation, Save completion, grading, Sims
+validation, deployed installer success, or broad UI automation.
+
+If the merge reports that the branch is already up to date, record a no-op
+instead of changing files. The no-op still needs the current PR head, current
+develop head, current checks, focused QA evidence, docs impact, PR wording
+review, and quality-audit cycles.
+
+## Step 5: Review diff scope
 
 Review changed files against the target branch:
 
@@ -102,7 +138,7 @@ file outside the intended scope is not automatically wrong, but it needs direct
 evidence. If it cannot be explained and validated, record a
 `NOT_MERGE_READY` blocker.
 
-## Step 5: Run bounded QA evidence
+## Step 6: Run bounded QA evidence
 
 Run focused commands directly:
 
@@ -131,7 +167,7 @@ automation, visible rendering correctness, grading, creative assessment, full
 lesson completion, full world execution, playback, Save completion, Sims
 validation, deployed installer success, or full Tweedle/player decode.
 
-## Step 6: Review docs and PR wording
+## Step 7: Review docs and PR wording
 
 Check docs touched by the diff:
 
@@ -152,7 +188,7 @@ The wording should say what the evidence proves and what remains blocked. If the
 text says or implies more than the runnable evidence proves, the recovery report
 must either record the wording fix or emit `NOT_MERGE_READY`.
 
-## Step 7: Write three quality-audit cycles
+## Step 8: Write three quality-audit cycles
 
 Trace the recovery with three cycles:
 
@@ -172,7 +208,7 @@ Trace the recovery with three cycles:
 The third cycle is the final gate. If it finds a blocker, the decision is
 `NOT_MERGE_READY`.
 
-## Step 8: Emit the decision
+## Step 9: Emit the decision
 
 Use `MERGE_READY` only when every gate is clean:
 

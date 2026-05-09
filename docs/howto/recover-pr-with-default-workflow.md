@@ -53,6 +53,59 @@ If either SHA comparison fails, stop and report `NOT_MERGE_READY` with a
 current-head mismatch blocker. Local validation from a stale head is not
 merge-ready evidence.
 
+## Recover conflicts against current develop
+
+When GitHub marks the pull request dirty or conflicting, recover the pull
+request branch against the current `origin/develop` head. Do not merge the pull
+request into `develop`, do not push to `develop`, and do not use a web/manual
+merge as evidence.
+
+```bash
+base_branch=develop
+git fetch origin "$base_branch"
+base_head=$(git rev-parse "origin/$base_branch")
+git status --short --branch
+```
+
+If the recovery task names an expected develop SHA, verify it before changing
+the branch:
+
+```bash
+test "$base_head" = "$expected_develop_head"
+```
+
+Then update only the pull request branch with the current base and resolve
+conflicts in the working tree:
+
+```bash
+git merge --no-ff "origin/$base_branch"
+```
+
+If conflicts appear, keep the resolution surgical:
+
+1. Prefer current `origin/develop` in shared documentation, scenario, and QA
+   contract files unless that would remove the pull request's bounded evidence
+   contract.
+2. Reapply only the PR-scoped Run-window/debug evidence wording and validation
+   hooks needed by the branch.
+3. Preserve explicit non-claims: no full world execution, playback, visible
+   rendering correctness, full UI automation, Save completion, grading, Sims
+   validation, deployed installer success, or broad UI automation.
+4. Do not resolve conflicts by adding unrelated cleanup, new scenarios, or broad
+   desktop automation claims.
+
+After resolving conflicts, confirm the branch has no merge state left and record
+the exact base head used:
+
+```bash
+git status --short --branch
+git rev-parse "origin/$base_branch"
+```
+
+If `git merge --no-ff "origin/$base_branch"` reports the branch is already up to
+date and no files change, continue through the no-op evidence path instead of
+creating a synthetic change.
+
 ## Collect GitHub and mergeability evidence
 
 Collect read-only pull request metadata:
@@ -206,7 +259,8 @@ Blockers
 ## No-op recovery
 
 A no-op recovery is valid only when the report ties the clean worktree to the
-current PR head and records the evidence reviewed. Use:
+current PR head, the current `origin/develop` head, and the evidence reviewed.
+Use:
 
 ```text
 Files modified
@@ -214,6 +268,6 @@ None
 ```
 
 The no-op justification must mention current-head identity, current checks,
-focused QA evidence, docs impact, PR description evidence, quality-audit cycles,
-and either a clean `MERGE_READY` decision or explicit `NOT_MERGE_READY`
-blockers.
+current develop head, focused QA evidence, docs impact, PR description evidence,
+quality-audit cycles, preserved bounded Run-window/debug scope, and either a
+clean `MERGE_READY` decision or explicit `NOT_MERGE_READY` blockers.

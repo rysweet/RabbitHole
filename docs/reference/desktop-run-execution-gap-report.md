@@ -468,9 +468,10 @@ test -d tweedle-lang/Grammar
 When the desktop Run execution gap report is updated through a default workflow
 recovery, the workflow report follows the [Default workflow recovery report](./default-workflow-recovery-report.md)
 contract. The recovery report must resolve the actual PR worktree with Git, run
-the no-op guard against that resolved path, include a `Files modified` section
-even when the value is `None`, and include exact-head clean-tree readiness
-evidence before claiming the branch is ready.
+the no-op guard against that resolved path, record the current `origin/develop`
+head used for conflict recovery or no-op evidence, include a `Files modified`
+section even when the value is `None`, and include exact-head clean-tree
+readiness evidence before claiming the branch is ready.
 
 The recovery workflow output remains separate from
 `desktop-run-execution-gap-report.json`. It documents repository state and

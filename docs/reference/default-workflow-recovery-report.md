@@ -11,6 +11,7 @@ under review and keep the final report structured, even when no files changed.
 - [No-timeout merge-ready recovery](#no-timeout-merge-ready-recovery)
 - [Repository path resolution](#repository-path-resolution)
 - [No-op guard](#no-op-guard)
+- [Develop-head conflict recovery](#develop-head-conflict-recovery)
 - [PR metadata and conflicts](#pr-metadata-and-conflicts)
 - [Workflow report API](#workflow-report-api)
 - [Configuration](#configuration)
@@ -23,7 +24,8 @@ under review and keep the final report structured, even when no files changed.
 Use this report contract for recovery work that evaluates an existing PR branch
 without rewriting PR history or manually merging the pull request. The report is
 evidence about the exact checked head, focused validation, and readiness gates;
-it does not authorize a merge, rebase, push, or conflict-resolution pass.
+it does not authorize merging the pull request into the target branch or pushing
+outside the pull request branch.
 
 The report is a workflow artifact. It does not expand product claims, desktop QA
 claims, Run execution claims, visible rendering claims, Save claims, grading
@@ -37,9 +39,9 @@ reference, such as [Desktop Run execution gap report](./desktop-run-execution-ga
 
 No-timeout recovery evaluates an existing pull request branch at the exact
 GitHub PR head without adding outer shell `timeout` wrappers around evidence
-commands, synthetic polling success gates, or manual merge steps. It is a
-fail-closed review workflow: green checks and completed workflows are necessary
-evidence, but they are not enough to claim merge readiness.
+commands, synthetic polling success gates, or manual PR-into-base merge steps.
+It is a fail-closed review workflow: green checks and completed workflows are
+necessary evidence, but they are not enough to claim merge readiness.
 
 The no-timeout rule applies to the recovery evidence command line. Existing QA
 scenario timeout fields and internal runner guards remain part of the QA system;
@@ -49,7 +51,7 @@ The recovery decision is one of:
 
 | Decision | Required meaning |
 | --- | --- |
-| `MERGE_READY` | The exact local `HEAD` matches the current PR `headRefOid`; the worktree is clean; GitHub Actions are green for that head; mergeability is clean; focused runnable QA evidence passed; docs impact was reviewed; diff scope is focused; PR description evidence is accurate; at least three quality-audit SEEK / VALIDATE / FIX cycles are documented; and the final cycle is clean. |
+| `MERGE_READY` | The exact local `HEAD` matches the current PR `headRefOid`; the current `origin/develop` head used for conflict recovery or no-op evidence is recorded; the worktree is clean; GitHub Actions are green for that head; mergeability is clean; focused runnable QA evidence passed; docs impact was reviewed; diff scope is focused; PR description evidence is accurate; at least three quality-audit SEEK / VALIDATE / FIX cycles are documented; and the final cycle is clean. |
 | `NOT_MERGE_READY` | One or more gates are missing, stale, dirty, conflicting, partial, or blocked. The report must list explicit blockers instead of implying readiness. |
 
 Use `NOT_MERGE_READY` when evidence is unavailable or ambiguous. Do not convert
@@ -61,16 +63,20 @@ readiness claim.
 Run the gates in this order so later evidence is tied to the correct head:
 
 1. Verify local `HEAD` equals the current PR `headRefOid`.
-2. Confirm the repository has no conflicting merge state and no unrelated dirty
+2. Fetch and record current `origin/develop`; when a task supplies an expected
+   develop SHA, verify it before changing the PR branch.
+3. If the PR is dirty, update only the PR branch against that develop head and
+   resolve conflicts there.
+4. Confirm the repository has no conflicting merge state and no unrelated dirty
    worktree changes.
-3. Collect current-head GitHub Actions and status-check evidence.
-4. Inspect the base-to-head diff for focused scope.
-5. Run focused QA, scenario, and test evidence applicable to the diff.
-6. Review docs impact and PR description evidence for accuracy and bounded
+5. Collect current-head GitHub Actions and status-check evidence.
+6. Inspect the base-to-head diff for focused scope.
+7. Run focused QA, scenario, and test evidence applicable to the diff.
+8. Review docs impact and PR description evidence for accuracy and bounded
    claims.
-7. Record three quality-audit SEEK / VALIDATE / FIX cycles.
-8. Emit `MERGE_READY` only when every gate is proven; otherwise emit
-   `NOT_MERGE_READY` with blockers.
+9. Record three quality-audit SEEK / VALIDATE / FIX cycles.
+10. Emit `MERGE_READY` only when every gate is proven; otherwise emit
+    `NOT_MERGE_READY` with blockers.
 
 ### No-timeout command rule
 
@@ -158,6 +164,38 @@ happened to run.
 | `changes-present` | `git status --short` or `git diff --stat` shows modified files. | List the files in `Files modified` and include validation evidence. |
 | `no-changes` | The resolved Git worktree is clean after recovery. | Emit a `Files modified` section with `None` as its body and include clean-tree readiness evidence. |
 | `blocked` | The repository path cannot be verified or Git checks fail. | Emit the blocker and do not claim readiness. |
+
+## Develop-head conflict recovery
+
+When a pull request becomes dirty because the base branch moved, recovery uses
+the current `origin/develop` head as the only base input. It updates the pull
+request branch, resolves conflicts in that branch, and records the exact base
+SHA used for the recovery. It never merges the pull request into `develop`, never
+pushes to `develop`, and never treats a web/manual merge as evidence.
+
+The recovery flow records these base facts:
+
+| Field | Meaning |
+| --- | --- |
+| `baseBranch` | Target branch used for conflict recovery. For this repository's desktop Run recovery lane, the value is `develop`. |
+| `baseHeadSha` | `git rev-parse origin/develop` at the time the recovery began. |
+| `baseHeadVerified` | Whether the observed base SHA matched a task-supplied expected SHA when one was supplied. |
+| `conflictResolutionMode` | `no-op`, `resolved-in-pr-branch`, or `blocked`. |
+| `conflictedFiles` | Files that required conflict resolution, or `None` when the branch was already clean against the base. |
+
+Resolution policy for shared documentation, scenario, and QA files is
+develop-first unless that would remove the pull request's bounded evidence
+contract. Restored pull request content must stay limited to the desktop
+Run-window/debug evidence contract and must preserve non-claims for full world
+execution, playback, visible rendering correctness, full UI automation, Save
+completion, grading, Sims validation, deployed installer success, and broad UI
+automation.
+
+If the branch is already clean against current `origin/develop`, the workflow
+must not manufacture a change. The report uses the no-op path and ties `Files
+modified: None` to the current PR head, current develop head, current checks,
+focused QA evidence, docs impact, PR wording review, quality-audit cycles, and
+preserved bounded scope.
 
 ## PR metadata and conflicts
 
@@ -367,6 +405,15 @@ conclusion for `head_sha`. A queued, in-progress, skipped, cancelled, failed,
 missing, or stale workflow is a `NOT_MERGE_READY` blocker unless the repository
 explicitly documents that the check is non-required for this PR type.
 
+For conflict recovery, include the base head that made the branch clean:
+
+```bash
+git -C "$repo_path" rev-parse origin/develop
+```
+
+If the recovery task supplied an expected develop SHA, the report must state
+whether the observed `origin/develop` SHA matched it before resolution began.
+
 ### Quality-audit cycles
 
 Record at least three SEEK / VALIDATE / FIX cycles. Each cycle must have all
@@ -438,12 +485,12 @@ NOT_MERGE_READY
 | --- | --- |
 | Explicit PR worktree path | Preferred source for `repo_path`; may be the repo root or a subdirectory, and must resolve through `git -C "$input_path" rev-parse --show-toplevel`. |
 | Current working directory | Fallback only when no explicit PR worktree path is supplied; resolved through the same Git top-level command. |
-| Target branch | Read-only base for diff review and GitHub mergeability evidence. No-timeout recovery does not manually merge the target branch into the PR branch. |
+| Target branch | Base for diff review, GitHub mergeability evidence, and conflict recovery into the PR branch. No-timeout recovery does not merge the PR into the target branch. |
 | PR number | Used only for read-only GitHub metadata evidence through `gh pr view`; conflict status blocks merge-readiness claims. |
 | `NODE_OPTIONS` | Use `--max-old-space-size=32768` for focused Node-adjacent QA commands in this repository. |
 | Timeout wrappers | Outer command-level wrappers are not allowed in recovery evidence. Run commands directly; do not wrap them with `timeout`, `gtimeout`, alarm scripts, or equivalent shims. Existing scenario timeout fields and internal runner guards remain valid. |
 | Quality-audit cycle count | At least three cycles are required; the final cycle must be clean before `MERGE_READY`. |
-| No-op recovery | Allowed only when tied to the current PR head, current checks, reviewed evidence, and either all gates pass or explicit `NOT_MERGE_READY` blockers are listed. |
+| No-op recovery | Allowed only when tied to the current PR head, current develop head, current checks, reviewed evidence, preserved bounded scope, and either all gates pass or explicit `NOT_MERGE_READY` blockers are listed. |
 
 Paths are untrusted input. The workflow passes them as Git `-C` arguments and
 does not construct commands with `eval`, dynamic shell expansion, or unchecked
@@ -495,6 +542,9 @@ GitHub and PR evidence
 - repoPath: /worktrees/wave6-run-execution-gap
 - branch: wave6-run-execution-gap-1778302300
 - headSha: 0123456789abcdef0123456789abcdef01234567
+- baseBranch: develop
+- baseHeadSha: fedcba9876543210fedcba9876543210fedcba98
+- conflictResolutionMode: no-op
 - git status --short --branch: ## wave6-run-execution-gap-1778302300...origin/wave6-run-execution-gap-1778302300
 - pullRequest: #404
 - prHeadSha: 0123456789abcdef0123456789abcdef01234567
@@ -572,6 +622,12 @@ extension.
 12. Require at least three quality-audit SEEK / VALIDATE / FIX cycles, with a
     clean final cycle.
 13. Require `NOT_MERGE_READY` blockers whenever any gate is missing or partial.
+14. For conflict recovery, require the report to name the current `origin/develop`
+    head used for resolution and reject claims based on an unverified or stale
+    base head.
+15. Reject any recovery report that implies the pull request was merged into
+    `develop`, pushed to `develop`, or manually merged through GitHub as part of
+    evidence collection.
 
 ## Troubleshooting
 
@@ -587,3 +643,4 @@ extension.
 | GitHub Actions are green but QA evidence is missing | CI is necessary but not sufficient for merge readiness. | Run or list the focused runnable QA evidence, or emit a `NOT_MERGE_READY` blocker. |
 | Only two quality-audit cycles are documented | The report is incomplete. | Add a third SEEK / VALIDATE / FIX cycle; if it is not clean, emit `NOT_MERGE_READY`. |
 | A recovery evidence command is wrapped with `timeout` or `gtimeout` | The evidence violates no-timeout recovery. | Rerun the command directly or treat the gate as blocked; do not remove scenario-level timeout fields from QA definitions. |
+| No-op report omits the current develop head | The clean-tree claim is not tied to the base that made the PR clean. | Record `git rev-parse origin/develop` and rerun the no-op guard against the resolved PR worktree. |
