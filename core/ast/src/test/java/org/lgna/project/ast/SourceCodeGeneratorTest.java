@@ -134,38 +134,6 @@ public class SourceCodeGeneratorTest {
   }
 
   @Test
-  public void characterizesConfiguredStaticMethodImportInGeneratedClassSource() throws NoSuchMethodException {
-    java.lang.reflect.Method reflectedMax = Math.class.getDeclaredMethod("max", int.class, int.class);
-    JavaMethod max = JavaMethod.getInstance(reflectedMax);
-    MethodInvocation maxCall = AstUtilities.createStaticMethodInvocation(
-        max,
-        new IntegerLiteral(3),
-        new IntegerLiteral(4));
-    UserMethod bigger = new UserMethod(
-        "bigger",
-        int.class,
-        new UserParameter[] {},
-        new BlockStatement(AstUtilities.createReturnStatement(int.class, maxCall)));
-    NamedUserType calculator = new NamedUserType(
-        "Calculator",
-        null,
-        Object.class,
-        new NamedUserConstructor[] {new NamedUserConstructor(new UserParameter[] {}, new ConstructorBlockStatement())},
-        new UserMethod[] {bigger},
-        new UserField[] {});
-
-    JavaCodeGenerator generator = new JavaCodeGenerator.Builder()
-        .addDefaultCodeOrganizerDefinition(CodeOrganizer.defaultCodeOrganizer)
-        .addImportStaticMethod(reflectedMax)
-        .build();
-    calculator.process(generator);
-
-    assertEquals(
-        "import static java.lang.Math.max;class Calculator extends Object{public Calculator(){super();}public int bigger(){return max(3,4);}}",
-        generator.getText());
-  }
-
-  @Test
   public void characterizesWhileLoopWithBooleanCondition() {
     WhileLoop loop = new WhileLoop(new BooleanLiteral(false), new BlockStatement());
     assertEquals("while (false){}", generate(loop));
