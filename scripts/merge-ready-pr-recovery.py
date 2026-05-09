@@ -58,6 +58,7 @@ OVERCLAIM_PHRASES = (
 )
 QA_SURFACE_PREFIX = "qa/outside-in/"
 QA_SCENARIO_EXTENSIONS = (".yaml", ".yml")
+QA_DISCOVERY_SEARCH_DIRS = ("qa/outside-in", "docs/reference", "docs/howto")
 
 
 class RecoveryEvidenceError(RuntimeError):
@@ -122,7 +123,10 @@ def sanitize_output_excerpt(text: str, *, max_chars: int = 240) -> str:
     home = str(Path.home())
     if home:
         compact = compact.replace(home, "~")
+    compact = re.sub(r"(?i)(authorization\s*:\s*(?:token|bearer)\s+)\S+", r"\1<redacted>", compact)
+    compact = re.sub(r"(?i)(authorization\s*=\s*(?:token|bearer)\s+)\S+", r"\1<redacted>", compact)
     compact = re.sub(r"(?i)(token|secret|password|authorization|api[_-]?key)=\S+", r"\1=<redacted>", compact)
+    compact = re.sub(r'(?i)("?(?:token|secret|password|api[_-]?key)"?\s*:\s*)"?[^"\s,;}]+"?', r"\1<redacted>", compact)
     compact = re.sub(r"(?i)Bearer\s+\S+", "Bearer <redacted>", compact)
     compact = re.sub(r"(?<![\w.-])(?:~|/(?:home|tmp|var|workspace|mnt|Users))/[^\s:;]+", "<path>", compact)
     if len(compact) > max_chars:
@@ -679,17 +683,31 @@ def collect_ci_evidence(
 
 def discover_qa_paths(runner: CommandRunner, root: Path) -> list[str]:
     discovered_paths: list[str] = []
+    missing_dirs = [relative for relative in QA_DISCOVERY_SEARCH_DIRS if not (root / relative).is_dir()]
+    if missing_dirs:
+        raise RecoveryEvidenceError(
+            "QA/scenario discovery search paths are missing: " + ", ".join(missing_dirs)
+        )
+
     find_result = runner(["find", "qa/outside-in", "-maxdepth", "4", "-type", "f"], cwd=root, env=None)
-    if find_result.returncode == 0:
-        discovered_paths.extend(find_result.stdout.splitlines())
+    require_success(find_result, "QA/scenario find discovery", ["find", "qa/outside-in", "-maxdepth", "4", "-type", "f"])
+    discovered_paths.extend(find_result.stdout.splitlines())
 
     grep_result = runner(
-        ["grep", "-R", "export\\|model", "-n", "qa/outside-in", "docs/reference", "docs/howto"],
+        ["grep", "-R", "export\\|model", "-n", *QA_DISCOVERY_SEARCH_DIRS],
         cwd=root,
         env=None,
     )
     if grep_result.returncode == 0:
         discovered_paths.extend(line.split(":", 1)[0] for line in grep_result.stdout.splitlines() if ":" in line)
+    elif grep_result.returncode != 1 or grep_result.stderr.strip():
+        raise RecoveryEvidenceError(
+            format_command_failure(
+                "QA/scenario grep discovery",
+                grep_result,
+                ["grep", "-R", "export\\|model", "-n", *QA_DISCOVERY_SEARCH_DIRS],
+            )
+        )
     return sorted(set(discovered_paths))
 
 
@@ -699,7 +717,14 @@ def collect_qa_evidence(
     runner: CommandRunner,
     root: Path,
 ) -> dict[str, Any]:
-    discovered_paths = discover_qa_paths(runner, root) if qa_surface_applies(changed_files) else []
+    try:
+        discovered_paths = discover_qa_paths(runner, root) if qa_surface_applies(changed_files) else []
+    except RecoveryEvidenceError as exc:
+        return {
+            "classification": "discovery-error",
+            "rationale": "QA/scenario discovery failed before applicable runnable evidence could be classified.",
+            "blockers": [f"NOT_MERGE_READY: {exc}"],
+        }
     return classify_qa_evidence(
         changed_files=changed_files,
         discovered_paths=discovered_paths,

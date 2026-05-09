@@ -55,7 +55,11 @@ class FakeRunner:
         metadata_overrides: dict[str, Any] | None = None,
         diff_output: str | None = None,
         find_stdout: str = "",
+        find_returncode: int = 0,
+        find_stderr: str = "",
         grep_stdout: str = "",
+        grep_returncode: int = 0,
+        grep_stderr: str = "",
     ) -> None:
         self.body = body
         self.checks = checks
@@ -63,7 +67,11 @@ class FakeRunner:
         self.metadata_overrides = metadata_overrides or {}
         self.diff_output = diff_output or f"M\t{MODEL_EXPORT_TEST}\n"
         self.find_stdout = find_stdout
+        self.find_returncode = find_returncode
+        self.find_stderr = find_stderr
         self.grep_stdout = grep_stdout
+        self.grep_returncode = grep_returncode
+        self.grep_stderr = grep_stderr
         self.commands: list[list[str]] = []
 
     def __call__(
@@ -116,9 +124,9 @@ class FakeRunner:
             metadata.update(self.metadata_overrides)
             return SimpleNamespace(returncode=0, stdout=json.dumps(metadata), stderr="")
         if command[:3] == ["find", "qa/outside-in", "-maxdepth"]:
-            return SimpleNamespace(returncode=0, stdout=self.find_stdout, stderr="")
+            return SimpleNamespace(returncode=self.find_returncode, stdout=self.find_stdout, stderr=self.find_stderr)
         if command and command[0] == "grep":
-            return SimpleNamespace(returncode=0, stdout=self.grep_stdout, stderr="")
+            return SimpleNamespace(returncode=self.grep_returncode, stdout=self.grep_stdout, stderr=self.grep_stderr)
         raise AssertionError(f"Unexpected command in recovery workflow: {command!r}")
 
     def _checks_already_queried(self) -> bool:
@@ -329,6 +337,61 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         self.assertIn("documented-manual", report["qa_scenario_evidence"])
         self.assertIn("QA/scenario evidence is documented or manual only", "\n".join(report["blockers"]))
         self.assertTrue(any(command[:3] == ["find", "qa/outside-in", "-maxdepth"] for command in runner.commands))
+        self.assertTrue(any(command and command[0] == "grep" for command in runner.commands))
+
+    def test_qa_discovery_failure_surfaces_sanitized_blocker(self) -> None:
+        qa_path = "qa/outside-in/alice-desktop/scenarios/export-model.yaml"
+        runner = FakeRunner(
+            body=complete_pr_body(),
+            checks=[
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
+            ],
+            diff_output=f"M\t{qa_path}\n",
+            find_returncode=2,
+            find_stderr="/home/azureuser/src/private/qa.log password: hunter2",
+        )
+
+        report = as_mapping(
+            self.recovery.recover_pr(
+                self.recovery_inputs(expected_diff_paths={qa_path}),
+                command_runner=runner,
+                repo_root=REPO_ROOT,
+            )
+        )
+
+        blockers = "\n".join(report["blockers"])
+        self.assertEqual("NOT_MERGE_READY", report["result"])
+        self.assertIn("QA/scenario find discovery failed", blockers)
+        self.assertIn("<path>", blockers)
+        self.assertIn("password: <redacted>", blockers)
+        self.assertNotIn("/home/azureuser/src/private", blockers)
+        self.assertNotIn("hunter2", blockers)
+        self.assertFalse(any(command and command[0] == "grep" for command in runner.commands))
+
+    def test_grep_no_matches_is_not_treated_as_discovery_failure(self) -> None:
+        qa_path = "qa/outside-in/alice-desktop/scenarios/export-model.yaml"
+        runner = FakeRunner(
+            body=complete_pr_body(),
+            checks=[
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
+            ],
+            diff_output=f"M\t{qa_path}\n",
+            grep_returncode=1,
+            grep_stderr="",
+        )
+
+        report = as_mapping(
+            self.recovery.recover_pr(
+                self.recovery_inputs(expected_diff_paths={qa_path}),
+                command_runner=runner,
+                repo_root=REPO_ROOT,
+            )
+        )
+
+        blockers = "\n".join(report["blockers"])
+        self.assertEqual("NOT_MERGE_READY", report["result"])
+        self.assertIn("QA/scenario evidence is missing", blockers)
+        self.assertNotIn("QA/scenario grep discovery failed", blockers)
         self.assertTrue(any(command and command[0] == "grep" for command in runner.commands))
 
     def test_head_movement_during_check_collection_blocks_readiness(self) -> None:

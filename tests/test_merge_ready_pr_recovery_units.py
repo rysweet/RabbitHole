@@ -131,6 +131,8 @@ class MergeReadyRecoveryUnitContractTest(unittest.TestCase):
             stdout="",
             stderr=(
                 "/home/azureuser/src/private/build.log token=abc123 "
+                "Authorization: token auth-secret-value password: hunter2 "
+                '{"token":"json-secret"} '
                 + "x" * 500
             ),
         )
@@ -141,8 +143,14 @@ class MergeReadyRecoveryUnitContractTest(unittest.TestCase):
         self.assertIn("mvn exit 2", failure)
         self.assertIn("<path>", failure)
         self.assertIn("token=<redacted>", failure)
+        self.assertIn("Authorization: token <redacted>", failure)
+        self.assertIn("password: <redacted>", failure)
+        self.assertIn('"token":<redacted>', failure)
         self.assertNotIn("/home/azureuser/src/private", failure)
         self.assertNotIn("abc123", failure)
+        self.assertNotIn("auth-secret-value", failure)
+        self.assertNotIn("hunter2", failure)
+        self.assertNotIn("json-secret", failure)
         self.assertLessEqual(len(failure), 320)
 
     def test_checks_require_stable_sha_and_all_green_check_states(self) -> None:
