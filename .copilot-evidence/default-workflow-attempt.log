@@ -1,6 +1,6 @@
 Default-workflow readiness evidence for PR #423
-Recorded at: 2026-05-09T10:46:11Z
-Validated source tree HEAD: 556d11cf115213f44b7a82c9b3d24ce74aafa513
+Recorded at: 2026-05-09T11:37:53Z
+Validated source tree commit: 50fbbcabc2fce389a2a158f8ffd3be8b49b16802
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
@@ -9,15 +9,17 @@ Scope:
 - PR #423 readiness recovery is bounded to the source-code-generator
   characterization lane, centered on core/ast SourceCodeGeneratorTest and the
   focused NetBeans ProjectCodeGeneratorTest.
-- The current diff against origin/develop contains source-generator
-  characterization changes, bounded launcher/source-generation documentation,
-  and generated-project code paths already in the PR branch.
-- Validation was rerun after excluding the out-of-scope
-  ProjectCodeGenerator.java performance optimization from this review round.
-- This evidence refresh changes only this log; the source tree validated here
-  is the exact committed source tree at the recorded HEAD.
-- This log is retained as review evidence for PR #423. The prior PR #388
-  fallback evidence was stale and has been replaced.
+- The validated source tree includes the review-blocker fixes:
+  - durable reference docs no longer carry point-in-time PR status wording;
+  - pyproject.toml remains at alice3-modernization-qa version 0.7.0 because no
+    QA package release is part of this source-generator characterization lane.
+- This evidence refresh changes only this workflow log. If this log is committed
+  after the validated source tree commit above, the only later delta is this
+  evidence artifact; no source, test, docs, or package metadata changed after
+  validation.
+- This log is retained as PR-specific review evidence for PR #423. Durable
+  repository docs describe stable contracts and do not carry point-in-time PR
+  status.
 - .copilot-evidence/default-workflow-attempt.exit remains a zero-exit marker.
 
 Validated commands for the source tree recorded here:
@@ -36,9 +38,11 @@ Result:
 - Focused SourceCodeGeneratorTest validation passed.
 - Focused ProjectCodeGeneratorTest validation passed.
 - Diff whitespace validation passed for the source-generator documentation,
-  evidence log, and ProjectCodeGenerator.java review-feedback path.
-- No uncommitted ProjectCodeGenerator.java production optimization is included
-  in this evidence refresh.
+  package metadata, evidence log, and ProjectCodeGenerator.java
+  review-feedback path.
+- The unrelated QA package version bump was reverted.
+- PR-specific wording was removed from durable docs and retained only in
+  workflow-owned evidence or PR discussion.
 - SourceCodeGeneratorTest now characterizes expression-statement assignment,
   field access, static and instance method invocation, iterable for-each source,
   and the current DoTogether runnable fallback in addition to the existing
