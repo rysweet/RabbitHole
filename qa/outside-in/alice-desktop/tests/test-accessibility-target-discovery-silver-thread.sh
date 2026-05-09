@@ -15,7 +15,7 @@ RUNTIME_SCENARIO="$BASE_DIR/scenarios/post-open-runtime-display-accessibility-ev
 SELECT_SCENARIO="$BASE_DIR/scenarios/select-project-tab-click-exec.yaml"
 RUNTIME_REFERENCE_DOC="$REPO_ROOT/docs/reference/post-open-runtime-display-accessibility-evidence.md"
 SELECT_REFERENCE_DOC="$REPO_ROOT/docs/reference/select-project-africa-full-atspi-evidence.md"
-SILVER_THREAD_REFERENCE_DOC="$REPO_ROOT/docs/reference/silver-thread-status-report.md"
+SILVER_THREAD_REFERENCE_DOC="$REPO_ROOT/docs/reference/accessibility-target-discovery-silver-thread.md"
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 

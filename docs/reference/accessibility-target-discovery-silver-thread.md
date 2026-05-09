@@ -52,7 +52,7 @@ present. A missing marker or broadened claim is a failure, not a warning.
 
 ## Evidence lanes
 
-The contract covers four checked-in inputs that form three product-facing lanes.
+The contract covers these checked-in evidence paths.
 
 | Lane | Checked input | What the contract proves |
 | --- | --- | --- |
@@ -69,8 +69,9 @@ the target-specific accessibility discovery records.
 
 ## Artifact API
 
-The contract validates the shape of existing artifacts; it does not create new
-runtime evidence artifacts itself.
+The contract validates declared artifact API markers in checked-in scenarios,
+probes, runners, and docs; it does not create new runtime evidence artifacts
+itself.
 
 ### Focused contract output
 
@@ -288,4 +289,3 @@ When changing the launch, run/runtime, or Select Project evidence paths:
    statements change.
 5. Run the focused contract before using the changed lane as silver-thread
    target discovery evidence.
-
