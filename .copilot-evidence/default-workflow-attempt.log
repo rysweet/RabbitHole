@@ -25,3 +25,34 @@ Limits:
 - This evidence does not claim runtime dispatch completion beyond the focused
   generated-source/headless characterization test.
 - This evidence does not claim export completion.
+
+Default-workflow finalization refresh for PR #388
+Recorded at: 2026-05-09T03:49:48Z
+Current PR head verified before this evidence-only update:
+cec7b96debc2fda4f711069e0ba781d6224fb952
+Base branch verified: develop
+
+Scope re-inspected:
+- Full origin/develop...HEAD diff reviewed.
+- Diff scope remains limited to:
+  .copilot-evidence/default-workflow-attempt.exit
+  .copilot-evidence/default-workflow-attempt.log
+  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
+- The test characterization remains focused on generated Scene.java forwarding
+  SceneActivationEvent through the generated scene activation listener lambda.
+
+Validation completed at current PR head before this evidence-only update:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+- git merge-tree --write-tree origin/develop HEAD
+
+Result:
+- Focused generated-source characterization passed.
+- merge-tree completed cleanly; write-tree result 52938664ddb5a815cbc06e1940711161baf7f5c1.
+- No unresolved fallback ownership marker remains in tracked evidence.
+
+Limits:
+- This evidence does not claim desktop runtime execution.
+- This evidence does not claim runtime dispatch completion beyond the focused
+  generated-source/headless characterization test.
+- This evidence does not claim export completion.
