@@ -542,7 +542,9 @@ The Run-window contract lane is centered on one opt-in product seam:
 `org.alice.eatme.runWindowEvidenceDir`. When the property is unset, no artifact
 is written. When it is set, the configured directory must already exist, and the
 seam writes only the fixed artifact `run-window-created.json` inside that
-directory without following a pre-existing artifact symlink.
+directory without following a pre-existing artifact symlink. The lane is passive:
+it records that the Run-window creation hook reached the evidence writer, not
+that the Run window rendered, executed, or completed learner-facing work.
 
 The artifact is a creation/wiring metadata record. It is not a render-affordance
 artifact, runtime result, Save artifact, grading artifact, creative-assessment

@@ -3,7 +3,9 @@
 Use this guide to review the focused Run-window evidence lane. The lane verifies
 only that the production Run-window creation hook is wired to the bounded
 `run-window-created.json` evidence seam and that the scenario runner preserves
-and validates the artifact.
+and validates the artifact. Treat it as a property-gated, passive creation/wiring
+check, not a Run behavior, rendering, assessment, Save, or lesson-completion
+test.
 
 For the complete artifact and API contract, see the [Run-Window
 Creation/Wiring Contract reference](../reference/run-window-creation-wiring-contract.md).

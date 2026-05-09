@@ -259,7 +259,8 @@ For the artifact API, configuration, examples, and claim boundaries, see
 ## Review the Run-window creation/wiring contract
 
 The `alice-desktop-run-window-contract` scenario covers only the
-Run-window-created evidence seam. It verifies that the Run-window creation
+Run-window-created evidence seam. This is a property-gated, passive
+creation/wiring check. It verifies that the Run-window creation
 hook can write a fixed `run-window-created.json` artifact with schema version,
 creation status, contract scope, source metadata, optional frame/program display
 metadata, path-safe artifact naming, JSON escaping, false capability booleans,

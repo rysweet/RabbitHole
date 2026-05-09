@@ -1,8 +1,12 @@
 # Run-Window Creation/Wiring Contract
 
 This reference defines the bounded Run-window evidence contract for Alice desktop
-QA. The feature records that the Run window was created and wired through the
-expected product seam. It does not claim active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, creative assessment, lesson completion, or full UI automation.
+QA. The feature is a property-gated, passive evidence seam: when a product-side
+run sets the evidence directory property, the Run-window pre-show hook writes one
+fixed JSON artifact proving only creation/wiring metadata. It does not claim
+active rendering, run execution, world execution correctness, rendering
+correctness, Save behavior, grading, creative assessment, lesson completion, or
+full UI automation.
 
 ## Contents
 
@@ -28,7 +32,8 @@ RunComposite#handlePreShowWindow
 
 The evidence is metadata that the Run window creation hook reached the evidence
 writer with the frame title and active program type available. The artifact is a
-creation/wiring record only.
+creation/wiring record only, not proof that the Run window rendered, advanced, or
+completed any learner-facing activity.
 
 ## Usage
 

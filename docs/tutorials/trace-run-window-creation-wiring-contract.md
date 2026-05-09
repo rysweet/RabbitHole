@@ -1,7 +1,8 @@
 # Tutorial: Trace the Run-Window Creation/Wiring Contract
 
 This tutorial walks through the focused Run-window evidence contract from the
-product seam to the generated JSON artifact.
+property-gated product seam to the generated JSON artifact. The feature records a
+passive creation/wiring fact only; it does not exercise or prove Run behavior.
 
 ## What you will do
 
