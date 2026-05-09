@@ -1,17 +1,20 @@
-# Desktop Run execution gap report
+# [PLANNED - Implementation Pending] Desktop Run execution gap report
 
-This reference documents the implemented fail-closed report emitted by the
-desktop Run evidence hook:
+This reference describes the intended fail-closed report for the desktop Run
+evidence hook:
 
 ```text
 desktop-run-execution-gap-report.json
 ```
 
-The report is written after the existing bounded Run-window evidence artifacts
-are produced. It states what is executable today and names the exact blocker
-that prevents any full world-execution claim. It is a reporting and validation
-artifact only; it does not add runtime probing, UI automation, rendering
-inference, grading inference, Save validation, or world-advance proof.
+The Java writer and focused tests must be implemented before this document can
+drop the `[PLANNED - Implementation Pending]` marker. The planned report will be
+written after the existing bounded Run-window evidence artifact writers complete
+their non-empty checks. It will state what is executable in the current evidence
+lane and name the exact blocker that prevents any full world-execution claim. It
+is a reporting and validation artifact only; it does not add runtime probing, UI
+automation, rendering inference, grading inference, Save validation, or
+world-advance proof.
 
 ## Contents
 
@@ -27,15 +30,15 @@ inference, grading inference, Save validation, or world-advance proof.
 
 ## Scope
 
-The report belongs to the opt-in desktop Run evidence flow implemented in:
+The report is planned for the opt-in desktop Run evidence flow in:
 
 ```text
 core/ide/src/main/java/org/alice/tools/EatmeDesktopRunExecutionEvidence.java
 core/ide/src/test/java/org/alice/tools/EatmeDesktopRunExecutionEvidenceTest.java
 ```
 
-When `recordRenderTargetAttached(...)` reaches the existing Run-window evidence
-path, it writes the established artifacts first:
+When the planned implementation reaches `recordRenderTargetAttached(...)` in the
+existing Run-window evidence path, it must write the established artifacts first:
 
 ```text
 desktop-run-render-affordance.json
@@ -46,27 +49,22 @@ desktop-save-menu-action-target.json
 desktop-run-status-summary.json
 ```
 
-After those artifacts are written and validated as present, the flow writes:
+After those artifact writers finish their own non-empty write checks, the
+planned flow writes:
 
 ```text
 desktop-run-execution-gap-report.json
 ```
 
-The report summarizes those bounded artifacts as the current executable
+The report will summarize those bounded artifacts as the current executable
 Run-window evidence. It then records the blocker to a stronger claim: missing
 deterministic proof that the Alice world advances through full runtime
 execution, not merely that Run-window evidence artifacts exist.
 
-The report may reference `desktop-run-execution.json` and
-`desktop-run-runtime.log` when VM-listener execution evidence is enabled in the
-same evidence directory. Those files are still bounded listener artifacts. They
-do not by themselves prove complete world advancement, visible rendering
-correctness, grading, Save completion, or complete UI automation.
-
 ## Usage
 
-Enable desktop Run evidence with the dedicated JVM system property and run a
-focused Run-window path:
+After implementation, enable desktop Run evidence with the dedicated JVM system
+property and run a focused Run-window path:
 
 ```bash
 java \
@@ -74,7 +72,7 @@ java \
   ...
 ```
 
-The report appears in the selected evidence directory after the existing
+The planned report appears in the selected evidence directory after the existing
 Run-window artifacts:
 
 ```text
@@ -95,14 +93,14 @@ python3 -m json.tool \
   target/desktop-run-evidence/desktop-run-execution-gap-report.json
 ```
 
-Use the report to answer only these questions:
+Use the planned report to answer only these questions:
 
 | Question | Source |
 | --- | --- |
-| What Run-window evidence is executable today? | `executableToday.evidenceArtifacts` |
+| What bounded Run-window evidence does this lane expose? | `executableToday.evidenceArtifacts` |
 | What prevents a stronger world-execution claim? | `blockerToFullWorldExecution.reason` |
 | Which claims are explicitly unsupported? | `doesNotClaim` |
-| Did the report validate the required artifact list and blocker text? | `failClosedRequirements` and focused tests |
+| Did the report validate the required artifact reference list and blocker text? | `failClosedRequirements` and focused tests |
 
 Do not use the report as proof that a world completed execution, pixels rendered
 correctly, learner work was graded, Save finished, or the full Alice UI was
@@ -116,30 +114,24 @@ automated.
 | `org.alice.eatme.runWindowEvidenceDir` | Legacy Run-window evidence directory. The desktop Run evidence flow uses it only when the dedicated desktop property is unset or blank. |
 
 The report does not introduce new environment variables, network calls,
-credentials, authentication behavior, or persistent user preferences.
-
-For QA wrappers that invoke Node-based orchestration, use the saved memory
-preference:
-
-```bash
-export NODE_OPTIONS=--max-old-space-size=32768
-```
+credentials, authentication behavior, Node options, or persistent user
+preferences.
 
 ## Report API
 
-The artifact name is stable:
+The planned artifact name is stable:
 
 ```text
 desktop-run-execution-gap-report.json
 ```
 
-The schema token is:
+The planned schema token is:
 
 ```text
 eatme.alice-desktop-run-execution-gap-report/v1
 ```
 
-Field order is not part of the contract. The report has this shape:
+Field order is not part of the contract. The planned report has this shape:
 
 ```json
 {
@@ -237,39 +229,38 @@ desktop-save-menu-action-target.json
 desktop-run-status-summary.json
 ```
 
-The report may also mention these VM-listener artifacts when they are enabled in
-the same evidence directory:
-
-```text
-desktop-run-execution.json
-desktop-run-runtime.log
-```
-
-Optional VM-listener references do not change the blocker. They remain bounded
-execution-listener evidence until a separate deterministic world-advance proof
-exists.
+The planned v1 report validates only these required artifact references in the
+report payload. Any additional artifact family requires a separate documented
+extension.
 
 ## Fail-closed behavior
 
-The writer validates the report before the atomic JSON write. Validation fails
-closed when any required condition is missing:
+The planned writer must validate the report payload after the existing artifact
+writers complete their own non-empty checks and before the atomic JSON write.
+This validation checks the report's required artifact references, blocker text,
+and non-claim categories. It does not replace each artifact writer's own
+responsibility for creating and checking its artifact file.
+
+Validation fails closed for the report when any required condition is missing:
 
 | Missing or invalid condition | Required behavior |
 | --- | --- |
-| Required evidence artifact list is empty | Throw validation error; do not accept a success-shaped report. |
-| Any required Run-window artifact name is omitted | Throw validation error; do not write or accept the report. |
-| `blockerToFullWorldExecution.reason` is blank | Throw validation error; do not write or accept the report. |
-| `doesNotClaim` omits a prohibited claim category | Throw validation error; do not write or accept the report. |
+| Required evidence artifact reference list is empty | Reject the report payload; do not write or accept a success-shaped report. |
+| Any required Run-window artifact name is omitted | Reject the report payload; do not write or accept the report. |
+| `blockerToFullWorldExecution.reason` is blank | Reject the report payload; do not write or accept the report. |
+| `doesNotClaim` omits a prohibited claim category | Reject the report payload; do not write or accept the report. |
 | Artifact path is absolute, nested, parent-relative, or escapes the evidence directory | Reject through the shared artifact path guard. |
 | Atomic write fails or the final artifact is empty | Surface the write failure through the existing logging/error path; do not treat the report as present. |
 
 The fail-closed checks prevent the report from becoming a misleading pass
-artifact. The expected steady-state status is `blocked` because the report names
-an execution proof gap.
+artifact. A report-validation failure should omit or log the report artifact and
+preserve normal Run behavior; it is not a product execution failure. The
+expected steady-state report status is `blocked` because the report names an
+execution proof gap.
 
 ## Examples
 
-### Review bounded Run-window evidence
+### Review bounded Run-window evidence after implementation
 
 ```bash
 run_dir=target/desktop-run-evidence
@@ -310,7 +301,7 @@ unsupportedClaims:
   - full UI automation
 ```
 
-### Validate the focused implementation contract
+### Validate the focused implementation contract after implementation
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn \
@@ -338,7 +329,8 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 
 ## Validation commands
 
-Run the focused `core/ide` validation from the repository root:
+After the Java writer and tests are implemented, run the focused `core/ide`
+validation from the repository root:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn \
@@ -369,7 +361,7 @@ test -d tweedle-lang/Grammar
 
 | Symptom | Meaning | Next check |
 | --- | --- | --- |
-| `desktop-run-execution-gap-report.json` is missing | The desktop Run evidence hook did not reach the post-summary report step, evidence was not enabled, or validation failed closed. | Check the evidence directory property, existing Run-window artifacts, and test logs. |
+| `desktop-run-execution-gap-report.json` is missing | The planned implementation is not present, the desktop Run evidence hook did not reach the post-summary report step, evidence was not enabled, or validation failed closed. | Check whether the Java writer has landed, then check the evidence directory property, existing Run-window artifacts, and test logs. |
 | Report exists but omits a required artifact name | The report is invalid. | Run `EatmeDesktopRunExecutionEvidenceTest`; fix the required artifact list before review. |
 | Report has an empty blocker reason | The report is invalid. | Restore the deterministic world-advance blocker text. |
 | Report omits a prohibited claim category | The report is invalid. | Restore all required `doesNotClaim` entries. |

@@ -326,16 +326,18 @@ artifact API, configuration, examples, and review rules are
 documented in [First-Lesson Live Procedure Target
 Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md).
 
-The opt-in desktop Run evidence hook also writes
-`desktop-run-execution-gap-report.json` after the existing Run-window evidence
-artifacts, including `desktop-run-status-summary.json`. The report states that
-the executable evidence available today is bounded Run-window evidence and names
-the blocker to a stronger execution claim: missing deterministic proof that the
-Alice world advances through full runtime execution rather than merely producing
-Run-window artifacts. Missing required artifact references, missing blocker text,
-or missing non-claim categories fail validation. The report does not prove full
-world execution, visible rendering correctness, grading, Save completion, or
-full UI automation. See [Desktop Run execution gap
+The planned opt-in desktop Run evidence hook will write
+`desktop-run-execution-gap-report.json` after the existing Run-window artifact
+writers complete their non-empty checks, including
+`desktop-run-status-summary.json`. The report will state that the executable
+evidence in this lane is bounded Run-window evidence and name the blocker to a
+stronger execution claim: missing deterministic proof that the Alice world
+advances through full runtime execution rather than merely producing Run-window
+artifacts. Missing required artifact references, missing blocker text, or
+missing non-claim categories fail validation for the report while preserving
+normal Run behavior. The report does not prove full world execution, visible
+rendering correctness, grading, Save completion, or full UI automation. See
+[Desktop Run execution gap
 report](../../../docs/reference/desktop-run-execution-gap-report.md).
 
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
