@@ -56,6 +56,7 @@ UNSUPPORTED_MERGE_READY_CLAIMS = (
 )
 
 MAVEN_COMMAND_PATTERN = re.compile(r"(^|\s)mvn(\s|$)")
+SHELL_ENV_ASSIGNMENT_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$")
 
 CLAIM_NEGATION_PATTERN = re.compile(
     r"(does not claim|do not claim|not claim|doesn't claim|without claiming|"
@@ -374,7 +375,114 @@ def _collect_blockers_from_evidence(name: str, evidence: object) -> list[str]:
     return [_format_blocker(f"{name} evidence status is {status}.")]
 
 
-def _has_outer_timeout_wrapper(command: str) -> bool:
+def _token_basename(token: str) -> str:
+    return token.rstrip("/").rsplit("/", 1)[-1]
+
+
+def _is_env_assignment(token: str) -> bool:
+    return SHELL_ENV_ASSIGNMENT_PATTERN.match(token) is not None
+
+
+def _is_named_executable(token: str, names: set[str]) -> bool:
+    return _token_basename(token) in names
+
+
+def _skip_env_prefix(tokens: Sequence[str], index: int) -> int:
+    while index < len(tokens) and _is_env_assignment(tokens[index]):
+        index += 1
+
+    if index >= len(tokens) or not _is_named_executable(tokens[index], {"env"}):
+        return index
+
+    index += 1
+    while index < len(tokens):
+        token = tokens[index]
+        if _is_env_assignment(token):
+            index += 1
+        elif token in {"-i", "--ignore-environment", "-0", "--null"}:
+            index += 1
+        elif token in {"-u", "--unset", "-C", "--chdir", "-S", "--split-string"}:
+            index += 2
+        elif token.startswith("--unset=") or token.startswith("--chdir="):
+            index += 1
+        else:
+            break
+    return index
+
+
+def _simple_command_executable_indices(tokens: Sequence[str]) -> list[int]:
+    separators = {"&&", "||", "|", ";"}
+    executable_indices: list[int] = []
+    index = 0
+    at_command_start = True
+    while index < len(tokens):
+        if tokens[index] in separators:
+            at_command_start = True
+            index += 1
+            continue
+        if not at_command_start:
+            index += 1
+            continue
+
+        index = _skip_env_prefix(tokens, index)
+        if index < len(tokens) and tokens[index] not in separators:
+            executable_indices.append(index)
+            at_command_start = False
+        index += 1
+    return executable_indices
+
+
+def _perl_alarm_exec_wrapper(tokens: Sequence[str], executable_index: int) -> bool:
+    if not _is_named_executable(tokens[executable_index], {"perl"}):
+        return False
+
+    separators = {"&&", "||", "|", ";"}
+    index = executable_index + 1
+    while index < len(tokens) and tokens[index] not in separators:
+        token = tokens[index]
+        expression = None
+        if token in {"-e", "-E"} and index + 1 < len(tokens):
+            expression = tokens[index + 1]
+            index += 1
+        elif token.startswith("-e") or token.startswith("-E"):
+            expression = token[2:]
+        elif (
+            token.startswith("-")
+            and ("e" in token[1:] or "E" in token[1:])
+            and index + 1 < len(tokens)
+        ):
+            expression = tokens[index + 1]
+            index += 1
+
+        if expression is not None:
+            lowered = expression.lower()
+            if "alarm" in lowered and "exec" in lowered and "@argv" in lowered:
+                return True
+        index += 1
+    return False
+
+
+def _shell_inline_command(tokens: Sequence[str], executable_index: int) -> Optional[str]:
+    if not _is_named_executable(
+        tokens[executable_index],
+        {"bash", "dash", "ksh", "sh", "zsh"},
+    ):
+        return None
+
+    index = executable_index + 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "-c" and index + 1 < len(tokens):
+            return tokens[index + 1]
+        if token.startswith("-") and "c" in token[1:] and index + 1 < len(tokens):
+            return tokens[index + 1]
+        if not token.startswith("-"):
+            return None
+        index += 1
+    return None
+
+
+def _has_outer_timeout_wrapper(command: str, *, _depth: int = 0) -> bool:
     try:
         tokens = shlex.split(command)
     except ValueError as exc:
@@ -382,8 +490,19 @@ def _has_outer_timeout_wrapper(command: str) -> bool:
     if not tokens:
         return False
 
-    first = tokens[0]
-    return first in {"timeout", "gtimeout"} or first.endswith("/timeout") or first.endswith("/gtimeout")
+    for executable_index in _simple_command_executable_indices(tokens):
+        if _is_named_executable(tokens[executable_index], {"timeout", "gtimeout"}):
+            return True
+        if _perl_alarm_exec_wrapper(tokens, executable_index):
+            return True
+        shell_command = _shell_inline_command(tokens, executable_index)
+        if (
+            shell_command is not None
+            and _depth < 3
+            and _has_outer_timeout_wrapper(shell_command, _depth=_depth + 1)
+        ):
+            return True
+    return False
 
 
 def _requires_node_options(command: str) -> bool:

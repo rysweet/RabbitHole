@@ -411,6 +411,28 @@ class QaEvidenceRunnerContractTest(unittest.TestCase):
         self.assertIn("timeout wrappers", joined)
         self.assertIn("NODE_OPTIONS=--max-old-space-size=32768", joined)
 
+    def test_rejects_documented_equivalent_timeout_wrappers(self) -> None:
+        module = load_recovery_module()
+
+        evidence = module.validate_recovery_commands(
+            [
+                (
+                    "NODE_OPTIONS=--max-old-space-size=32768 "
+                    "perl -e 'alarm 600; exec @ARGV' mvn test"
+                ),
+                (
+                    "NODE_OPTIONS=--max-old-space-size=32768 "
+                    "bash -lc 'timeout 600 qa/outside-in/alice-desktop/runners/validate-scenarios.sh'"
+                ),
+            ]
+        )
+
+        joined = "\n".join(blockers(evidence))
+        self.assertEqual("blocked", field(evidence, "status"))
+        self.assertIn("NOT_MERGE_READY", joined)
+        self.assertIn("timeout wrappers", joined)
+        self.assertNotIn("requires NODE_OPTIONS=--max-old-space-size=32768", joined)
+
 
 class ReadinessEvaluatorContractTest(unittest.TestCase):
     def test_emits_merge_ready_only_when_every_gate_is_clean(self) -> None:
