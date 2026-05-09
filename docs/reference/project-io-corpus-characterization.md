@@ -15,6 +15,7 @@ of the contract.
 - [Usage](#usage)
 - [Coverage scope](#coverage-scope)
 - [Archive contracts](#archive-contracts)
+- [Canonical save/reopen/edit chain](#canonical-savereopenedit-chain)
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
@@ -39,7 +40,7 @@ The project IO corpus feature is centered on these existing suites:
 | Test suite | Purpose |
 | --- | --- |
 | `HistoricalArchiveRoundTripCharacterizationTest` | Generated historical archive coverage for `.a3p`, `.a3w`, and `.a3c` files, including XML fallback and round-trip behavior. |
-| `IoUtilitiesTest` | Focused reader/writer edge coverage for JSON manifests, Tweedle decode boundaries, resource failures, version checks, and safe archive entries. |
+| `IoUtilitiesTest` | Focused reader/writer edge coverage for JSON manifests, Tweedle decode boundaries, resource failures, version checks, safe archive entries, and the canonical save -> reopen -> edit -> save/reopen archive seam chain. |
 
 Prefer extending one of these suites over adding a new synthetic test class. A
 new test belongs here only when it exercises a real Alice archive boundary
@@ -62,6 +63,11 @@ resource data still reads back.
 
 This is not a migration-manager refactor effort. `ProjectMigrationManager`
 refactors require characterization at the relevant IO seam first.
+
+The save/reopen/edit chain is intentionally scoped to repository-owned archive IO
+APIs. It does not launch Alice desktop, click the Save menu, control a save
+dialog, automate Swing/AWT, or prove full desktop Save completion. Desktop Save
+menu proof artifacts remain separate from this archive seam.
 
 ## Archive contracts
 
@@ -114,6 +120,36 @@ Readback through `IoUtilities.readProject(File)` preserves:
 
 Round-trip characterization writes the read project to a second `.a3p` archive
 and repeats the same archive-entry and readback assertions.
+
+## Canonical save/reopen/edit chain
+
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+is the single canonical characterization for editable project archives that are
+saved, reopened, edited, saved again, reopened again, and exported through
+repository-owned IO seams.
+
+The chain uses only production archive APIs:
+
+| Step | API or object | Required behavior |
+| --- | --- | --- |
+| Create fixture | `new Project(programType("OriginalProgram"), Project.SceneCameraType.WindowCamera)` | Builds a synthetic, in-memory Alice project with no checked-in binary fixture. |
+| Save original archive | `IoUtilities.writeProject(originalProjectFile, project)` | Writes an editable `.a3p` project archive under the test temporary directory. |
+| Reopen original archive | `IoUtilities.readProject(originalProjectFile)` | Returns a `Project` whose program type is present and still named `OriginalProgram`. |
+| Edit reopened project | `NamedUserType.name.setValue("EditedProgram")` | Mutates project-owned AST data after the first reopen. |
+| Save edited archive | `IoUtilities.writeProject(editedProjectFile, reopenedProject)` | Writes a second editable `.a3p` archive from the reopened, edited project. |
+| Reopen edited archive | `IoUtilities.readProject(editedProjectFile)` | Returns a `Project` whose program type is present and named `EditedProgram`. |
+| Inspect edited archive | `ZipFile` plus `manifest.json` | Confirms the edited archive manifest names `EditedProgram`, uses `a3p`, and still contains `programType.xml`. |
+| Export edited project | `IoUtilities.exportProject(exportFile, editedProject)` | Writes a `.a3w` player archive from the edited project without using desktop UI. |
+| Inspect export archive | `ZipFile` plus `manifest.json` | Confirms the export manifest names `EditedProgram`, uses `a3w`, and references `src/EditedProgram.twe`. |
+
+The edit assertion must happen after the second `IoUtilities.readProject` call.
+A file-exists or non-empty archive assertion is not sufficient because it would
+miss stale-save regressions where Alice writes the pre-edit project state.
+
+Keep exactly one canonical test for this chain in `IoUtilitiesTest`. Related
+tests may cover neighboring archive shapes, resources, corrupt manifests, or
+decoder boundaries, but they should not duplicate the save -> reopen -> edit ->
+save/reopen journey under a different name unless the production seam changes.
 
 ### Player `.a3w` manifest archive
 
@@ -360,7 +396,7 @@ mvn -pl core/story-api-migration -am \
 Focused `IoUtilities` reader/writer edge coverage:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.lgna.project.io.IoUtilitiesTest \
@@ -392,6 +428,27 @@ Then the program type, scene-camera type, resource bytes, and ResourceExpression
 When the read project is written again
 Then the second archive preserves the same observable contract
 ```
+
+### Characterize the canonical save/reopen/edit chain
+
+```text
+Given a synthetic project whose program type is named OriginalProgram
+When IoUtilities.writeProject writes original-program.a3p
+And IoUtilities.readProject reopens original-program.a3p
+And the reopened NamedUserType is renamed to EditedProgram
+And IoUtilities.writeProject writes edited-program.a3p from the reopened project
+And IoUtilities.readProject reopens edited-program.a3p
+Then the reopened edited project has program type EditedProgram
+And edited-program.a3p still has coherent project manifest metadata and
+    programType.xml structure
+When IoUtilities.exportProject writes edited-program.a3w
+Then the export manifest names EditedProgram
+And the export archive contains src/EditedProgram.twe
+```
+
+This example is archive IO seam coverage only. It is not evidence that the
+desktop Save menu, Save dialog, Croquet action path, or full UI automation path
+completed.
 
 ### Characterize generated `.a3w` player behavior
 

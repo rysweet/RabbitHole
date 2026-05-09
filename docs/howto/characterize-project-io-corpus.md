@@ -17,6 +17,7 @@ checking in `.a3p`, `.a3w`, `.a3c`, or media payloads.
 - [Build a deterministic fixture](#build-a-deterministic-fixture)
 - [Assert archive entries and routing](#assert-archive-entries-and-routing)
 - [Assert production readback](#assert-production-readback)
+- [Maintain the canonical save/reopen/edit chain](#maintain-the-canonical-savereopenedit-chain)
 - [Characterize fail-fast JSON player reads](#characterize-fail-fast-json-player-reads)
 - [Update representative corpus evidence](#update-representative-corpus-evidence)
 - [Run the focused tests](#run-the-focused-tests)
@@ -184,6 +185,32 @@ editable Alice program type.
 For round-trip coverage, write the decoded object to a second archive and repeat
 the same archive-entry and readback assertions.
 
+## Maintain the canonical save/reopen/edit chain
+
+Use `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+for the repository-owned archive IO seam that proves one editable project can be
+saved, reopened, edited, saved again, reopened again, and exported. Keep this as
+the only canonical test for that journey.
+
+The test should continue to:
+
+1. Create a synthetic `Project` with a `NamedUserType` program type.
+2. Save the original project with `IoUtilities.writeProject`.
+3. Reopen the original archive with `IoUtilities.readProject`.
+4. Edit project-owned data after reopen, using `NamedUserType.name.setValue(...)`.
+5. Save the edited project with `IoUtilities.writeProject`.
+6. Reopen the edited archive with `IoUtilities.readProject`.
+7. Assert the edited program type name survived the second reopen.
+8. Inspect stable archive structure, including readable `manifest.json`,
+   project/export file type metadata, `programType.xml` in the edited `.a3p`, and
+   `src/<EditedProgram>.twe` in the exported `.a3w`.
+
+Do not add desktop setup to this test. It must not launch Alice desktop, click
+the Save menu, drive `JFileChooser`, use AWT Robot, depend on Croquet Save
+actions, or claim full desktop Save completion. If desktop Save behavior needs
+coverage, use the separate Save-menu proof lane and document its narrower UI
+claim independently.
+
 ## Characterize fail-fast JSON player reads
 
 When a `.a3w` player archive has a JSON manifest with a program name, read it as
@@ -232,7 +259,7 @@ binary Alice archives.
 Run the focused historical archive suite first:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
@@ -242,10 +269,10 @@ mvn -pl core/story-api-migration -am \
 If the change touches `IoUtilitiesTest`, include it explicitly:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest,org.lgna.project.io.IoUtilitiesTest \
+  -Dtest=org.lgna.project.io.IoUtilitiesTest \
   test
 ```
 

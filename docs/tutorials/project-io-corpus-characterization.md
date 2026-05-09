@@ -12,8 +12,9 @@ characterization test. The same pattern applies to generated `.a3w` player and
 - [3. Write and inspect the archive](#3-write-and-inspect-the-archive)
 - [4. Read through IoUtilities](#4-read-through-ioutilities)
 - [5. Prove the round trip](#5-prove-the-round-trip)
-- [6. Document representative corpus evidence](#6-document-representative-corpus-evidence)
-- [7. Run validation](#7-run-validation)
+- [6. Trace the canonical save/reopen/edit chain](#6-trace-the-canonical-savereopenedit-chain)
+- [7. Document representative corpus evidence](#7-document-representative-corpus-evidence)
+- [8. Run validation](#8-run-validation)
 
 ## Goal
 
@@ -160,7 +161,39 @@ The second read proves the generated fixture is not only readable once; it
 preserves the current Alice archive shape across a normal write/read/write/read
 cycle.
 
-## 6. Document representative corpus evidence
+## 6. Trace the canonical save/reopen/edit chain
+
+For the save/reopen/edit seam, use the existing
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+journey rather than adding a second full-chain test.
+
+The fixture starts with a synthetic project:
+
+```java
+Project project = new Project(programType("OriginalProgram"), Project.SceneCameraType.WindowCamera);
+```
+
+The chain then stays below desktop UI and uses only archive APIs:
+
+```java
+IoUtilities.writeProject(originalProjectFile, project);
+Project reopenedProject = IoUtilities.readProject(originalProjectFile);
+reopenedProject.getProgramType().name.setValue("EditedProgram");
+IoUtilities.writeProject(editedProjectFile, reopenedProject);
+Project editedProject = IoUtilities.readProject(editedProjectFile);
+IoUtilities.exportProject(exportFile, editedProject);
+```
+
+The important assertion is not that the files exist. The important assertion is
+that the project reopened from the second archive has program type
+`EditedProgram`, and that both the edited `.a3p` manifest and exported `.a3w`
+manifest still describe the edited program coherently.
+
+Treat this as repository-owned archive seam evidence only. It does not prove
+that a desktop Save menu item was clicked, that a Save dialog completed, or that
+full UI automation saved a project.
+
+## 7. Document representative corpus evidence
 
 If this fixture shape becomes representative modernization corpus evidence, add
 or update the matching entry in:
@@ -193,15 +226,15 @@ The scorecard should report the LFS-independent corpus manifest as present. It
 must not require the generated `.a3p` archive to be checked in or fetched from
 Git LFS.
 
-## 7. Run validation
+## 8. Run validation
 
 Run the focused test from the repository root:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  -Dtest=org.lgna.project.io.IoUtilitiesTest \
   test
 ```
 
