@@ -73,7 +73,7 @@ public class IssueSubmissionProgressWorkerTest {
   }
 
   private static final class RecordingIssueSubmissionProgressWorker extends IssueSubmissionProgressWorker {
-    private final Boolean submissionResult;
+    private final boolean submissionResult;
     private final RuntimeException submissionException;
     private final Thread thread;
     private final Throwable throwable;
@@ -93,7 +93,7 @@ public class IssueSubmissionProgressWorkerTest {
       super(null, isProjectAttachmentDesired);
       this.thread = thread;
       this.throwable = throwable;
-      this.submissionResult = Boolean.valueOf(submissionResult);
+      this.submissionResult = submissionResult;
       this.submissionException = submissionException;
     }
 
