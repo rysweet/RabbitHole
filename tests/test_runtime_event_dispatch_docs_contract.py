@@ -20,6 +20,11 @@ RECOVERY_PR_NUMBER = "403"
 RECOVERY_PR_HEAD_COMMAND = (
     f'EXPECTED_PR_HEAD="$(gh pr view {RECOVERY_PR_NUMBER} --json headRefOid --jq .headRefOid)"'
 )
+RECOVERY_PR_VIEW_COMMAND = (
+    f"gh pr view {RECOVERY_PR_NUMBER} "
+    "--json number,title,headRefName,headRefOid,mergeStateStatus,reviewDecision,statusCheckRollup"
+)
+RECOVERY_PR_CHECKS_COMMAND = f"gh pr checks {RECOVERY_PR_NUMBER}"
 RECOVERY_HEAD_CHECK = 'test "$(git rev-parse HEAD)" = "$EXPECTED_PR_HEAD"'
 NON_CLAIM_TERMS = [
     "desktop runtime execution",
@@ -371,13 +376,21 @@ class RuntimeEventDispatchPr403RecoveryContractTest(unittest.TestCase):
 
         required_boundary_text = [
             "Do not manually merge PR #403",
+            RECOVERY_PR_VIEW_COMMAND,
+            RECOVERY_PR_CHECKS_COMMAND,
+            "mergeStateStatus",
+            "reviewDecision",
+            "statusCheckRollup",
             "No-op justification:",
             "checked-out HEAD matches the live PR head",
+            "No-op",
         ]
         for expected_text in required_boundary_text:
             with self.subTest(expected_text=expected_text):
                 self.assertIn(expected_text, reference)
         self.assertIn("no pending repository changes remain", normalized_reference)
+        self.assertIn("no scoped defect is found", normalized_reference)
+        self.assertIn("GitHub checks are green for the live PR head", normalized_reference)
 
         bounded_non_claims = [
             "full UI automation",

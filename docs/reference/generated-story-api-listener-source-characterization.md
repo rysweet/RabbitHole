@@ -83,10 +83,26 @@ Do not manually merge PR #403. Finalization must stay tied to executable
 current-head evidence from the named readiness, runtime-event-dispatch,
 generated listener, and documentation-boundary checks.
 
+Refresh the live review, merge-state, and check evidence immediately before
+reporting readiness:
+
+```bash
+gh pr view 403 --json number,title,headRefName,headRefOid,mergeStateStatus,reviewDecision,statusCheckRollup
+gh pr checks 403
+```
+
+Classify the PR as merge-ready only when `headRefOid` still matches
+`EXPECTED_PR_HEAD`, `mergeStateStatus` is not blocking, `reviewDecision` is not
+blocking, and `statusCheckRollup` plus `gh pr checks 403` show that GitHub
+checks are green for the live PR head.
+
 No-op justification: when the checked-out HEAD matches the live PR head on
 branch `wave6-runtime-event-dispatch-1778302300` and no pending repository
 changes remain, no additional repository changes are required for PR #403
-recovery when the named current-head checks pass.
+recovery when the named current-head checks pass and no scoped defect is found.
+The final report must include `No-op` and tie the no-op to the live PR head,
+GitHub checks, `mergeStateStatus`, `reviewDecision`, and the bounded
+runtime-event-dispatch evidence above.
 
 ## Feature intent
 
