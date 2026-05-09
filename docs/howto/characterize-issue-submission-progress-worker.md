@@ -167,15 +167,15 @@ The evidence file should be generated or edited outside the source tree unless i
 
 | Evidence | Source command or review |
 | --- | --- |
-| Current PR head | `git --no-pager rev-parse HEAD` after fetching the PR branch. |
-| Current base | `git --no-pager rev-parse origin/develop` after fetching `origin/develop`; record this in the PR body or handoff notes. The gate does not enforce a separate base-SHA JSON field. |
-| Diff scope | `git --no-pager diff --name-only origin/develop...HEAD`; allowed files are the worker, focused test, directly related docs, the PR #428 gate/test files, and recovered-branch `pyproject.toml` metadata when that file is present in this PR diff. |
+| Current PR head | `git --no-pager rev-parse HEAD` after fetching the PR branch; record the full 40-character SHA. |
+| Current base | `git --no-pager rev-parse origin/develop` after fetching `origin/develop`; record the full 40-character SHA in `base.base_sha`, `expected_base_sha`, and the PR body. |
+| Diff scope | `git --no-pager diff --name-only origin/develop...HEAD`; allowed files are the worker, focused test, directly related docs, and the PR #428 gate/test files. |
 | Focused validation | The exact `IssueSubmissionProgressWorkerTest` Maven command and passing result from this head. |
 | Module validation | The full `core/issue-reporting` Maven command and passing result when issue-reporting production code changed. |
 | Docs impact | This reference, how-to, tutorial, index, or an explicit no-op docs assessment. |
 | Scenario applicability | A direct worker scenario result, or the non-applicable worker-seam statement below. |
 | Quality audit | At least three SEEK / VALIDATE / FIX cycles with a clean final cycle. |
-| GitHub Actions | `gh pr checks 428 --watch=false --json name,state,bucket` or equivalent check-run evidence, collected after local and remote PR heads match. The check entries do not carry a head SHA that the gate validates independently. |
+| GitHub Actions | `gh pr checks 428 --watch=false --json name,state,bucket` or equivalent check-run evidence, collected after local and remote PR heads match; include the verified current head SHA with each check entry in the evidence package. |
 | PR body | The exact PR description text that reviewers see for the current head. |
 
 Use this scenario statement when no Alice desktop scenario directly exercises bug-report submission through the worker:
@@ -192,14 +192,14 @@ Before marking a worker-seam PR ready, collect current-head evidence instead of 
 
 | Gate | What to record |
 | --- | --- |
-| Branch head | The branch name and exact `HEAD` SHA that validation used. |
-| Diff scope | `git --no-pager diff --name-status origin/develop...HEAD`; explain any file outside the worker, focused test, directly related docs, PR #428 gate/test files, and recovered-branch metadata. |
+| Branch head | The branch name and exact full 40-character `HEAD` SHA that validation used. |
+| Diff scope | `git --no-pager diff --name-status origin/develop...HEAD`; explain any file outside the worker, focused test, directly related docs, and PR #428 gate/test files. |
 | Focused validation | The exact focused Maven command and result for `IssueSubmissionProgressWorkerTest`. |
 | Module validation | The exact full `core/issue-reporting` Maven command and result when production issue-reporting code changed. |
 | Docs impact | The reference, how-to, tutorial, or index entries updated, or an explicit no-op justification if docs already matched the behavior. |
 | Scenario applicability | A direct worker scenario result, or the explicit non-applicable statement from this guide. |
 | Quality audit | At least three SEEK / VALIDATE / FIX cycles, with a clean final cycle. |
-| GitHub Actions | Completed green PR checks collected after confirming the current PR head; do not imply the gate validates a check-run SHA. |
+| GitHub Actions | Completed green PR checks collected after confirming the current PR head and recorded with that same head SHA in the evidence package. |
 | Claim boundary | A statement that the evidence is limited to the issue-reporting worker seam and does not establish rendered UI, grading, lesson completion, project archive attachment contents, or real issue-service submission. |
 
 If any gate is missing, write an explicit `NOT_MERGE_READY` blocker with the missing evidence instead of treating green CI as sufficient.

@@ -173,24 +173,24 @@ Use this checklist when preparing or reviewing a PR that only changes the issue-
 
 | Evidence | Accepted current-head evidence |
 | --- | --- |
-| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, directly related docs, the PR #428 gate/test files, and explicitly justified recovered-branch metadata. Record the `origin/develop` SHA in handoff evidence; the gate consumes the diff file list but does not enforce a separate base-SHA field. |
+| Branch scope | `git --no-pager diff --name-status origin/develop...HEAD` shows the change is limited to `IssueSubmissionProgressWorker`, its focused test, directly related docs, and the PR #428 gate/test files. Record the full 40-character `origin/develop` SHA in handoff evidence; the gate requires matching base evidence and PR-body evidence. |
 | Readiness | The focused `IssueSubmissionProgressWorkerTest` command above passes with `NODE_OPTIONS=--max-old-space-size=32768`. Run the full `core/issue-reporting` module command when handing off the PR or when any issue-reporting production code changes. |
 | Scenario applicability | Alice desktop outside-in scenarios are non-applicable unless an existing scenario directly exercises this bug-report worker seam. Do not substitute unrelated launch, Save, lesson, render, or wrapper-smoke scenarios as evidence for this worker. |
 | Review | Source review confirms `createIssueBuilder()` still delegates to `JSubmitPane.createIssueBuilder()`, the progress pane remains lazy through `getProgressPane()`, and `do_onBackgroundThread()` still publishes start, delegates submission work, then publishes completion only after a normal delegate return. |
 | Quality audit | Record at least three SEEK / VALIDATE / FIX cycles against the current head. A clean final cycle has no remaining worker, docs, scenario-applicability, diff-scope, or evidence issue requiring a fix. |
 | PR description | The PR body names the exact head validated, focused and module validation commands, docs impact, scenario applicability, diff scope, quality-audit cycles, GitHub Actions status, and bounded non-claims. |
-| Finalization | `git --no-pager status --short --branch`, `gh pr view <PR_NUMBER>`, and `gh pr checks <PR_NUMBER> --watch=false` describe the open PR state and checks without manually merging the PR. Collect check output only after verifying the local and remote PR head; `github_checks` entries do not carry an independently validated head SHA. |
+| Finalization | `git --no-pager status --short --branch`, `gh pr view <PR_NUMBER>`, and `gh pr checks <PR_NUMBER> --watch=false` describe the open PR state and checks without manually merging the PR. Collect check output only after verifying the local and remote PR head; record the verified head SHA with each `github_checks` entry. |
 | Claim boundary | Handoff notes cite only the worker seam, background ordering, attachment intent, exception propagation, source review, and Maven/PR-check evidence. They do not claim rendered UI automation, real issue-service submission, grading, or full end-to-end coverage. |
 
 ## PR #428 merge-ready gate
 
 `scripts/pr428_merge_ready_gate.py` is the executable readiness contract for the recovered PR #428 branch. It treats green GitHub checks as one input, not as the whole readiness decision. The gate is ready only when branch sync, diff scope, focused validation, docs impact, scenario applicability, quality-audit cycles, GitHub Actions, and the PR description all describe the same current PR head.
 
-The executable gate validates the PR head through `branch.local_head`, `branch.remote_head`, and `expected_head_sha` or `branch.remote_head`. It does not currently accept or enforce a separate `base_sha` or `develop_sha` field. Record the fetched `origin/develop` SHA in the PR body or handoff notes next to the `origin/develop...HEAD` diff evidence so reviewers can see which base was used.
+The executable gate validates full 40-character commit SHAs for `branch.local_head`, `branch.remote_head`, `expected_head_sha` or `branch.remote_head`, `base.base_sha`, and `expected_base_sha`. Record the fetched `origin/develop` SHA in the evidence package and PR body next to the `origin/develop...HEAD` diff evidence so reviewers can see which base was used.
 
-The current recovered PR diff includes `pyproject.toml` project-version metadata. That file is allowed by the PR #428 gate only as recovered-branch metadata; it is not part of the worker feature contract and should not be treated as product behavior. If the branch no longer changes `pyproject.toml`, omit it from `diff_files` and from the evidence narrative.
+The current recovered PR diff does not include project-version metadata. `pyproject.toml` is not part of the worker feature contract and is not allowed by the PR #428 gate for this head.
 
-GitHub check entries are normalized from `gh pr checks` or check-run JSON and must be completed with a success, neutral, or skipped conclusion. They do not include a head SHA that the gate can verify. Collect them after confirming local and remote PR heads match, and describe them in the PR body as current-head checks collected after that verification.
+GitHub check entries are normalized from `gh pr checks` or check-run JSON and must be completed with a success, neutral, or skipped conclusion. Record the verified current head SHA with each check entry before running the gate.
 
 Run it from the repository root with a JSON evidence package:
 
@@ -214,17 +214,19 @@ The evidence package is an object with these fields:
 | Field | Required shape | Accepted meaning |
 | --- | --- | --- |
 | `branch.current_ref` | String | Must be `origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa`. |
-| `branch.local_head` | String SHA | Local branch head used for validation. |
-| `branch.remote_head` | String SHA | Current remote PR branch head. Must match `local_head`. |
+| `branch.local_head` | Full 40-character SHA | Local branch head used for validation. |
+| `branch.remote_head` | Full 40-character SHA | Current remote PR branch head. Must match `local_head`. |
 | `branch.manual_merge_seen` | Boolean | Must be `false`; readiness is based on the preserved PR branch, not a manually merged replacement branch. |
-| `diff_files` | Array of repository-relative paths | Must stay within the worker, focused test, directly related docs, the PR #428 gate/test files, and recovered-branch `pyproject.toml` metadata when it is present in this PR diff. |
-| `runnable_evidence` | Array of command-result objects | Must include the focused worker Maven command, `passed: true`, and the current head SHA. Timeout wrappers are rejected. |
+| `base.base_ref` / `base.base_sha` | `origin/develop` and full 40-character SHA | Current authoritative base ref and SHA. Must match `expected_base_sha`. |
+| `expected_base_sha` | Full 40-character SHA | Expected current `origin/develop` base. |
+| `diff_files` | Array of repository-relative paths | Must stay within the worker, focused test, directly related docs, and the PR #428 gate/test files. |
+| `runnable_evidence` | Array of command-result objects | Must include the focused worker Maven command, `passed: true`, and the current full 40-character head SHA. Timeout wrappers are rejected. |
 | `docs_impact.assessed` | Boolean | Must be `true`, with changed or reviewed docs listed when applicable. |
 | `scenario_evidence` | Object | Must be a passing direct scenario or an explicit `not_applicable` reason naming the non-UI issue-reporting worker seam. |
 | `quality_audit_cycles` | Array | Must contain at least three SEEK / VALIDATE / FIX cycles and a clean final cycle. |
-| `github_checks` | Array | Every reported check must be completed and green, skipped, or neutral. The gate does not validate a check head SHA; collect these after branch/head verification. |
+| `github_checks` | Array | Every reported check must be completed and green, skipped, or neutral, with the verified current head SHA recorded on each entry. |
 | `pr_description` | String | Must include current-head evidence, base-SHA handoff evidence, focused validation, docs impact, scenario applicability, diff scope, quality audit, current GitHub Actions status, and bounded non-claims. |
-| `expected_head_sha` | Optional string SHA | Overrides the expected current head. When omitted, the gate uses `branch.remote_head`. |
+| `expected_head_sha` | Optional full 40-character SHA | Overrides the expected current head. When omitted, the gate uses `branch.remote_head`. |
 
 ### Example evidence package
 
@@ -236,6 +238,11 @@ The evidence package is an object with these fields:
     "remote_head": "<current-pr-head-sha>",
     "manual_merge_seen": false
   },
+  "base": {
+    "base_ref": "origin/develop",
+    "base_sha": "<current-develop-sha>"
+  },
+  "expected_base_sha": "<current-develop-sha>",
   "diff_files": [
     "core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java",
     "core/issue-reporting/src/test/java/org/lgna/issue/IssueSubmissionProgressWorkerTest.java",
@@ -243,7 +250,6 @@ The evidence package is an object with these fields:
     "docs/howto/characterize-issue-submission-progress-worker.md",
     "docs/tutorials/trace-issue-submission-progress-worker.md",
     "docs/index.md",
-    "pyproject.toml",
     "scripts/pr428_merge_ready_gate.py",
     "tests/test_pr428_merge_ready_gate.py"
   ],
@@ -291,10 +297,12 @@ The evidence package is an object with these fields:
     {
       "name": "build",
       "status": "COMPLETED",
-      "conclusion": "SUCCESS"
+      "conclusion": "SUCCESS",
+      "head_sha": "<current-pr-head-sha>"
     }
   ],
-  "pr_description": "Head validated: <current-pr-head-sha>\nBase validated: origin/develop at <current-develop-sha>.\nFocused validation: NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/issue-reporting -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test passed.\nDocs impact: reference, how-to, tutorial, and index reviewed.\nScenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.\nDiff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, test, and recovered-branch metadata files.\nQuality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.\nGitHub Actions: all current-head checks completed successfully after branch/head verification.\nDoes not claim full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, project archive attachment contents, real issue-service submission, or full Tweedle/player decode."
+  "pr_description": "Head validated: <current-pr-head-sha>\nBase validated: origin/develop at <current-develop-sha>.\nFocused validation: NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/issue-reporting -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest test passed.\nDocs impact: reference, how-to, tutorial, and index reviewed.\nScenario evidence: not applicable; no Alice desktop workflow impact because this is a non-UI issue-reporting worker seam.\nDiff scope checked: origin/develop...HEAD includes only allowed worker, docs, gate, and test files.\nQuality audit: three SEEK / VALIDATE / FIX cycles completed with a clean final cycle.\nGitHub Actions: all current-head checks completed successfully after branch/head verification.\nDoes not claim full UI automation, visible rendering correctness, grading, creative assessment, full lesson completion, project archive attachment contents, real issue-service submission, or full Tweedle/player decode.",
+  "expected_head_sha": "<current-pr-head-sha>"
 }
 ```
 

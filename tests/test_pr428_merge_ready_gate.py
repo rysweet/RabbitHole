@@ -4,6 +4,7 @@ import unittest
 
 REQUIRED_REMOTE_REF = "origin/feat/issue-408-rabbithole-wave7-coverage-ratchet-lane-follow-defa"
 HEAD_SHA = "2b8a961d67f2365d38b9f6ea833e700e99e351a2"
+STALE_HEAD_SHA = "ffffffffffffffffffffffffffffffffffffffff"
 BASE_SHA = "2e1e43c3937a7d163bcc76f1882903a8ad31f1cc"
 STALE_BASE_SHA = "0366dfa17f0f41e2d878c293a6c33fb1f841993a"
 FOCUSED_COMMAND = (
@@ -94,7 +95,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         )
         drifted = gate.validate_branch_sync(
             current_ref=REQUIRED_REMOTE_REF,
-            local_head="deadbeef",
+            local_head=STALE_HEAD_SHA,
             remote_head=HEAD_SHA,
             manual_merge_seen=False,
         )
@@ -104,19 +105,30 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
             remote_head=HEAD_SHA,
             manual_merge_seen=True,
         )
+        malformed = gate.validate_branch_sync(
+            current_ref=REQUIRED_REMOTE_REF,
+            local_head="deadbeef",
+            remote_head="deadbeef",
+            manual_merge_seen=False,
+        )
 
         self.assertTrue(synced.ready)
         self.assertEqual([], synced.blockers)
         self.assertBlocked(drifted, "remote head")
         self.assertBlocked(manually_merged, "manual merge")
+        self.assertBlocked(malformed, "40-character hex commit SHA")
 
     def test_diff_scope_allows_only_worker_tests_docs_and_justified_metadata(self) -> None:
         gate = gate_module()
         unrelated_files = REAL_PR_DIFF_FILES + ["core/ide/src/main/java/org/alice/ide/Unrelated.java"]
+        absolute_path = "/tmp/private-checkout/core/issue-reporting/IssueSubmissionProgressWorker.java"
 
         self.assertTrue(gate.audit_diff_scope(REAL_PR_DIFF_FILES).ready)
         self.assertBlocked(gate.audit_diff_scope(unrelated_files), "diff scope")
         self.assertBlocked(gate.audit_diff_scope(REAL_PR_DIFF_FILES + ["pyproject.toml"]), "pyproject.toml")
+        invalid_path_result = gate.audit_diff_scope([absolute_path])
+        self.assertBlocked(invalid_path_result, "repository-relative")
+        self.assertFalse(any(absolute_path in blocker for blocker in invalid_path_result.blockers))
 
     def test_complete_evidence_requires_current_develop_base_sha(self) -> None:
         gate = gate_module()
@@ -129,11 +141,17 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         missing_expected_base = {
             key: value for key, value in evidence.items() if key != "expected_base_sha"
         }
+        malformed_base = {
+            **evidence,
+            "base": {"base_ref": "origin/develop", "base_sha": "deadbeef"},
+            "expected_base_sha": "deadbeef",
+        }
 
         self.assertTrue(gate.evaluate_merge_ready(evidence).ready)
         self.assertBlocked(gate.evaluate_merge_ready(stale_base), "base")
         self.assertBlocked(gate.evaluate_merge_ready(missing_base), "base")
         self.assertBlocked(gate.evaluate_merge_ready(missing_expected_base), "expected base SHA")
+        self.assertBlocked(gate.evaluate_merge_ready(malformed_base), "40-character hex commit SHA")
 
     def test_github_actions_are_tied_to_current_pr_head(self) -> None:
         gate = gate_module()
@@ -141,17 +159,30 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         stale_check_head = {
             **evidence,
             "github_checks": [
-                {"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": "deadbeef"}
+                {"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": STALE_HEAD_SHA}
             ],
         }
         missing_check_head = {
             **evidence,
             "github_checks": [{"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS"}],
         }
+        malformed_check_head = {
+            **evidence,
+            "expected_head_sha": "deadbeef",
+            "branch": {
+                **evidence["branch"],
+                "local_head": "deadbeef",
+                "remote_head": "deadbeef",
+            },
+            "github_checks": [
+                {"name": "build", "status": "COMPLETED", "conclusion": "SUCCESS", "head_sha": "deadbeef"}
+            ],
+        }
 
         self.assertTrue(gate.evaluate_merge_ready(evidence).ready)
         self.assertBlocked(gate.evaluate_merge_ready(stale_check_head), "current head")
-        self.assertBlocked(gate.evaluate_merge_ready(missing_check_head), "current head")
+        self.assertBlocked(gate.evaluate_merge_ready(missing_check_head), "40-character hex commit SHA")
+        self.assertBlocked(gate.evaluate_merge_ready(malformed_check_head), "40-character hex commit SHA")
 
     def test_scenario_non_applicability_requires_specific_non_ui_worker_rationale(self) -> None:
         gate = gate_module()
@@ -194,7 +225,28 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                 {
                     "command": FOCUSED_COMMAND,
                     "passed": True,
+                    "head_sha": STALE_HEAD_SHA,
+                }
+            ],
+            expected_head_sha=HEAD_SHA,
+        )
+        malformed_head = gate.validate_runnable_evidence(
+            [
+                {
+                    "command": FOCUSED_COMMAND,
+                    "passed": True,
                     "head_sha": "deadbeef",
+                }
+            ],
+            expected_head_sha="deadbeef",
+        )
+        command_with_secret = "mvn 'unterminated --token=secret-value"
+        malformed_command = gate.validate_runnable_evidence(
+            [
+                {
+                    "command": command_with_secret,
+                    "passed": True,
+                    "head_sha": HEAD_SHA,
                 }
             ],
             expected_head_sha=HEAD_SHA,
@@ -203,6 +255,9 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
         self.assertTrue(focused.ready)
         self.assertBlocked(timeout_wrapped, "timeout")
         self.assertBlocked(stale_head, "current head")
+        self.assertBlocked(malformed_head, "40-character hex commit SHA")
+        self.assertBlocked(malformed_command, "not parseable")
+        self.assertFalse(any(command_with_secret in blocker for blocker in malformed_command.blockers))
 
     def test_quality_audit_requires_three_seek_validate_fix_cycles_with_clean_final_cycle(self) -> None:
         gate = gate_module()
@@ -290,7 +345,7 @@ class Pr428MergeReadyGateContractTest(unittest.TestCase):
                 expected_base_sha=BASE_SHA,
             ).ready
         )
-        self.assertBlocked(gate.validate_pr_description(body.replace(HEAD_SHA, "deadbeef"), HEAD_SHA), "head")
+        self.assertBlocked(gate.validate_pr_description(body.replace(HEAD_SHA, STALE_HEAD_SHA), HEAD_SHA), "head")
         self.assertBlocked(
             gate.validate_pr_description(
                 body.replace(BASE_SHA, STALE_BASE_SHA),

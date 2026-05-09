@@ -26,6 +26,7 @@ FOCUSED_WORKER_TEST = "org.lgna.issue.IssueSubmissionProgressWorkerTest"
 FOCUSED_MAVEN_FRAGMENT = "mvn -pl core/issue-reporting -am -DfailIfNoTests=false"
 REQUIRED_NODE_OPTIONS = "NODE_OPTIONS=--max-old-space-size=32768"
 NOT_READY_PREFIX = "NOT_MERGE_READY"
+FULL_COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
 
 ALLOWED_DIFF_FILES = {
     "core/issue-reporting/src/main/java/org/lgna/issue/IssueSubmissionProgressWorker.java",
@@ -151,8 +152,18 @@ def _clean_sha(value: object) -> str:
     return str(value or "").strip()
 
 
+def _is_full_commit_sha(value: str) -> bool:
+    return bool(FULL_COMMIT_SHA_RE.fullmatch(value))
+
+
 def _as_text(value: object) -> str:
     return str(value or "").strip()
+
+
+def _sha_format_blocker(label: str, value: str) -> str:
+    return not_ready(
+        f"{label} must be a full 40-character hex commit SHA, got {value or '<missing>'}"
+    )
 
 
 def validate_branch_sync(
@@ -172,6 +183,10 @@ def validate_branch_sync(
         blockers.append(
             not_ready(f"branch sync must use {required_ref}, got {current_ref or '<missing>'}")
         )
+    if not _is_full_commit_sha(clean_local_head):
+        blockers.append(_sha_format_blocker("local head", clean_local_head))
+    if not _is_full_commit_sha(clean_remote_head):
+        blockers.append(_sha_format_blocker("remote head", clean_remote_head))
     if not clean_local_head or clean_local_head != clean_remote_head:
         blockers.append(not_ready("local head must match the current remote head before validation"))
     if manual_merge_seen:
@@ -197,8 +212,12 @@ def validate_base_evidence(
         blockers.append(
             not_ready(f"base evidence must use {required_base_ref}, got {base_ref or '<missing>'}")
         )
+    if not _is_full_commit_sha(base_sha):
+        blockers.append(_sha_format_blocker("base evidence SHA", base_sha))
     if not expected_sha:
         blockers.append(not_ready("expected base SHA evidence is missing"))
+    elif not _is_full_commit_sha(expected_sha):
+        blockers.append(_sha_format_blocker("expected base SHA", expected_sha))
     elif base_sha != expected_sha:
         blockers.append(
             not_ready(
@@ -212,7 +231,7 @@ def validate_base_evidence(
 def _normalize_diff_path(path: str) -> str:
     normalized = PurePosixPath(path.replace("\\", "/")).as_posix()
     if normalized.startswith("../") or normalized == ".." or normalized.startswith("/"):
-        raise ValueError(f"diff path must be repository-relative: {path}")
+        raise ValueError("diff path must be repository-relative")
     return normalized
 
 
@@ -223,22 +242,27 @@ def audit_diff_scope(
     """Require the PR diff to stay within the documented worker lane."""
 
     allowed = ALLOWED_DIFF_FILES if allowed_files is None else allowed_files
+    blockers: list[str] = []
     unexpected: list[str] = []
-    for path in changed_files:
-        normalized = _normalize_diff_path(path)
+    for index, path in enumerate(changed_files, start=1):
+        try:
+            normalized = _normalize_diff_path(path)
+        except ValueError as exc:
+            blockers.append(not_ready(f"diff file #{index} is invalid: {exc}"))
+            continue
         if normalized not in allowed:
             unexpected.append(normalized)
     if unexpected:
         files = ", ".join(sorted(unexpected))
-        return blocked_result(f"diff scope includes unrelated files: {files}")
-    return ready_result()
+        blockers.append(not_ready(f"diff scope includes unrelated files: {files}"))
+    return result_from_blockers(blockers)
 
 
 def _command_tokens(command: str) -> list[str]:
     try:
         return shlex.split(command)
     except ValueError as exc:
-        raise ValueError(f"validation command is not parseable: {command}") from exc
+        raise ValueError("validation command is not parseable") from exc
 
 
 def _uses_timeout_wrapper(command: str) -> bool:
@@ -270,23 +294,34 @@ def validate_runnable_evidence(
 
     blockers: list[str] = []
     focused_seen = False
+    clean_expected_head_sha = _clean_sha(expected_head_sha)
+    expected_head_is_valid = not clean_expected_head_sha or _is_full_commit_sha(clean_expected_head_sha)
+    if clean_expected_head_sha and not expected_head_is_valid:
+        blockers.append(_sha_format_blocker("expected head SHA", clean_expected_head_sha))
     for index, entry in enumerate(evidence, start=1):
         command = _as_text(entry.get("command"))
         if not command:
             blockers.append(not_ready(f"runnable evidence #{index} is missing a command"))
             continue
-        if _uses_timeout_wrapper(command):
+        try:
+            uses_timeout_wrapper = _uses_timeout_wrapper(command)
+        except ValueError as exc:
+            blockers.append(not_ready(f"runnable evidence #{index} {exc}"))
+            uses_timeout_wrapper = False
+        if uses_timeout_wrapper:
             blockers.append(
-                not_ready(f"runnable evidence #{index} uses a timeout wrapper: {command}")
+                not_ready(f"runnable evidence #{index} uses a timeout wrapper")
             )
         if not bool(entry.get("passed")):
             blockers.append(not_ready(f"runnable evidence #{index} did not pass"))
         head_sha = _clean_sha(entry.get("head_sha"))
-        if expected_head_sha and head_sha != expected_head_sha:
+        if not _is_full_commit_sha(head_sha):
+            blockers.append(_sha_format_blocker(f"runnable evidence #{index} head SHA", head_sha))
+        if clean_expected_head_sha and expected_head_is_valid and head_sha != clean_expected_head_sha:
             blockers.append(
                 not_ready(
                     "runnable evidence must be from the current head "
-                    f"{expected_head_sha}, got {head_sha or '<missing>'}"
+                    f"{clean_expected_head_sha}, got {head_sha or '<missing>'}"
                 )
             )
         if _has_focused_worker_command(command):
@@ -422,6 +457,9 @@ def validate_github_actions(
     blockers: list[str] = []
     checks_seen = False
     clean_expected_head_sha = _clean_sha(expected_head_sha)
+    expected_head_is_valid = not clean_expected_head_sha or _is_full_commit_sha(clean_expected_head_sha)
+    if clean_expected_head_sha and not expected_head_is_valid:
+        blockers.append(_sha_format_blocker("expected head SHA", clean_expected_head_sha))
     for check in checks:
         checks_seen = True
         normalized_check = normalize_github_action_check(check)
@@ -438,7 +476,9 @@ def validate_github_actions(
                     f"{conclusion or '<missing conclusion>'}"
                 )
             )
-        if clean_expected_head_sha and head_sha != clean_expected_head_sha:
+        if clean_expected_head_sha and not _is_full_commit_sha(head_sha):
+            blockers.append(_sha_format_blocker(f"GitHub Actions check {name} head SHA", head_sha))
+        elif clean_expected_head_sha and expected_head_is_valid and head_sha != clean_expected_head_sha:
             blockers.append(
                 not_ready(
                     "GitHub Actions check evidence must be tied to the current head "
@@ -471,10 +511,14 @@ def validate_pr_description(
     blockers: list[str] = []
     body_text = body or ""
     body_lower = body_text.lower()
+    if expected_head_sha and not _is_full_commit_sha(expected_head_sha):
+        blockers.append(_sha_format_blocker("expected head SHA", expected_head_sha))
     if expected_head_sha and expected_head_sha not in body_text:
         blockers.append(
             not_ready(f"PR description must include current head {expected_head_sha}")
         )
+    if expected_base_sha and not _is_full_commit_sha(expected_base_sha):
+        blockers.append(_sha_format_blocker("expected base SHA", expected_base_sha))
     if expected_base_sha and expected_base_sha not in body_text:
         blockers.append(
             not_ready(f"PR description must include current base {expected_base_sha}")
@@ -622,7 +666,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         level=logging.INFO if args.verbose else logging.WARNING,
         format="%(levelname)s: %(message)s",
     )
-    result = evaluate_merge_ready(load_evidence(args.evidence_json))
+    try:
+        result = evaluate_merge_ready(load_evidence(args.evidence_json))
+    except json.JSONDecodeError:
+        result = blocked_result("evidence JSON is malformed")
+    except OSError:
+        result = blocked_result("evidence JSON could not be read")
+    except ValueError as exc:
+        result = blocked_result(str(exc))
     if result.ready:
         logging.info("PR #428 merge-ready gate passed")
     else:

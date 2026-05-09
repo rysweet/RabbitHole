@@ -127,14 +127,14 @@ scripts/pr428_merge_ready_gate.py
 Read the evidence checks as a checklist:
 
 ```text
-branch head matches remote PR head
-base SHA is recorded in handoff or PR-body evidence
+branch head is a full 40-character SHA and matches remote PR head
+base SHA is a full 40-character origin/develop SHA recorded in evidence and the PR body
 diff files stay inside the worker lane
 focused worker Maven command passed on this head
 docs impact was assessed
 desktop scenario evidence is direct or explicitly not applicable
 three SEEK / VALIDATE / FIX cycles are recorded
-GitHub checks collected after branch/head verification are completed and green, skipped, or neutral
+GitHub checks collected after branch/head verification are completed, green, skipped, or neutral, and tied to the same head SHA
 PR description contains the same current-head evidence and bounded non-claims
 ```
 
@@ -164,4 +164,4 @@ A blocked result starts each reason with `NOT_MERGE_READY`. For example, stale v
 }
 ```
 
-The gate validates the PR head through the branch evidence and runnable evidence. It does not validate a separate base-SHA field or a check-run head SHA, so keep those as explicit handoff notes collected after branch/head verification. Treat a blocked gate as an evidence problem to fix on the current PR branch, not as permission to widen this worker seam or recreate the PR.
+The gate validates full 40-character head and base SHAs through the branch, runnable, base, GitHub check, and PR-body evidence. Treat a blocked gate as an evidence problem to fix on the current PR branch, not as permission to widen this worker seam or recreate the PR.
