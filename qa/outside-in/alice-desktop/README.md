@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the focused launch, run/runtime, and Select Project target-discovery contract, see [Accessibility Target Discovery Silver-Thread Contract](../../../docs/reference/accessibility-target-discovery-silver-thread.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -202,6 +202,21 @@ An opened result requires `evidenceStatus=opened`, exact `Africa Full`
 `blockerDetail` fields and adds one structured `nextBlocker`; it is not a full
 Alice UI automation, visible rendering, grading, creative assessment, Save,
 first-lesson, launcher, or decoder claim.
+
+To validate the focused launch, run/runtime, and Select Project accessibility
+target discovery silver thread without launching Alice or claiming full UI
+automation:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
+```
+
+The contract checks scenario metadata, runner/probe target discovery markers,
+structured blocker fields, and bounded scope wording. It validates only the
+narrow target discovery evidence path and does not prove visual correctness,
+rendering correctness, world execution correctness, full world execution, or
+general accessibility compliance.
 
 The Gadugi exported launcher evidence scenario is a separate CLI scenario under
 `gadugi/`, not a custom Alice scenario under `scenarios/`. Validate and run it

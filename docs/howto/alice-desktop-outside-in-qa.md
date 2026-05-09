@@ -13,6 +13,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
+- [Validate accessibility target discovery](#validate-accessibility-target-discovery)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
@@ -36,6 +37,12 @@ test -d tweedle-lang/Grammar
 The real desktop launch scenarios use Xvfb when available. The post-open runtime/display accessibility scenario also requires the same AT-SPI stack used by the live Swing probes: `python3-pyatspi`, `libatk-wrapper-java`, and an AT-SPI2 accessibility bus for the current user session. Manual scenarios do not require Xvfb; they generate structured evidence checklists. Gated command smokes do not run heavy Maven or GUI commands unless `ALICE_QA_RUN_GATED_SMOKES=1` is set.
 
 No browser surface is part of this lane, so Playwright is not required. Virtual TTY tools are only useful for terminal wrappers and are not used for Swing GUI interaction.
+
+The focused accessibility target discovery silver-thread contract is a static
+executable check over checked-in QA artifacts. It does not require Xvfb or
+AT-SPI because it validates scenario metadata, runner/probe target discovery
+markers, structured blockers, and bounded scope wording rather than collecting
+fresh desktop evidence.
 
 ## Validate the scenario catalog
 
@@ -423,6 +430,36 @@ validated target, and raw RGBA values. If the sampling status is blocked, review
 `visible-rendering-pixel-sampling-blocker.json` and preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, target validation, or sampler is unavailable.
+
+## Validate accessibility target discovery
+
+Use the focused accessibility target discovery silver-thread contract when you
+need to validate the checked-in launch, run/runtime, and Select Project target
+discovery evidence without collecting fresh desktop evidence:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
+```
+
+The contract checks existing scenario metadata, runner wiring, probe field names,
+structured blockers, and bounded scope wording. It covers:
+
+| Lane | Required evidence path |
+| --- | --- |
+| Launch | Launch evidence and structured fallback markers in `launch.yaml` and runner output expectations. |
+| Run/runtime | Manual run/debug artifact names plus post-open runtime/display candidate, geometry, target-ready, and blocker markers. |
+| Select | `Africa Full` target starter observation, selection, open-attempt, opened-starter, project-open, and structured next-blocker markers. |
+
+A passing contract supports only the narrow statement that the repository has
+executable validation for accessibility target discovery signals and structured
+blockers across those lanes. It does not claim full UI automation, visual
+correctness, rendering correctness, world execution correctness, full world
+execution, or general accessibility compliance.
+
+For the complete usage, artifact API, configuration, examples, tutorial, and
+claim boundaries, see [Accessibility Target Discovery Silver-Thread
+Contract](../reference/accessibility-target-discovery-silver-thread.md).
 
 ## Prepare evidence for manual workflows
 

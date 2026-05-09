@@ -29,6 +29,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `qa/outside-in/alice-desktop/runners/run-scenario.sh` | Scenario listing, validation, real launch execution, and manual checklist generation. |
 | `qa/outside-in/alice-desktop/runners/tab-click-probe.py` | AT-SPI Select Project tab and starter selection/opening probe for the target-specific Africa Full evidence path. |
 | `qa/outside-in/alice-desktop/runners/post-project-open-probe.py` | AT-SPI post-open main-window probe gated by prior target-specific Select Project opened evidence. |
+| `qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh` | Focused executable contract that validates bounded launch, run/runtime, and Select Project accessibility target discovery evidence and structured blockers. |
 | `qa/outside-in/alice-desktop/evidence/` | Local generated evidence. Contents are ignored by Git except `.gitignore`. |
 
 ## Scenario catalog
@@ -74,6 +75,15 @@ desktop edit action; it does not perform a desktop edit, Save, rendering
 correctness check, learner assessment, creative assessment, or full first-lesson
 completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
+
+The accessibility target discovery silver-thread contract is a focused shell
+contract over existing launch, run/debug, post-open runtime/display, and Select
+Project evidence paths. It validates target discovery signals, structured
+blockers, and bounded scope wording only; it does not launch Alice, add a new
+scenario workflow, or claim full UI automation, visual correctness, rendering
+correctness, world execution correctness, full world execution, or general
+accessibility compliance. See [Accessibility Target Discovery Silver-Thread
+Contract](./accessibility-target-discovery-silver-thread.md).
 
 ## Learner-world boundary
 
@@ -576,6 +586,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
 12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
 13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-world grading, rubric scoring, correctness assessment, or creative assessment.
+14. Keeps accessibility target discovery evidence narrow: do not use launch, run/runtime, or Select Project target discovery markers to claim full UI automation, visual correctness, rendering correctness, world execution correctness, full world execution, or general accessibility compliance.
 
 ## Extension rules
 
