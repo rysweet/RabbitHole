@@ -87,15 +87,12 @@ discarded:
 | --- | --- |
 | `placement.json` | The supported object identifier is `alice-gallery://animals/bunny`. |
 | `scene.diff.json` | The scene field list includes the added bunny field after placement. |
-| `procedure-edit.json` | `input_project_artifact` is `placed-project.a3p`. |
-| `procedure-edit-command.json` | The `append-comment` command completed and increased the statement count by one. |
-| `procedure.diff.json` | The targeted scene method is present after the edit. |
-| `procedure-tab-selection.json` | The Croquet/DeclarationsEditor tab-selection helper selected `eatmeFirstLesson`. |
+| `first-lesson-code-editor-action-proof.json` | `input_project_artifact` is `placed-project.a3p`, the backing seam selected `eatmeFirstLesson`, and the marker count is target-only. |
 | `edited-project.a3p` | Reopening the archive finds the placed bunny field and the appended `Comment` statement. |
 
-`procedure-ui-action-no-go.json` is currently emitted on every successful
-procedure-edit run as the narrow blocker for the missing desktop code-editor edit
-action target. It is not evidence that a desktop UI edit action completed.
+Successful runs do not emit `procedure-ui-action-no-go.json`. The proof remains
+limited to the deterministic backing/action seam; it is not evidence that a broad
+desktop UI workflow completed.
 
 ## Claim boundaries
 

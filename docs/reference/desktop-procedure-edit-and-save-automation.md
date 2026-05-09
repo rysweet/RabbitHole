@@ -11,7 +11,7 @@ and the behavior that remains outside this slice.
 | User step | Class | What can be observed without launching the full desktop |
 | --- | --- | --- |
 | Open a procedure tab | `org.alice.ide.declarationseditor.ProcedureTabSelection` | Returns the Croquet `Operation` that selects a `UserMethod` procedure in a `DeclarationsEditorComposite`, has a guarded helper to fire it, reports the selected procedure, exposes the selected `CodeComposite`, and observes the backing `CodeEditor.getCode()` model. |
-| Run the current procedure edit implementation | `org.alice.tools.ProcedureEditCommand` | Applies the supported `append-comment` edit to the selected `UserMethod` and returns statement counts for `procedure-edit-command.json`. This is an implementation command, not a desktop code-editor command. |
+| Run the current procedure edit implementation | `org.alice.tools.EatmeEditProcedure` | Applies the supported `append-comment` edit to the selected `scene.eatmeFirstLesson` `UserMethod` and writes `first-lesson-code-editor-action-proof.json`. This is a focused backing/action proof, not broad desktop UI automation. |
 | Select a procedure tab in Alice | `org.alice.ide.declarationseditor.DeclarationTabState` | Owns the real tab-selection operation used by the desktop declarations editor. |
 | Show procedure code | `org.alice.ide.declarationseditor.CodeComposite` | Wraps the selected `UserMethod` and creates the code view when the desktop activates the tab. |
 | Save the current project | `org.alice.ide.croquet.models.projecturi.SaveProjectOperation` | Keeps the user-facing Save command, prompt rule, icon, and toolbar behavior. |

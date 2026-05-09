@@ -274,7 +274,8 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-first-lesson-next-action.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"desktop-save-menu-action-target.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"missing_evidence\""));
-    assertTrue(statusSummaryJson, statusSummaryJson.contains("\"artifact\": \"procedure-ui-action-no-go.json\""));
+    assertTrue(statusSummaryJson,
+        statusSummaryJson.contains("\"artifact\": \"first-lesson-code-editor-action-proof.json\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"source_tool\": \"tools/eatme-edit-procedure\""));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("\"evidence_present\": false"));
     assertTrue(statusSummaryJson, statusSummaryJson.contains("SaveProjectOperation invocation result"));

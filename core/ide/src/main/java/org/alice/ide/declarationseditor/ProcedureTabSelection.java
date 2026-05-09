@@ -52,12 +52,22 @@ public final class ProcedureTabSelection {
   }
 
   public static AbstractCode getSelectedCodeEditorCode(DeclarationsEditorComposite editor) {
+    CodeEditor codeEditor = getSelectedCodeEditor(editor);
+    return codeEditor != null ? codeEditor.getCode() : null;
+  }
+
+  public static String getSelectedCodeEditorBackingClassName(DeclarationsEditorComposite editor) {
+    CodeEditor codeEditor = getSelectedCodeEditor(editor);
+    return codeEditor != null ? codeEditor.getClass().getName() : null;
+  }
+
+  private static CodeEditor getSelectedCodeEditor(DeclarationsEditorComposite editor) {
     CodeComposite selectedProcedureComposite = getSelectedProcedureCodeComposite(editor);
     if (selectedProcedureComposite == null) {
       return null;
     }
     if (selectedProcedureComposite.getView().getCodePanelWithDropReceptor() instanceof CodeEditor codeEditor) {
-      return codeEditor.getCode();
+      return codeEditor;
     }
     throw new IllegalStateException(
         "selected procedure tab is not backed by a CodeEditor: " + selectedProcedureComposite.getDeclaration().getName());

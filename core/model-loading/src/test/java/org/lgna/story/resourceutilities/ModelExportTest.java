@@ -123,6 +123,14 @@ public class ModelExportTest {
   }
 
   @Test
+  public void createResourceEnumNameCombinesModelAndNonDefaultTextureNames() {
+    assertEquals(
+        "VARIANT_PROP_BLUE_STRIPE",
+        new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA).createResourceEnumName("VariantProp", "blueStripe")
+    );
+  }
+
+  @Test
   public void modelExporterHonorsForcedEnumNamesWithoutTrailingComma() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
     exporter.addResource("VariantProp", "Default", "SIMS2", null, null);

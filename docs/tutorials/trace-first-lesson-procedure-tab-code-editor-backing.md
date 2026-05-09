@@ -95,6 +95,9 @@ The final observation asks the selected tab's backing editor for its code model:
 
 ```java
 assertSame(procedure, ProcedureTabSelection.getSelectedCodeEditorCode(editor));
+assertEquals(
+    "org.alice.ide.codeeditor.CodeEditor",
+    ProcedureTabSelection.getSelectedCodeEditorBackingClassName(editor));
 ```
 
 This proves the selected procedure tab is backed by a code editor whose
@@ -117,3 +120,5 @@ For the task-oriented command, see [Run the First-Lesson Procedure Tab
 Code-Editor Backing Proof](../howto/run-first-lesson-procedure-tab-code-editor-backing.md).
 For the full contract, see the [First-Lesson Procedure Tab Code-Editor Backing
 reference](../reference/first-lesson-procedure-tab-code-editor-backing.md).
+For the action proof that builds on this backing observation, see the
+[First-Lesson Code-Editor Action Proof](../reference/first-lesson-code-editor-action-proof.md).

@@ -1924,6 +1924,69 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void decodeClassWithSimpleIfMethodCallBodyCreatesConditionalMethodInvocation() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          void run(WholeNumber n) {
+            if (n > 0) { this.helper(); }
+          }
+          void helper() { }
+        }
+        """);
+
+    UserMethod run = userMethodNamed(type, "run");
+    UserMethod helper = userMethodNamed(type, "helper");
+    assertEquals(1, run.body.getValue().statements.size());
+    assertTrue(run.body.getValue().statements.get(0) instanceof ConditionalStatement);
+    ConditionalStatement conditional = (ConditionalStatement) run.body.getValue().statements.get(0);
+    assertEquals(1, conditional.booleanExpressionBodyPairs.size());
+    BooleanExpressionBodyPair pair = conditional.booleanExpressionBodyPairs.get(0);
+    assertRelationalInfix(pair.expression.getValue(), RelationalInfixExpression.Operator.GREATER);
+    assertEquals(1, pair.body.getValue().statements.size());
+    assertTrue(pair.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) pair.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+    assertEquals(0, conditional.elseBody.getValue().statements.size());
+  }
+
+  @Test
+  public void decodeClassWithSimpleIfLogicalConditionAndMixedSupportedBodyCreatesOrderedStatements() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          WholeNumber count <- 0;
+          void run(Boolean a, Boolean b) {
+            if (a && b) { count <- 1; this.helper(); }
+          }
+          void helper() { }
+        }
+        """);
+
+    UserMethod run = userMethodNamed(type, "run");
+    UserMethod helper = userMethodNamed(type, "helper");
+    ConditionalStatement conditional = (ConditionalStatement) run.body.getValue().statements.get(0);
+    BooleanExpressionBodyPair pair = conditional.booleanExpressionBodyPairs.get(0);
+    assertConditionalInfix(pair.expression.getValue(), ConditionalInfixExpression.Operator.AND);
+    assertEquals(2, pair.body.getValue().statements.size());
+    assertTrue(pair.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement assignmentStatement = (ExpressionStatement) pair.body.getValue().statements.get(0);
+    assertTrue(assignmentStatement.expression.getValue() instanceof AssignmentExpression);
+    AssignmentExpression assignment = (AssignmentExpression) assignmentStatement.expression.getValue();
+    assertIntegerLiteral(assignment.rightHandSide.getValue(), 1);
+    assertTrue(pair.body.getValue().statements.get(1) instanceof ExpressionStatement);
+    ExpressionStatement methodStatement = (ExpressionStatement) pair.body.getValue().statements.get(1);
+    assertTrue(methodStatement.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) methodStatement.expression.getValue();
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+  }
+
+  @Test
   public void decodeClassWithLocalDeclarationInIfBodyReportsUnsupported() {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
@@ -1935,8 +1998,51 @@ public class TweedleEncoderDecoderTest {
             }
             """));
 
-    assertTrue(thrown.getMessage().contains("if/else"));
+    assertTrue(thrown.getMessage().contains("simple if"));
     assertTrue(thrown.getMessage().contains("bad"));
+  }
+
+  @Test
+  public void decodeClassWithArgumentBearingThisMethodCallInIfBodyReportsUnsupportedBoundary() {
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
+        class SyntheticType {
+          void run(Boolean flag) {
+            if (flag) { this.helper(value: 1); }
+          }
+          void helper(WholeNumber value) { }
+        }
+        """, "run.this.helper");
+  }
+
+  @Test
+  public void decodeClassWithArbitraryReceiverMethodCallInIfBodyReportsUnsupportedBoundary() {
+    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+        class SyntheticType {
+          TextString label <- "";
+          void run(Boolean flag) {
+            if (flag) { label.helper(); }
+          }
+          void helper() { }
+        }
+        """, "run.label.helper");
+  }
+
+  @Test
+  public void decodeClassWithMethodCallInIfElseBodyReportsUnsupportedBoundary() {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode("""
+            class SyntheticType {
+              WholeNumber count <- 0;
+              void run(Boolean flag) {
+                if (flag) { this.helper(); } else { count <- 0; }
+              }
+              void helper() { }
+            }
+            """));
+
+    assertTrue(thrown.getMessage().contains("if/else"));
+    assertTrue(thrown.getMessage().contains("run"));
   }
 
   @Test
@@ -1952,7 +2058,7 @@ public class TweedleEncoderDecoderTest {
             }
             """));
 
-    assertTrue(thrown.getMessage().contains("if/else"));
+    assertTrue(thrown.getMessage().contains("simple if"));
     assertTrue(thrown.getMessage().contains("bad"));
   }
 

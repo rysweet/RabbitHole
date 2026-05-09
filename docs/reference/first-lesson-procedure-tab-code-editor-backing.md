@@ -24,8 +24,8 @@ first-lesson completion proof.
 
 ## Scope
 
-This seam covers exactly one handoff after the existing
-procedure/code-editor action blocker proof:
+This seam covers exactly one backing handoff that the procedure/code-editor
+action proof builds on:
 
 ```text
 known UserMethod for scene.eatmeFirstLesson
@@ -43,7 +43,7 @@ completion.
 
 Use this seam when a review needs evidence that the procedure tab selected for
 `scene.eatmeFirstLesson` is backed by the expected in-memory code model before a
-desktop edit-action proof is attempted.
+deterministic edit/action proof is reviewed.
 
 Run the focused characterization:
 
@@ -80,6 +80,7 @@ Swing event dispatch thread, and asserts these facts:
 | Selected composite | `ProcedureTabSelection.getSelectedProcedureCodeComposite(editor)` returns the selected `CodeComposite` for that `UserMethod`. | Implemented. |
 | Composite declaration | `selectedCodeComposite.getDeclaration()` is the expected `UserMethod`. | Implemented. |
 | Code-editor code | `ProcedureTabSelection.getSelectedCodeEditorCode(editor)` returns the same expected `UserMethod` through the selected tab's backing code editor. | Implemented. |
+| Code-editor class | `ProcedureTabSelection.getSelectedCodeEditorBackingClassName(editor)` returns `org.alice.ide.codeeditor.CodeEditor`. | Implemented. |
 
 The helper may initialize the selected `CodeComposite` view to inspect the code
 editor backing. That view initialization is allowed because it observes the
@@ -154,6 +155,18 @@ procedure tab is not backed by a `CodeEditor`.
 The first-lesson backing proof asserts that this value is the same `UserMethod`
 instance as `scene.eatmeFirstLesson`.
 
+### `getSelectedCodeEditorBackingClassName(...)`
+
+```java
+public static String getSelectedCodeEditorBackingClassName(
+    DeclarationsEditorComposite editor)
+```
+
+Returns the selected procedure tab's backing code-editor class name. Returns
+`null` when the current selection is not a procedure `CodeComposite`. Throws
+`IllegalStateException` when a selected procedure tab is not backed by a
+`CodeEditor`.
+
 ## Configuration
 
 No product preference or runtime project configuration is required.
@@ -194,6 +207,9 @@ SwingUtilities.invokeAndWait(() -> {
       procedure,
       ProcedureTabSelection.getSelectedProcedureCodeComposite(editor).getDeclaration());
   assertSame(procedure, ProcedureTabSelection.getSelectedCodeEditorCode(editor));
+  assertEquals(
+      "org.alice.ide.codeeditor.CodeEditor",
+      ProcedureTabSelection.getSelectedCodeEditorBackingClassName(editor));
 });
 ```
 
@@ -227,10 +243,11 @@ This seam must not claim:
 | Select Project opens the configured starter | [Open Africa Full through Select Project with AT-SPI](./select-project-africa-full-atspi-evidence.md). |
 | Live post-open target/action readiness | [First-Lesson Live Procedure Target Action Seam](./first-lesson-live-procedure-target-observation.md). |
 | Procedure tab and code-editor backing | This reference and `ProcedureTabSelectionTest#selectProcedureLandsOnCodeEditorBackedByExpectedMethodCode`. |
+| Deterministic code-editor backing action | [First-Lesson Code-Editor Action Proof](./first-lesson-code-editor-action-proof.md). |
 | AST/project-level procedure edit | [First-Lesson Procedure/Edit Seam](./first-lesson-procedure-edit-seam.md). |
 | Save menu/dialog/write proof | [Save Menu Dialog Write Proof](./save-menu-dialog-write-proof.md) and [Robot Save Menu Dialog Write/Readback Proof](./robot-save-menu-dialog-write-readback-proof.md). |
 | Learner-world assessment boundary | [Learner-world assessment boundary](./learner-world-assessment-boundary.md). |
 
 Use the smallest owner for the claim under review. Passing this seam is a
-prerequisite-style observation for a future desktop edit-action proof, not proof
-that the edit action itself exists or completed.
+prerequisite-style observation for the deterministic action proof, not proof by
+itself that the edit action completed.

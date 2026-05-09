@@ -30,13 +30,15 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class EatmeEditProcedureTest {
+  private static final String ACTION_PROOF_ARTIFACT = "first-lesson-code-editor-action-proof.json";
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
   public void editsSceneProcedureAndWritesEatmeProofArtifacts() throws Exception {
     File projectFile = temporaryFolder.newFile("placed.a3p");
-    IoUtilities.writeProject(projectFile, projectWithScene());
+    IoUtilities.writeProject(projectFile, projectWithSceneMethod("eatmeFirstLesson"));
     Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
     ByteArrayOutputStream stdout = new ByteArrayOutputStream();
     ByteArrayOutputStream stderr = new ByteArrayOutputStream();
@@ -54,63 +56,29 @@ public class EatmeEditProcedureTest {
 
     assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
     String result = stdout.toString(StandardCharsets.UTF_8);
-    assertTrue(result, result.contains("\"schema_version\":\"eatme.alice-procedure-edit-result/v1\""));
-    assertTrue(result, result.contains("\"status\":\"edited\""));
+    assertTrue(result, result.contains(
+        "\"schema_version\":\"eatme.alice-first-lesson-code-editor-action-proof-result/v1\""));
+    assertTrue(result, result.contains("\"status\":\"proved\""));
     assertTrue(result, result.contains("\"edited_project_artifact\":\"edited-project.a3p\""));
-    assertTrue(result, result.contains("\"procedure_edit_command\":\"procedure-edit-command.json\""));
-    assertTrue(result, result.contains("\"procedure_or_code_diff\":\"procedure.diff.json\""));
-    assertTrue(result, result.contains("\"procedure_tab_selection\":\"procedure-tab-selection.json\""));
-    assertTrue(result, result.contains("\"procedure_ui_action_no_go\":\"procedure-ui-action-no-go.json\""));
-    assertTrue(Files.size(evidenceDir.resolve("procedure-edit.json")) > 0);
-    assertTrue(Files.size(evidenceDir.resolve("procedure-edit-command.json")) > 0);
-    assertTrue(Files.size(evidenceDir.resolve("procedure.diff.json")) > 0);
-    assertTrue(Files.size(evidenceDir.resolve("procedure-tab-selection.json")) > 0);
-    assertTrue(Files.size(evidenceDir.resolve("procedure-ui-action-no-go.json")) > 0);
+    assertTrue(result, result.contains("\"action_proof\":\"" + ACTION_PROOF_ARTIFACT + "\""));
+    assertNonEmptyFile(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
 
-    String tabSelection = Files.readString(evidenceDir.resolve("procedure-tab-selection.json"));
-    assertTrue(tabSelection,
-        tabSelection.contains("\"schema_version\": \"eatme.alice-procedure-tab-selection/v1\""));
-    assertTrue(tabSelection, tabSelection.contains("\"selection_mode\": \"in_editor_procedure_tab_operation\""));
-    assertTrue(tabSelection, tabSelection.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
-    assertTrue(tabSelection, tabSelection.contains("\"selected_method\": \"eatmeFirstLesson\""));
-    assertTrue(tabSelection, tabSelection.contains("\"operation_fired\": true"));
-    assertTrue(tabSelection, tabSelection.contains("desktop UI action invoked"));
-
-    String editCommand = Files.readString(evidenceDir.resolve("procedure-edit-command.json"));
-    assertTrue(editCommand,
-        editCommand.contains("\"schema_version\": \"eatme.alice-procedure-edit-command/v1\""));
-    assertTrue(editCommand, editCommand.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
-    assertTrue(editCommand, editCommand.contains("\"command\": \"append-comment\""));
-    assertTrue(editCommand, editCommand.contains("\"selected_method\": \"eatmeFirstLesson\""));
-    assertTrue(editCommand, editCommand.contains("\"completed\": true"));
-    assertTrue(editCommand, editCommand.contains("\"before_statement_count\": 0"));
-    assertTrue(editCommand, editCommand.contains("\"after_statement_count\": 1"));
-    assertTrue(editCommand, editCommand.contains("\"statement_count_delta\": 1"));
-    assertTrue(editCommand, editCommand.contains("\"doesNotClaim\""));
-    assertTrue(editCommand, editCommand.contains("desktop UI action invoked"));
-
-    String uiActionNoGo = Files.readString(evidenceDir.resolve("procedure-ui-action-no-go.json"));
-    assertTrue(uiActionNoGo,
-        uiActionNoGo.contains("\"schema_version\": \"eatme.alice-code-procedure-ui-action-no-go/v1\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"status\": \"blocked\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"source\": \"EatmeEditProcedure\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"ast_edit_artifact\": \"procedure-edit.json\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_edit_command\": \"procedure-edit-command.json\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_or_code_diff\": \"procedure.diff.json\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"procedure_tab_selection\": \"procedure-tab-selection.json\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"exact_missing_ui_edit_action_target\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("desktop code editor edit action after selecting scene.eatmeFirstLesson"));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("org.alice.ide.codeeditor.CodeEditor"));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("org.alice.ide.declarationseditor.CodeComposite"));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("org.alice.ide.declarationseditor.DeclarationsEditorComposite"));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"code_editor_action_target_not_exposed\""));
-    assertTrue(uiActionNoGo, uiActionNoGo.contains("\"append_comment_ui_invocation_not_available\""));
-    assertFalse(uiActionNoGo, uiActionNoGo.contains("\"procedure_selector_not_bound_to_ui_action\""));
-    String doesNotClaim = jsonSection(uiActionNoGo, "doesNotClaim");
-    assertTrue(doesNotClaim, doesNotClaim.contains("desktop UI action invoked"));
-    assertTrue(doesNotClaim, doesNotClaim.contains("code editor/procedure action completion"));
-    assertTrue(doesNotClaim, doesNotClaim.contains("full Alice UI automation"));
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(proof,
+        proof.contains("\"schema_version\": \"eatme.alice-first-lesson-code-editor-action-proof/v1\""));
+    assertTrue(proof, proof.contains("\"status\": \"proved\""));
+    assertTrue(proof, proof.contains("\"procedure_selector\": \"scene.eatmeFirstLesson\""));
+    assertTrue(proof, proof.contains("\"selected_declaration\": \"eatmeFirstLesson\""));
+    assertTrue(proof, proof.contains("\"code_composite_declaration\": \"eatmeFirstLesson\""));
+    assertTrue(proof, proof.contains("\"code_editor_backing\": \"org.alice.ide.codeeditor.CodeEditor\""));
+    assertTrue(proof, proof.contains("\"code_editor_code\": \"eatmeFirstLesson\""));
+    assertTrue(proof, proof.contains("\"action\": \"append-comment\""));
+    assertTrue(proof, proof.contains("\"before_statement_count\": 1"));
+    assertTrue(proof, proof.contains("\"after_statement_count\": 2"));
+    assertTrue(proof, proof.contains("\"target_marker_count\": 1"));
+    assertTrue(proof, proof.contains("\"wrong_target_marker_count\": 0"));
+    String doesNotClaim = jsonSection(proof, "doesNotClaim");
     assertTrue(doesNotClaim, doesNotClaim.contains("visible rendering correctness"));
     assertTrue(doesNotClaim, doesNotClaim.contains("first-lesson completion"));
     assertTrue(doesNotClaim, doesNotClaim.contains("grading"));
@@ -126,7 +94,7 @@ public class EatmeEditProcedureTest {
         .findFirst()
         .orElse(null);
     assertNotNull("edited project should contain the selected method", method);
-    Statement statement = method.body.getValue().statements.get(0);
+    Statement statement = method.body.getValue().statements.get(1);
     assertTrue("edit proof should be a comment statement", statement instanceof Comment);
     assertEquals("eatme edit proof", ((Comment) statement).text.getValue());
   }
@@ -134,7 +102,7 @@ public class EatmeEditProcedureTest {
   @Test
   public void chainsObjectPlacementIntoProcedureEditAndRecordsPlacedProjectHandoff() throws Exception {
     File starterProject = temporaryFolder.newFile("starter.a3p");
-    IoUtilities.writeProject(starterProject, projectWithScene());
+    IoUtilities.writeProject(starterProject, projectWithSceneMethod("eatmeFirstLesson"));
     Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
     ByteArrayOutputStream placementStdout = new ByteArrayOutputStream();
     ByteArrayOutputStream placementStderr = new ByteArrayOutputStream();
@@ -177,14 +145,12 @@ public class EatmeEditProcedureTest {
 
     assertEquals(editStderr.toString(StandardCharsets.UTF_8), 0, editStatus);
     String editResult = editStdout.toString(StandardCharsets.UTF_8);
-    assertTrue(editResult, editResult.contains("\"schema_version\":\"eatme.alice-procedure-edit-result/v1\""));
-    assertTrue(editResult, editResult.contains("\"status\":\"edited\""));
+    assertTrue(editResult, editResult.contains(
+        "\"schema_version\":\"eatme.alice-first-lesson-code-editor-action-proof-result/v1\""));
+    assertTrue(editResult, editResult.contains("\"status\":\"proved\""));
     assertNonEmptyFile(evidenceDir.resolve("edited-project.a3p"));
-    assertNonEmptyFile(evidenceDir.resolve("procedure-edit.json"));
-    assertNonEmptyFile(evidenceDir.resolve("procedure-edit-command.json"));
-    assertNonEmptyFile(evidenceDir.resolve("procedure.diff.json"));
-    assertNonEmptyFile(evidenceDir.resolve("procedure-tab-selection.json"));
-    assertNonEmptyFile(evidenceDir.resolve("procedure-ui-action-no-go.json"));
+    assertNonEmptyFile(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
 
     Project editedProject = IoUtilities.readProject(evidenceDir.resolve("edited-project.a3p").toFile());
     NamedUserType editedSceneType = sceneType(editedProject);
@@ -192,20 +158,20 @@ public class EatmeEditProcedureTest {
         findField(editedSceneType, "bunny"));
     UserMethod method = findMethod(editedSceneType, "eatmeFirstLesson");
     assertNotNull("edited project should contain the selected method", method);
-    assertEquals(1, method.body.getValue().statements.size());
-    Statement statement = method.body.getValue().statements.get(0);
+    assertEquals(2, method.body.getValue().statements.size());
+    Statement statement = method.body.getValue().statements.get(1);
     assertTrue("chained edit proof should be a comment statement", statement instanceof Comment);
     assertEquals("eatme placement to procedure proof", ((Comment) statement).text.getValue());
 
-    String editArtifact = Files.readString(evidenceDir.resolve("procedure-edit.json"));
-    assertTrue("procedure edit artifact should record the placed-project handoff",
-        editArtifact.contains("\"input_project_artifact\": \"placed-project.a3p\""));
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue("action proof artifact should record the placed-project handoff",
+        proof.contains("\"input_project_artifact\": \"placed-project.a3p\""));
   }
 
   @Test
   public void procedureEditArtifactsKeepClaimsScopedToProcedureEditSeam() throws Exception {
     File projectFile = temporaryFolder.newFile("placed.a3p");
-    IoUtilities.writeProject(projectFile, projectWithScene());
+    IoUtilities.writeProject(projectFile, projectWithSceneMethod("eatmeFirstLesson"));
     Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
 
     int status = EatmeEditProcedure.run(
@@ -220,39 +186,16 @@ public class EatmeEditProcedureTest {
         new PrintStream(new ByteArrayOutputStream()));
 
     assertEquals(0, status);
-    String tabSelection = Files.readString(evidenceDir.resolve("procedure-tab-selection.json"));
-    String editCommand = Files.readString(evidenceDir.resolve("procedure-edit-command.json"));
-    String uiActionNoGo = Files.readString(evidenceDir.resolve("procedure-ui-action-no-go.json"));
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    String doesNotClaim = jsonSection(proof, "doesNotClaim");
+    assertTrue(doesNotClaim, doesNotClaim.contains("full first-lesson completion"));
+    assertTrue(doesNotClaim, doesNotClaim.contains("visible rendering correctness"));
+    assertTrue(doesNotClaim, doesNotClaim.contains("first-lesson completion"));
+    assertTrue(doesNotClaim, doesNotClaim.contains("grading"));
+    assertTrue(doesNotClaim, doesNotClaim.contains("creative assessment"));
+    assertTrue(doesNotClaim, doesNotClaim.contains("broad UI automation"));
 
-    String tabDoesNotClaim = jsonSection(tabSelection, "doesNotClaim");
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("desktop UI action invoked"));
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("code editor/procedure action completion"));
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("full Alice UI automation"));
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("visible rendering correctness"));
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("first-lesson completion"));
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("grading"));
-    assertTrue(tabDoesNotClaim, tabDoesNotClaim.contains("creative assessment"));
-
-    String commandDoesNotClaim = jsonSection(editCommand, "doesNotClaim");
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("desktop UI action invoked"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("desktop code editor command completion"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("Save-menu completion"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("full Alice UI automation"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("visible rendering correctness"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("first-lesson completion"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("grading"));
-    assertTrue(commandDoesNotClaim, commandDoesNotClaim.contains("creative assessment"));
-
-    String uiDoesNotClaim = jsonSection(uiActionNoGo, "doesNotClaim");
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("desktop UI action invoked"));
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("code editor/procedure action completion"));
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("full Alice UI automation"));
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("visible rendering correctness"));
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("first-lesson completion"));
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("grading"));
-    assertTrue(uiDoesNotClaim, uiDoesNotClaim.contains("creative assessment"));
-
-    String scopedArtifacts = tabSelection + editCommand + uiActionNoGo;
+    String scopedArtifacts = proof;
     assertFalse(scopedArtifacts, scopedArtifacts.contains("full lesson completion"));
     assertFalse(scopedArtifacts, scopedArtifacts.contains("launcher"));
     assertFalse(scopedArtifacts, scopedArtifacts.contains("model exporter"));
@@ -289,9 +232,11 @@ public class EatmeEditProcedureTest {
         new PrintStream(new ByteArrayOutputStream()));
 
     assertEquals(0, status);
-    String diff = Files.readString(evidenceDir.resolve("procedure.diff.json"));
-    assertTrue(diff, diff.contains("\"created_method\": false"));
-    assertTrue(diff, diff.contains("\"statement_count_delta\": 1"));
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(proof, proof.contains("\"before_statement_count\": 1"));
+    assertTrue(proof, proof.contains("\"after_statement_count\": 2"));
+    assertTrue(proof, proof.contains("\"statement_count_delta\": 1"));
+    assertTrue(proof, proof.contains("\"target_marker_count\": 1"));
   }
 
   @Test
@@ -314,6 +259,7 @@ public class EatmeEditProcedureTest {
 
     assertEquals(2, status);
     assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("unsupported edit spec"));
+    assertTrue(Files.notExists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-edit.json")));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
   }
@@ -338,6 +284,7 @@ public class EatmeEditProcedureTest {
 
     assertEquals(2, status);
     assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("procedure selector must name one scene method"));
+    assertTrue(Files.notExists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-edit.json")));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
   }
@@ -362,6 +309,7 @@ public class EatmeEditProcedureTest {
 
     assertEquals(2, status);
     assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("unsupported procedure selector"));
+    assertTrue(Files.notExists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-edit.json")));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
   }
@@ -386,6 +334,7 @@ public class EatmeEditProcedureTest {
 
     assertEquals(2, status);
     assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("append-comment edit spec must include non-blank text"));
+    assertTrue(Files.notExists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-edit.json")));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
   }
@@ -408,6 +357,7 @@ public class EatmeEditProcedureTest {
 
     assertEquals(2, status);
     assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("project file does not exist"));
+    assertTrue(Files.notExists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-edit.json")));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
   }
@@ -433,6 +383,7 @@ public class EatmeEditProcedureTest {
 
     assertEquals(2, status);
     assertTrue(stderr.toString(StandardCharsets.UTF_8).contains("project does not contain a program field typed by an SScene subtype"));
+    assertTrue(Files.notExists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-edit.json")));
     assertTrue(Files.notExists(evidenceDir.resolve("procedure-ui-action-no-go.json")));
   }
