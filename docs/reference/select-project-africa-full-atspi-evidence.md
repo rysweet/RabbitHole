@@ -102,12 +102,15 @@ Use a disposable worktree for merge reproduction so the PR checkout stays review
 MERGE_WORKTREE="$(mktemp -d /tmp/pr437-merge-check.XXXXXX)"
 rmdir "$MERGE_WORKTREE"
 
-trap '(
-  cd "$MERGE_WORKTREE" && git merge --abort >/dev/null 2>&1 || true
-)
-git worktree remove --force "$MERGE_WORKTREE" >/dev/null 2>&1 || true' EXIT
-
 git worktree add --detach "$MERGE_WORKTREE" "$PR_HEAD_OID"
+trap '(
+  cd "$MERGE_WORKTREE"
+  if git rev-parse -q --verify MERGE_HEAD; then
+    git merge --abort
+  fi
+)
+git worktree remove --force "$MERGE_WORKTREE"' EXIT
+
 set +e
 (
   cd "$MERGE_WORKTREE"
