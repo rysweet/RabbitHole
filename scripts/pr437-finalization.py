@@ -13,7 +13,22 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 
-EXPECTED_PR_HEAD = "78b6f807eb4f30df4401de40a58246f499969cc3"
+def _current_repository_head() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=Path(__file__).resolve().parents[1],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        details = exc.stderr.strip() or exc.stdout.strip() or f"exit code {exc.returncode}"
+        raise RuntimeError(f"unable to determine current repository HEAD: {details}") from exc
+    return result.stdout.strip()
+
+
+EXPECTED_PR_HEAD = os.environ.get("PR437_EXPECTED_HEAD") or _current_repository_head()
 EXPECTED_REPO = "rysweet/RabbitHole"
 EXPECTED_PR_NUMBER = 437
 EXPECTED_BRANCH = "feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo"
@@ -39,6 +54,10 @@ class ExternalMetadataError(FinalizationError):
 
 class ScopeViolationError(FinalizationError):
     """Raised when Select Project evidence expands beyond the starter lane."""
+
+
+class NoOpDirtyRecoveryError(FinalizationError):
+    """Raised when dirty PR repair is incorrectly represented as no-op work."""
 
 
 @dataclass(frozen=True)
@@ -94,6 +113,22 @@ class FocusedValidation:
 class GateDecision:
     action: str
     reason: str
+
+
+@dataclass(frozen=True)
+class DirtyRecoveryPlan:
+    action: str
+    repo: str
+    pr_number: int
+    branch: str
+    base_ref: str
+    reconcile_ref: str
+    noop_allowed: bool
+    reconcile_commands: tuple[str, ...]
+    validation_commands: tuple[str, ...]
+    focused_evidence_claims: list[str]
+    changed_files: list[str]
+    blocker: str
 
 
 @dataclass(frozen=True)
@@ -277,7 +312,10 @@ class MergeReadinessEvaluator:
             return MergeReadiness(
                 merge_ready=False,
                 reason="merge-state-blocked",
-                blocker=f"mergeStateStatus is {merge_state or 'unavailable'}, not CLEAN",
+                blocker=(
+                    "merge dirtiness: "
+                    f"mergeStateStatus is {merge_state or 'unavailable'}, not CLEAN"
+                ),
                 review_state=review_state,
                 approved=approved,
                 requires_disposable_merge_check=requires_disposable,
@@ -317,6 +355,8 @@ class FocusedSelectProjectValidator:
         "Select Project visibility",
         "Starters tab activation",
         "Africa Full target selection/open attempt",
+        "Africa Full target selection evidence",
+        "Africa Full open attempt evidence",
     }
     ALLOWED_BLOCKER_PREFIX = "exact blocker:"
     FORBIDDEN_TERMS = {
@@ -355,6 +395,81 @@ class FocusedSelectProjectValidator:
             valid=True,
             accepted_claims=accepted,
             blocker="; ".join(blockers),
+        )
+
+
+class DirtyRecoveryPlanner:
+    def __init__(
+        self,
+        *,
+        repo: str,
+        pr_number: int,
+        branch: str,
+        base_ref: str,
+        node_options: str,
+    ) -> None:
+        self.repo = repo
+        self.pr_number = pr_number
+        self.branch = branch
+        self.base_ref = base_ref
+        self.node_options = node_options
+
+    def plan(
+        self,
+        *,
+        local_head: str,
+        pr_head: str,
+        readiness: MergeReadiness,
+        changed_files: Sequence[str],
+        requested_action: str = "EDIT_AND_PUSH",
+    ) -> DirtyRecoveryPlan:
+        if requested_action == "NO_OP":
+            raise NoOpDirtyRecoveryError(
+                "PR #437 dirty recovery must use edit-and-push repair evidence; no-op mode is prohibited"
+            )
+
+        blocker = ""
+        if local_head != pr_head:
+            blocker = f"head mismatch: local HEAD {local_head} does not match PR head {pr_head}"
+        elif readiness.merge_ready:
+            blocker = "PR metadata is already clean; dirty recovery planning is not required"
+        elif not readiness.requires_disposable_merge_check:
+            blocker = readiness.blocker
+
+        action = "NOT_MERGE_READY" if blocker else "EDIT_AND_PUSH"
+        reconcile_ref = f"origin/{self.base_ref}"
+        validation_commands = (
+            "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+            "qa/outside-in/alice-desktop/tests/test-select-project-proof.sh",
+            "qa/outside-in/alice-desktop/tests/test-tab-click-probe.sh",
+            "qa/outside-in/alice-desktop/tests/test-post-project-open-probe.sh",
+            "python3 -m unittest "
+            "tests/test_pr437_select_project_recovery_contract.py "
+            "tests/test_pr437_finalization_workflow.py "
+            "tests/test_pr437_noop_recovery_report_contract.py "
+            "tests/test_pr437_dirty_recovery_workflow.py",
+        )
+        return DirtyRecoveryPlan(
+            action=action,
+            repo=self.repo,
+            pr_number=self.pr_number,
+            branch=self.branch,
+            base_ref=self.base_ref,
+            reconcile_ref=reconcile_ref,
+            noop_allowed=False,
+            reconcile_commands=(
+                f"git fetch origin {self.base_ref}",
+                f"git merge --no-edit {reconcile_ref}",
+            ),
+            validation_commands=validation_commands,
+            focused_evidence_claims=[
+                "Select Project visibility",
+                "Starters tab activation",
+                "Africa Full target selection evidence",
+                "Africa Full open attempt evidence",
+            ],
+            changed_files=list(changed_files),
+            blocker=blocker,
         )
 
 
@@ -448,9 +563,13 @@ class FinalReportGenerator:
                 "Publish this summary after the commit/push.\n"
             )
         return (
-            "Report path: `BLOCKED_WITH_REASON`\n"
+            "Report path: `NOT_MERGE_READY`\n"
             f"Current branch: `{branch}`\n"
             f"Current head: `{current_head}`\n"
+            "Concrete blockers:\n"
+            f"{focused_lines}\n"
+            "Do not merge manually.\n"
+            "Do not use no-op mode.\n"
             "Finalization is blocked; do not publish a no-op or merge-ready report.\n"
         )
 

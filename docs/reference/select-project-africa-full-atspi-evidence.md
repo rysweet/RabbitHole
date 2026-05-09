@@ -26,7 +26,7 @@ The lane is intentionally narrow. It records target identification, target-speci
 
 ## PR #437 recovery contract
 
-The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. Do not merge manually. Do not use timeout wrappers. It starts from the GitHub PR head, records current GitHub merge/check/review metadata, runs a disposable local merge check only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after the head and base are verified, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker.
+The recovery lane for PR #437 is a documentation-backed finalization gate around the Select Project evidence lane. Do not merge manually. Do not use timeout wrappers. It starts from the GitHub PR head, records current GitHub merge/check/review metadata, runs a disposable local merge check only when GitHub reports `DIRTY` or mergeability metadata is unavailable/ambiguous after the head and base are verified, resolves only confirmed PR-blocking conflicts, and publishes either focused evidence or one exact blocker. When the current task is dirty repair, follow the planned [PR #437 dirty recovery reference](./pr437-dirty-recovery.md): dirty repair is `EDIT_AND_PUSH` or `BLOCKED_WITH_REASON` only, never `NO_OP`.
 
 The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR state snapshot records:
 

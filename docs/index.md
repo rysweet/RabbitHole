@@ -29,10 +29,12 @@ repository.
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
 - [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - run and review the target-specific Select Project evidence path for the committed starter project.
+- [Recover PR #437 after DIRTY merge state](./howto/recover-pr437-dirty-select-project.md) - planned dirty-repair operator flow for focused Select Project recovery, validation, edit-and-push reporting, and finalization refresh.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
 - [Learner-world assessment boundary](./reference/learner-world-assessment-boundary.md) - reference for the manual instructor/student setup/open/save evidence boundary, generated checklist wording, unsupported assessment claims, and `define-reviewed-assessment-contract` next boundary.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
+- [PR #437 dirty recovery reference](./reference/pr437-dirty-recovery.md) - planned dirty-repair mode, metadata contract, validation matrix, report shape, no-op prohibition, and push safety rules.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, claim boundaries, and world-canvas pixel target readiness contract.
 - [Visible rendering evidence nonclaim contract](./reference/visible-rendering-evidence-nonclaim-contract.md) - executable QA contract for keeping render artifacts, screenshots, generated files, and sampled pixels from becoming visible correctness claims without a separate visual-correctness observation contract.
 - [Alice Desktop Silver-Thread Status Report](./reference/silver-thread-status-report.md) - fail-closed shell QA report that aggregates bounded launch, starter change, object placement, procedure edit, run-window/render-affordance, and optional Save/reopen evidence.
