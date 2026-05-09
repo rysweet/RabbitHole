@@ -13,6 +13,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
+- [Review the desktop Run execution gap report](#review-the-desktop-run-execution-gap-report)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
 - [Choose a custom evidence directory](#choose-a-custom-evidence-directory)
@@ -376,6 +377,34 @@ Accept the run only when `status.txt` records `outcome=passed`,
 `runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, or runtime/display candidate is unavailable.
+
+## Review the desktop Run execution gap report
+
+When opt-in desktop Run evidence is enabled, the Run evidence hook writes
+`desktop-run-execution-gap-report.json` after the existing bounded Run-window
+artifacts. Review it after `desktop-run-status-summary.json`:
+
+```bash
+run_dir=target/desktop-run-evidence
+
+python3 -m json.tool "$run_dir/desktop-run-status-summary.json"
+python3 -m json.tool "$run_dir/desktop-run-execution-gap-report.json"
+```
+
+Accept the report only as a bounded evidence summary. The executable evidence
+available today is the existing Run-window evidence artifacts named in
+`executableToday.evidenceArtifacts`; the blocker to any stronger claim is the
+missing deterministic proof that the Alice world advances through full runtime
+execution rather than merely producing Run-window artifacts.
+
+The report must keep `status=blocked`, include non-empty blocker text, list the
+required Run-window artifacts, and include `doesNotClaim` entries for full world
+execution, visible rendering correctness, grading, Save completion, and full UI
+automation. If any of those fields are missing, validation fails closed and the
+report is not acceptable evidence.
+
+For the complete artifact API, configuration, examples, and review rules, see
+[Desktop Run execution gap report](../reference/desktop-run-execution-gap-report.md).
 
 ## Prepare evidence for manual workflows
 
