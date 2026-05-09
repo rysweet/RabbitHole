@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -296,6 +297,82 @@ public class SaveOperationCompletionEvidenceTest {
     assertTrue(json, json.contains("desktop Save dialog discovery artifact with target_resolved"));
     assertTrue(json, json.contains("\"desktop Save menu item was clicked\""));
     assertTrue(json, json.contains("\"saved file completed\""));
+  }
+
+  @Test
+  public void canonicalSaveCompletionEvidenceUsesSingleRenderedProofArtifactContract() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("canonical-rendered-save-proof"));
+    File savedFile = Files.writeString(testDir.resolve("robot-save-menu-proof.a3p"), "project").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(savedFile, testDir);
+
+    Path artifact = evidence.write(evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT));
+
+    assertEquals(
+        "robot-save-menu-dialog-write-readback-proof.json",
+        artifact.getFileName().toString());
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"schemaVersion\": \"eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1\""));
+    assertFalse(json, json.contains("\"schema_version\""));
+    assertTrue(json, json.contains("\"scenario\": \"alice-desktop-save-menu-dialog-write-proof\""));
+    assertTrue(json, json.contains("\"workflow\": \"save-menu-dialog-write-proof\""));
+    assertTrue(json, json.contains("\"runId\": "));
+    assertTrue(json, json.contains("\"generatedAtUtc\": "));
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"blocker\": {"));
+    assertTrue(json, json.contains("\"kind\": \"file_menu_not_showing\""));
+    assertFalse(json, json.contains("\"claim\": "));
+  }
+
+  @Test
+  public void canonicalEvidenceDerivesEarliestPreciseBlockerWhenDialogWasNeverReached() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("canonical-missing-dialog-proof"));
+    File targetFile = testDir.resolve("robot-save-menu-proof.a3p").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, testDir);
+
+    Path artifact = evidence.write(evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT));
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"blocker\": {"));
+    assertTrue(json, json.contains("\"kind\": \"file_menu_not_showing\""));
+    assertTrue(json, json.contains("\"observed\": "));
+    assertTrue(json, json.contains("\"required\": "));
+    assertTrue(json, json.contains("\"requiresNextEvidence\": ["));
+    assertFalse(json, json.contains("\"status\": \"proven\""));
+    assertFalse(json, json.contains("\"claim\": "));
+  }
+
+  @Test
+  public void canonicalEvidenceDoesNotProveWriteOnlyArtifactWithoutReadbackMarker() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("canonical-write-without-readback-proof"));
+    File savedFile = Files.writeString(testDir.resolve("write-only.a3p"), "not a readable Alice archive").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(savedFile, testDir);
+    evidence.robotFileMenuOpened = true;
+    evidence.robotSaveItemClicked = true;
+    evidence.saveActionIdentityMatched = true;
+    evidence.chooserObserved = true;
+    evidence.dialogShowing = true;
+    evidence.selectedFileVerified = true;
+    evidence.targetInsideProofRoot = true;
+    evidence.approvedSelection = true;
+    evidence.normalizedSelectedFile = savedFile.getCanonicalPath();
+
+    Path artifact = evidence.write(evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT));
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"kind\": \"readback_failed\""));
+    assertTrue(json, json.contains("\"fileWritten\": false"));
+    assertTrue(json, json.contains("\"projectReadable\": false"));
+    assertTrue(json, json.contains("\"markerPresent\": false"));
+    assertFalse(json, json.contains("\"status\": \"proven\""));
+    assertFalse(json, json.contains("\"claim\": "));
   }
 
   private static Path newTestDir() throws Exception {

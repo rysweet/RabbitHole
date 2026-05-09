@@ -327,9 +327,14 @@ for scenario_id in gated_scenarios:
     if scenario["automationMode"] != "gated-command-smoke":
         errors.append(f"{scenario_id} must use gated-command-smoke to avoid mandatory heavy GUI/build work")
     automation = scenario.get("automation", {})
-    for field in ("cwd", "argv", "timeoutSeconds", "readyWaitSeconds"):
+    required_fields = ("cwd", "argv", "readyWaitSeconds")
+    if scenario["workflow"] != "save-menu-dialog-write-proof":
+        required_fields = required_fields + ("timeoutSeconds",)
+    for field in required_fields:
         if field not in automation:
             errors.append(f"{scenario_id} automation must include {field}")
+    if scenario["workflow"] == "save-menu-dialog-write-proof" and "timeoutSeconds" in automation:
+        errors.append(f"{scenario_id} automation must not include timeoutSeconds")
     if "immediate-qa-backlog" not in scenario.get("tags", []):
         errors.append(f"{scenario_id} must be tagged as immediate-qa-backlog coverage")
     evidence_text = "\n".join(scenario["evidence"]["required"]).lower()

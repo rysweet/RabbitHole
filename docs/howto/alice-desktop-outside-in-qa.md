@@ -520,6 +520,8 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch \
   --timeout-seconds 180
 ```
 
+Do not use `--timeout-seconds`, scenario `automation.timeoutSeconds`, or shell `timeout` for the target `alice-desktop-save-menu-dialog-write-proof` workflow. That workflow is intentionally no-timeout and instead fails closed through bounded Java proof waits and the emitted Save proof evidence artifact.
+
 Gated command smokes cover exported-project, NetBeans package, package/install, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure path, future UI startup, menu/action plumbing, and wizard/palette/completion paths. Without `ALICE_QA_RUN_GATED_SMOKES=1`, those scenarios write `status.txt` with `outcome=gated-not-run` and exit non-zero so they cannot pass by accident. Use `--prepare-only` for intentional preflight/checklist preparation. Enable the gate only in a worktree prepared for the configured Maven, packaging, or display-backed command.
 
 The QA lane itself does not require Node.js. If a surrounding QA orchestrator invokes Node-based tooling around this lane, use:

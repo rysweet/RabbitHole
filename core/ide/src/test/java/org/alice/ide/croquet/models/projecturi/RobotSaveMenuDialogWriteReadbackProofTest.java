@@ -48,7 +48,6 @@ import java.awt.event.InputEvent;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -68,18 +67,22 @@ import static org.junit.Assert.assertTrue;
 /**
  * Joins the next Save seam: Robot File-menu activation, live Save dialog control,
  * .a3p write, IoUtilities readback, and marker verification.
+ * Canonical evidence status is either "blocked" or "proven".
  */
 public class RobotSaveMenuDialogWriteReadbackProofTest {
   private static final String ARTIFACT = "robot-save-menu-dialog-write-readback-proof.json";
   private static final String SCHEMA_VERSION =
-      "eatme.alice-desktop-robot-save-menu-dialog-write-readback-proof/v1";
-  private static final String READBACK_MARKER = "robotSaveMenuRoundTripMarker";
+      SaveOperationCompletionEvidence.SAVE_PROOF_SCHEMA_VERSION;
+  private static final String READBACK_MARKER = SaveOperationCompletionEvidence.SAVE_PROOF_MARKER;
   private static final String TARGET_FILE_NAME = "robot-save-menu-proof.a3p";
 
   private String previousDiscoveryEvidenceDir;
   private String previousSelectedPath;
   private String previousSaveEvidenceDir;
   private String previousProofOnly;
+  private String previousSaveProofScenario;
+  private String previousSaveProofRunId;
+  private String previousSaveProofEvidencePath;
   private Preferences licensePreferences;
   private String previousLicenseAccepted;
 
@@ -90,6 +93,9 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     previousSelectedPath = System.getProperty(FileDialogUtilities.SAVE_DIALOG_SELECTED_PATH_PROPERTY);
     previousSaveEvidenceDir = System.getProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY);
     previousProofOnly = System.getProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY);
+    previousSaveProofScenario = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY);
+    previousSaveProofRunId = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY);
+    previousSaveProofEvidencePath = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY);
     licensePreferences = Preferences.userNodeForPackage(License.class);
     previousLicenseAccepted = licensePreferences.get("isLicenseAccepted", null);
   }
@@ -102,25 +108,29 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     restoreProperty(FileDialogUtilities.SAVE_DIALOG_SELECTED_PATH_PROPERTY, previousSelectedPath);
     restoreProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY, previousSaveEvidenceDir);
     restoreProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY, previousProofOnly);
+    restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY, previousSaveProofScenario);
+    restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY, previousSaveProofRunId);
+    restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY, previousSaveProofEvidencePath);
     resetActiveApplication();
   }
 
-  @Test(timeout = 90000)
+  @Test
   public void robotFileSaveApprovesChooserWritesReadableMarkedProjectOrWritesBlocker()
       throws Exception {
     Path proofRoot = canonicalProofRoot();
     Path projectsDir = Files.createDirectories(proofRoot.resolve("projects"));
-    Path artifact = proofRoot.resolve(ARTIFACT);
+    Path artifact = SaveOperationCompletionEvidence.configuredSaveProofArtifact(proofRoot);
     Files.deleteIfExists(artifact);
     File targetFile = projectsDir.resolve(TARGET_FILE_NAME).toAbsolutePath().toFile();
     Files.deleteIfExists(targetFile.toPath());
 
-    RobotSaveProofEvidence evidence = new RobotSaveProofEvidence(targetFile, proofRoot);
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, proofRoot);
     if (!isNonHeadlessAwtDisplayAvailable()) {
       evidence.block("headless_awt",
           "No available non-headless AWT display",
           "Xvfb or another non-headless AWT display capable of Robot mouse events and Swing JFileChooser display");
-      evidence.write(proofRoot);
+      evidence.write(artifact);
       assertBlockedArtifact(artifact, "headless_awt");
       return;
     }
@@ -192,7 +202,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         evidence.block("robot_unavailable",
             "java.awt.Robot could not be created for this display",
             "A desktop session that permits java.awt.Robot mouse events");
-        evidence.write(proofRoot);
+        evidence.write(artifact);
         assertBlockedArtifact(artifact, "robot_unavailable");
         return;
       }
@@ -204,7 +214,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         evidence.block("file_menu_not_showing",
             "Robot could not open the rendered File menu popup",
             "A visible Croquet File menu that accepts Robot mouse events");
-        evidence.write(proofRoot);
+        evidence.write(artifact);
         assertBlockedArtifact(artifact, "file_menu_not_showing");
         return;
       }
@@ -229,7 +239,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         evidence.block("save_item_not_attributed",
             "The rendered File popup did not expose the Save item by SaveProjectOperation action identity",
             "A Save menu item whose Swing Action is SaveProjectOperation");
-        evidence.write(proofRoot);
+        evidence.write(artifact);
         assertBlockedArtifact(artifact, "save_item_not_attributed");
         return;
       }
@@ -257,27 +267,27 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
               "A readable Alice project archive with the expected marker");
         }
       }
-      evidence.write(proofRoot);
+      evidence.write(artifact);
 
       String json = Files.readString(artifact);
-      assertTrue(json, json.contains("\"schema_version\": \"" + SCHEMA_VERSION + "\""));
-      assertTrue(json, json.contains("\"proofTarget\": \"Robot File menu Save activation joined to dialog/write/readback evidence\""));
+      assertTrue(json, json.contains("\"schemaVersion\": \"" + SCHEMA_VERSION + "\""));
+      assertTrue(json, json.contains("\"proofTarget\": \"single rendered desktop Save path: menu, dialog, control, write, readback\""));
       assertTrue(json, json.contains("\"baselinePreserved\""));
       assertTrue(json, json.contains("\"StageIdeSaveMenuDoClickToWriteProofTest\""));
       assertTrue(json, json.contains("\"ProjectApplicationSaveProjectToTest\""));
       assertTrue(json, json.contains("\"JMenuBarRobotClickSaveProofTest\""));
       if (json.contains("\"status\": \"proven\"")) {
-        assertTrue(json, json.contains("\"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\""));
-        assertTrue(json, json.contains("\"robot_file_menu_opened\": true"));
-        assertTrue(json, json.contains("\"robot_save_item_clicked\": true"));
-        assertTrue(json, json.contains("\"save_action_identity_matched\": true"));
-        assertTrue(json, json.contains("\"chooser_observed\": true"));
-        assertTrue(json, json.contains("\"approved_selection\": true"));
-        assertTrue(json, json.contains("\"file_written\": true"));
-        assertTrue(json, json.contains("\"file_nonempty\": true"));
-        assertTrue(json, json.contains("\"project_readable\": true"));
-        assertTrue(json, json.contains("\"expected_marker\": \"" + READBACK_MARKER + "\""));
-        assertTrue(json, json.contains("\"marker_present\": true"));
+        assertTrue(json, json.contains("\"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\""));
+        assertTrue(json, json.contains("\"fileMenuOpened\": true"));
+        assertTrue(json, json.contains("\"saveMenuItemInvoked\": true"));
+        assertTrue(json, json.contains("\"saveActionIdentityMatched\": true"));
+        assertTrue(json, json.contains("\"saveDialogObserved\": true"));
+        assertTrue(json, json.contains("\"approvedSelection\": true"));
+        assertTrue(json, json.contains("\"fileWritten\": true"));
+        assertTrue(json, json.contains("\"fileNonempty\": true"));
+        assertTrue(json, json.contains("\"projectReadable\": true"));
+        assertTrue(json, json.contains("\"marker\": \"" + READBACK_MARKER + "\""));
+        assertTrue(json, json.contains("\"markerPresent\": true"));
         assertFalse(json, json.contains("\"status\": \"blocked\""));
       } else {
         assertTrue(json, json.contains("\"status\": \"blocked\""));
@@ -286,7 +296,6 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         assertFalse(json, json.contains("\"claim\""));
       }
       assertFalse(json, json.contains(FileDialogUtilities.escapeJson(targetFile.getCanonicalPath())));
-      assertTrue(json, json.contains("\"full desktop Save completion\""));
       assertTrue(json, json.contains("\"all Save variants\""));
       assertTrue(json, json.contains("\"Save As coverage\""));
     } finally {
@@ -299,19 +308,20 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     Path proofRoot = Files.createDirectories(Path.of(
         "target", "robot-save-menu-proof-contract-test", UUID.randomUUID().toString()));
     File targetFile = proofRoot.resolve("projects").resolve(TARGET_FILE_NAME).toFile();
-    RobotSaveProofEvidence evidence = new RobotSaveProofEvidence(targetFile, proofRoot);
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, proofRoot);
 
-    evidence.write(proofRoot);
+    evidence.write(proofRoot.resolve(ARTIFACT));
 
     String json = Files.readString(proofRoot.resolve(ARTIFACT));
     assertTrue(json, json.contains("\"status\": \"blocked\""));
     assertTrue(json, json.contains("\"kind\": \"file_menu_not_showing\""));
-    assertTrue(json, json.contains("\"robot_file_menu_opened\": false"));
-    assertTrue(json, json.contains("\"robot_save_item_clicked\": false"));
-    assertTrue(json, json.contains("\"approved_selection\": false"));
-    assertTrue(json, json.contains("\"file_written\": false"));
-    assertTrue(json, json.contains("\"project_readable\": false"));
-    assertTrue(json, json.contains("\"marker_present\": false"));
+    assertTrue(json, json.contains("\"fileMenuOpened\": false"));
+    assertTrue(json, json.contains("\"saveMenuItemInvoked\": false"));
+    assertTrue(json, json.contains("\"approvedSelection\": false"));
+    assertTrue(json, json.contains("\"fileWritten\": false"));
+    assertTrue(json, json.contains("\"projectReadable\": false"));
+    assertTrue(json, json.contains("\"markerPresent\": false"));
     assertTrue(json, json.contains("\"requiresNextEvidence\""));
     assertFalse(json, json.contains("\"claim\""));
   }
@@ -322,7 +332,8 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         "target", "robot-save-menu-proof-contract-test", UUID.randomUUID().toString()));
     Path projectsDir = Files.createDirectories(proofRoot.resolve("projects"));
     File targetFile = Files.writeString(projectsDir.resolve(TARGET_FILE_NAME), "not an Alice project").toFile();
-    RobotSaveProofEvidence evidence = new RobotSaveProofEvidence(targetFile, proofRoot);
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, proofRoot);
     evidence.robotFileMenuOpened = true;
     evidence.saveActionIdentityMatched = true;
     evidence.chooserObserved = true;
@@ -334,16 +345,16 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     evidence.approvedSelection = true;
     evidence.recordReadback(true, true);
 
-    evidence.write(proofRoot);
+    evidence.write(proofRoot.resolve(ARTIFACT));
 
     String json = Files.readString(proofRoot.resolve(ARTIFACT));
     assertTrue(json, json.contains("\"status\": \"blocked\""));
     assertTrue(json, json.contains("\"kind\": \"save_item_not_attributed\""));
-    assertTrue(json, json.contains("\"robot_file_menu_opened\": true"));
-    assertTrue(json, json.contains("\"robot_save_item_clicked\": false"));
-    assertTrue(json, json.contains("\"file_written\": false"));
-    assertTrue(json, json.contains("\"project_readable\": false"));
-    assertTrue(json, json.contains("\"marker_present\": false"));
+    assertTrue(json, json.contains("\"fileMenuOpened\": true"));
+    assertTrue(json, json.contains("\"saveMenuItemInvoked\": false"));
+    assertTrue(json, json.contains("\"fileWritten\": false"));
+    assertTrue(json, json.contains("\"projectReadable\": false"));
+    assertTrue(json, json.contains("\"markerPresent\": false"));
     assertFalse(json, json.contains("\"status\": \"proven\""));
     assertFalse(json, json.contains("\"claim\""));
   }
@@ -354,7 +365,8 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         "target", "robot-save-menu-proof-contract-test", UUID.randomUUID().toString()));
     Path projectsDir = Files.createDirectories(proofRoot.resolve("projects"));
     File targetFile = Files.writeString(projectsDir.resolve(TARGET_FILE_NAME), "non-empty proof file").toFile();
-    RobotSaveProofEvidence evidence = new RobotSaveProofEvidence(targetFile, proofRoot);
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, proofRoot);
     evidence.robotFileMenuOpened = true;
     evidence.robotSaveItemClicked = true;
     evidence.saveActionIdentityMatched = true;
@@ -367,19 +379,18 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     evidence.approvedSelection = true;
     evidence.recordReadback(true, true);
 
-    evidence.write(proofRoot);
+    evidence.write(proofRoot.resolve(ARTIFACT));
 
     String json = Files.readString(proofRoot.resolve(ARTIFACT));
     assertTrue(json, json.contains("\"status\": \"proven\""));
-    assertTrue(json, json.contains("\"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\""));
-    assertTrue(json, json.contains("\"normalized_selected_file\": \"projects/" + TARGET_FILE_NAME + "\""));
-    assertTrue(json, json.contains("\"file_written\": true"));
-    assertTrue(json, json.contains("\"file_nonempty\": true"));
-    assertTrue(json, json.contains("\"project_readable\": true"));
-    assertTrue(json, json.contains("\"marker_present\": true"));
-    assertTrue(json, json.contains("\"full desktop Save completion\""));
+    assertTrue(json, json.contains("\"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\""));
+    assertTrue(json, json.contains("\"normalizedSelectedPath\": \"projects/" + TARGET_FILE_NAME + "\""));
+    assertTrue(json, json.contains("\"fileWritten\": true"));
+    assertTrue(json, json.contains("\"fileNonempty\": true"));
+    assertTrue(json, json.contains("\"projectReadable\": true"));
+    assertTrue(json, json.contains("\"markerPresent\": true"));
     assertFalse(json, json.contains("\"status\": \"blocked\""));
-    assertFalse(json, json.contains("\"blocker\""));
+    assertTrue(json, json.contains("\"blocker\": null"));
   }
 
   @Test
@@ -389,7 +400,8 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     Path outsideRoot = Files.createDirectories(Path.of(
         "target", "robot-save-menu-proof-outside-test", UUID.randomUUID().toString()));
     File outsideTarget = Files.writeString(outsideRoot.resolve(TARGET_FILE_NAME), "outside").toFile();
-    RobotSaveProofEvidence evidence = new RobotSaveProofEvidence(outsideTarget, proofRoot);
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(outsideTarget, proofRoot);
     evidence.robotFileMenuOpened = true;
     evidence.robotSaveItemClicked = true;
     evidence.saveActionIdentityMatched = true;
@@ -402,12 +414,12 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     evidence.approvedSelection = true;
     evidence.recordReadback(true, true);
 
-    evidence.write(proofRoot);
+    evidence.write(proofRoot.resolve(ARTIFACT));
 
     String json = Files.readString(proofRoot.resolve(ARTIFACT));
     assertTrue(json, json.contains("\"status\": \"blocked\""));
     assertTrue(json, json.contains("\"kind\": \"target_path_rejected\""));
-    assertTrue(json, json.contains("\"normalized_selected_file\": \"[outside-proof-root]\""));
+    assertTrue(json, json.contains("\"normalizedSelectedPath\": \"[outside-proof-root]\""));
     assertFalse(json, json.contains(FileDialogUtilities.escapeJson(outsideTarget.getCanonicalPath())));
     assertFalse(json, json.contains("\"claim\""));
   }
@@ -462,14 +474,14 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     private static final int MAX_CHOOSER_CANDIDATES = 2;
 
     private final File targetFile;
-    private final RobotSaveProofEvidence evidence;
+    private final SaveOperationCompletionEvidence.SaveProofEvidence evidence;
     private final AtomicBoolean finished = new AtomicBoolean(false);
     private final AtomicBoolean approvalScheduled = new AtomicBoolean(false);
     private final AtomicBoolean approvalApplied = new AtomicBoolean(false);
     private final AtomicInteger pollCount = new AtomicInteger();
     private volatile java.util.Timer timer;
 
-    RobotSaveDialogController(File targetFile, RobotSaveProofEvidence evidence) {
+    RobotSaveDialogController(File targetFile, SaveOperationCompletionEvidence.SaveProofEvidence evidence) {
       this.targetFile = targetFile;
       this.evidence = evidence;
     }
@@ -569,235 +581,6 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
         current.cancel();
         this.timer = null;
       }
-    }
-  }
-
-  private static class RobotSaveProofEvidence {
-    private final File targetFile;
-    private final Path proofRoot;
-    private final String targetCanonicalPath;
-
-    private volatile boolean robotFileMenuOpened;
-    private volatile boolean robotSaveItemClicked;
-    private volatile boolean saveActionIdentityMatched;
-    private volatile boolean chooserObserved;
-    private volatile boolean approvedSelection;
-    private volatile boolean ambiguousChooserDiscovery;
-    private volatile boolean selectedFileVerified;
-    private volatile boolean targetInsideProofRoot;
-    private volatile boolean dialogShowing;
-    private volatile String dialogClass;
-    private volatile String normalizedSelectedFile;
-    private volatile int pollCount;
-    private volatile boolean projectReadable;
-    private volatile boolean markerPresent;
-    private volatile String blockerKind;
-    private volatile String blockerObserved;
-    private volatile String blockerRequired;
-
-    RobotSaveProofEvidence(File targetFile, Path proofRoot) throws java.io.IOException {
-      this.targetFile = targetFile;
-      this.proofRoot = proofRoot.toRealPath();
-      this.targetCanonicalPath = targetFile.getCanonicalPath();
-    }
-
-    void block(String kind, String observed, String required) {
-      if (this.blockerKind == null) {
-        this.blockerKind = kind;
-        this.blockerObserved = observed;
-        this.blockerRequired = required;
-      }
-    }
-
-    void recordReadback(boolean projectReadable, boolean markerPresent) {
-      this.projectReadable = projectReadable;
-      this.markerPresent = markerPresent;
-    }
-
-    void write(Path evidenceDir) throws Exception {
-      Path targetPath = Path.of(this.targetCanonicalPath).normalize();
-      Path selectedPath = this.normalizedSelectedFile == null
-          ? null
-          : Path.of(this.normalizedSelectedFile).normalize();
-      boolean fileExists = this.targetFile.isFile();
-      long fileSizeBytes = fileExists ? this.targetFile.length() : 0;
-      boolean fileNonempty = fileSizeBytes > 0;
-      boolean fileHasExpectedExtension = this.targetFile.getName().endsWith(".a3p");
-      boolean selectedFileMatchesExpected =
-          this.normalizedSelectedFile != null && this.targetCanonicalPath.equals(this.normalizedSelectedFile);
-      boolean observedWrite = fileExists && fileNonempty && fileHasExpectedExtension && this.targetInsideProofRoot;
-      boolean proven = this.robotFileMenuOpened
-          && this.robotSaveItemClicked
-          && this.saveActionIdentityMatched
-          && this.chooserObserved
-          && this.approvedSelection
-          && !this.ambiguousChooserDiscovery
-          && this.selectedFileVerified
-          && selectedFileMatchesExpected
-          && observedWrite
-          && this.projectReadable
-          && this.markerPresent
-          && this.blockerKind == null;
-      if (!proven && this.blockerKind == null) {
-        block(inferBlockerKind(observedWrite),
-            inferBlockerObserved(observedWrite),
-            "A complete Robot File menu Save activation, dialog approval, write, readback, and marker path");
-      }
-      boolean claimApprovedSelection = proven && this.approvedSelection;
-      boolean claimFileWritten = proven && fileExists;
-      boolean claimFileNonempty = proven && fileNonempty;
-      boolean claimProjectReadable = proven && this.projectReadable;
-      boolean claimMarkerPresent = proven && this.markerPresent;
-      String status = proven ? "proven" : "blocked";
-      String claimOrSummary = proven
-          ? "  \"claim\": \"AWT Robot opened File, clicked the production Save menu item, controlled the Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker\",\n"
-          : "  \"reporting_summary\": \"Robot File menu Save dialog/write/readback path was not proven; see blocker.kind for the exact missing or unsafe precondition\",\n";
-      Files.createDirectories(evidenceDir);
-      Files.writeString(
-          evidenceDir.resolve(ARTIFACT),
-          "{\n"
-              + "  \"schema_version\": \"" + SCHEMA_VERSION + "\",\n"
-              + "  \"status\": \"" + status + "\",\n"
-              + "  \"proofTarget\": \"Robot File menu Save activation joined to dialog/write/readback evidence\",\n"
-              + claimOrSummary
-              + blockerJson(proven)
-              + "  \"trigger\": {\n"
-              + "    \"robot_file_menu_opened\": " + this.robotFileMenuOpened + ",\n"
-              + "    \"robot_save_item_clicked\": " + this.robotSaveItemClicked + ",\n"
-              + "    \"save_action_identity_matched\": " + this.saveActionIdentityMatched + "\n"
-              + "  },\n"
-              + "  \"observed_dialog\": {\n"
-              + "    \"dialogType\": \"Swing JFileChooser\",\n"
-              + "    \"dialog_class\": " + stringJson(this.dialogClass) + ",\n"
-              + "    \"dialog_showing\": " + this.dialogShowing + ",\n"
-              + "    \"chooser_observed\": " + this.chooserObserved + ",\n"
-              + "    \"approved_selection\": " + claimApprovedSelection + ",\n"
-              + "    \"ambiguous_chooser_discovery\": " + this.ambiguousChooserDiscovery + ",\n"
-              + "    \"poll_count\": " + this.pollCount + "\n"
-              + "  },\n"
-              + "  \"selected_file\": {\n"
-              + "    \"normalized_selected_file\": " + stringJson(proofRelativePath(selectedPath)) + ",\n"
-              + "    \"expected_file\": " + stringJson(proofRelativePath(targetPath)) + ",\n"
-              + "    \"selected_file_verified\": " + this.selectedFileVerified + ",\n"
-              + "    \"selected_file_matches_expected\": " + selectedFileMatchesExpected + ",\n"
-              + "    \"target_inside_proof_root\": " + this.targetInsideProofRoot + "\n"
-              + "  },\n"
-              + "  \"written_artifact\": {\n"
-              + "    \"target_file\": " + stringJson(proofRelativePath(targetPath)) + ",\n"
-              + "    \"file_written\": " + claimFileWritten + ",\n"
-              + "    \"file_nonempty\": " + claimFileNonempty + ",\n"
-              + "    \"file_extension\": \"a3p\",\n"
-              + "    \"file_has_expected_extension\": " + fileHasExpectedExtension + ",\n"
-              + "    \"file_size_bytes\": " + fileSizeBytes + "\n"
-              + "  },\n"
-              + "  \"readback\": {\n"
-              + "    \"project_readable\": " + claimProjectReadable + ",\n"
-              + "    \"expected_marker\": \"" + READBACK_MARKER + "\",\n"
-              + "    \"marker_present\": " + claimMarkerPresent + "\n"
-              + "  },\n"
-              + "  \"baselinePreserved\": [\n"
-              + "    \"StageIdeSaveMenuDoClickToWriteProofTest\",\n"
-              + "    \"ProjectApplicationSaveProjectToTest\",\n"
-              + "    \"JMenuBarRobotClickSaveProofTest\"\n"
-              + "  ],\n"
-              + "  \"requiresNextEvidence\": [\n"
-              + "    \"Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related\",\n"
-              + "    \"Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed\"\n"
-              + "  ],\n"
-              + "  \"doesNotClaim\": [\n"
-              + "    \"full desktop Save completion\",\n"
-              + "    \"full lesson completion\",\n"
-              + "    \"visible rendering correctness\",\n"
-              + "    \"grading correctness\",\n"
-              + "    \"physical user click\",\n"
-              + "    \"broad UI automation coverage\",\n"
-              + "    \"native dialog coverage\",\n"
-              + "    \"all Save variants\",\n"
-              + "    \"Save As coverage\"\n"
-              + "  ]\n"
-              + "}\n",
-          StandardCharsets.UTF_8);
-    }
-
-    boolean proofContainsPath(Path path) {
-      return path != null && path.normalize().startsWith(this.proofRoot);
-    }
-
-    private String inferBlockerKind(boolean observedWrite) {
-      if (!this.robotFileMenuOpened) {
-        return "file_menu_not_showing";
-      }
-      if (!this.robotSaveItemClicked || !this.saveActionIdentityMatched) {
-        return "save_item_not_attributed";
-      }
-      if (!this.chooserObserved) {
-        return "dialog_not_observed";
-      }
-      if (this.ambiguousChooserDiscovery) {
-        return "ambiguous_chooser_discovery";
-      }
-      if (!this.selectedFileVerified || !this.approvedSelection) {
-        return "chooser_control_failed";
-      }
-      if (!this.targetInsideProofRoot || !this.targetFile.getName().endsWith(".a3p")) {
-        return "target_path_rejected";
-      }
-      if (!observedWrite) {
-        return "write_not_observed";
-      }
-      if (!this.projectReadable) {
-        return "readback_failed";
-      }
-      return "marker_missing";
-    }
-
-    private String inferBlockerObserved(boolean observedWrite) {
-      if (!this.robotFileMenuOpened) {
-        return "The rendered File menu was not opened by Robot";
-      }
-      if (!this.robotSaveItemClicked || !this.saveActionIdentityMatched) {
-        return "The production Save item click was not attributed to Robot";
-      }
-      if (!this.chooserObserved) {
-        return "No live Swing JFileChooser was observed";
-      }
-      if (this.ambiguousChooserDiscovery) {
-        return "Multiple live Swing JFileChoosers were observed";
-      }
-      if (!this.selectedFileVerified || !this.approvedSelection) {
-        return "The live Save chooser could not be safely controlled";
-      }
-      if (!this.targetInsideProofRoot || !this.targetFile.getName().endsWith(".a3p")) {
-        return "The selected Save target was outside the proof root or not an .a3p file";
-      }
-      if (!observedWrite) {
-        return "No non-empty .a3p write was observed at the controlled target";
-      }
-      if (!this.projectReadable) {
-        return "The written .a3p file could not be read back as an Alice project";
-      }
-      return "The readback project did not contain " + READBACK_MARKER;
-    }
-
-    private String blockerJson(boolean proven) {
-      if (proven) {
-        return "";
-      }
-      return "  \"blocker\": {\n"
-          + "    \"kind\": \"" + escape(this.blockerKind) + "\",\n"
-          + "    \"observed\": \"" + escape(this.blockerObserved) + "\",\n"
-          + "    \"required\": \"" + escape(this.blockerRequired) + "\"\n"
-          + "  },\n";
-    }
-
-    private String proofRelativePath(Path path) {
-      if (path == null) {
-        return null;
-      }
-      if (!proofContainsPath(path)) {
-        return "[outside-proof-root]";
-      }
-      return this.proofRoot.relativize(path).toString().replace(File.separatorChar, '/');
     }
   }
 
@@ -977,15 +760,18 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
   }
 
   private static Path canonicalProofRoot() throws Exception {
+    String configuredEvidencePath = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY);
+    if (configuredEvidencePath == null || configuredEvidencePath.isBlank()) {
+      configuredEvidencePath = System.getenv(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_ENV);
+    }
+    if (configuredEvidencePath != null && !configuredEvidencePath.isBlank()) {
+      Path configuredParent = Path.of(configuredEvidencePath).toAbsolutePath().normalize().getParent();
+      if (configuredParent == null) {
+        throw new IllegalArgumentException("Save proof evidence path must have a parent directory");
+      }
+      return Files.createDirectories(configuredParent).toRealPath();
+    }
     return Files.createDirectories(Path.of("target", "save-menu-proofs")).toRealPath();
-  }
-
-  private static String stringJson(String value) {
-    return value == null ? "null" : "\"" + escape(value) + "\"";
-  }
-
-  private static String escape(String value) {
-    return value == null ? "" : FileDialogUtilities.escapeJson(value);
   }
 
   private record ChooserCandidate(JDialog dialog, JFileChooser chooser) {

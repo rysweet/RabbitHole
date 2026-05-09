@@ -1,0 +1,33 @@
+{
+  "blocker": null,
+  "control": {
+    "approvedSelection": true,
+    "selectedPathSet": true
+  },
+  "dialog": {
+    "dialogShowing": true,
+    "dialogType": "Swing JFileChooser",
+    "saveDialogObserved": true
+  },
+  "generatedAtUtc": "2099-01-01T00:00:00Z",
+  "menu": {
+    "fileMenuOpened": true,
+    "saveActionIdentityMatched": true,
+    "saveMenuItemInvoked": true
+  },
+  "readback": {
+    "marker": "robotSaveMenuRoundTripMarker",
+    "markerPresent": false,
+    "projectReadable": true
+  },
+  "runId": "contract-run-1",
+  "scenario": "alice-desktop-save-menu-dialog-write-proof",
+  "schemaVersion": "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1",
+  "status": "proven",
+  "workflow": "save-menu-dialog-write-proof",
+  "write": {
+    "fileWritten": false,
+    "outputPath": "projects/robot-save-menu-proof.a3p",
+    "outputSizeBytes": 999999
+  }
+}

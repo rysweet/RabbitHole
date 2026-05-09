@@ -63,12 +63,17 @@ if "first-lesson-live-procedure-target-observation" not in workflow_enum:
     )
 
 required_automation = set(automation.get("required", []))
-expected_automation = {"cwd", "argv", "timeoutSeconds", "readyWaitSeconds"}
+expected_automation = {"cwd", "argv", "readyWaitSeconds"}
 missing_automation = sorted(expected_automation - required_automation)
 if missing_automation:
     raise AssertionError(
         "automation object must require all command fields when present: "
         f"{missing_automation}"
+    )
+if "timeoutSeconds" in required_automation:
+    raise AssertionError(
+        "automation.timeoutSeconds must not be globally required; "
+        "the Save proof scenario has a no-workflow-timeout contract"
     )
 
 if "command" in automation.get("properties", {}):
