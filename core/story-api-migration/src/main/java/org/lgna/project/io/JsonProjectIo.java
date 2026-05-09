@@ -103,6 +103,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         if (canRecoverLegacyProjectResources(manifest, decodedTypes, resources)) {
           return new Project(null, new HashSet<>(decodedTypes.types), resources, sceneCameraType(manifest));
         }
+        if (isUnsupportedLegacyProgramArchive(manifest, decodedTypes)) {
+          throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes);
+        }
         verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
       }
       verifyArchiveHasNoUnsupportedManifestTypes("Project archive", decodedTypes);
@@ -335,17 +338,35 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
         ProjectManifest manifest,
         TypeReadResult decodedTypes,
         Set<Resource> resources) {
+      return isUnsupportedLegacyProgramArchive(manifest, decodedTypes)
+          && hasExactlyOneRecoveredImageResource(resources);
+    }
+
+    private static boolean isUnsupportedLegacyProgramArchive(
+        ProjectManifest manifest,
+        TypeReadResult decodedTypes) {
       String expectedProgramName = manifestName(manifest);
       return (manifest != null)
           && (manifest.metadata != null)
           && LEGACY_PROGRAM_TYPE_NAME.equals(expectedProgramName)
           && IoUtilities.EXPORT_EXTENSION.equals(manifest.metadata.fileType)
-          && decodedTypes.hasUnsupportedTweedleDecodeFor(expectedProgramName)
-          && hasExactlyOneRecoveredImageResource(resources);
+          && decodedTypes.hasUnsupportedTweedleDecodeFor(expectedProgramName);
     }
 
     private static boolean hasExactlyOneRecoveredImageResource(Set<Resource> resources) {
       return (resources.size() == 1) && resources.stream().allMatch(ImageResource.class::isInstance);
+    }
+
+    private static IOException unsupportedLegacyJsonProjectArchive(
+        ProjectManifest manifest,
+        TypeReadResult decodedTypes) {
+      String expectedProgramName = manifestName(manifest);
+      String message = "Unsupported legacy JSON project archive for program type '" + expectedProgramName
+          + "': archive declares a legacy/player-style Program type but does not provide "
+          + "a supported project structure or the single-image legacy recovery shape"
+          + unsupportedDecodeReasonsClause(decodedTypes);
+      UnsupportedTweedleDecodeException cause = decodedTypes.unsupportedTweedleDecodeCauseFor(expectedProgramName);
+      return (cause == null) ? new IOException(message) : new IOException(message, cause);
     }
 
     private static void verifyArchiveHasExpectedType(
@@ -422,6 +443,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       private final Set<NamedUserType> types = new LinkedHashSet<>();
       private final Map<String, NamedUserType> typesByName = new HashMap<>();
       private final Map<String, String> unsupportedTweedleDecodeReasonsByTypeName = new HashMap<>();
+      private final Map<String, UnsupportedTweedleDecodeException> unsupportedTweedleDecodeCausesByTypeName = new HashMap<>();
       private boolean hasTypeReferences;
 
       private void add(NamedUserType type) {
@@ -436,9 +458,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
 
       private void addUnsupportedTweedleType(TypeReference typeReference, UnsupportedTweedleDecodeException e) {
-        unsupportedTweedleDecodeReasonsByTypeName.putIfAbsent(
-            unsupportedTweedleTypeName(typeReference),
-            unsupportedTweedleDecodeReason(e));
+        String typeName = unsupportedTweedleTypeName(typeReference);
+        unsupportedTweedleDecodeReasonsByTypeName.putIfAbsent(typeName, unsupportedTweedleDecodeReason(e));
+        unsupportedTweedleDecodeCausesByTypeName.putIfAbsent(typeName, e);
       }
 
       private static String unsupportedTweedleTypeName(TypeReference typeReference) {
@@ -453,6 +475,10 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
       private boolean hasUnsupportedTweedleDecodeFor(String name) {
         return (name != null) && unsupportedTweedleDecodeReasonsByTypeName.containsKey(name);
+      }
+
+      private UnsupportedTweedleDecodeException unsupportedTweedleDecodeCauseFor(String name) {
+        return (name == null) ? null : unsupportedTweedleDecodeCausesByTypeName.get(name);
       }
 
       private boolean hasUnsupportedTweedleTypes() {

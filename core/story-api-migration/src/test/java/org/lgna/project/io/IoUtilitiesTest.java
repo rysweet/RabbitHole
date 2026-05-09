@@ -328,7 +328,7 @@ public class IoUtilitiesTest {
       assertAudioReference(manifest, audioResource.getId(), "sound.wav", "resources/sound.wav");
       assertArrayEquals(audioBytes, readZipEntryBytes(zipFile, "resources/sound.wav"));
     }
-    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
   }
 
   @Test
@@ -852,7 +852,39 @@ public class IoUtilitiesTest {
     File exportFile = temporaryFolder.newFile("json-unsupported-super-program.a3w");
     writeJsonPlayerArchive(exportFile, "Program", "class Program extends MissingSuper {}");
 
-    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
+  }
+
+  @Test
+  public void unsupportedLegacyProgramJsonArchiveFailsClosedWithClearBoundaryMessage() throws Exception {
+    File exportFile = temporaryFolder.newFile("unsupported-legacy-program.a3w");
+    writeJsonPlayerArchive(exportFile, "Program", "class Program extends MissingSuper {}");
+
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
+  }
+
+  @Test
+  public void unsupportedLegacyProgramJsonArchiveWithAudioResourceDoesNotUseImageRecovery() throws Exception {
+    TypeReference typeReference = new TypeReference("Program", "src/Program.twe", "tweedle");
+    AudioReference audioReference = audioReference(UUID.randomUUID(), "legacy-sound.wav", 1.0);
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "Program";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    manifest.resources.add(typeReference);
+    manifest.resources.add(audioReference);
+    File exportFile = temporaryFolder.newFile("unsupported-legacy-program-audio.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class Program extends MissingSuper {}");
+      writeZipEntry(zipOutputStream, audioReference.file, new byte[] {0, 1, 2, 3});
+    }
+
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
   }
 
   @Test
@@ -1086,7 +1118,7 @@ public class IoUtilitiesTest {
       assertNotNull(zipFile.getEntry("resources/.._folder_picture.png"));
       assertNull(zipFile.getEntry("resources/../folder/picture.png"));
     }
-    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
   }
 
   @Test
@@ -1111,7 +1143,7 @@ public class IoUtilitiesTest {
       assertImageReference(manifest, unixPath.getId(), "unix-picture.png", "resources/unix-picture.png");
       assertImageReference(manifest, windowsPath.getId(), "windows-picture.png", "resources/windows-picture.png");
     }
-    assertUnsupportedProjectArchiveFailsClosed(exportFile, "Program");
+    assertUnsupportedLegacyJsonProjectArchiveFailsClosed(exportFile);
   }
 
   @Test
@@ -1431,11 +1463,10 @@ public class IoUtilitiesTest {
         TypeManifest.class);
   }
 
-  private static IOException assertUnsupportedProjectArchiveFailsClosed(File exportFile, String expectedProgramName) {
+  private static IOException assertUnsupportedLegacyJsonProjectArchiveFailsClosed(File exportFile) {
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
-    assertTrue(thrown.getMessage().contains(
-        "Project archive manifest names program type '" + expectedProgramName + "'"));
-    assertTrue(thrown.getMessage().contains("decoded type names are []"));
+    assertTrue(thrown.getMessage().contains("Unsupported legacy JSON project archive"));
+    assertTrue(thrown.getMessage().contains("Program"));
     return thrown;
   }
 
