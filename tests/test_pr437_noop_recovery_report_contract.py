@@ -8,7 +8,7 @@ HOWTO_PATH = REPO_ROOT / "docs" / "howto" / "open-africa-full-through-select-pro
 REFERENCE_PATH = REPO_ROOT / "docs" / "reference" / "select-project-africa-full-atspi-evidence.md"
 
 EXPECTED_BRANCH = "feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo"
-EXPECTED_HEAD_MARKER = "<verified headRefOid matching git rev-parse HEAD>"
+EXPECTED_HEAD = "78b6f807eb4f30df4401de40a58246f499969cc3"
 
 FOCUSED_CHECKS = [
     "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
@@ -38,7 +38,8 @@ class Pr437NoopRecoveryReportContractTest(unittest.TestCase):
             "Current head:",
             "PR metadata command:",
             "Worktree cleanliness:",
-            "Disposable merge check:",
+            "Merge-ready evidence:",
+            "Review metadata:",
             "Focused validation:",
             "Live artifact exception:",
         ]:
@@ -48,14 +49,14 @@ class Pr437NoopRecoveryReportContractTest(unittest.TestCase):
     def test_noop_justification_requires_verified_branch_and_head_match(self) -> None:
         """Unit contract: PR #437 recovery evidence is tied to the verified branch/head."""
         self.assertIn(EXPECTED_BRANCH, self.combined)
-        self.assertIn(EXPECTED_HEAD_MARKER, self.combined)
+        self.assertIn(EXPECTED_HEAD, self.combined)
         self.assertRegex(
             self.combined,
             rf"No-op justification:[\s\S]*Current branch:\s*`?{re.escape(EXPECTED_BRANCH)}`?",
         )
         self.assertRegex(
             self.combined,
-            rf"No-op justification:[\s\S]*Current head:\s*`?{re.escape(EXPECTED_HEAD_MARKER)}`?",
+            rf"No-op justification:[\s\S]*Current head:\s*`?{re.escape(EXPECTED_HEAD)}`?",
         )
 
     def test_focused_validation_command_list_includes_this_noop_contract(self) -> None:
@@ -104,7 +105,7 @@ class Pr437NoopRecoveryReportContractTest(unittest.TestCase):
                 self.assertIn(section, self.combined)
 
         self.assertIn("evidence-ready only", self.combined)
-        self.assertIn("does not authorize an agent to undraft, approve, merge, close, rebase", self.combined)
+        self.assertIn("does not authorize an agent to approve, merge, close, rebase", self.combined)
 
 
 if __name__ == "__main__":

@@ -36,22 +36,22 @@ The recovery lane is scoped to `rysweet/RabbitHole` PR #437. The required PR sta
 | `headRefName` | Branch checked out for recovery work. Do not infer this from the current local branch. |
 | `headRefOid` | Exact PR head commit. The checked-out local `git rev-parse HEAD` value must match this SHA before validation or merge checks count as PR evidence. |
 | `baseRefName` | Branch used for local merge reproduction. |
-| `isDraft` | Draft state used by the finalization gate. |
-| `mergeStateStatus` | GitHub mergeability signal. `DIRTY` is actionable until locally reproduced or disproved. |
-| `reviewDecision` | Current review decision used as finalization context only; it does not replace local readiness evidence. |
-| `statusCheckRollup` | Current GitHub check context. Passing checks do not override local merge dirtiness or missing evidence. |
+| `isDraft` | Current draft state metadata. `false` is required for the current owner-free merge-ready report, but draft state alone never proves evidence quality. |
+| `mergeStateStatus` | GitHub mergeability signal. `CLEAN` is merge-ready evidence when the current required checks are also `SUCCESS`; `DIRTY` remains actionable until locally reproduced or disproved. |
+| `reviewDecision` | Current review decision metadata. An empty value means owner-free/unset and must be reported honestly instead of being converted into approval. |
+| `statusCheckRollup` | Current GitHub check context. Required checks must be `SUCCESS` for the merge-ready report; passing checks do not override missing focused evidence or overbroad claims. |
 
-`mergeStateStatus=DIRTY` is a blocker until the exact PR head is checked out explicitly and a local merge check against the PR base lists either no unmerged files or the exact conflict files. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot alone.
+`mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is the merge-ready signal for the current PR head. `mergeStateStatus=DIRTY` is a blocker until the exact PR head is checked out explicitly and a local merge check against the PR base lists either no unmerged files or the exact conflict files. The recovery lane must not mark the PR ready from a `develop` checkout, a stale local branch, a branch name match without SHA confirmation, or a GitHub metadata snapshot that is not tied to the local `HEAD`.
 
-Passing recovery gates makes PR #437 evidence-ready only. It does not authorize an agent to undraft, approve, merge, close, rebase, push unrelated changes, or otherwise mutate the PR.
+Passing recovery gates makes PR #437 evidence-ready only. It does not authorize an agent to approve, merge, close, rebase, push unrelated changes, or otherwise mutate the PR.
 
-The PR-specific recovery wording is current only while PR #437 remains open/draft at the verified `headRefOid`. After the PR is finalized, the durable Select Project evidence lane remains authoritative, and PR #437 recovery wording should be treated as historical or retired from active instructions.
+The PR-specific recovery wording is current only while PR #437 remains open at the verified `headRefOid`. For the owner-free finalization path, `reviewDecision` can be unset while merge readiness still holds when the repository policy allows merge, `mergeStateStatus=CLEAN`, and every required check succeeds.
 
 ### External service boundary
 
 No Alice runtime API client or service adapter is required for this Select Project lane. The only external service dependency in PR #437 recovery is GitHub metadata and checkout access through the `gh` CLI and `git fetch`; treat those commands as the operator-facing service adapter.
 
-Read-only GitHub metadata and fetch calls may be retried for transient GitHub CLI authentication, network connectivity, or rate limiting failures. Do not silently substitute cached, historical, or manually typed PR metadata after the final retry fails. Record the failure as the current `environment dependency` blocker, naming the unavailable dependency and leaving the PR draft.
+Read-only GitHub metadata and fetch calls may be retried for transient GitHub CLI authentication, network connectivity, or rate limiting failures. Do not silently substitute cached, historical, or manually typed PR metadata after the final retry fails. Record the failure as the current `environment dependency` blocker, naming the unavailable dependency.
 
 Do not use gh auth status --show-token, print tokens, or include authentication output in evidence. Record only the command shape, exit status, PR fields, and non-secret error category needed to explain the blocker.
 
@@ -155,9 +155,10 @@ Use a no-op justification only when all of these conditions are true:
 
 | Condition | Required evidence |
 | --- | --- |
-| Exact PR head | `gh pr view` reports `headRefOid`, and local `git rev-parse HEAD` matches it. |
+| Exact PR head | `gh pr view` reports `headRefOid=78b6f807eb4f30df4401de40a58246f499969cc3`, and local `git rev-parse HEAD` matches it. |
 | Clean worktree | `git status --short --branch` has no uncommitted repository changes unrelated to the no-op report. |
-| Merge readiness | The disposable merge check has no unmerged files, or the report names one `merge dirtiness` blocker instead of claiming readiness. |
+| Merge readiness | GitHub reports `mergeStateStatus=CLEAN`, and every required status check in `statusCheckRollup` has `status=COMPLETED` and `conclusion=SUCCESS`; if GitHub reports `DIRTY`, the report names one `merge dirtiness` blocker instead of claiming readiness. |
+| Review metadata | `reviewDecision` is recorded exactly. Empty review decision is reported as owner-free/unset and is not described as approval. |
 | Focused validation | The Select Project scenario/schema/probe checks in [Focused commands](#focused-commands) pass, or the report names `failing validation`. |
 | Evidence boundary | The report separates verified evidence from unverified assumptions and makes no full UI automation, rendering, Save, grading, creative-assessment, or lesson-completion claim. |
 
@@ -170,10 +171,11 @@ For PR #437, use this report shape only after the executable checks prove the re
 ```markdown
 No-op justification:
 - Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
-- Current head: `<verified headRefOid matching git rev-parse HEAD>`
+- Current head: `78b6f807eb4f30df4401de40a58246f499969cc3`
 - PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
 - Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
-- Disposable merge check: detached worktree merge against the verified PR base completed with no unmerged files, or the report names `merge dirtiness` instead of claiming readiness.
+- Merge-ready evidence: `mergeStateStatus=CLEAN`, every required check in `statusCheckRollup` completed with `SUCCESS`, and branch refs point at the verified head.
+- Review metadata: `reviewDecision` is empty/owner-free; report it as unset and do not claim approval.
 - Focused validation: `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`, schema/scenario/proof/probe contracts, `tests/test_pr437_select_project_recovery_contract.py`, and `tests/test_pr437_noop_recovery_report_contract.py` passed at this head.
 - Live artifact exception: no new AT-SPI evidence directory was required because this recovery verified existing documentation/contracts and does not claim live Select Project success.
 ```
@@ -477,18 +479,20 @@ Do not publish full Alice UI automation, Save proof, visible rendering correctne
 
 ## PR finalization gate
 
-PR #437 remains draft unless all finalization conditions are true:
+PR #437 is merge-ready for the owner-free finalization report when all finalization conditions are true. The earlier draft-only gate (`PR #437 remains draft unless all finalization conditions are true`) is no longer the current-head contract because `isDraft=false` is metadata, not the remaining blocker.
 
 | Gate | Ready condition |
 | --- | --- |
 | PR head checked out | `gh pr checkout 437 --repo rysweet/RabbitHole` or an equivalent explicit checkout is the active branch, and local `git rev-parse HEAD` matches the recorded `headRefOid`. |
-| Local merge state | The local merge check against the recorded base has no unmerged files. |
+| GitHub merge state | `mergeStateStatus=CLEAN` for the verified `headRefOid`. |
+| Required checks | Every required check in `statusCheckRollup` is completed with `SUCCESS`. |
+| Review metadata | Empty `reviewDecision` is reported as owner-free/unset. It is not approval, and it does not block merge readiness when repository policy and checks allow merge. |
 | Conflict scope | Any resolved conflicts are limited to PR-blocking files and preserve Alice/RabbitHole baseline behavior unless a tested change is documented. |
 | Focused validation | Select Project scenario/schema/probe contract checks pass. |
 | Evidence truthfulness | Published evidence names only commands and artifacts actually produced in the recovery run. |
 | Claim boundary | The report separates verified evidence from unverified assumptions and does not imply full UI automation. |
 
-When any gate fails, the PR stays draft and the recovery report publishes one current blocker from the blocker taxonomy. Passing GitHub checks are useful context, but they do not make a dirty, under-evidenced, or overclaiming PR ready for review. Even when every gate passes, the documented result is evidence-ready only; it does not authorize an agent to undraft, approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.
+When any gate fails, the recovery report publishes one current blocker from the blocker taxonomy. Passing GitHub checks are merge-ready evidence only when they are tied to the verified head and clean merge state; they do not make an under-evidenced or overclaiming PR ready. Even when every gate passes, the documented result is evidence-ready only; it does not authorize an agent to approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.
 
 ## Verified evidence report shape
 

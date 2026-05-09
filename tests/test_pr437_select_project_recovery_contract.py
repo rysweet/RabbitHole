@@ -215,13 +215,19 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("Do not publish multiple blockers as a grab bag", reference)
         self.assertIn("Use `Current blocker: None` only when every PR finalization gate passes", howto)
 
-    def test_pr_finalization_gate_keeps_draft_until_merge_validation_evidence_and_claims_are_clean(self) -> None:
+    def test_pr_finalization_gate_reports_owner_free_clean_green_merge_readiness(self) -> None:
         text = self.reference
 
-        self.assertIn("PR #437 remains draft unless all finalization conditions are true", text)
+        self.assertIn("PR #437 is merge-ready for the owner-free finalization report", text)
+        self.assertIn("reviewDecision", text)
+        self.assertIn("owner-free/unset", text)
+        self.assertIn("mergeStateStatus=CLEAN", text)
+        self.assertIn("SUCCESS", text)
         for ready_gate in [
             "PR head checked out",
-            "Local merge state",
+            "GitHub merge state",
+            "Required checks",
+            "Review metadata",
             "Conflict scope",
             "Focused validation",
             "Evidence truthfulness",
@@ -229,8 +235,8 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         ]:
             with self.subTest(ready_gate=ready_gate):
                 self.assertIn(ready_gate, text)
-        self.assertIn("Passing GitHub checks are useful context", text)
-        self.assertIn("they do not make a dirty, under-evidenced, or overclaiming PR ready for review", text)
+        self.assertIn("Passing GitHub checks are merge-ready evidence", text)
+        self.assertIn("they do not make an under-evidenced or overclaiming PR ready", text)
 
     def test_environment_dependency_blocker_cannot_be_reported_as_live_ui_proof(self) -> None:
         text = self.reference
