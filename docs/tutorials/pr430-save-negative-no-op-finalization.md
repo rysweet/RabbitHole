@@ -8,6 +8,10 @@ evidence into one bounded no-op decision.
 The tutorial does not teach Save implementation work. It keeps the claim limited
 to invalid Save proof artifacts failing closed.
 
+Steps 1 through 3 are manual preflight checks. The gate in step 5 evaluates the
+evidence JSON and refreshed GitHub PR diff/check/description data; it does not
+read local `HEAD`, run `git status`, or verify the PR draft/merge state.
+
 ## 1. Start from the PR head
 
 Fetch the PR head and compare it to the current checkout:
@@ -63,8 +67,10 @@ python3 scripts/pr430_merge_ready_gate.py --evidence pr430-evidence.json --refre
 ```
 
 A clean no-op finalization returns `MERGE_READY`, an empty `blockers` array, and
-an empty `files_modified` array. If `files_modified` is non-empty, the result may
-still be merge-ready, but it is not a no-op.
+an empty `files_modified` array with `no_op_justification`. If `files_modified`
+is non-empty, the result may still be merge-ready, but it is not a no-op. The
+`files_modified` value comes from the evidence document, not from local
+`git status`.
 
 ## 6. Write the final no-op result
 

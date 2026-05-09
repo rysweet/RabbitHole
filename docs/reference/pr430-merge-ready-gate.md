@@ -1,9 +1,14 @@
 # PR #430 Merge-Ready Gate
 
-This reference documents the merge-readiness gate for RabbitHole PR #430. The
-gate evaluates PR #430 without merging it and returns merge-ready only when the
-checked-out head, GitHub PR state, GitHub checks, focused QA evidence, and
-bounded documentation claims all agree.
+This reference documents the merge-readiness evidence gate for RabbitHole PR
+#430. The gate evaluates a supplied evidence JSON document without merging it
+and, when requested, refreshes read-only GitHub evidence for the PR head, PR diff
+paths, check status, and PR description.
+
+The gate is not a complete local finalization command. It does not inspect the
+checked-out `HEAD`, run `git status`, or verify that PR #430 is open, non-draft,
+and merge-clean. Those checks are manual preflight requirements in
+[Finalize PR #430 Recovery](../howto/finalize-pr430-recovery.md).
 
 The gate is intentionally narrow. It protects the Save menu dialog negative
 artifact contract: invalid Save proof artifacts must fail closed with explicit
@@ -43,21 +48,24 @@ feat/issue-407-rabbithole-wave7-save-negative-contract-lane-follo
 
 The evidence must prove all of the following:
 
-1. The evaluated local head SHA exactly matches the current PR `headRefOid`.
-2. PR #430 is open, non-draft, and has a clean merge state.
+1. The evidence targets PR #430 and the authoritative PR branch.
+2. The evidence `evaluated_head_sha` matches the current remote PR `headRefOid`.
 3. Manual merge evidence is absent.
-4. The working tree is clean or contains only intentional PR #430 recovery changes.
-5. Changed files stay inside the focused Save negative artifact contract surface.
-6. GitHub checks for the current PR head are complete and green.
-7. Focused runnable QA evidence is current for the evaluated head.
-8. Documentation impact is assessed and claim wording stays bounded.
-9. The PR description cites current-head evidence, docs impact, quality-audit cycles, green checks, and non-claims.
-10. No owner handoff, ambiguous blocker, or pending workflow exit remains.
+4. The GitHub PR diff paths stay inside the focused Save negative artifact contract surface.
+5. GitHub checks for the current PR head are complete and green.
+6. Focused runnable QA evidence is represented in the evidence JSON for the evaluated head.
+7. Documentation impact is assessed and claim wording stays bounded.
+8. The PR description cites current-head evidence, docs impact, quality-audit cycles, green checks, and non-claims.
+9. Workflow evidence has `NO_OP_GUARD` classification, no timeout wrappers were used, and the required audit/description evidence has no unresolved blocker.
+
+`evaluated_head_sha` is evidence supplied to the gate or refreshed from GitHub.
+The gate compares that value to the remote PR head; it does not independently
+read local `HEAD`.
 
 ## Focused diff scope
 
-The gate accepts only repo-relative, normalized paths inside the PR #430 recovery
-surface:
+The gate accepts only repo-relative, normalized PR diff paths inside the PR #430
+recovery surface:
 
 | Path | Accepted purpose |
 | --- | --- |
@@ -73,6 +81,10 @@ surface:
 
 Absolute paths, parent-directory traversal, empty path segments, Windows
 separators, NUL bytes, and paths outside this list fail the scope gate.
+
+When `--refresh-github` is used, `diff.changed_files` is populated from the
+GitHub PR diff (`gh pr view --json files`). It is not local working-tree state.
+Use `git status --short` outside the gate to confirm local cleanliness.
 
 ## Required focused QA
 
@@ -90,9 +102,9 @@ not positive Save write/readback evidence.
 
 ## GitHub checks
 
-GitHub check evidence is current only when it is tied to the PR `headRefOid` that
-matches the evaluated local head. Each check must be complete with one of these
-accepted conclusions:
+GitHub check evidence is current only when its `head_sha` matches the current
+remote PR head recorded in evidence. Each check must be complete with one of
+these accepted conclusions:
 
 ```text
 success
@@ -105,12 +117,14 @@ or stale checks block merge readiness.
 
 ## No-op contract
 
-When no code or documentation changes are required, a no-op result is valid only
-when the evidence includes an explicit accepted justification. The justification
-must mention both the current remote PR head and the merge-ready gates.
+When no code or documentation changes are required, a gate-level no-op result is
+valid only when the evidence includes an explicit accepted justification. The
+justification must mention both the current remote PR head and the merge-ready
+gates.
 
-Use this form for the final response after the gate returns `MERGE_READY`, the
-working tree is clean, and no push is required:
+Use this form for the final response only after the manual preflight confirms
+local `HEAD`, working-tree cleanliness, and PR open/non-draft/clean state, and
+after the gate returns `MERGE_READY`:
 
 ```text
 No-op: local HEAD matches the current PR #430 head, the working tree is clean,
@@ -119,10 +133,9 @@ artifact evidence shows invalid Save proof artifacts fail closed. No code,
 documentation, test, or push changes are required.
 ```
 
-Do not use the no-op form when evidence is stale, checks are pending, the local
-head differs from the PR head, the working tree contains unrelated changes, or
-the Save negative evidence is missing or broader than invalid artifact
-rejection.
+Do not use the no-op form when evidence is stale, checks are pending, the manual
+preflight fails, or the Save negative evidence is missing or broader than invalid
+artifact rejection.
 
 ## Output API
 
@@ -174,15 +187,11 @@ current PR, changed-file, check, and PR-description fields from GitHub.
     "branch": "feat/issue-407-rabbithole-wave7-save-negative-contract-lane-follo",
     "remote_head_sha": "0123456789abcdef0123456789abcdef01234567",
     "evaluated_head_sha": "0123456789abcdef0123456789abcdef01234567",
-    "state": "OPEN",
-    "is_draft": false,
-    "merge_state_status": "CLEAN",
     "manual_merge": false
   },
   "workflow": {
     "owner_exit_classification": "NO_OP_GUARD",
-    "no_timeout_wrappers": true,
-    "owner_handoff_remaining": false
+    "no_timeout_wrappers": true
   },
   "diff": {
     "files_modified": [],
@@ -265,7 +274,9 @@ current PR, changed-file, check, and PR-description fields from GitHub.
 ```
 
 Replace the example SHA values with the current PR head SHA before running the
-gate without `--refresh-github`.
+gate without `--refresh-github`. `diff.files_modified` is workflow evidence about
+whether the current recovery step changed files; `diff.changed_files` is PR diff
+scope evidence and is refreshed from GitHub when `--refresh-github` is used.
 
 ## Related documentation
 

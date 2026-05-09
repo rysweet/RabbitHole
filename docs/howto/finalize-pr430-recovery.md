@@ -9,6 +9,11 @@ artifact rejection.
 This guide is only for PR #430. It is not a general Save workflow guide and it
 does not prove desktop Save completion.
 
+The local `HEAD`, working-tree, and PR open/non-draft/clean checks below are
+manual preflight checks. The merge-ready gate evaluates evidence JSON and
+refreshed GitHub PR diff/check/description data; it does not run these local Git
+or PR-state checks for you.
+
 ## Prerequisites
 
 Run commands from the repository root:
@@ -82,6 +87,10 @@ The negative artifact command proves only that invalid Save proof artifacts fail
 closed with explicit diagnostics. Do not cite it as positive Save
 write/readback evidence.
 
+Existing QA evidence still has to be represented in `pr430-evidence.json`; the
+gate does not infer local QA history from shell history, CI logs, or prior
+terminal output.
+
 ## Run the merge-ready gate
 
 Evaluate the evidence document and refresh GitHub state:
@@ -96,6 +105,7 @@ The gate must return:
 {
   "blockers": [],
   "files_modified": [],
+  "no_op_justification": "Current remote PR head was evaluated and all merge-ready gates have evidence.",
   "ready": true,
   "status": "MERGE_READY"
 }
@@ -103,6 +113,10 @@ The gate must return:
 
 If `blockers` is non-empty, make only the narrowest focused recovery change,
 rerun the affected focused validation, and push only that scoped fix.
+
+`files_modified` comes from the evidence document. It is not computed from local
+`git status`, so keep the manual working-tree preflight separate from the gate
+result.
 
 ## Use the no-op finalization form
 
