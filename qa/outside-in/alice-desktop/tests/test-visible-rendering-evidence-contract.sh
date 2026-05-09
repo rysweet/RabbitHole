@@ -77,6 +77,8 @@ def collect_contract_inputs(value, state):
                 state["correctness_checks"].append(child)
             if key == "unsupportedClaims":
                 continue
+            if key_implies_visible_correctness(key) and positive_correctness_value(child):
+                state["positive_correctness_fields"].append((key, child))
             collect_contract_inputs(child, state)
     elif isinstance(value, list):
         for child in value:
@@ -91,6 +93,40 @@ def sentences(text):
 
 def is_negated(sentence):
     return any(marker in sentence for marker in negation_markers)
+
+
+def key_implies_visible_correctness(key):
+    lower = key.lower()
+    return "correct" in lower and any(
+        token in lower
+        for token in ("visible", "visual", "rendered", "rendering", "world")
+    )
+
+
+def positive_correctness_value(value):
+    if value is True:
+        return True
+    if isinstance(value, str):
+        lower = value.strip().lower()
+        if any(marker in lower for marker in negation_markers):
+            return False
+        return lower in {
+            "accepted",
+            "confirmed",
+            "correct",
+            "established",
+            "observed",
+            "passed",
+            "performed",
+            "success",
+            "validated",
+            "verified",
+        }
+    if isinstance(value, dict):
+        return any(positive_correctness_value(child) for child in value.values())
+    if isinstance(value, list):
+        return any(positive_correctness_value(child) for child in value)
+    return False
 
 
 def correctness_claim_is_negated(sentence, match):
@@ -126,7 +162,12 @@ def text_documents_boundary(texts):
 def check_payload(path, label, errors):
     with open(path, encoding="utf-8") as artifact:
         payload = json.load(artifact)
-    state = {"has_render_evidence": False, "correctness_checks": [], "texts": []}
+    state = {
+        "has_render_evidence": False,
+        "correctness_checks": [],
+        "positive_correctness_fields": [],
+        "texts": [],
+    }
     collect_contract_inputs(payload, state)
 
     if state["has_render_evidence"] and not explicit_visible_correctness_observation(payload):
@@ -135,6 +176,8 @@ def check_payload(path, label, errors):
         for value in state["correctness_checks"]:
             if value != "not-performed":
                 errors.append(f"{label} correctnessCheck must be not-performed without observation evidence")
+        for key, value in state["positive_correctness_fields"]:
+            errors.append(f"{label} must not report {key}={value!r} without observation evidence")
         if not unsupported_claims_document_boundary(payload) and not text_documents_boundary(state["texts"]):
             errors.append(f"{label} must document the visible-correctness nonclaim boundary")
 
@@ -304,6 +347,38 @@ status=$?
 assert_failure "$status" "invalid overclaim fixture is rejected by the nonclaim contract"
 assert_contains "$INVALID_OVERCLAIM_FIXTURE" '"expectedContractResult": "rejected"' "invalid overclaim fixture is explicitly marked as a negative fixture"
 assert_contains "$tmp_root/invalid-overclaim-fixture.err" 'visibleRenderingCorrectnessEstablished=false|correctnessCheck must be not-performed|positive visible-correctness claims' "invalid overclaim fixture fails for visible-correctness overclaim semantics"
+
+unobserved_correctness_status_payload="$tmp_root/invalid-unobserved-correctness-status-fixture.json"
+python3 - "$unobserved_correctness_status_payload" <<'PY'
+import json
+import sys
+
+payload = {
+    "schemaVersion": 1,
+    "status": "observed",
+    "visibleRenderingCorrectnessEstablished": False,
+    "visibleCorrectnessStatus": "observed",
+    "generatedFiles": ["screenshot.png", "visible-rendering-pixel-observation.json"],
+    "pixelSampling": {
+        "correctnessCheck": "not-performed",
+        "pixelsSampled": True,
+        "sampleCount": 1,
+    },
+    "limitations": ["Render evidence does not establish visible correctness."],
+    "unsupportedClaims": ["full-visible-rendering-correctness"],
+}
+with open(sys.argv[1], "w", encoding="utf-8") as output:
+    json.dump(payload, output, indent=2, sort_keys=True)
+    output.write("\n")
+PY
+status=$?
+assert_success "$status" "unobserved visible-correctness status fixture is wrapped as render-evidence contract input"
+assert_render_nonclaim_json "$unobserved_correctness_status_payload" "invalid unobserved correctness status fixture" \
+  >"$tmp_root/invalid-unobserved-correctness-status-fixture.out" \
+  2>"$tmp_root/invalid-unobserved-correctness-status-fixture.err"
+status=$?
+assert_failure "$status" "success-shaped visible-correctness status is rejected without observation evidence"
+assert_contains "$tmp_root/invalid-unobserved-correctness-status-fixture.err" 'visibleCorrectnessStatus' "unobserved correctness status fixture fails for the success-shaped field"
 
 wording_payload="$tmp_root/valid-negated-wording-fixture.json"
 python3 - "$VALID_NEGATED_WORDING_FIXTURE" "$wording_payload" <<'PY'

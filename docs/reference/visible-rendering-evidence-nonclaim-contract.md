@@ -291,12 +291,13 @@ Render-only observation fields can support these states:
 | `pixelSampling.correctnessCheck` | `not-performed` for observed sampling artifacts and blocked sampling artifacts |
 | `unsupportedClaims` | Includes visible correctness and rendered-world correctness claim tokens |
 
-Render-only evidence must not set a positive visible-correctness state. A future
-positive state requires a different reviewed contract that defines visual
-correctness observation fields, the observer, the observation method, the
-accepted scope, and the exact criteria. This render-evidence contract rejects
-artifacts that try to derive that state from file existence, screenshots,
-generated output, target readiness, or sampled pixels.
+Render-only evidence must not set a positive visible-correctness state, including
+alternate success-shaped fields such as visible or visual correctness status
+values. A future positive state requires a different reviewed contract that
+defines visual-correctness observation fields, the observer, the observation
+method, the accepted scope, and the exact criteria. This render-evidence
+contract rejects artifacts that try to derive that state from file existence,
+screenshots, generated output, target readiness, or sampled pixels.
 
 ## Allowed wording
 
