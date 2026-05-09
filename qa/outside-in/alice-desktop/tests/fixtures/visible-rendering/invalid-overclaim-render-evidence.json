@@ -1,0 +1,49 @@
+{
+  "claim": "negative-overclaim-contract-fixture",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
+  "expectedContractResult": "rejected",
+  "fixturePurpose": "negative-overclaim-contract-fixture",
+  "generatedFiles": [
+    "screenshot.png",
+    "visible-rendering-pixel-observation.json"
+  ],
+  "pixelSampling": {
+    "correctnessCheck": "performed",
+    "pixelsSampled": true,
+    "sampleCount": 1,
+    "samplingMethod": "fixture-rgba-samples",
+    "status": "observed"
+  },
+  "renderArtifacts": [
+    {
+      "kind": "screenshot",
+      "path": "screenshot.png",
+      "rejectedSupportText": "visible correctness passed"
+    }
+  ],
+  "rejectedStatements": [
+    "render output proves visible correctness"
+  ],
+  "renderedWorldPixelsObserved": true,
+  "sampleCount": 1,
+  "schemaVersion": 1,
+  "screenshot": {
+    "path": "screenshot.png",
+    "status": "screenshot-captured"
+  },
+  "sourceArtifact": "controlled-display-pixel-observation.json",
+  "status": "observed",
+  "visibleRenderingCorrectnessEstablished": true,
+  "worldCanvasPixelTarget": {
+    "identified": true,
+    "screenExtents": {
+      "coordinateType": "screen",
+      "height": 240,
+      "width": 320,
+      "x": 160,
+      "y": 120
+    },
+    "status": "target-ready"
+  }
+}
