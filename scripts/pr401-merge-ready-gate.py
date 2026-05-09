@@ -97,6 +97,7 @@ BLOCKER_BODY_MISSING_HEAD = "NOT_MERGE_READY: PR body lacks current-head evidenc
 BLOCKER_BODY_STALE_HEAD = "NOT_MERGE_READY: PR body contains stale head evidence"
 BLOCKER_BODY_OVERCLAIM = "NOT_MERGE_READY: PR body overclaims UI behavior"
 BLOCKER_BODY_UNRESOLVED = "NOT_MERGE_READY: PR body records unresolved blockers"
+BLOCKER_CONTEXT_LOAD = "NOT_MERGE_READY: unable to collect merge-ready context"
 
 HEX_SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
 OVERCLAIM_RE = re.compile(
@@ -310,12 +311,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(validation_plan(), indent=2))
         return 0
 
-    if args.context_json:
-        LOGGER.info("Reading merge-ready context from %s", args.context_json)
-        context = json.loads(args.context_json.read_text(encoding="utf-8"))
-    else:
-        LOGGER.info("Collecting live PR #%s metadata only; validation evidence requires --context-json", args.pr)
-        context = build_runtime_context(pr_number=args.pr, base_ref=args.base_ref)
+    try:
+        if args.context_json:
+            LOGGER.info("Reading merge-ready context from %s", args.context_json)
+            context = _load_context_json(args.context_json)
+        else:
+            LOGGER.info(
+                "Collecting live PR #%s metadata only; validation evidence requires --context-json",
+                args.pr,
+            )
+            context = build_runtime_context(pr_number=args.pr, base_ref=args.base_ref)
+    except (subprocess.CalledProcessError, json.JSONDecodeError, OSError, ValueError) as exc:
+        result = _context_load_failure_result(exc)
+        if args.json:
+            print(json.dumps(result, indent=2))
+        else:
+            LOGGER.error("%s", result["blockers"][0])
+            _print_human_result(result)
+        return 1
 
     result = evaluate_merge_readiness(context)
     if args.json:
@@ -452,6 +465,39 @@ def _list(value: Any) -> list[Any]:
 
 def _string(value: Any) -> str:
     return value if isinstance(value, str) else ""
+
+
+def _load_context_json(path: Path) -> dict[str, Any]:
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(parsed, dict):
+        raise ValueError(f"Expected JSON object in {path}")
+    return parsed
+
+
+def _context_load_failure_result(exc: Exception) -> dict[str, Any]:
+    return {
+        "ready": False,
+        "blockers": [f"{BLOCKER_CONTEXT_LOAD}: {_context_load_error_message(exc)}"],
+        "accepted_claim": "",
+    }
+
+
+def _context_load_error_message(exc: Exception) -> str:
+    if isinstance(exc, subprocess.CalledProcessError):
+        stderr = _string(exc.stderr).strip()
+        stdout = _string(exc.output).strip()
+        details = stderr or stdout
+        suffix = f": {details}" if details else ""
+        return f"command failed ({exc.returncode}): {_format_command(exc.cmd)}{suffix}"
+    if isinstance(exc, json.JSONDecodeError):
+        return f"invalid JSON at line {exc.lineno} column {exc.colno}: {exc.msg}"
+    return str(exc) or exc.__class__.__name__
+
+
+def _format_command(command: Any) -> str:
+    if isinstance(command, (list, tuple)):
+        return " ".join(str(part) for part in command)
+    return str(command)
 
 
 def _run_text(command: Sequence[str]) -> str:

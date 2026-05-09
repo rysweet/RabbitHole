@@ -1,5 +1,10 @@
+import contextlib
 import importlib.util
+import io
+import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from functools import lru_cache
 from pathlib import Path
@@ -320,6 +325,86 @@ class Pr401MergeReadyGateTest(unittest.TestCase):
         self.assertIn("NOT_MERGE_READY: runnable QA/scenario evidence is incomplete", result["blockers"])
         self.assertIn("NOT_MERGE_READY: docs impact review is incomplete", result["blockers"])
         self.assertIn("NOT_MERGE_READY: fewer than three quality-audit cycles are documented", result["blockers"])
+
+    def test_live_runtime_context_subprocess_failure_returns_blocker(self) -> None:
+        gate = load_gate()
+        stdout = io.StringIO()
+        failure = subprocess.CalledProcessError(
+            1,
+            ["gh", "pr", "view", "401"],
+            stderr="authentication required",
+        )
+
+        with patch.object(gate, "_run_text", side_effect=failure), contextlib.redirect_stdout(stdout):
+            exit_code = gate.main(["--json"])
+
+        self.assertEqual(1, exit_code)
+        payload = json.loads(stdout.getvalue())
+        self.assertFalse(payload["ready"])
+        self.assertEqual(1, len(payload["blockers"]))
+        self.assertIn(
+            "NOT_MERGE_READY: unable to collect merge-ready context",
+            payload["blockers"][0],
+        )
+        self.assertIn("gh pr view 401", payload["blockers"][0])
+        self.assertIn("authentication required", payload["blockers"][0])
+
+    def test_live_runtime_context_invalid_json_returns_blocker(self) -> None:
+        gate = load_gate()
+        stdout = io.StringIO()
+
+        with patch.object(gate, "_run_text", return_value="not json"), contextlib.redirect_stdout(stdout):
+            exit_code = gate.main(["--json"])
+
+        self.assertEqual(1, exit_code)
+        payload = json.loads(stdout.getvalue())
+        self.assertFalse(payload["ready"])
+        self.assertEqual(1, len(payload["blockers"]))
+        self.assertIn(
+            "NOT_MERGE_READY: unable to collect merge-ready context",
+            payload["blockers"][0],
+        )
+        self.assertIn("invalid JSON", payload["blockers"][0])
+
+    def test_malformed_context_json_returns_blocker(self) -> None:
+        gate = load_gate()
+        stdout = io.StringIO()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            context_path = Path(tmp_dir) / "merge-ready-context.json"
+            context_path.write_text("not json", encoding="utf-8")
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = gate.main(["--json", "--context-json", str(context_path)])
+
+        self.assertEqual(1, exit_code)
+        payload = json.loads(stdout.getvalue())
+        self.assertFalse(payload["ready"])
+        self.assertEqual(1, len(payload["blockers"]))
+        self.assertIn(
+            "NOT_MERGE_READY: unable to collect merge-ready context",
+            payload["blockers"][0],
+        )
+        self.assertIn("invalid JSON", payload["blockers"][0])
+
+    def test_missing_context_json_returns_blocker(self) -> None:
+        gate = load_gate()
+        stdout = io.StringIO()
+
+        with tempfile.TemporaryDirectory() as tmp_dir, contextlib.redirect_stdout(stdout):
+            exit_code = gate.main(
+                ["--json", "--context-json", str(Path(tmp_dir) / "missing-context.json")]
+            )
+
+        self.assertEqual(1, exit_code)
+        payload = json.loads(stdout.getvalue())
+        self.assertFalse(payload["ready"])
+        self.assertEqual(1, len(payload["blockers"]))
+        self.assertIn(
+            "NOT_MERGE_READY: unable to collect merge-ready context",
+            payload["blockers"][0],
+        )
+        self.assertIn("missing-context.json", payload["blockers"][0])
 
     def test_validation_plan_uses_node_options_and_no_timeout_wrappers(self) -> None:
         gate = load_gate()
