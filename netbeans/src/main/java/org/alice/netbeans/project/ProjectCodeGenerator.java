@@ -551,6 +551,23 @@ public class AliceJavaFXLauncher extends Application {
             char ch = value.charAt(i);
             if ((ch == (char) 34) || (ch == (char) 92)) {
                 builder.append((char) 92).append(ch);
+            } else if (ch == (char) 8) {
+                builder.append((char) 92).append('b');
+            } else if (ch == (char) 9) {
+                builder.append((char) 92).append('t');
+            } else if (ch == (char) 10) {
+                builder.append((char) 92).append('n');
+            } else if (ch == (char) 12) {
+                builder.append((char) 92).append('f');
+            } else if (ch == (char) 13) {
+                builder.append((char) 92).append('r');
+            } else if (ch < (char) 32) {
+                builder.append((char) 92).append('u');
+                String hex = Integer.toHexString(ch);
+                for (int padding = hex.length(); padding < 4; padding++) {
+                    builder.append('0');
+                }
+                builder.append(hex);
             } else {
                 builder.append(ch);
             }

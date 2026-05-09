@@ -172,6 +172,31 @@ public class ProjectCodeGeneratorTest {
   }
 
   @Test
+  public void generatedLauncherEscapesRenderObservationDetailAsJsonString() throws Exception {
+    String output = runGeneratedLauncherWithRobot(
+        "launcher-visible-pixel-json-escaping",
+        """
+        package javafx.scene.robot;
+
+        public class Robot {
+          public javafx.scene.paint.Color getPixelColor(double screenX, double screenY) {
+            throw new UnsupportedOperationException("screen capture \\"denied\\"\\nbackslash \\\\ end");
+          }
+        }
+        """);
+
+    assertTrue(output.contains("ALICE_LAUNCHER_RENDER_OBSERVATION"));
+    assertTrue(output.contains("\"status\":\"pixel-observation-unsupported\""));
+    assertTrue(
+        output,
+        output.contains("\"detail\":\"JavaFX Robot screen capture was unavailable: "
+            + "java.lang.UnsupportedOperationException: screen capture \\\"denied\\\"\\nbackslash \\\\ end\""));
+    assertFalse(output.contains("screen capture \\\"denied\\\"\nbackslash"));
+    assertTrue(output.contains("ALICE_LAUNCHER_NO_GO pixel-observation-unsupported"));
+    assertFalse(output.contains("ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted"));
+  }
+
+  @Test
   public void generatedLauncherReportsPixelMismatchWithoutDelegatingProgramMain() throws Exception {
     String output = runGeneratedLauncherWithRobot(
         "launcher-visible-pixel-mismatch",
