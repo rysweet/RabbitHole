@@ -24,6 +24,47 @@ SCOPE_EXCLUSIONS = (
 
 
 class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
+    _worktree_tempdir = None
+    _linked_worktree = None
+    _linked_worktree_head = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._worktree_tempdir = tempfile.TemporaryDirectory(prefix="alice-archive-guard-")
+        cls._linked_worktree = Path(cls._worktree_tempdir.name) / "linked-worktree"
+        try:
+            subprocess.run(
+                ["git", "worktree", "add", "--detach", str(cls._linked_worktree), "HEAD"],
+                cwd=REPO_ROOT,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            cls._worktree_tempdir.cleanup()
+            cls._worktree_tempdir = None
+            cls._linked_worktree = None
+            raise
+        cls._linked_worktree_head = cls.git_output(cls._linked_worktree, "rev-parse", "HEAD")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if cls._linked_worktree is not None:
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(cls._linked_worktree)],
+                cwd=REPO_ROOT,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            cls._linked_worktree = None
+        if cls._worktree_tempdir is not None:
+            cls._worktree_tempdir.cleanup()
+            cls._worktree_tempdir = None
+        cls._linked_worktree_head = None
+
     def test_guard_script_exists_as_repo_owned_entrypoint(self) -> None:
         self.assertTrue(
             GUARD_SCRIPT.is_file(),
@@ -54,7 +95,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_accepts_clean_worktree_with_exact_head_noop_evidence(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(head))
 
             result = self.run_guard(
@@ -70,7 +111,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_clean_worktree_noop_evidence_for_stale_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             stale_head = "0" * 40 if head != "0" * 40 else "1" * 40
             evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(stale_head))
 
@@ -89,7 +130,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_expected_head_that_is_not_worktree_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             stale_head = "0" * 40 if head != "0" * 40 else "1" * 40
             evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(stale_head))
 
@@ -107,7 +148,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_clean_worktree_evidence_without_noop_justification(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             evidence_file = self.write_evidence(
                 linked_worktree,
                 self.exact_head_noop_evidence(head, include_noop_justification=False),
@@ -127,7 +168,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_clean_worktree_evidence_with_files_modified_claim(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             evidence_file = self.write_evidence(
                 linked_worktree,
                 self.exact_head_noop_evidence(head) + "\nFiles modified: none\n",
@@ -147,7 +188,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_clean_worktree_noop_evidence_without_scope_exclusions(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             evidence_file = self.write_evidence(
                 linked_worktree,
                 self.exact_head_noop_evidence(head, include_scope_exclusions=False),
@@ -167,7 +208,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_clean_worktree_noop_evidence_with_out_of_scope_claims(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             evidence_file = self.write_evidence(
                 linked_worktree,
                 self.exact_head_noop_evidence(head)
@@ -196,7 +237,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_rejects_noop_justification_without_expected_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             evidence_file = self.write_evidence(
                 linked_worktree,
                 self.exact_head_noop_evidence(head, include_noop_head=False),
@@ -217,7 +258,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     def test_guard_reports_missing_noop_evidence_file(self) -> None:
         with self.linked_worktree() as linked_worktree:
-            head = self.git_output(linked_worktree, "rev-parse", "HEAD")
+            head = self.linked_worktree_head()
             missing_evidence_file = linked_worktree.parent / "missing-readiness-evidence.md"
 
             result = self.run_guard(
@@ -235,29 +276,17 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
 
     @contextmanager
     def linked_worktree(self) -> Iterator[Path]:
-        with tempfile.TemporaryDirectory(prefix="alice-archive-guard-") as temporary_directory:
-            linked_worktree = Path(temporary_directory) / "linked-worktree"
-            subprocess.run(
-                ["git", "worktree", "add", "--detach", str(linked_worktree), "HEAD"],
-                cwd=REPO_ROOT,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            try:
-                yield linked_worktree
-            finally:
-                subprocess.run(
-                    ["git", "worktree", "remove", "--force", str(linked_worktree)],
-                    cwd=REPO_ROOT,
-                    check=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                )
+        if self._linked_worktree is None:
+            self.fail("linked guard worktree was not initialized")
+        yield self._linked_worktree
 
-    def git_output(self, worktree: Path, *args: str) -> str:
+    def linked_worktree_head(self) -> str:
+        if self._linked_worktree_head is None:
+            self.fail("linked guard worktree HEAD was not initialized")
+        return self._linked_worktree_head
+
+    @staticmethod
+    def git_output(worktree: Path, *args: str) -> str:
         return subprocess.run(
             ["git", "-C", str(worktree), *args],
             check=True,

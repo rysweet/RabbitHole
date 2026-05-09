@@ -169,6 +169,9 @@ public class XmlProjectIo implements ProjectIo {
 
 
     private Version readSourceProgramVersion() throws IOException {
+      if (sourceProgramVersion != null) {
+        return sourceProgramVersion;
+      }
       if (container == null) {
         throw new IOException("There is no file to read");
       }
@@ -177,8 +180,12 @@ public class XmlProjectIo implements ProjectIo {
         throw new IOException(container.toString() + " does not contain entry " + VERSION_ENTRY_NAME);
       }
 
-      String content = readContent(is);
-      return new Version(content);
+      String content;
+      try (InputStream versionStream = is) {
+        content = readContent(versionStream);
+      }
+      sourceProgramVersion = new Version(content);
+      return sourceProgramVersion;
     }
 
     private static String readContent(InputStream is) throws IOException {
@@ -279,12 +286,22 @@ public class XmlProjectIo implements ProjectIo {
       NodeList children = element.getChildNodes();
       for (int i = children.getLength() - 1; i >= 0; i--) {
         Node child = children.item(i);
-        if ((child instanceof Text text) && (text.getData().trim().isEmpty())) {
+        if ((child instanceof Text text) && isXmlWhitespace(text.getData())) {
           element.removeChild(child);
         } else if (child instanceof Element childElement) {
           removeWhitespaceNodes(childElement);
         }
       }
+    }
+
+    private static boolean isXmlWhitespace(String text) {
+      for (int i = 0; i < text.length(); i++) {
+        char ch = text.charAt(i);
+        if ((ch != ' ') && (ch != '\n') && (ch != '\r') && (ch != '\t')) {
+          return false;
+        }
+      }
+      return true;
     }
 
     private byte[] readResourceData(String entryName, Element xmlElement) throws IOException {
@@ -338,7 +355,7 @@ public class XmlProjectIo implements ProjectIo {
       if ((type == null) || resources.isEmpty()) {
         return;
       }
-      Map<UUID, Resource> resourcesById = new HashMap<>();
+      Map<UUID, Resource> resourcesById = new HashMap<>(resources.size() * 2);
       for (Resource resource : resources) {
         resourcesById.put(resource.getId(), resource);
       }
@@ -361,6 +378,7 @@ public class XmlProjectIo implements ProjectIo {
     }
 
     private ResourceTypeHelper typeHelper;
+    private Version sourceProgramVersion;
   }
 
   // Encoding of project XML changed from UTF-8 to UTF-16 in 3.7.

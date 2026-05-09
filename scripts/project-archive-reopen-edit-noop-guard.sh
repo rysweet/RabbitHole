@@ -105,29 +105,30 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
     fail 1 "no-op evidence file is missing: $allow_noop_evidence_file"
   fi
 
-  evidence_text="$(tr '[:upper:]' '[:lower:]' < "$allow_noop_evidence_file")"
+  evidence_text="$(< "$allow_noop_evidence_file")"
+  evidence_text_lower="$(printf '%s' "$evidence_text" | tr '[:upper:]' '[:lower:]')"
 
-  grep -Fq "No-op justification:" "$allow_noop_evidence_file" \
+  [[ "$evidence_text" == *"No-op justification:"* ]] \
     || fail 1 "no-op evidence must include a No-op justification section"
 
-  if grep -Fq "Files modified:" "$allow_noop_evidence_file"; then
+  if [[ "$evidence_text" == *"Files modified:"* ]]; then
     fail 1 "clean no-op evidence must not also list modified files"
   fi
 
-  grep -Fq "PR head: $expected_head" "$allow_noop_evidence_file" \
+  [[ "$evidence_text" == *"PR head: $expected_head"* ]] \
     || fail 1 "stale no-op evidence for expected head $expected_head"
-  grep -Fq "Local HEAD: $expected_head" "$allow_noop_evidence_file" \
+  [[ "$evidence_text" == *"Local HEAD: $expected_head"* ]] \
     || fail 1 "stale no-op evidence for expected head $expected_head"
 
-  if ! grep -A8 -F "No-op justification:" "$allow_noop_evidence_file" | grep -Fq "$expected_head"; then
+  if ! grep -A8 -F "No-op justification:" <<< "$evidence_text" | grep -Fq "$expected_head"; then
     fail 1 "no-op justification must reference expected head $expected_head"
   fi
 
-  grep -Fq "Scope exclusions:" "$allow_noop_evidence_file" \
+  [[ "$evidence_text" == *"Scope exclusions:"* ]] \
     || fail 1 "no-op evidence must include scope exclusions"
-  grep -Fq "Positive claim scope:" "$allow_noop_evidence_file" \
+  [[ "$evidence_text" == *"Positive claim scope:"* ]] \
     || fail 1 "no-op evidence must include positive claim scope"
-  grep -Fq "Stale evidence note:" "$allow_noop_evidence_file" \
+  [[ "$evidence_text" == *"Stale evidence note:"* ]] \
     || fail 1 "no-op evidence must include a stale evidence note"
 
   for required_exclusion in \
@@ -135,12 +136,12 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
     "visible rendering correctness" \
     "grading" \
     "full save completion"; do
-    if [[ "$evidence_text" != *"$required_exclusion"* ]]; then
+    if [[ "$evidence_text_lower" != *"$required_exclusion"* ]]; then
       fail 1 "no-op evidence scope exclusions must mention $required_exclusion"
     fi
   done
 
-  if grep -Eiq '^[[:space:]]*(full desktop lesson automation|visible rendering correctness|grading workflow|grading|full save completion)[[:space:]]*:[[:space:]]*(proven|validated|supported|complete|passed|ready)' "$allow_noop_evidence_file"; then
+  if grep -Eiq '^[[:space:]]*(full desktop lesson automation|visible rendering correctness|grading workflow|grading|full save completion)[[:space:]]*:[[:space:]]*(proven|validated|supported|complete|passed|ready)' <<< "$evidence_text"; then
     fail 1 "no-op evidence contains out-of-scope desktop, rendering, grading, or full Save claims"
   fi
 
