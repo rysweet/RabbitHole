@@ -42,7 +42,7 @@ TARGET_STARTER_SCENARIO_IDS = {
 }
 workflow_values = {
     "archive-fixture-smoke",
-    "exported-project-smoke",
+    "exported-project-ant-build-smoke",
     "failure-path-smoke",
     "file-loader-smoke",
     "first-lesson-live-procedure-target-observation",
@@ -110,11 +110,12 @@ allowed_automation = {
             "mvn",
             "-DincludeSims=false",
             "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
             "-Dsurefire.failIfNoSpecifiedTests=false",
             "-pl",
             "netbeans",
             "-am",
-            "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest",
+            "-Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest",
             "test",
         ),
     ),
