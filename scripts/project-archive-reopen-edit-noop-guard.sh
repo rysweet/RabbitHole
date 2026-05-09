@@ -133,6 +133,21 @@ if [[ -n "$allow_noop_evidence_file" ]]; then
   [[ "$evidence_text" == *"Stale evidence note:"* ]] \
     || fail 1 "no-op evidence must include a stale evidence note"
 
+  missing_checks=()
+  for required_check in \
+    "gitguardian security checks" \
+    "alice checkstyle ci/build (pull_request)" \
+    "alice coverage reports/coverage (pull_request)" \
+    "alice netbeans package ci/package-netbeans (pull_request)" \
+    "alice test ci/test (pull_request)"; do
+    if ! grep -Fqi "$required_check successful at current pr head" <<< "$evidence_text"; then
+      missing_checks+=("$required_check")
+    fi
+  done
+  if [[ "${#missing_checks[@]}" -gt 0 ]]; then
+    fail 1 "no-op evidence checks must mark ${missing_checks[*]} successful at current PR head"
+  fi
+
   missing_exclusions=()
   for required_exclusion in \
     "full desktop lesson automation" \

@@ -27,6 +27,28 @@ INCOMPLETE_SCOPE_EXCLUSIONS = (
     "Scope exclusions: no full desktop lesson automation, visible rendering "
     "correctness, grading, or full Save completion claims"
 )
+REQUIRED_PR_CHECKS = (
+    "GitGuardian Security Checks",
+    "Alice Checkstyle CI/build (pull_request)",
+    "Alice Coverage Reports/coverage (pull_request)",
+    "Alice NetBeans Package CI/package-netbeans (pull_request)",
+    "Alice Test CI/test (pull_request)",
+)
+CURRENT_PR_CHECK_EVIDENCE = "Checks: " + "; ".join(
+    f"{check_name} successful at current PR head" for check_name in REQUIRED_PR_CHECKS
+)
+INCOMPLETE_PR_CHECK_EVIDENCE = "Checks: " + "; ".join(
+    f"{check_name} successful at current PR head" for check_name in REQUIRED_PR_CHECKS[1:]
+)
+FAILING_PR_CHECK_EVIDENCE = "Checks: " + "; ".join(
+    [
+        f"{REQUIRED_PR_CHECKS[0]} successful at current PR head",
+        f"{REQUIRED_PR_CHECKS[1]} failure at current PR head",
+        f"{REQUIRED_PR_CHECKS[2]} successful at current PR head",
+        f"{REQUIRED_PR_CHECKS[3]} successful at current PR head",
+        f"{REQUIRED_PR_CHECKS[4]} successful at current PR head",
+    ]
+)
 
 
 class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
@@ -291,6 +313,69 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         combined_output = (result.stdout + result.stderr).lower()
         self.assertIn("out-of-scope", combined_output)
 
+    def test_guard_rejects_clean_worktree_noop_evidence_without_current_pr_check_evidence(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_current_pr_checks=False),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("check", combined_output)
+        self.assertIn("current pr head", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_with_incomplete_current_pr_checks(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, pr_check_evidence=INCOMPLETE_PR_CHECK_EVIDENCE),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("gitguardian security checks", combined_output)
+        self.assertIn("check", combined_output)
+
+    def test_guard_rejects_clean_worktree_noop_evidence_when_required_check_is_not_successful(self) -> None:
+        with self.linked_worktree() as linked_worktree:
+            head = self.linked_worktree_head()
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, pr_check_evidence=FAILING_PR_CHECK_EVIDENCE),
+            )
+
+            result = self.run_guard(
+                linked_worktree,
+                "--allow-noop-evidence",
+                str(evidence_file),
+                "--expected-head",
+                head,
+            )
+
+        self.assertNotEqual(0, result.returncode)
+        combined_output = (result.stdout + result.stderr).lower()
+        self.assertIn("successful", combined_output)
+        self.assertIn("current pr head", combined_output)
+
     def test_guard_rejects_noop_justification_without_expected_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.linked_worktree_head()
@@ -363,7 +448,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         include_noop_justification: bool = True,
         include_scope_exclusions: bool = True,
         include_noop_head: bool = True,
+        include_current_pr_checks: bool = True,
         scope_exclusions: str = SCOPE_EXCLUSIONS,
+        pr_check_evidence: str = CURRENT_PR_CHECK_EVIDENCE,
     ) -> str:
         lines = [
             "PR: 402",
@@ -379,9 +466,10 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
             f"Validation command: {VALIDATION_COMMAND}",
             f"Validation result: exit 0 PASS at {head}",
-            "Checks: no scoped PR check blocker",
             "Positive claim scope: repository-owned archive reopen/edit behavior only",
         ]
+        if include_current_pr_checks:
+            lines.append(pr_check_evidence)
         if include_scope_exclusions:
             lines.append(scope_exclusions)
         lines.append("Stale evidence note: older evidence must not be reused for a different HEAD")
