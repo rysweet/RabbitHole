@@ -202,6 +202,18 @@ expected_argv = {
         "-Dtest=org.alice.ide.uricontent.FileProjectLoaderTest",
         "test",
     ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/issue-reporting",
+        "-am",
+        "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest",
+        "test",
+    ),
     ("qa/outside-in/alice-desktop/runners/netbeans-package-smoke.sh",),
     ("qa/outside-in/alice-desktop/runners/package-install-smoke.sh",),
     (

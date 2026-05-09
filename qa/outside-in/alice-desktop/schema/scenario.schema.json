@@ -35,6 +35,7 @@
         "first-lesson-live-procedure-target-observation",
         "future-ui-smoke",
         "instructor-student-setup",
+        "issue-reporting-smoke",
         "launch",
         "menu-action-smoke",
         "netbeans-package-smoke",
@@ -392,6 +393,43 @@
                 },
                 {
                   "const": "-Dtest=org.alice.ide.uricontent.FileProjectLoaderTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/issue-reporting"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest"
                 },
                 {
                   "const": "test"
