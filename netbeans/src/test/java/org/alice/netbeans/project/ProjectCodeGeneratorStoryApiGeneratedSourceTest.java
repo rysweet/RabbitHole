@@ -206,6 +206,46 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
   }
 
   @Test
+  public void generatedSceneActivationListenerReceivesEventArgumentHeadless() throws Exception {
+    Path sourceDirectory = generateProgramSource(
+        "synthetic-scene-activation-listener-payload-runtime.a3p",
+        programTypeWithExecutableSceneActivationListenerPayloadProbe(),
+        "generated-scene-activation-listener-payload-runtime-src");
+
+    Path scenePath = sourceDirectory.resolve("Scene.java");
+    String sceneSource = Files.readString(scenePath);
+    assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener((SceneActivationEvent p0) ->"));
+    assertTrue(sceneSource, sceneSource.contains(
+        "ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationEventPayload(p0);"));
+
+    Path classesDirectory = compileAllGeneratedSources(
+        "generated-scene-activation-listener-payload-runtime-classes",
+        sourceDirectory);
+    sceneActivationEventPayloadLatch = new CountDownLatch(1);
+    recordedSceneActivationEvent = null;
+    try (URLClassLoader classLoader = new URLClassLoader(
+        new URL[] {classesDirectory.toUri().toURL()},
+        Thread.currentThread().getContextClassLoader())) {
+      Object scene = instantiateGeneratedScene(classLoader);
+      Object sceneActivationHandler = sceneActivationHandlerFor(scene);
+      assertNotNull("Generated listener registration should install a runtime scene activation handler",
+          sceneActivationHandler);
+      SceneActivationEvent firedEvent = new SceneActivationEvent();
+      sceneActivationHandler.getClass()
+          .getMethod("handleEventFire", SceneActivationEvent.class)
+          .invoke(sceneActivationHandler, firedEvent);
+      assertTrue("Generated scene activation listener should receive the fired runtime event argument",
+          sceneActivationEventPayloadLatch.await(5, TimeUnit.SECONDS));
+      assertSame("Generated listener should receive the same SceneActivationEvent payload fired by the handler",
+          firedEvent,
+          recordedSceneActivationEvent);
+    } finally {
+      recordedSceneActivationEvent = null;
+      sceneActivationEventPayloadLatch = null;
+    }
+  }
+
+  @Test
   public void generatedSyntheticTimeListenerDispatchesThroughTimerHandlerSeamHeadless() throws Exception {
     Path sourceDirectory = generateProgramSource(
         "synthetic-time-listener-runtime.a3p",
@@ -290,6 +330,14 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return timerField.get(eventManager);
   }
 
+  private static Object sceneActivationHandlerFor(Object scene) throws Exception {
+    Object sceneImplementation = scene.getClass().getMethod("getImplementation").invoke(scene);
+    Object eventManager = sceneImplementation.getClass().getMethod("getEventManager").invoke(sceneImplementation);
+    var handlerField = eventManager.getClass().getDeclaredField("sceneActivationHandler");
+    handlerField.setAccessible(true);
+    return handlerField.get(eventManager);
+  }
+
   private static void activateAndUpdateTimer(Object timer, double currentTime) throws Exception {
     timer.getClass().getMethod("sceneActivated", SceneActivationEvent.class).invoke(timer, new SceneActivationEvent());
     var currentTimeField = timer.getClass().getDeclaredField("currentTime");
@@ -310,6 +358,11 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     sceneActivationEventLatch.countDown();
   }
 
+  public static void recordSceneActivationEventPayload(SceneActivationEvent event) {
+    recordedSceneActivationEvent = event;
+    sceneActivationEventPayloadLatch.countDown();
+  }
+
   public static void recordTimeEvent() {
     timeEventLatch.countDown();
   }
@@ -320,8 +373,10 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
   }
 
   private static CountDownLatch sceneActivationEventLatch;
+  private static CountDownLatch sceneActivationEventPayloadLatch;
   private static CountDownLatch timeEventLatch;
   private static CountDownLatch timeEventElapsedLatch;
+  private static volatile SceneActivationEvent recordedSceneActivationEvent;
   private static volatile Double recordedTimeSinceLastFire;
 
   private Path generateProgramSource(String projectFileName, NamedUserType programType, String sourceDirectoryName)
@@ -431,6 +486,13 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return type;
   }
 
+  private static NamedUserType programTypeWithExecutableSceneActivationListenerPayloadProbe() {
+    NamedUserType type = programType("Program");
+    NamedUserType sceneType = sceneTypeWithExecutableSceneActivationListenerPayloadProbe();
+    type.fields.add(new UserField("scene", sceneType));
+    return type;
+  }
+
   private static NamedUserType programTypeWithExecutableTimeListenerRegistration() {
     NamedUserType type = programType("Program");
     NamedUserType sceneType = sceneTypeWithExecutableTimeListenerRegistration();
@@ -502,6 +564,27 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return type;
   }
 
+  private static NamedUserType sceneTypeWithExecutableSceneActivationListenerPayloadProbe() {
+    NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
+    JavaMethod addSceneActivationListener = AstUtilities.lookupMethod(
+        SScene.class,
+        "addSceneActivationListener",
+        SceneActivationListener.class);
+    UserMethod handleActiveChanged = new UserMethod(
+        "handleActiveChanged",
+        Void.TYPE,
+        new UserParameter[] {
+            new UserParameter("isActive", Boolean.class),
+            new UserParameter("activationCount", Integer.class)
+        },
+        new BlockStatement(AstUtilities.createMethodInvocationStatement(
+            new ThisExpression(),
+            addSceneActivationListener,
+            sceneActivationEventPayloadListenerLambda())));
+    type.methods.add(handleActiveChanged);
+    return type;
+  }
+
   private static NamedUserType sceneTypeWithExecutableTimeListenerRegistration() {
     NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
     JavaMethod addTimeListener = AstUtilities.lookupMethod(
@@ -563,6 +646,21 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     lambda.body.getValue().statements.add(AstUtilities.createMethodInvocationStatement(
         new org.lgna.project.ast.TypeExpression(recordEvent.getDeclaringType()),
         recordEvent));
+    return expression;
+  }
+
+  private static LambdaExpression sceneActivationEventPayloadListenerLambda() {
+    LambdaExpression expression = AstUtilities.createLambdaExpression(SceneActivationListener.class);
+    UserLambda lambda = (UserLambda) expression.value.getValue();
+    UserParameter eventParameter = lambda.requiredParameters.get(0);
+    JavaMethod recordEvent = AstUtilities.lookupMethod(
+        ProjectCodeGeneratorStoryApiGeneratedSourceTest.class,
+        "recordSceneActivationEventPayload",
+        SceneActivationEvent.class);
+    lambda.body.getValue().statements.add(AstUtilities.createMethodInvocationStatement(
+        new TypeExpression(recordEvent.getDeclaringType()),
+        recordEvent,
+        new ParameterAccess(eventParameter)));
     return expression;
   }
 

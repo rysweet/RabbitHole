@@ -1,15 +1,101 @@
-Running default-workflow at 2026-05-07T13:07:04+00:00
-Error: recipe-runner-rs exited with signal SIGTERM (15)
+Default-workflow recovery evidence for PR #388
+Recorded at: 2026-05-09T03:33:47Z
+Starting PR head verified: 6838fdf73a7fb2fe329e56563e6de37cdaf003b5
+Base branch verified: develop
 
-Stopped default-workflow attempt at 2026-05-07T13:08:23+00:00 after it produced no recipe output and did not exit in non-interactive mode.
-Process tree was: bash 1149110 -> amplihack 1149114 -> recipe-runner-rs 1149115.
+Scope inspected:
+- Full origin/develop...HEAD diff reviewed.
+- Diff scope at starting head was test-only:
+  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
+- The generated-source characterization asserts that generated Scene.java forwards
+  SceneActivationEvent through the generated scene activation listener lambda.
 
-Continuation attempt at 2026-05-07T14:03:43Z
-Requested workflow: default-workflow
-Result: workflow skill invocation skipped because active recipe-managed session instructions prohibit invoking workflow skills.
-Fallback: manual default-workflow steps followed for this branch.
+Validation completed at starting head:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+- git merge-tree --write-tree origin/develop HEAD
 
-Recovery/finalization at 2026-05-09T03:55:00Z
-Requested workflow: default-workflow PR #389 recovery
-Result: prior manual-fallback marker cleared after exact-head review, base-to-head diff inspection, focused local validation, gated exported Ant build smoke proof, clean mergeability check, and passing PR checks.
-Evidence boundary: exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest Ant build/JAR/probe behavior; it is not full GUI export, deployed installer, visible rendering, or Sims validation.
+Result:
+- Focused generated-source characterization passed.
+- merge-tree completed cleanly; write-tree result e0242ceec159d25644aedff8a77e62de70e0b8e9.
+- Prior fallback ownership marker is superseded by this default-workflow-owned evidence.
+
+Limits:
+- This evidence does not claim desktop runtime execution.
+- This evidence does not claim runtime dispatch completion beyond the focused
+  generated-source/headless characterization test.
+- This evidence does not claim export completion.
+
+Default-workflow finalization refresh for PR #388
+Recorded at: 2026-05-09T03:49:48Z
+Current PR head verified before this evidence-only update:
+cec7b96debc2fda4f711069e0ba781d6224fb952
+Base branch verified: develop
+
+Scope re-inspected:
+- Full origin/develop...HEAD diff reviewed.
+- Diff scope remains limited to:
+  .copilot-evidence/default-workflow-attempt.exit
+  .copilot-evidence/default-workflow-attempt.log
+  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
+- The test characterization remains focused on generated Scene.java forwarding
+  SceneActivationEvent through the generated scene activation listener lambda.
+
+Validation completed at current PR head before this evidence-only update:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+- git merge-tree --write-tree origin/develop HEAD
+
+Result:
+- Focused generated-source characterization passed.
+- merge-tree completed cleanly; write-tree result 52938664ddb5a815cbc06e1940711161baf7f5c1.
+- No unresolved fallback ownership marker remains in tracked evidence.
+
+Limits:
+- This evidence does not claim desktop runtime execution.
+- This evidence does not claim runtime dispatch completion beyond the focused
+  generated-source/headless characterization test.
+- This evidence does not claim export completion.
+
+Default-workflow recovery/finalization for PR #389
+Recorded at: 2026-05-09T03:55:00Z
+Starting PR head verified: b183575ca623d07affb296fe753d30860cad4832
+Base branch verified: develop
+
+Scope inspected:
+- Full origin/develop...HEAD diff reviewed.
+- Diff scope covers the exported-project Ant build smoke workflow rename/wiring,
+  the runner and validator argv allowlists, schema/workflow contract tests, and
+  documentation/evidence-boundary updates.
+- A stale wording blocker was fixed so the docs no longer say the Ant target
+  execution remains unwired.
+
+Validation completed:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-gadugi-exported-launcher-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/run-tests.sh
+- ALICE_QA_RUN_GATED_SMOKES=1 NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-exported-project-smoke --evidence-dir /tmp/rabbithole-pr389-exported-ant-evidence
+- git diff --check origin/develop...HEAD
+- git merge-tree clean check against origin/develop
+
+Result:
+- Prior manual-fallback marker is cleared by default-workflow-owned evidence.
+- Focused QA contracts passed.
+- The gated exported Ant project smoke passed with status.txt outcome=passed,
+  exitCode=0, and Alice3ProjectTemplateAntSmokeTest tests run: 7, failures: 0,
+  errors: 0, skipped: 0.
+- No Ant log contained Java Result.
+- GitHub PR checks for build, package-netbeans, test, and GitGuardian passed at
+  pushed head 96f0834e5259f0b1b96fcbf4e73dd250f0902ab5; coverage was still
+  in progress at the time of base-merge refresh.
+
+Limits:
+- The exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest
+  Ant build/JAR/probe behavior.
+- This evidence does not claim full GUI export journey validation.
+- This evidence does not claim deployed installer validation.
+- This evidence does not claim visible rendering or Sims validation.
