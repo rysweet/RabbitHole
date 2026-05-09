@@ -1,20 +1,13 @@
-# [TDD RED - Implementation Pending] Alice Desktop Silver-Thread Status Report
+# Alice Desktop Silver-Thread Status Report
 
-This reference documents the intended behavior of the planned repository-owned
-silver-thread QA report:
+This reference documents the repository-owned silver-thread QA report:
 
 ```text
 qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh
 ```
 
-A TDD contract shell artifact is now present at this path, but the aggregate
-evidence implementation is not complete. Until the implementation replaces the
-pending report body, treat this page and the shell assertions as the contract
-for the feature we will build, not as proof that the aggregate report has
-already executed successfully.
-
-The planned report will be a fail-closed shell artifact that aggregates existing
-executable Alice desktop evidence for the product-spanning thread:
+The report is a fail-closed shell artifact that aggregates existing executable
+Alice desktop evidence for the product-spanning thread:
 
 ```text
 launch Alice
@@ -24,14 +17,14 @@ launch Alice
   -> report bounded Save/reopen evidence when directly available
 ```
 
-The planned script must not add a new QA scenario workflow. It will inspect
-stable repository-owned seams, marker strings, and scenario/test contracts that
-already exercise the underlying behavior.
+The script does not add a new QA scenario workflow. It inspects stable
+repository-owned seams, marker strings, and scenario/test contracts that already
+exercise the underlying behavior.
 
 ## Contents
 
 - [Implementation status](#implementation-status)
-- [Planned usage](#planned-usage)
+- [Usage](#usage)
 - [Status model](#status-model)
 - [Required evidence](#required-evidence)
 - [Optional Save/reopen evidence](#optional-savereopen-evidence)
@@ -43,42 +36,31 @@ already exercise the underlying behavior.
 
 ## Implementation status
 
-This page is a retcon specification for implementation-pending documentation.
-The lower-level evidence seams listed below are checked-in inputs, and the
-aggregate shell report path now contains the red TDD contract test. The report
-implementation is still pending.
+The aggregate shell report is implemented at
+`qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh`. It
+replaced the earlier TDD-red contract body with literal marker aggregation over
+the repository-owned seams listed below.
 
-Before this page can be treated as implemented reference documentation:
+## Usage
 
-1. Replace the pending TDD report body in
-   `qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh` with
-   literal marker aggregation over the repository-owned seams.
-2. Make the script emit the status, evidence, gap, and claim-boundary lines
-   defined here.
-3. Verify the script fails closed when required files or markers are absent.
-4. Remove the `[TDD RED - Implementation Pending]` title marker and planned
-   wording from this page.
-
-## Planned usage
-
-After implementation, run the report from the repository root:
+Run the report from the repository root:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
 bash qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh
 ```
 
-The planned script will accept no arguments. It will use only hard-coded
-repository-relative paths and literal marker checks.
+The script accepts no arguments. It uses only hard-coded repository-relative
+paths and literal marker checks.
 
-Use the implemented report when a pull request needs one compact answer to
-whether the current repository still has executable evidence for the bounded
-Alice desktop silver thread. Use the lower-level seam tests when a review needs
-to debug a specific evidence category.
+Use this report when a pull request needs one compact answer to whether the
+current repository still has executable evidence for the bounded Alice desktop
+silver thread. Use the lower-level seam tests when a review needs to debug a
+specific evidence category.
 
 ## Status model
 
-The planned report will have one top-level status line:
+The report has one top-level status line:
 
 ```text
 status:silver_thread=<covered_bounded|blocked>
@@ -95,14 +77,14 @@ Exit codes:
 | --- | --- |
 | `0` | All required evidence categories are covered within the bounded claim scope. |
 | `1` | One or more required evidence categories are missing. |
-| `2` | The implemented report was invoked from outside the repository layout or hit an internal contract error. |
+| `2` | The implemented report was invoked from outside the repository layout, passed unsupported arguments, or hit an internal contract error. |
 
-Optional Save/reopen gaps will not change the exit code. They will be printed as
+Optional Save/reopen gaps do not change the exit code. They are printed as
 bounded gaps unless direct Save/reopen evidence is found.
 
 ## Required evidence
 
-The planned report will require these evidence categories:
+The report requires these evidence categories:
 
 | Category | Required claim | Repository-owned seam |
 | --- | --- | --- |
@@ -124,8 +106,8 @@ claims, or a previous successful run.
 
 ## Optional Save/reopen evidence
 
-Save/reopen evidence will be reported only when the repository contains the
-direct bounded seam:
+Save/reopen evidence is reported only when the repository contains the direct
+bounded seam:
 
 ```text
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
@@ -140,7 +122,7 @@ robotSaveMenuRoundTripMarker
 IoUtilities.readProject
 ```
 
-When those markers are present, the planned report will print:
+When those markers are present, the report prints:
 
 ```text
 evidence:save_reopen=covered_bounded path=core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java
@@ -151,8 +133,7 @@ marker proof exists. It does not mean full desktop Save completion, Save As
 coverage, native dialog coverage, full project lifecycle coverage, or visible
 world execution.
 
-When the seam or markers are missing, the planned report will print a
-non-blocking gap:
+When the seam or markers are missing, the report prints a non-blocking gap:
 
 ```text
 gap:save_reopen=not_covered_optional reason=direct_save_reopen_seam_missing
@@ -160,8 +141,8 @@ gap:save_reopen=not_covered_optional reason=direct_save_reopen_seam_missing
 
 ## Output API
 
-The planned report will write grep-friendly lines to standard output. Field
-order will be stable within each line. Paths will be repository-relative.
+The report writes grep-friendly lines to standard output. Field order is stable
+within each line. Paths are repository-relative.
 
 ### Status line
 
@@ -224,12 +205,12 @@ claim-boundary:full_desktop_save_completion=not_claimed
 claim-boundary:new_scenario_workflow=not_added
 ```
 
-These lines are part of the planned contract. Removing one would weaken the
-report because callers could accidentally overstate what the aggregate proves.
+These lines are part of the contract. Removing one would weaken the report
+because callers could accidentally overstate what the aggregate proves.
 
 ## Configuration
 
-The planned report will have no feature flags and no dynamic path configuration.
+The report has no feature flags and no dynamic path configuration.
 
 | Setting | Value |
 | --- | --- |
@@ -239,21 +220,21 @@ The planned report will have no feature flags and no dynamic path configuration.
 | Network | Not used. |
 | Generated artifacts | None. The implemented report prints to standard output only. |
 
-The script must intentionally avoid user-controlled paths, globs, command
+The script intentionally avoids user-controlled paths, globs, command
 construction, `eval`, network access, package installation, privileged
 operations, and broad UI automation.
 
 ## Examples
 
-### Planned passing bounded report
+### Passing bounded report
 
 ```text
 status:silver_thread=covered_bounded required=5 covered=5 gaps=0 optional_gaps=0
-evidence:launch=covered_bounded path=qa/outside-in/alice-desktop/runners/run-scenario.sh marker=alice-ide-atk
+evidence:launch=covered_bounded path=qa/outside-in/alice-desktop/scenarios/post-open-runtime-display-accessibility-evidence.yaml marker=xvfb-real-alice
 evidence:starter_world_or_program_change=covered_bounded path=core/ide/src/test/java/org/alice/tools/EatmeEditProcedureTest.java marker=edited-project.a3p
-evidence:object_placement=covered_bounded path=core/ide/src/test/java/org/alice/tools/EatmeEditProcedureTest.java marker=placement.json
+evidence:object_placement=covered_bounded path=core/ide/src/test/java/org/alice/tools/EatmeEditProcedureTest.java marker=scene.diff.json
 evidence:procedure_edit=covered_bounded path=core/ide/src/test/java/org/alice/tools/FirstLessonCodeEditorActionProofTest.java marker=wave4-code-editor-action-proof
-evidence:run_window_or_render_affordance=covered_bounded path=qa/outside-in/alice-desktop/runners/run-scenario.sh marker=worldCanvasPixelTarget
+evidence:run_window_or_render_affordance=covered_bounded path=qa/outside-in/alice-desktop/scenarios/post-open-runtime-display-accessibility-evidence.yaml marker=visible-rendering-pixel-sampling-blocker.json
 evidence:save_reopen=covered_bounded path=core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/RobotSaveMenuDialogWriteReadbackProofTest.java marker=robotSaveMenuRoundTripMarker
 claim-boundary:full_ui_automation=not_claimed
 claim-boundary:visible_rendering_correctness=not_claimed
@@ -264,11 +245,11 @@ claim-boundary:full_desktop_save_completion=not_claimed
 claim-boundary:new_scenario_workflow=not_added
 ```
 
-### Planned blocked required evidence
+### Blocked required evidence
 
 ```text
 status:silver_thread=blocked required=5 covered=4 gaps=1 optional_gaps=0
-evidence:launch=covered_bounded path=qa/outside-in/alice-desktop/runners/run-scenario.sh marker=alice-ide-atk
+evidence:launch=covered_bounded path=qa/outside-in/alice-desktop/scenarios/post-open-runtime-display-accessibility-evidence.yaml marker=xvfb-real-alice
 gap:procedure_edit=missing_required path=core/ide/src/test/java/org/alice/tools/FirstLessonCodeEditorActionProofTest.java marker=wave4-code-editor-action-proof
 claim-boundary:visible_rendering_correctness=not_claimed
 ```
@@ -278,7 +259,7 @@ implemented aggregate cannot be used as silver-thread evidence until the
 lower-level seam is restored or the report is updated to point at a new direct
 executable seam.
 
-### Planned optional Save/reopen gap
+### Optional Save/reopen gap
 
 ```text
 status:silver_thread=covered_bounded required=5 covered=5 gaps=0 optional_gaps=1
@@ -318,8 +299,8 @@ The implemented report must not claim:
 | `status:silver_thread=blocked` | A required file or marker is missing. | Read the adjacent `gap:` line, restore the underlying seam, or update the report to the new direct executable seam. |
 | `gap:save_reopen=not_covered_optional` | The bounded Robot Save/readback seam was not found. | Keep the gap, or restore direct Save/readback evidence before claiming optional coverage. |
 | `claim-boundary:*` lines are missing | The report contract is incomplete. | Restore the non-claim output before using the implemented report in review. |
-| The script is not present | The aggregate report has not been implemented yet. | Treat this page as the planned contract until the shell artifact is added. |
-| The script is run with arguments | The invocation is unsupported. | Run the exact no-argument command from [Planned usage](#planned-usage) after implementation. |
+| The script is not present | The aggregate report has been removed or was not checked out. | Restore the shell artifact before using this reference as executable evidence. |
+| The script is run with arguments | The invocation is unsupported. | Run the exact no-argument command from [Usage](#usage). |
 
 Do not fix a blocked implemented report by weakening marker checks to
 file-existence-only checks. The implemented report must be intentionally brittle
