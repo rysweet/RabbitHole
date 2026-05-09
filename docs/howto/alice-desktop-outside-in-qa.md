@@ -465,14 +465,20 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Place the bounded Run-window artifacts and supporting manual evidence in the
-timestamped directory before review:
+timestamped directory before review, or record exact paths to the evidence
+directory that produced them:
 
 ```text
 manual-evidence-checklist.txt
 environment.txt
 status.txt
+desktop-run-execution.json
+desktop-run-runtime.log
 desktop-run-render-affordance.json
+desktop-run-pixel-boundary.json
 desktop-run-pixel-observation.json
+desktop-first-lesson-next-action.json
+desktop-save-menu-action-target.json
 desktop-run-status-summary.json
 desktop-run-execution-gap-report.json
 launch.log or run.log
@@ -481,13 +487,24 @@ saved .a3p project used for the run
 review-notes.txt
 ```
 
+`desktop-run-execution.json` and `desktop-run-runtime.log` are supporting
+VM-listener evidence when opt-in desktop Run execution evidence is enabled. The
+gap report's `executableToday.evidenceArtifacts` list remains limited to the
+bounded Run-window artifacts named by the implementation; those referenced files
+should be present for review or precisely linked from `review-notes.txt`.
+
 Use this review note shape for a bounded acceptance decision:
 
 ```text
 scenario: alice-desktop-run-debug
 reviewedEvidence:
+  - desktop-run-execution.json
+  - desktop-run-runtime.log
   - desktop-run-render-affordance.json
+  - desktop-run-pixel-boundary.json
   - desktop-run-pixel-observation.json
+  - desktop-first-lesson-next-action.json
+  - desktop-save-menu-action-target.json
   - desktop-run-status-summary.json
   - desktop-run-execution-gap-report.json
 decision: accept bounded Run-window evidence only

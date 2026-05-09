@@ -92,6 +92,10 @@ claim full world execution, playback, visible rendering correctness, full UI
 automation, Save completion, grading, Sims validation, or deployed installer
 success. Its v1 `doesNotClaim` payload enforces only the implementation-backed
 tokens documented in the [Desktop Run execution gap report](./desktop-run-execution-gap-report.md).
+The `alice-desktop-run-debug` manual checklist also asks reviewers to collect or
+link `desktop-run-execution.json` and `desktop-run-runtime.log` when opt-in
+desktop Run execution evidence is enabled; those VM-listener artifacts support
+the manual handoff but are not v1 gap-report `executableToday` entries.
 
 ## Learner-world boundary
 

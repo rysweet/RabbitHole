@@ -366,11 +366,19 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 The generated checklist is not a pass result. Reviewers place or reference the
-bounded Run-window artifacts, the gap report, the run log, workflow-context
-screenshots or screen captures, the saved `.a3p` used for the run, and
-`review-notes.txt` in the timestamped directory. Acceptance language must stay
-limited to bounded Run-window evidence and the deterministic world-advance proof
-blocker.
+supporting VM-listener artifacts (`desktop-run-execution.json` and
+`desktop-run-runtime.log`) when opt-in desktop Run execution evidence is enabled,
+the bounded Run-window artifacts named by the gap report
+(`desktop-run-render-affordance.json`, `desktop-run-pixel-boundary.json`,
+`desktop-run-pixel-observation.json`,
+`desktop-first-lesson-next-action.json`,
+`desktop-save-menu-action-target.json`, and
+`desktop-run-status-summary.json`), the gap report, the run log,
+workflow-context screenshots or screen captures, the saved `.a3p` used for the
+run, and `review-notes.txt` in the timestamped directory. If artifacts are not
+copied into the manual run directory, `review-notes.txt` must identify their
+exact evidence location. Acceptance language must stay limited to bounded
+Run-window evidence and the deterministic world-advance proof blocker.
 
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
 

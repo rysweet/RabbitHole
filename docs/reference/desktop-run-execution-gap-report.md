@@ -72,11 +72,13 @@ java \
   ...
 ```
 
-The report appears in the selected evidence directory after the existing
-Run-window artifacts:
+A complete opt-in review directory can include the supporting VM-listener
+artifacts, the bounded Run-window artifacts, and the gap report:
 
 ```text
 target/desktop-run-evidence/
+  desktop-run-execution.json
+  desktop-run-runtime.log
   desktop-run-render-affordance.json
   desktop-run-pixel-boundary.json
   desktop-run-pixel-observation.json
@@ -85,6 +87,13 @@ target/desktop-run-evidence/
   desktop-run-status-summary.json
   desktop-run-execution-gap-report.json
 ```
+
+`desktop-run-execution.json` and `desktop-run-runtime.log` are supporting
+VM-listener evidence when opt-in desktop Run execution evidence is enabled.
+They are required by the manual `run-debug` checklist in that mode, but they
+are not v1 `executableToday.evidenceArtifacts` entries and do not expand the
+gap report's claim beyond bounded Run-window evidence plus the deterministic
+world-advance blocker.
 
 Review the gap report after reviewing `desktop-run-status-summary.json`:
 
@@ -306,12 +315,17 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 The timestamped run directory is the review container. If opt-in desktop Run
-evidence is enabled during the same review, place or reference these artifacts
-from that directory:
+evidence is enabled during the same review, place these artifacts in that
+directory or reference the exact evidence directory that produced them:
 
 ```text
+desktop-run-execution.json
+desktop-run-runtime.log
 desktop-run-render-affordance.json
+desktop-run-pixel-boundary.json
 desktop-run-pixel-observation.json
+desktop-first-lesson-next-action.json
+desktop-save-menu-action-target.json
 desktop-run-status-summary.json
 desktop-run-execution-gap-report.json
 launch.log or run.log
@@ -319,6 +333,17 @@ manual screenshot or screen capture for workflow context
 saved .a3p project used for the run
 review-notes.txt
 ```
+
+`desktop-run-execution.json` and `desktop-run-runtime.log` are supporting
+VM-listener artifacts for the manual checklist. The report-referenced artifact
+files are `desktop-run-render-affordance.json`,
+`desktop-run-pixel-boundary.json`, `desktop-run-pixel-observation.json`,
+`desktop-first-lesson-next-action.json`,
+`desktop-save-menu-action-target.json`, and
+`desktop-run-status-summary.json`. They do not have to be copied into the manual
+scenario directory when they were generated elsewhere, but review notes must name
+their exact location; the report's references alone are not a substitute for
+collecting or linking the actual artifacts.
 
 `review-notes.txt` should state that the decision accepts bounded Run-window
 evidence only and keeps deterministic world-advance proof blocked until a
@@ -356,8 +381,13 @@ Any wording that treats the report as proof of full execution, playback, or rend
 
 ```text
 reviewedEvidence:
+  - desktop-run-execution.json
+  - desktop-run-runtime.log
   - desktop-run-render-affordance.json
+  - desktop-run-pixel-boundary.json
   - desktop-run-pixel-observation.json
+  - desktop-first-lesson-next-action.json
+  - desktop-save-menu-action-target.json
   - desktop-run-status-summary.json
   - desktop-run-execution-gap-report.json
 decision: accept bounded Run-window evidence only
@@ -396,7 +426,11 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
    missing.
 5. Require `doesNotClaim` to include full world execution, visible rendering
    correctness, grading, Save completion, and full UI automation.
-6. Keep PR and review text conservative: "bounded Run-window evidence" and
+6. For `alice-desktop-run-debug` manual review, require the supporting
+   VM-listener artifacts when that opt-in evidence is enabled, and require each
+   payload-referenced artifact file to be physically present or precisely linked
+   from review notes.
+7. Keep PR and review text conservative: "bounded Run-window evidence" and
    "execution gap report" are acceptable; completion, playback, correctness,
    grading, Save, Sims, installer, or full-automation claims are not.
 
