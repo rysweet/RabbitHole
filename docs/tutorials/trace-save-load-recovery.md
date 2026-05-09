@@ -72,7 +72,7 @@ These tests characterize the same rules:
 Run the focused validation:
 
 ```shell
-mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -pl core/ide -am \
   -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
@@ -116,15 +116,13 @@ The acceptance scenarios describe the observable archive contract:
 Run the focused validation:
 
 ```shell
-mvn -pl core/story-api-migration -am -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
 ## Check the complete recovery model
 
-TLC was not run for this PR validation because no local `tlc`, `tla2tools`, or
-`tla2tools.jar` was found. When TLC is available, check the model with the
-committed config:
+When TLC is available, check the model with the committed config:
 
 ```shell
 cd eatme/formal/backup-load-recovery

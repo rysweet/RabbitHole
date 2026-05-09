@@ -162,10 +162,10 @@ Run commands from the repository root.
 
 ```shell
 NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_formal_spec_contracts_reference tests.test_pr426_formal_contract_wiring
-mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectLoadFailurePlanTest,ProjectLoadFailureDispatchPlanTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectLoadFailurePlanTest,ProjectLoadFailureDispatchPlanTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
 The Maven flags keep upstream reactor modules without tests or without the named
