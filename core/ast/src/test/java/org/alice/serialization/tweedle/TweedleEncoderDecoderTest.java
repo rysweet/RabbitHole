@@ -1559,7 +1559,7 @@ public class TweedleEncoderDecoderTest {
 
   @Test
   public void implicitSameClassMethodCallDecodeRejectsArgumentBearingCall() {
-    assertUnsupportedArgumentBearingImplicitSameClassMethodCallDecode("""
+    assertUnsupportedImplicitSameClassMethodCallDecode("""
         class SyntheticType {
           void caller() { helper(value: 1); }
           void helper(WholeNumber value) { }
@@ -2161,16 +2161,6 @@ public class TweedleEncoderDecoderTest {
   }
 
   private void assertUnsupportedImplicitSameClassMethodCallDecode(String source, String expectedDetail) {
-    UnsupportedTweedleDecodeException thrown = assertThrows(
-        UnsupportedTweedleDecodeException.class,
-        () -> coder.decode(source));
-
-    assertTrue(thrown.getMessage(), thrown.getMessage().contains(expectedDetail));
-  }
-
-  private void assertUnsupportedArgumentBearingImplicitSameClassMethodCallDecode(
-      String source,
-      String expectedDetail) {
     UnsupportedTweedleDecodeException thrown = assertThrows(
         UnsupportedTweedleDecodeException.class,
         () -> coder.decode(source));

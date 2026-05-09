@@ -314,7 +314,7 @@ public class Decoder {
         throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
       }
     } else if (!methodCall.getArguments().isEmpty()) {
-      throw unsupportedArgumentBearingImplicitSameClassMethodCall(ownerName, methodCall);
+      throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
     }
     UserMethod targetMethod = zeroArgumentMethods.get(methodCall.getMethodName());
     if (targetMethod == null) {
@@ -1117,14 +1117,6 @@ public class Decoder {
       MethodCallExpression methodCall) {
     return new UnsupportedTweedleDecodeException(
         "Tweedle " + ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS + " are not supported by the AST decoder: "
-            + ownerName + "." + describeMethodCall(methodCall));
-  }
-
-  private UnsupportedTweedleDecodeException unsupportedArgumentBearingImplicitSameClassMethodCall(
-      String ownerName,
-      MethodCallExpression methodCall) {
-    return new UnsupportedTweedleDecodeException(
-        "Tweedle argument-bearing implicit same-class method calls are not supported by the AST decoder: "
             + ownerName + "." + describeMethodCall(methodCall));
   }
 
