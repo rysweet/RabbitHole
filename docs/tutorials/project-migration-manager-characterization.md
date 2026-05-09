@@ -3,6 +3,13 @@
 This tutorial walks through adding a generated XML-string characterization for a
 `ProjectMigrationManager` text migration seam.
 
+For background on why this layer exists, see the
+[Migration Hotspot Characterization concepts](../concepts/migration-hotspot-characterization.md).
+For the full contract and API reference, see the
+[reference](../reference/project-migration-manager-characterization.md).
+For a task-oriented checklist, use the
+[how-to](../howto/characterize-project-migration-manager.md).
+
 ## Contents
 
 - [Goal](#goal)

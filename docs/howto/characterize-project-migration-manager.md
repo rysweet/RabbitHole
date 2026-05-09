@@ -29,6 +29,8 @@ The characterization suite is documented in the
 [ProjectMigrationManager migration reference](../reference/project-migration-manager-characterization.md).
 For a guided example, use the
 [ProjectMigrationManager migration tutorial](../tutorials/project-migration-manager-characterization.md).
+For background on why this layer exists, see the
+[Migration Hotspot Characterization concepts](../concepts/migration-hotspot-characterization.md).
 
 ## 1. Identify the migration behavior
 

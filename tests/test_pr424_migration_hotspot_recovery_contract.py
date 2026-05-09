@@ -22,12 +22,14 @@ MIGRATION_TEST = (
 )
 SCOPED_DOCS = [
     DOCS_INDEX,
+    REPO_ROOT / "docs" / "concepts" / "migration-hotspot-characterization.md",
     REPO_ROOT / "docs" / "howto" / "characterize-project-migration-manager.md",
     REPO_ROOT / "docs" / "reference" / "project-migration-manager-characterization.md",
     REPO_ROOT / "docs" / "tutorials" / "project-migration-manager-characterization.md",
 ]
 EXPECTED_PR_SCOPE = {
     "core/story-api-migration/src/test/java/org/lgna/project/migration/ProjectMigrationManagerTest.java",
+    "docs/concepts/migration-hotspot-characterization.md",
     "docs/howto/characterize-project-migration-manager.md",
     "docs/index.md",
     "docs/reference/project-migration-manager-characterization.md",
@@ -36,6 +38,7 @@ EXPECTED_PR_SCOPE = {
     "tests/test_pr424_migration_hotspot_recovery_contract.py",
 }
 EXPECTED_DOC_LINKS = [
+    "./concepts/migration-hotspot-characterization.md",
     "./reference/project-migration-manager-characterization.md",
     "./howto/characterize-project-migration-manager.md",
     "./tutorials/project-migration-manager-characterization.md",

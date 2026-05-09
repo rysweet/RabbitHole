@@ -3,6 +3,13 @@
 This reference describes the `core/story-api-migration` characterization layer
 for `ProjectMigrationManager` text migration behavior.
 
+For background on why this layer exists and how it fits the modernization
+approach, see the [Migration Hotspot Characterization concepts](../concepts/migration-hotspot-characterization.md).
+For a task-oriented guide, use the
+[how-to](../howto/characterize-project-migration-manager.md).
+For a guided example, use the
+[tutorial](../tutorials/project-migration-manager-characterization.md).
+
 ## Contents
 
 - [Package](#package)
