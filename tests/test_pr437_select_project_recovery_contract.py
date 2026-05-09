@@ -48,8 +48,17 @@ def fenced_block_containing(text: str, marker: str) -> str:
 
 
 class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.howto = read(HOWTO_PATH)
+        cls.reference = read(REFERENCE_PATH)
+        cls.validator = read(VALIDATOR_PATH)
+        cls.runner = read(RUNNER_PATH)
+        cls.schema = json.loads(read(SCHEMA_PATH))
+        cls.schema_text = json.dumps(cls.schema)
+
     def test_pr_state_inspector_requires_exact_pr_head_and_check_metadata(self) -> None:
-        text = read(REFERENCE_PATH)
+        text = self.reference
 
         self.assertIn("gh pr view 437 --repo rysweet/RabbitHole", text)
         self.assertIn("`state`", text)
@@ -66,8 +75,8 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("must not mark the PR ready from a `develop` checkout", text)
 
     def test_pr_state_commands_capture_open_state_review_decision_and_checks(self) -> None:
-        text = read(REFERENCE_PATH)
-        howto = read(HOWTO_PATH)
+        text = self.reference
+        howto = self.howto
         block = fenced_block_containing(text, "gh pr view 437 --repo rysweet/RabbitHole")
 
         for field in ["state", "isDraft", "mergeStateStatus", "reviewDecision", "statusCheckRollup"]:
@@ -79,8 +88,8 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("review decision", howto)
 
     def test_recovery_contract_forbids_manual_merge_and_external_timeout_wrappers(self) -> None:
-        howto = read(HOWTO_PATH)
-        reference = read(REFERENCE_PATH)
+        howto = self.howto
+        reference = self.reference
 
         for text in [howto, reference]:
             with self.subTest(surface="howto" if text == howto else "reference"):
@@ -88,7 +97,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
                 self.assertIn("Do not use timeout wrappers", text)
 
     def test_howto_publication_boundary_allows_current_head_noop_justification_only(self) -> None:
-        text = read(HOWTO_PATH)
+        text = self.howto
 
         self.assertIn("workflow-accepted no-op justification", text)
         self.assertIn("current-head run proves that no repository change is needed", text)
@@ -98,7 +107,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("reviewed artifacts or the explicit reason no live artifact was required", text)
 
     def test_github_external_service_boundary_uses_retry_and_explicit_failure(self) -> None:
-        text = read(REFERENCE_PATH)
+        text = self.reference
         block = fenced_block_containing(text, "with_external_retry")
 
         self.assertIn("with_external_retry()", block)
@@ -116,7 +125,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("Do not silently substitute cached, historical, or manually typed PR metadata", text)
 
     def test_howto_keeps_general_prerequisites_before_pr_specific_recovery_note(self) -> None:
-        text = read(HOWTO_PATH)
+        text = self.howto
 
         self.assertLess(
             heading_index(text, "## Prerequisites"),
@@ -125,7 +134,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         )
 
     def test_merge_reproduction_uses_trap_guarded_disposable_worktree_cleanup(self) -> None:
-        text = read(REFERENCE_PATH)
+        text = self.reference
         block = fenced_block_containing(text, "MERGE_WORKTREE")
 
         self.assertIn("git worktree add", block)
@@ -140,7 +149,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         )
 
     def test_conflict_resolver_scope_records_exact_conflict_reason_resolution_and_next_action(self) -> None:
-        text = read(REFERENCE_PATH)
+        text = self.reference
 
         self.assertIn("git diff --name-only --diff-filter=U", text)
         for required_field in ["Conflict file", "Conflict reason", "Resolution", "Next action"]:
@@ -151,8 +160,8 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("records `merge dirtiness` as the current blocker instead of guessing", text)
 
     def test_select_project_evidence_lane_lists_focused_checks_and_excludes_downstream_claims(self) -> None:
-        howto = read(HOWTO_PATH)
-        reference = read(REFERENCE_PATH)
+        howto = self.howto
+        reference = self.reference
 
         for check in FOCUSED_SELECT_PROJECT_CHECKS:
             with self.subTest(check=check):
@@ -165,12 +174,12 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
                 self.assertIn(non_claim, reference)
 
     def test_scenario_schema_runner_and_validator_share_target_contract_terms(self) -> None:
-        schema = json.loads(read(SCHEMA_PATH))
-        validator = read(VALIDATOR_PATH)
-        runner = read(RUNNER_PATH)
+        schema = self.schema
+        validator = self.validator
+        runner = self.runner
 
         self.assertIn(SELECT_PROJECT_WORKFLOW, schema["properties"]["workflow"]["enum"])
-        schema_text = json.dumps(schema)
+        schema_text = self.schema_text
         self.assertIn("targetStarter", schema_text)
         self.assertIn("displayName", schema_text)
         self.assertIn("repositoryPath", schema_text)
@@ -188,8 +197,8 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
             self.assertIn("TARGET_STARTER_REPO_PATH", runner)
 
     def test_verified_report_shape_separates_evidence_assumptions_and_single_blocker(self) -> None:
-        howto = read(HOWTO_PATH)
-        reference = read(REFERENCE_PATH)
+        howto = self.howto
+        reference = self.reference
 
         for heading in ["## Verified evidence", "## Unverified assumptions", "## Current blocker"]:
             with self.subTest(heading=heading):
@@ -205,7 +214,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("Use `Current blocker: None` only when every PR finalization gate passes", howto)
 
     def test_pr_finalization_gate_keeps_draft_until_merge_validation_evidence_and_claims_are_clean(self) -> None:
-        text = read(REFERENCE_PATH)
+        text = self.reference
 
         self.assertIn("PR #437 remains draft unless all finalization conditions are true", text)
         for ready_gate in [
@@ -222,7 +231,7 @@ class Pr437SelectProjectRecoveryContractTest(unittest.TestCase):
         self.assertIn("they do not make a dirty, under-evidenced, or overclaiming PR ready for review", text)
 
     def test_environment_dependency_blocker_cannot_be_reported_as_live_ui_proof(self) -> None:
-        text = read(REFERENCE_PATH)
+        text = self.reference
 
         self.assertIn("Live AT-SPI or supporting desktop/runtime dependencies prevent execution", text)
         self.assertIn("the docs name the missing dependency instead of claiming proof", text)

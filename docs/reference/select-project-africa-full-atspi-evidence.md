@@ -77,9 +77,6 @@ with_external_retry() {
   done
 }
 
-with_external_retry gh pr view 437 --repo rysweet/RabbitHole \
-  --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url
-
 PR_JSON="$(with_external_retry gh pr view 437 --repo rysweet/RabbitHole \
   --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url)"
 PR_HEAD_OID="$(printf '%s\n' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefOid"])')"
