@@ -402,11 +402,12 @@ for name, text in claim_scope_inputs.items():
                 f"{', '.join(matched_labels)}: {paragraph[:180]}"
             )
 
-combined_scope_text = "\n".join(claim_scope_inputs.values()).lower()
+combined_scope_text = re.sub(r"\s+", " ", "\n".join(claim_scope_inputs.values()).lower())
 for required_non_claim in (
     "full ui automation",
     "visible rendering correctness",
     "full world execution",
+    "does not launch alice or generate fresh desktop evidence",
 ):
     require(required_non_claim in combined_scope_text, f"scope docs/scenarios must explicitly mention {required_non_claim!r} as a bounded non-claim")
 require(
