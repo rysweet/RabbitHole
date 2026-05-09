@@ -99,3 +99,64 @@ Limits:
 - This evidence does not claim full GUI export journey validation.
 - This evidence does not claim deployed installer validation.
 - This evidence does not claim visible rendering or Sims validation.
+
+Default-workflow recovery/finalization for PR #403
+Recorded at: 2026-05-09T18:27:00Z
+Validated local recovery head before evidence-only update:
+d7f41314bad7017bda9d7e2c5160841c4aaf284c
+Base branch verified: develop
+Recovery branch verified: wave6-runtime-event-dispatch-1778302300
+
+Scope inspected:
+- Full origin/develop...HEAD diff reviewed after merging current origin/develop.
+- Diff scope remains limited to focused headless runtime event dispatch
+  characterization and its narrow QA/docs/evidence contracts:
+  core/ast/src/test/java/org/lgna/project/virtualmachine/VirtualMachineHeadlessRuntimeEventTest.java
+  docs/index.md
+  docs/reference/alice-desktop-outside-in-qa.md
+  docs/reference/generated-story-api-listener-source-characterization.md
+  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
+  qa/outside-in/alice-desktop/README.md
+  qa/outside-in/alice-desktop/runners/run-scenario.sh
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+  qa/outside-in/alice-desktop/scenarios/generated-listener-runtime-dispatch-smoke.yaml
+  qa/outside-in/alice-desktop/scenarios/runtime-event-dispatch-smoke.yaml
+  qa/outside-in/alice-desktop/schema/scenario.schema.json
+  qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+  qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
+  tests/test_runtime_event_dispatch_docs_contract.py
+- docs/index.md retains current develop-owned content while linking only the
+  bounded headless runtime dispatch/generated listener characterization.
+- The reference documentation was clarified to keep PR #403 evidence links
+  focused on runtime-dispatch characterization and synchronized QA allowlists.
+
+Validation completed at the reconciled recovery content:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_runtime_event_dispatch_docs_contract
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest test -q
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+- git ls-files -u
+- rg '^(<<<<<<<|=======|>>>>>>>)' . --glob '!tweedle-lang/**'
+- git merge-base --is-ancestor origin/develop HEAD
+- git merge-tree --write-tree origin/develop HEAD
+
+Result:
+- No unmerged paths remain and no conflict markers were found.
+- Current origin/develop is an ancestor of the recovery head.
+- merge-tree completed cleanly; write-tree result
+  a46869e025f3fbd1486115c3b7bf737f864de8e4.
+- GitHub PR checks observed before the recovery push at prior remote head
+  b3151ffe4216ccecfe640a66bcf86becf4dbca0d: build, package-netbeans, test,
+  and GitGuardian passed; coverage was still in progress, so the PR state was
+  UNSTABLE pending that check.
+
+Limits:
+- This evidence does not claim desktop runtime execution.
+- This evidence does not claim visible rendering, playback correctness, Save
+  completion, grading, assessment, or full UI automation.
+- This evidence is bounded to headless virtual-machine listener dispatch,
+  generated listener source/registration, and one generated scene activation
+  dispatch through the existing headless runtime seam.
