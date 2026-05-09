@@ -55,6 +55,8 @@ repository.
 - [Coverage ratchet and hotspot review tutorial](./tutorials/coverage-ratchet-and-hotspot-review.md) - guided ratchet expansion example with conservative thresholds and a hotspot skip/refactor decision.
 - [Coverage reporting reference](./reference/coverage-reporting.md) - aggregate and module JaCoCo reporting, CLI options, CI ratchet gates, configuration, and path toward 70% line coverage.
 - [CI efficiency notes](./reference/ci-efficiency.md) - current pull request check timing, parallelism status, and safe next targets.
+- [Merge-ready PR recovery](./reference/merge-ready-pr-recovery.md) - CLI contract, recovery steps, evidence template, and validation for the automated merge-ready blocker resolution script.
+- [Run merge-ready PR recovery](./howto/run-merge-ready-pr-recovery.md) - how to bring a pull request to merge-ready status with QA scenario validation, quality audit cycles, and PR description updates.
 
 ## Modernization evidence and scorecards
 
@@ -66,6 +68,7 @@ repository.
 - [Characterize ModelResourceExporter behavior](./howto/characterize-model-resource-exporter.md) - how to add focused, behavior-backed model resource exporter coverage before protected hotspot work.
 - [Model resource exporter reference](./reference/model-resource-exporter.md) - XML, generated Java, thumbnail, and protected-hotspot contracts for model-loading resource export.
 - [Tutorial: Characterize ModelResourceExporter bounding-box state](./tutorials/model-resource-exporter-bounding-box-state.md) - guided example for protecting the intentional stateful XML bounding-box behavior.
+- [Tutorial: Trace a Model Export PR Recovery](./tutorials/trace-model-export-pr-recovery.md) - guided walkthrough from QA scenario validation through quality audit to the merge-ready PR evidence template.
 - [Decode coverage characterization](./reference/decode-coverage-characterization.md) - build contract, API behavior, examples, and tutorial guidance for Tweedle, literal arithmetic field initializers, player archive, type archive boundaries, and resource decode tests.
 - [Zero-argument this-method call decode reference](./reference/zero-argument-this-method-call-decode.md) - narrow Tweedle decoder contract for explicit same-type `this.method()` calls with no arguments and the argument-bearing explicit `this.method(label: value, ...)` fail-fast boundary.
 - [Simple if-statement decode reference](./reference/simple-if-statement-decode.md) - Tweedle decoder contract for simple `if (condition) { ... }` bodies with supported conditions and an explicit conditional-body allowlist including zero-argument `this.method();` calls.
