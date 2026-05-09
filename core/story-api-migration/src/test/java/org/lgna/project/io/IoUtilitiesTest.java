@@ -41,6 +41,7 @@ import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
+import org.lgna.story.SScene;
 import org.lgna.story.SProgram;
 
 import javax.imageio.ImageIO;
@@ -54,8 +55,10 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -157,6 +160,38 @@ public class IoUtilitiesTest {
       assertNotNull(zipFile.getEntry(editedProgramReference.file));
       assertTrue(readZipEntryText(zipFile, editedProgramReference.file).contains("class " + editedProgramName));
     }
+  }
+
+  @Test
+  public void reopenedPlayerArchiveWithSiblingTypeCanBeEditedSavedAsProjectAndReopened() throws Exception {
+    String originalProgramName = "OriginalPlayerProgram";
+    String editedProgramName = "EditedPlayerProgram";
+    String originalSceneName = "OriginalPlayerScene";
+    String editedSceneName = "EditedPlayerScene";
+    NamedUserType sceneType = sceneType(originalSceneName);
+    NamedUserType programType = programType(originalProgramName);
+    UserField sceneField = new UserField();
+    sceneField.name.setValue("scene");
+    sceneField.valueType.setValue(sceneType);
+    programType.fields.add(sceneField);
+    Set<NamedUserType> namedUserTypes = new HashSet<>();
+    namedUserTypes.add(sceneType);
+    Project project = new Project(programType, namedUserTypes, new HashSet<>(), Project.SceneCameraType.WindowCamera);
+    File playerArchive = temporaryFolder.newFile("sibling-player.a3w");
+    File savedProjectArchive = temporaryFolder.newFile("edited-sibling-project.a3p");
+
+    IoUtilities.exportProject(playerArchive, project);
+    Project reopenedPlayerArchive = IoUtilities.readProject(playerArchive);
+    reopenedPlayerArchive.getProgramType().name.setValue(editedProgramName);
+    namedUserTypeNamed(reopenedPlayerArchive, originalSceneName).name.setValue(editedSceneName);
+
+    IoUtilities.writeProject(savedProjectArchive, reopenedPlayerArchive);
+
+    Project reopenedProjectArchive = IoUtilities.readProject(savedProjectArchive);
+    assertEquals(editedProgramName, reopenedProjectArchive.getProgramType().getName());
+    NamedUserType reopenedSceneType = namedUserTypeNamed(reopenedProjectArchive, editedSceneName);
+    assertSame(reopenedSceneType, onlyField(reopenedProjectArchive.getProgramType()).getValueType());
+    assertEquals(Project.SceneCameraType.WindowCamera, sceneCameraType(reopenedProjectArchive));
   }
 
   @Test
@@ -1234,6 +1269,47 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void jsonPlayerReaderRejectsTraversalTypeReference() throws Exception {
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "Program";
+    manifest.metadata.fileType = IoUtilities.EXPORT_EXTENSION;
+    manifest.metadata.identifier.name = UUID.randomUUID().toString();
+    manifest.metadata.identifier.type = Manifest.ProjectType.World;
+    manifest.projectStructure.sceneCameraType = Project.SceneCameraType.WindowCamera;
+    TypeReference typeReference = new TypeReference("Program", "../Program.twe", "tweedle");
+    manifest.resources.add(typeReference);
+    File exportFile = temporaryFolder.newFile("traversal-type.a3w");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class Program {}");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(exportFile));
+
+    assertTrue(thrown.getMessage().contains(typeReference.file));
+  }
+
+  @Test
+  public void jsonTypeReaderRejectsTraversalTypeReference() throws Exception {
+    TypeManifest manifest = typeManifest("SyntheticType");
+    TypeReference typeReference = new TypeReference("SyntheticType", "../SyntheticType.twe", "tweedle");
+    manifest.resources.add(typeReference);
+    File typeFile = temporaryFolder.newFile("traversal-type.a3c");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(typeFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, typeReference.file, "class SyntheticType {}");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeFile));
+
+    assertTrue(thrown.getMessage().contains(typeReference.file));
+  }
+
+  @Test
   public void jsonPlayerAudioReadsWithSameUuidDoNotMutateEarlierRead() throws Exception {
     UUID sharedId = UUID.randomUUID();
     byte[] firstData = new byte[] {1, 2, 3};
@@ -1280,6 +1356,40 @@ public class IoUtilitiesTest {
     IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectFile));
 
     assertTrue(thrown.getMessage().contains("../evil.txt"));
+  }
+
+  @Test
+  public void xmlProjectReaderRejectsExternalEntityInResourcesXml() throws Exception {
+    File externalEntityFile = temporaryFolder.newFile("project-xxe.txt");
+    Files.write(externalEntityFile.toPath(), "project external entity should not be read".getBytes(StandardCharsets.UTF_8));
+    File projectFile = temporaryFolder.newFile("external-entity-resource.a3p");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(projectFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, "programType.xml", encodedProgramTypeXml("Program"));
+      writeZipEntry(zipOutputStream, "resources.xml", externalEntityResourcesXml(externalEntityFile));
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readProject(projectFile));
+
+    assertTrue(thrown.getMessage().contains("resources.xml"));
+  }
+
+  @Test
+  public void xmlTypeReaderRejectsExternalEntityInResourcesXml() throws Exception {
+    File externalEntityFile = temporaryFolder.newFile("type-xxe.txt");
+    Files.write(externalEntityFile.toPath(), "type external entity should not be read".getBytes(StandardCharsets.UTF_8));
+    File typeFile = temporaryFolder.newFile("external-entity-resource.a3c");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(typeFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, "type.xml", encodedTypeXml("LibraryType"));
+      writeZipEntry(zipOutputStream, "resources.xml", externalEntityResourcesXml(externalEntityFile));
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.readType(typeFile));
+
+    assertTrue(thrown.getMessage().contains("resources.xml"));
   }
 
   @Test
@@ -1369,10 +1479,33 @@ public class IoUtilitiesTest {
   }
 
   private static NamedUserType programType(String name) {
+    return userType(name, SProgram.class);
+  }
+
+  private static NamedUserType sceneType(String name) {
+    return userType(name, SScene.class);
+  }
+
+  private static NamedUserType userType(String name, Class<?> superClass) {
     NamedUserType type = new NamedUserType();
     type.name.setValue(name);
-    type.superType.setValue(JavaType.getInstance(SProgram.class));
+    type.superType.setValue(JavaType.getInstance(superClass));
     return type;
+  }
+
+  private static NamedUserType namedUserTypeNamed(Project project, String name) {
+    for (NamedUserType namedUserType : project.getNamedUserTypes()) {
+      if (name.equals(namedUserType.getName())) {
+        return namedUserType;
+      }
+    }
+    fail("Missing named user type " + name);
+    return null;
+  }
+
+  private static UserField onlyField(NamedUserType type) {
+    assertEquals(1, type.getDeclaredFields().size());
+    return type.getDeclaredFields().get(0);
   }
 
   private static NamedUserType programTypeReferencingImageResource(String name, ImageResource imageResource) {
@@ -1695,6 +1828,22 @@ public class IoUtilitiesTest {
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     XMLUtilities.write((new XmlEncoderDecoder()).encode(programType(name)), outputStream);
     return outputStream.toByteArray();
+  }
+
+  private static byte[] encodedTypeXml(String name) {
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    XMLUtilities.write((new XmlEncoderDecoder()).encode(programType(name)), outputStream);
+    return outputStream.toByteArray();
+  }
+
+  private static String externalEntityResourcesXml(File externalEntityFile) {
+    return """
+        <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+        <!DOCTYPE root [
+          <!ENTITY archiveXxe SYSTEM "%s">
+        ]>
+        <root>&archiveXxe;</root>
+        """.formatted(externalEntityFile.toURI());
   }
 
   private static void writeXmlProjectArchive(

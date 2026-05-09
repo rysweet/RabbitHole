@@ -1,28 +1,32 @@
 # Project Archive Reopen/Edit Seam
 
 The project archive reopen/edit seam is the repository-owned contract for
-opening an Alice `.a3p` archive from disk, editing the loaded project model,
-writing the project again, reopening it, and exporting it as `.a3w` without
-desktop UI automation.
+writing an editable Alice `.a3p` project archive, reopening it through the
+production project archive reader, editing project-owned model state, writing it
+again, reopening it again, and exporting the edited project to `.a3w`.
 
-There are two coverage levels. The lower-bound headless journey protects archive
-write, reopen, second write, second reopen, export, and readback. The complete
-reopen/edit seam additionally requires an edit persistence assertion.
+This seam lives in `core/story-api-migration`. It does not require Alice desktop,
+Save-menu automation, visible rendering, grading, or first-lesson workflow
+completion.
 
 Use this reference with
 [Validate the Project Archive Reopen/Edit Seam](../howto/validate-project-archive-reopen-edit-seam.md)
 and
 [Tutorial: Trace the Project Archive Reopen/Edit Seam](../tutorials/trace-project-archive-reopen-edit-seam.md).
+For neighboring generated archive coverage, see
+[Project IO Corpus Characterization](./project-io-corpus-characterization.md).
 
 ## Contents
 
 - [Contract](#contract)
+- [Primary characterization](#primary-characterization)
 - [API surfaces](#api-surfaces)
-- [Loader behavior](#loader-behavior)
-- [Archive write and export behavior](#archive-write-and-export-behavior)
-- [Root-detection contract for guard scripts](#root-detection-contract-for-guard-scripts)
+- [Archive behavior](#archive-behavior)
+- [Reader routing](#reader-routing)
+- [Security and failure boundaries](#security-and-failure-boundaries)
 - [Configuration](#configuration)
 - [Validation](#validation)
+- [PR 402 readiness evidence](#pr-402-readiness-evidence)
 - [Boundaries](#boundaries)
 
 ## Contract
@@ -30,199 +34,237 @@ and
 The seam proves this bounded journey:
 
 ```text
-Given a valid Alice project archive on disk
-When FileProjectLoader opens it
-And the loaded Project is edited in memory
-And the edited Project is written to a new .a3p archive
-And the edited archive is reopened
-And the reopened Project is exported to .a3w
+Given a valid in-memory Alice Project
+When IoUtilities.writeProject writes the original .a3p archive
+And IoUtilities.readProject reopens that .a3p archive
+And the reopened Project is edited in memory
+And IoUtilities.writeProject writes the edited .a3p archive
+And IoUtilities.readProject reopens the edited .a3p archive
+And IoUtilities.exportProject exports the edited Project as .a3w
 Then the edited project-owned state survives the second reopen
-And the exported archive is readable through the production project archive reader
+And the edited .a3p and exported .a3w archives contain coherent manifest data
 ```
 
-The journey stays below Alice desktop Save UI. It uses production project archive
-read/write/export code and direct file-backed loader behavior.
+The edit assertion is mandatory. A file-exists assertion, non-empty archive
+assertion, or successful first reopen alone is not enough because those checks
+would miss stale-save regressions that write the pre-edit project state.
+
+## Primary characterization
+
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+is the canonical characterization for the reopen/edit seam.
+
+The test uses generated temporary archives and only production project archive
+APIs:
+
+| Step | Surface | Required behavior |
+| --- | --- | --- |
+| Create fixture | `new Project(programType("OriginalProgram"), Project.SceneCameraType.WindowCamera)` | Builds a deterministic editable project without a checked-in binary fixture. |
+| Save original archive | `IoUtilities.writeProject(originalProjectFile, project)` | Writes an editable `.a3p` archive. |
+| Reopen original archive | `IoUtilities.readProject(originalProjectFile)` | Returns a `Project` whose program type is present and named `OriginalProgram`. |
+| Edit reopened project | `NamedUserType.name.setValue("EditedProgram")` | Mutates project-owned AST data after the first reopen. |
+| Save edited archive | `IoUtilities.writeProject(editedProjectFile, reopenedProject)` | Writes a second editable `.a3p` archive from the edited project. |
+| Reopen edited archive | `IoUtilities.readProject(editedProjectFile)` | Returns a `Project` whose program type is present and named `EditedProgram`. |
+| Inspect edited archive | `ZipFile` and `manifest.json` | Confirms the edited `.a3p` manifest names `EditedProgram`, declares file type `a3p`, preserves scene-camera metadata, and contains `programType.xml`. |
+| Export edited project | `IoUtilities.exportProject(exportFile, editedProject)` | Writes a `.a3w` player archive from the edited project. |
+| Inspect export archive | `ZipFile` and `manifest.json` | Confirms the `.a3w` manifest names `EditedProgram`, declares file type `a3w`, and references `src/EditedProgram.twe`. |
+
+Keep this as the single canonical full-chain test. Add neighboring coverage to
+`IoUtilitiesTest` or `HistoricalArchiveRoundTripCharacterizationTest` when a
+change touches archive routing, manifest parsing, resources, XML fallback,
+Tweedle decode boundaries, or historical archive round trips.
 
 ## API surfaces
 
 | Surface | Role |
 | --- | --- |
-| `org.alice.ide.uricontent.FileProjectLoader(File)` | Opens an existing file-backed project archive and reports the original archive URI. |
-| `org.alice.ide.uricontent.FileProjectLoader(File, boolean)` | Opens the same archive with optional VR-ready save URI remapping. |
-| `org.alice.ide.uricontent.AbstractFileProjectLoader.load()` | Protected loader seam that rejects non-project paths, uses `IoUtilities.projectReader(File)`, applies resource helpers, and returns `null` for rejected or failed loads. |
-| `org.alice.ide.uricontent.AbstractFileProjectLoader.handleLoadException(File, Exception)` | Hook for loader-specific IO failure handling. |
-| `org.alice.ide.uricontent.UriProjectLoader.getUri()` | Reports the active project URI used for save/reopen classification. |
-| `org.alice.ide.uricontent.UriProjectLoader.shouldBeSaved()` | Reports whether the loader points at a save destination that does not exist yet. |
-| `org.alice.ide.uricontent.UriProjectLoader.getMainProjectFile()` | Maps normal project archives and named backup archives back to their main project file. |
-| `org.alice.ide.ProjectFileUtilities.saveCopyOfProjectTo(File)` | Adjacent IDE save-copy surface covered by `ProjectFileUtilitiesTest`; not exercised by `ProjectOpenSaveExportJourneyTest`. |
-| `org.alice.ide.ProjectFileUtilities.exportCopyOfProjectTo(File)` | Adjacent IDE export-copy surface covered by `ProjectFileUtilitiesTest`; not exercised by `ProjectOpenSaveExportJourneyTest`. |
-| `org.lgna.project.io.IoUtilities.writeProject(File, Project)` | Lower-level archive writer used by headless characterization tests. |
-| `org.lgna.project.io.IoUtilities.exportProject(File, Project)` | Lower-level player archive exporter used by headless characterization tests. |
-| `org.lgna.project.io.IoUtilities.readProject(File)` | Production reader used to verify saved and exported archives. |
+| `org.lgna.project.io.IoUtilities.readProject(File)` | Public project archive reader for `.a3p` and `.a3w` files. |
+| `org.lgna.project.io.IoUtilities.readProject(String)` | Path-based overload for the same checked project read boundary. |
+| `org.lgna.project.io.IoUtilities.writeProject(File, Project, DataSource...)` | Editable `.a3p` writer that creates parent directories and writes through production archive code. |
+| `org.lgna.project.io.IoUtilities.writeProject(OutputStream, Project, DataSource...)` | Stream-backed editable project writer. |
+| `org.lgna.project.io.IoUtilities.exportProject(File, Project, DataSource...)` | Player `.a3w` exporter for project archive readback and manifest assertions. |
+| `org.lgna.project.io.XmlProjectIo` | XML project/type archive implementation used by editable `.a3p` fallback and XML `.a3c` behavior. |
+| `org.lgna.project.io.JsonProjectIo` | JSON manifest/Tweedle archive implementation used by readable `.a3w` and JSON `.a3c` behavior. |
+| `org.lgna.project.io.IoUtilities.PROJECT_EXTENSION` | Public extension constant for editable project archives: `a3p`. |
+| `org.lgna.project.io.IoUtilities.EXPORT_EXTENSION` | Public extension constant for player archives: `a3w`. |
+| `org.lgna.project.io.IoUtilities.TYPE_EXTENSION` | Public extension constant for type archives: `a3c`. |
 
-### Headless loader example
+`IoUtilities.readProject` declares checked archive failures. Unsupported,
+malformed, mismatched, or corrupt archives must fail clearly at the IO boundary
+instead of returning a success-shaped partial `Project`.
 
-Tests that need to call the protected loader seam expose it through a small
-subclass instead of widening production API:
+## Archive behavior
 
-```java
-private static class TestFileProjectLoader extends FileProjectLoader {
-  TestFileProjectLoader(File file) {
-    super(file);
-  }
+### Editable project `.a3p`
 
-  Project loadNow() {
-    return load();
-  }
-}
+`IoUtilities.writeProject(File, Project, DataSource...)` writes editable project
+archives. A generated project archive includes:
+
+```text
+version.txt
+manifest.json
+programType.xml
 ```
 
-A complete headless reopen/write/export flow uses real temporary files. To make
-it the reopen/edit seam, mutate the loaded project before the second write and
-assert the edited state after the second reopen and export readback:
+Resource-bearing project archives also include:
 
-```java
-File originalProjectFile = workingDirectory.resolve("classroom.a3p").toFile();
-File savedProjectFile = workingDirectory.resolve("classroom-copy.a3p").toFile();
-File exportedProjectFile = workingDirectory.resolve("classroom-export.a3w").toFile();
-
-Project originalProject = new Project(programType("ClassroomProgram"), Project.SceneCameraType.WindowCamera);
-IoUtilities.writeProject(originalProjectFile, originalProject);
-
-Project loadedProject = new TestFileProjectLoader(originalProjectFile).loadNow();
-loadedProject.getProgramType().name.setValue("EditedClassroomProgram");
-
-IoUtilities.writeProject(savedProjectFile, loadedProject);
-Project reopenedProject = new TestFileProjectLoader(savedProjectFile).loadNow();
-
-IoUtilities.exportProject(exportedProjectFile, reopenedProject);
-Project exportedProject = IoUtilities.readProject(exportedProjectFile);
+```text
+resources.xml
+resources/<resource-name>
 ```
 
-The required assertion is the edited project-owned state after the second reopen
-and exported archive readback. A file-exists assertion alone is not enough.
+The manifest identifies the archive as an Alice project:
 
-## Loader behavior
-
-`FileProjectLoader` accepts valid Alice 3 project archives and rejects invalid
-or unsupported inputs without returning a partial project.
-
-| Input | Loader behavior |
+| Manifest field | Required behavior |
 | --- | --- |
-| Existing valid `.a3p` archive | Returns a `Project` whose program type and resources were read through the production project archive reader. |
-| Corrupt archive bytes | Returns `null` after delegating the IO failure to `handleLoadException(File, Exception)`. |
-| Missing file | Returns `null` after surfacing the existing unable-to-open-file path. |
-| Alice 2 `.a2w` file | Returns `null`; Alice 3 does not load Alice 2 worlds through this loader. |
-| Alice type archive `.a3c` | Returns `null`; type archives are not project files. |
-| Future-version project that the user declines to open | Returns `null`. |
+| `metadata.fileType` | `a3p` |
+| `metadata.identifier.type` | `World` |
+| `description.name` | Matches the current project program type name. |
+| `projectStructure.sceneCameraType` | Preserves the project scene-camera type. |
 
-URI classification remains part of the seam:
+Generated editable `.a3p` archives keep XML program payloads. They do not use
+`src/<ProgramType>.twe` as the primary editable project payload.
 
-| Loader state | Expected classification |
+### Player export `.a3w`
+
+`IoUtilities.exportProject(File, Project, DataSource...)` writes player archives.
+A generated simple player archive includes:
+
+```text
+version.txt
+manifest.json
+src/<ProgramType>.twe
+```
+
+The manifest identifies the export as a player archive:
+
+| Manifest field | Required behavior |
 | --- | --- |
-| Normal project file | `getUri()` is the project file URI, `shouldBeSaved()` is `false` when the file exists, `isBackup()` is `false`, and `getMainProjectFile()` returns the file. |
-| VR-ready loader | `getUri()` points to the sibling ` VR.a3p` save target and `shouldBeSaved()` is `true` until that target exists. |
-| Named backup file in `<project>.bak/` | `isBackup()` is `true`, `isDefaultBackup()` is `false`, and `getMainProjectFile()` resolves to the sibling `<project>.a3p`. |
-| Default backup in `.defaultbak/` | `isBackup()` and `isDefaultBackup()` are `true`; no main project file is inferred. |
-| New project loader | Not a backup and no main project file. |
+| `metadata.fileType` | `a3w` |
+| `metadata.identifier.type` | `World` |
+| `description.name` | Matches the exported project program type name. |
+| `projectStructure.sceneCameraType` | Preserves the exported scene-camera type. |
+| type reference | Points at `src/<ProgramType>.twe` with format `tweedle`. |
 
-## Archive write and export behavior
+Export readback and manifest assertions are archive IO evidence only. They do
+not prove player runtime behavior or visible rendering correctness.
 
-The complete saving, reopening, editing, saving again, reopening again, and
-exporting journey preserves project-owned model data through real archive bytes:
+### Type archive `.a3c`
 
-1. Write the original project to `.a3p`.
-2. Reopen the `.a3p` through `FileProjectLoader`.
-3. Edit the reopened `Project`.
-4. Write the edited project to another `.a3p`.
-5. Reopen the edited `.a3p` through `FileProjectLoader`.
-6. Assert the edit survived.
-7. Export the reopened edited project to `.a3w`.
-8. Read the `.a3w` with `IoUtilities.readProject(File)`.
+Type archive behavior is adjacent to the reopen/edit seam. It is protected by
+`HistoricalArchiveRoundTripCharacterizationTest` and lower-level `IoUtilities`
+coverage when reader/writer routing changes affect `.a3c` compatibility.
 
-Project archive tests may inspect stable archive entries such as
-`manifest.json`, `programType.xml`, and exported Tweedle source entries when
-that structure is the behavior under review. They should not depend on desktop
-rendering, native file choosers, or user event timing.
+## Reader routing
 
-## Root-detection contract for guard scripts
+`IoUtilities` selects the archive reader from `manifest.json`:
 
-The repo-owned no-op guard entrypoint is
-`scripts/project-archive-reopen-edit-noop-guard.sh`. It must evaluate the actual
-git-linked worktree root before it decides whether a change is empty. It must not
-compare a copied session directory, detached artifact directory, or non-git path.
+| Manifest state | Reader behavior |
+| --- | --- |
+| Readable manifest with `metadata.fileType` equal to `a3w` | Uses the JSON project reader. |
+| Readable manifest with `metadata.fileType` equal to `a3c` | Uses the JSON project/type reader where applicable. |
+| Missing manifest | Uses the XML reader. |
+| Readable manifest with `metadata.fileType` equal to `a3p` | Uses XML fallback for editable project payloads. |
+| Corrupt manifest | Fails with manifest-read context instead of silently falling back. |
 
-The guard resolves the repository root with git:
+This routing is compatibility-sensitive. A change that moves editable `.a3p`
+archives away from XML fallback must update the API behavior, archive contract,
+and characterization tests together.
 
-```bash
-git rev-parse --show-toplevel
-```
+## Security and failure boundaries
 
-When a candidate path is supplied, the guard runs root detection from that path:
+Treat every project archive as untrusted input. Reader, writer, and evidence
+changes must preserve these boundaries:
 
-```bash
-git -C "$candidate_path" rev-parse --show-toplevel
-```
-
-The resolved root is the only directory used for git status or diff checks:
-
-```bash
-git -C "$repo_root" status --short
-git -C "$repo_root" diff --name-only
-```
-
-If root detection fails, the guard must fail clearly instead of treating the path
-as a clean no-op. This protects linked worktrees and avoids false failures caused
-by session copies.
+| Boundary | Required behavior |
+| --- | --- |
+| Corrupt or mismatched manifests | Fail clearly with archive-read context. Do not silently downgrade a readable but invalid manifest into XML fallback or a partial success. |
+| Archive entries | Keep entry handling archive-local. Do not relax existing path, resource, or payload safety checks when adding `.a3p`, `.a3w`, or `.a3c` coverage. |
+| XML parsing | Do not add XML parsing behavior that resolves external entities, loads remote resources, or depends on network access. |
+| Evidence output | Record commands, SHAs, exit statuses, and concise failure summaries only. Do not log full archive contents, full manifest payloads, source payloads, or resource bytes as readiness evidence. |
 
 ## Configuration
 
-Set the saved Node memory preference before Maven validation:
+Use the saved Node memory preference when running Maven validation:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
-Initialize the required Tweedle grammar submodule in every fresh checkout or
-worktree before focused or broad Maven validation:
+Initialize the Tweedle grammar submodule in every fresh checkout or worktree
+before focused or broad Maven validation:
 
 ```bash
 git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-No network service, credential, GitHub token, desktop display, or new product
-preference is required for the archive reopen/edit seam.
+No desktop display, credentials, network service, new product preference, or
+checked-in binary archive corpus is required for this seam.
 
 ## Validation
 
-Run the focused `core/ide` characterization from the repository root:
+Run the focused primary characterization from the repository root:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.ide.ProjectOpenSaveExportJourneyTest,org.alice.ide.uricontent.FileProjectLoaderTest \
+  -pl core/story-api-migration -am \
+  -Dtest=org.lgna.project.io.IoUtilitiesTest \
   test
 ```
 
-The focused command is ready for the complete seam when
-`ProjectOpenSaveExportJourneyTest` includes the deterministic edit assertion and
-proves the headless project archive journey, while `FileProjectLoaderTest` proves
-valid, invalid, VR-ready, and backup classification behavior.
+Run the historical archive guard when archive parsing, archive writing, reader
+routing, XML fallback, JSON manifest handling, Tweedle decode boundaries, or
+`.a3c`/`.a3w` compatibility is touched:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/story-api-migration -am \
+  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  test
+```
+
+## PR 402 readiness evidence
+
+For PR 402 recovery work on branch
+`wave6-project-reopen-edit-chain-1778302300`, readiness evidence records the
+exact branch state that passed the focused archive IO characterization. The
+evidence is a handoff record, not a new behavior claim.
+
+Record:
+
+| Field | Required value |
+| --- | --- |
+| PR | `402` |
+| Branch | `wave6-project-reopen-edit-chain-1778302300` |
+| Recovery baseline | `50b4d8687a42` |
+| Sync method | `already current`, `rebased onto develop`, or `merged develop` |
+| Final HEAD | Exact SHA from `git rev-parse HEAD` after sync and validation. |
+| Validation command | The focused `IoUtilitiesTest` command above, with `NODE_OPTIONS=--max-old-space-size=32768`. |
+| Result | Exit status and concise pass/fail outcome. |
+| Compatibility validation | Optional. Include the `HistoricalArchiveRoundTripCharacterizationTest` command and result when `.a3c`, `.a3w`, JSON/XML routing, parser, writer, Tweedle decode, or archive-resource behavior changed. |
+
+If the branch is already current with `develop`, record that explicitly. If sync
+requires conflict resolution, resolve only conflicts tied to repository-owned
+project archive IO seams.
 
 ## Boundaries
 
 This seam does not claim:
 
-- desktop Save menu completion;
+- desktop Save completion;
 - native or Swing file chooser automation;
 - full UI automation;
 - visible rendering correctness;
 - grading or learner assessment correctness;
 - full first-lesson completion;
-- runtime player behavior beyond reading the exported archive through the project archive reader.
+- player runtime behavior beyond archive manifest/source readback;
+- broad project migration correctness outside the characterized IO boundary.
 
 Use the separate Save-menu proof lane for bounded desktop Save evidence. Keep
-this seam focused on repository-owned project archive reader/writer behavior.
+this seam focused on repository-owned project archive reader, writer, export,
+manifest, and compatibility behavior.

@@ -69,7 +69,15 @@ import org.lgna.project.migration.ast.ReplaceCameraWithVR;
 import org.lgna.story.resourceutilities.ResourceTypeHelper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
+import org.xml.sax.SAXException;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -183,14 +191,18 @@ public class XmlProjectIo implements ProjectIo {
       return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
     }
 
-    private static Document readXML(InputStream is, MigrationManager migrationManager, Version decodedVersion) {
+    private static Document readXML(
+        InputStream is,
+        String entryName,
+        MigrationManager migrationManager,
+        Version decodedVersion) throws IOException {
       if (migrationManager.hasTextMigrationsFor(decodedVersion)) {
         Charset charSet = getCharsetForVersion(decodedVersion);
         String modifiedText =
             migrationManager.migrate(TextFileUtilities.read(new InputStreamReader(is, charSet)), decodedVersion);
         is = new ByteArrayInputStream(modifiedText.getBytes(charSet));
       }
-      return XMLUtilities.read(is);
+      return readArchiveXml(is, entryName);
     }
 
     private Document readXML(String entryName, MigrationManager migrationManager, Version decodedVersion) throws IOException {
@@ -198,7 +210,9 @@ public class XmlProjectIo implements ProjectIo {
       if (is == null) {
         throw new IOException("Archive does not contain entry " + entryName);
       }
-      return readXML(is, migrationManager, decodedVersion);
+      try (InputStream xmlStream = is) {
+        return readXML(xmlStream, entryName, migrationManager, decodedVersion);
+      }
     }
 
     private NamedUserType readType(String entryName) throws IOException, VersionNotSupportedException {
@@ -214,7 +228,10 @@ public class XmlProjectIo implements ProjectIo {
       Set<Resource> resources = new HashSet<>();
       InputStream isResources = container.getInputStream(RESOURCES_ENTRY_NAME);
       if (isResources != null) {
-        Document xmlDocument = XMLUtilities.read(isResources);
+        Document xmlDocument;
+        try (InputStream resourcesStream = isResources) {
+          xmlDocument = readArchiveXml(resourcesStream, RESOURCES_ENTRY_NAME);
+        }
         List<Element> xmlElements = XMLUtilities.getChildElementsByTagName(xmlDocument.getDocumentElement(), XML_RESOURCE_TAG_NAME);
         for (Element xmlElement : xmlElements) {
           String className = xmlElement.getAttribute(XML_RESOURCE_CLASSNAME_ATTRIBUTE);
@@ -236,6 +253,38 @@ public class XmlProjectIo implements ProjectIo {
         }
       }
       return resources;
+    }
+
+    private static Document readArchiveXml(InputStream is, String entryName) throws IOException {
+      try {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        documentBuilderFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        documentBuilderFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        documentBuilderFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        documentBuilderFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        documentBuilderFactory.setXIncludeAware(false);
+        documentBuilderFactory.setExpandEntityReferences(false);
+
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document document = documentBuilder.parse(is);
+        removeWhitespaceNodes(document.getDocumentElement());
+        return document;
+      } catch (ParserConfigurationException | SAXException | IOException e) {
+        throw new IOException("Unable to read " + entryName, e);
+      }
+    }
+
+    private static void removeWhitespaceNodes(Element element) {
+      NodeList children = element.getChildNodes();
+      for (int i = children.getLength() - 1; i >= 0; i--) {
+        Node child = children.item(i);
+        if ((child instanceof Text text) && (text.getData().trim().isEmpty())) {
+          element.removeChild(child);
+        } else if (child instanceof Element childElement) {
+          removeWhitespaceNodes(childElement);
+        }
+      }
     }
 
     private byte[] readResourceData(String entryName, Element xmlElement) throws IOException {
