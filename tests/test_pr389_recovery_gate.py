@@ -55,6 +55,65 @@ PR389_CHANGED_FILES = [
     "scripts/pr389_recovery_gate.py",
     "tests/test_pr389_recovery_gate.py",
 ]
+COMMAND_SAFETY_BLOCKER_CASES = (
+    (
+        "manual merge flag",
+        lambda evidence: evidence.update({"manualMergeUsed": True}),
+        "manual-merge-used",
+    ),
+    (
+        "direct timeout argv",
+        lambda evidence: evidence["commands"].append(["timeout", "600", "mvn", "test"]),
+        "timeout-wrapper-used",
+    ),
+    (
+        "env-wrapped timeout argv",
+        lambda evidence: evidence["commands"].append(["env", "timeout", "600", "mvn", "test"]),
+        "timeout-wrapper-used",
+    ),
+    (
+        "shell separator manual merge",
+        lambda evidence: evidence["commands"].append("cd repo && gh pr merge 389"),
+        "manual-merge-used",
+    ),
+    (
+        "nested bash timeout",
+        lambda evidence: evidence["commands"].append(["bash", "-lc", "timeout 600 mvn test"]),
+        "timeout-wrapper-used",
+    ),
+    (
+        "nested sh git merge",
+        lambda evidence: evidence["commands"].append(["sh", "-c", "git fetch && git merge HEAD"]),
+        "manual-merge-used",
+    ),
+    (
+        "semicolon manual merge",
+        lambda evidence: evidence["commands"].append("echo ok;gh pr merge 389"),
+        "manual-merge-used",
+    ),
+    (
+        "nested semicolon manual merge",
+        lambda evidence: evidence["commands"].append(["bash", "-lc", "echo ok;gh pr merge 389"]),
+        "manual-merge-used",
+    ),
+    (
+        "adjacent operator manual merge",
+        lambda evidence: evidence["commands"].append("true&&gh pr merge 389"),
+        "manual-merge-used",
+    ),
+    (
+        "semicolon timeout",
+        lambda evidence: evidence["commands"].append("echo ok;timeout 600 mvn test"),
+        "timeout-wrapper-used",
+    ),
+    (
+        "nested semicolon timeout",
+        lambda evidence: evidence["commands"].append(
+            ["bash", "-lc", "echo ok;timeout 600 mvn test"]
+        ),
+        "timeout-wrapper-used",
+    ),
+)
 
 
 def load_recovery_gate():
@@ -378,65 +437,13 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
 
     def test_command_verifier_rejects_manual_merge_and_timeout_wrappers(self) -> None:
         self.assert_no_blockers("verify_command_safety")
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence.update({"manualMergeUsed": True}),
-            "manual-merge-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append(["timeout", "600", "mvn", "test"]),
-            "timeout-wrapper-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append(["env", "timeout", "600", "mvn", "test"]),
-            "timeout-wrapper-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append("cd repo && gh pr merge 389"),
-            "manual-merge-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append(["bash", "-lc", "timeout 600 mvn test"]),
-            "timeout-wrapper-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append(["sh", "-c", "git fetch && git merge HEAD"]),
-            "manual-merge-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append("echo ok;gh pr merge 389"),
-            "manual-merge-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append(
-                ["bash", "-lc", "echo ok;gh pr merge 389"]
-            ),
-            "manual-merge-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append("true&&gh pr merge 389"),
-            "manual-merge-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append("echo ok;timeout 600 mvn test"),
-            "timeout-wrapper-used",
-        )
-        self.assert_has_blocker(
-            "verify_command_safety",
-            lambda evidence: evidence["commands"].append(
-                ["bash", "-lc", "echo ok;timeout 600 mvn test"]
-            ),
-            "timeout-wrapper-used",
-        )
+        for name, mutate, expected_blocker in COMMAND_SAFETY_BLOCKER_CASES:
+            with self.subTest(name=name):
+                self.assert_has_blocker(
+                    "verify_command_safety",
+                    mutate,
+                    expected_blocker,
+                )
 
 
 class Pr389RecoveryGateIntegrationTest(unittest.TestCase):
