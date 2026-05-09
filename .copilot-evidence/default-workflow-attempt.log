@@ -160,3 +160,53 @@ Limits:
 - This evidence is bounded to headless virtual-machine listener dispatch,
   generated listener source/registration, and one generated scene activation
   dispatch through the existing headless runtime seam.
+
+Default-workflow post-push check refresh for PR #403
+Recorded at: 2026-05-09T18:36:51Z
+Current PR head verified before this evidence-only refresh:
+3e0cba7f81ae92162ceee8a616776758bd379d82
+Current origin/develop verified:
+2e1e43c3937a7d163bcc76f1882903a8ad31f1cc
+Base branch verified: develop
+Recovery branch verified: wave6-runtime-event-dispatch-1778302300
+
+Reason for this refresh:
+- The previous PR #403 evidence entry intentionally recorded local recovery and
+  noted that GitHub checks were observed before the recovery push at the prior
+  remote head.
+- After the focused recovery push, PR #403 is CLEAN at the current head above
+  and GitHub checks are passing; this evidence-only refresh records that updated
+  merge-ready state without changing runtime, QA, or documentation behavior.
+
+Scope rechecked:
+- origin/develop is an ancestor of the current PR head.
+- No unmerged paths remain.
+- No conflict markers remain outside the tweedle-lang submodule.
+- The recovery scope remains limited to focused headless runtime event dispatch
+  characterization, generated listener source/registration characterization,
+  synchronized QA metadata contracts, and narrow evidence links.
+
+Validation refreshed at the current PR head before this evidence-only update:
+- git submodule update --init tweedle-lang
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_runtime_event_dispatch_docs_contract
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest test -q
+- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
+- gh pr checks 403 --json name,state,bucket
+
+Result:
+- PR #403 merge state is CLEAN.
+- GitHub checks at head 3e0cba7f81ae92162ceee8a616776758bd379d82 are passing:
+  coverage, build, package-netbeans, test, and GitGuardian Security Checks.
+- This refresh changes only merge-ready evidence for the already-pushed
+  runtime-dispatch recovery.
+
+Limits:
+- This evidence does not claim desktop runtime execution.
+- This evidence does not claim visible rendering, playback correctness, Save
+  completion, grading, assessment, or full UI automation.
+- This evidence is bounded to headless virtual-machine listener dispatch,
+  generated listener source/registration, and one generated scene activation
+  dispatch through the existing headless runtime seam.
