@@ -14,8 +14,11 @@ For a guided walkthrough, see
 - [Prerequisites](#prerequisites)
 - [Prepare the worktree](#prepare-the-worktree)
 - [Sync PR 402 recovery branch](#sync-pr-402-recovery-branch)
+- [Inspect the exact diff](#inspect-the-exact-diff)
 - [Run primary validation](#run-primary-validation)
 - [Run compatibility validation when needed](#run-compatibility-validation-when-needed)
+- [Inspect PR checks](#inspect-pr-checks)
+- [Use the no-op guard](#use-the-no-op-guard)
 - [Review failures](#review-failures)
 - [Record readiness evidence](#record-readiness-evidence)
 - [Review claims](#review-claims)
@@ -55,6 +58,15 @@ Preserve unrelated worktree state. An untracked `default-workflow-attempt.log`
 is not part of this archive IO seam unless it is already a required repository
 artifact.
 
+Record the local worktree state before making sync or readiness decisions:
+
+```bash
+git status --short
+```
+
+Resolve, commit, or explicitly preserve unrelated local changes before treating
+them as recovery evidence.
+
 ## Sync PR 402 recovery branch
 
 Fetch the integration branch and PR branch:
@@ -75,24 +87,37 @@ git switch --track origin/wave6-project-reopen-edit-chain-1778302300
 Confirm PR 402 still points at this branch:
 
 ```bash
-gh pr view 402 --json number,headRefName,headRepositoryOwner,baseRefName
+gh pr view 402 --json number,headRefName,headRefOid,headRepositoryOwner,baseRefName
 ```
 
-Account for the recovery baseline:
+Confirm the local worktree is the PR head:
+
+```bash
+test "$(git rev-parse HEAD)" = "$(gh pr view 402 --json headRefOid --jq .headRefOid)"
+```
+
+Account for the recovery baseline and integration base:
 
 ```bash
 git merge-base --is-ancestor 50b4d8687a42 HEAD
-git log --oneline --decorate --max-count=12
+develop_head="$(git rev-parse origin/develop)"
+merge_base="$(git merge-base HEAD origin/develop)"
 ```
 
-Sync with `develop` using the least disruptive path that preserves active PR
-review history:
+Do not integrate `develop` when the branch already contains current
+`origin/develop`:
 
-1. If the branch already contains current `origin/develop`, record `already current`.
-2. Rebase only when the branch is private to the current recovery task or the PR
-   owner has explicitly chosen rewritten history for this update.
-3. For a shared or already-reviewed PR branch, prefer a minimal merge of
-   `origin/develop` over rewriting active PR history.
+```bash
+test "$merge_base" = "$develop_head"
+```
+
+If that test passes, record `merge-base equals origin/develop`. If it fails,
+merge `origin/develop` minimally rather than rebasing or force-pushing the
+published PR branch:
+
+```bash
+git merge --no-ff origin/develop
+```
 
 Resolve only conflicts tied to repository-owned project archive IO seams:
 
@@ -106,6 +131,49 @@ docs/tutorials/trace-project-archive-reopen-edit-seam.md
 
 Do not use this recovery path for unrelated desktop QA, rendering, grading,
 first-lesson, or broad migration-manager work.
+
+After any merge or committed local recovery change creates a new local `HEAD`,
+push the recovery branch normally so PR 402 points at the commit that will be
+validated:
+
+```bash
+git push origin HEAD:wave6-project-reopen-edit-chain-1778302300
+```
+
+Then refresh PR head evidence and compare it to the local commit before running
+or recording final evidence:
+
+```bash
+pr_head="$(gh pr view 402 --json headRefOid --jq .headRefOid)"
+local_head="$(git rev-parse HEAD)"
+test "$local_head" = "$pr_head"
+```
+
+Do not record readiness for a local-only merge commit or stale PR head.
+
+## Inspect the exact diff
+
+Review the exact pull request diff after any required sync:
+
+```bash
+git status --short
+git diff --stat origin/develop...HEAD
+git diff --name-status origin/develop...HEAD
+```
+
+Group the changed files in readiness evidence:
+
+| Group | Expected paths |
+| --- | --- |
+| Implementation | `core/story-api-migration/src/main/java/org/lgna/project/io/` when archive reader/writer behavior changed. |
+| Characterization test | `core/story-api-migration/src/test/java/org/lgna/project/io/` for focused reopen/edit or compatibility coverage. |
+| QA metadata | Repository-owned QA scenario, schema, or runner files only when they directly support this archive IO seam. |
+| Documentation | `docs/reference/project-archive-reopen-edit-seam.md`, this guide, and the matching tutorial. |
+| Guard scope | `scripts/project-archive-reopen-edit-noop-guard.sh` and `tests/test_project_archive_reopen_edit_noop_guard.py` when the no-op guard itself changes. |
+
+Stop and narrow the work before recording readiness if the diff includes
+unrelated desktop Save completion, full UI automation, visible rendering,
+grading, broad historical compatibility, or first-lesson completion changes.
 
 ## Run primary validation
 
@@ -152,6 +220,53 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
 If no archive parsing or writing code changed and the primary validation passes,
 the historical guard is optional for this narrow PR recovery.
 
+## Inspect PR checks
+
+Inspect PR check state after validation:
+
+```bash
+gh pr checks 402
+```
+
+Resolve only failing checks that are directly tied to project archive
+reopen/edit readiness. Report pending checks as pending. Do not turn unrelated
+desktop, rendering, grading, Save-completion, or first-lesson check state into a
+claim about this seam.
+
+## Use the no-op guard
+
+Run the guard when the recovery workflow reaches the final evidence step:
+
+```bash
+scripts/project-archive-reopen-edit-noop-guard.sh .
+```
+
+Interpret it this way:
+
+| Result | Evidence requirement |
+| --- | --- |
+| Exit `0` | The worktree has uncommitted changes; list the relative paths under `Files modified` after reviewing that they are scoped to this seam. |
+| Exit `1` | The worktree is clean; include **No-op justification** tied to the exact current `HEAD`, merge-base status, diff scope, validation, and PR checks. |
+| Exit `2` or `64` | Fix the command path or arguments before recording readiness evidence. |
+
+Use `--print-root` to confirm the guard is evaluating the intended linked
+worktree:
+
+```bash
+scripts/project-archive-reopen-edit-noop-guard.sh core/story-api-migration --print-root
+```
+
+To make a clean-worktree no-op explicit and machine-checkable, save the final
+evidence text and pass the exact current head. The evidence must use
+`No-op justification` instead of `Files modified`, and the justification must
+reference that same head:
+
+```bash
+scripts/project-archive-reopen-edit-noop-guard.sh . \
+  --allow-noop-evidence readiness-evidence.md \
+  --expected-head "$(git rev-parse HEAD)"
+```
+
 ## Review failures
 
 Use the failing assertion to choose the smallest responsible seam:
@@ -180,6 +295,9 @@ Record readiness after sync and validation at the exact final HEAD:
 
 ```bash
 final_head="$(git rev-parse HEAD)"
+pr_head="$(gh pr view 402 --json headRefOid --jq .headRefOid)"
+test "$final_head" = "$pr_head"
+git status --short
 ```
 
 Use this evidence shape:
@@ -187,13 +305,35 @@ Use this evidence shape:
 ```text
 PR: 402
 Branch: wave6-project-reopen-edit-chain-1778302300
-Recovery baseline: 50b4d8687a42
-Sync method: <already current | rebased onto develop | merged develop>
-Final HEAD: <exact git rev-parse HEAD value>
+Base: develop
+PR head: <exact SHA from gh pr view 402 --json headRefOid --jq .headRefOid>
+Local HEAD: <exact git rev-parse HEAD value>
+Merge-base status: <merge-base equals origin/develop | merged origin/develop>
+Worktree status: <clean | exact git status --short entries reviewed as recovery scope>
+Diff summary:
+  Implementation: <paths or none>
+  Characterization test: <paths or none>
+  QA metadata: <paths or none>
+  Documentation: <paths or none>
+  Guard scope: <paths or none>
 Validation:
   NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test
 Result: <passed with exit code 0 | failed with exit code N and blocker summary>
 Compatibility validation: <not run; no parser/writer/routing compatibility surface changed | command and result>
+Checks: <PR check names and states, with scoped blockers only>
+Files modified: <relative paths changed by this recovery step>
+```
+
+If the guard reports a clean worktree, replace `Files modified` with:
+
+```text
+No-op justification:
+  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at
+  <HEAD>, local HEAD matches the PR head, merge-base equals origin/develop, the
+  origin/develop...HEAD diff is limited to project archive reopen/edit
+  characterization/readiness surfaces, focused archive reopen/edit validation
+  passed at <HEAD>, and no scoped PR check blocker requires a code or docs
+  change.
 ```
 
 Run and record compatibility validation when `.a3c`, `.a3w`, JSON/XML routing,
