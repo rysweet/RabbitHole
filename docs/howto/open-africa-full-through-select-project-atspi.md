@@ -80,7 +80,7 @@ GitHub PR metadata is an external dependency for that recovery path, not Alice r
 
 Passing recovery gates makes the PR evidence-ready only. It does not authorize an agent to approve, merge, close, rebase, push unrelated changes, or otherwise mutate PR #437.
 
-The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed. For current head `78b6f807eb4f30df4401de40a58246f499969cc3`, `mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is merge-ready evidence. Empty `reviewDecision` is owner-free/unset metadata; report it honestly and do not describe it as approval. The no-op justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, merge-ready GitHub evidence, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required. No live artifact is acceptable only for a no-op documentation recovery that makes no live Select Project success claim and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory.
+The PR #437 recovery report can use a workflow-accepted no-op justification only when a current-head run proves that no repository change is needed. At the verified head, `mergeStateStatus=CLEAN` plus required checks with `SUCCESS` conclusions is merge-ready evidence. Empty `reviewDecision` is owner-free/unset metadata; report it honestly and do not describe it as approval. The no-op justification must cite the exact PR metadata command, local head SHA, worktree cleanliness, merge-ready GitHub evidence, focused validation commands, and reviewed artifacts or the explicit reason no live artifact was required. No live artifact is acceptable only for a no-op documentation recovery that makes no live Select Project success claim and explicitly says the run verified existing documentation/contracts instead of producing a new AT-SPI evidence directory.
 
 ## Target evidence vocabulary
 
@@ -314,7 +314,7 @@ If this run supports PR #437 recovery or finalization, use the [verified evidenc
 - Use `Current blocker: None` only when every PR finalization gate passes.
 ```
 
-For PR #437 at current head `78b6f807eb4f30df4401de40a58246f499969cc3`, use the canonical [`No-op justification:` shape](../reference/select-project-africa-full-atspi-evidence.md#workflow-accepted-no-op-justification) only for a documentation-only recovery that makes no live Select Project success claim.
+For PR #437 at the verified current head, use the canonical [`No-op justification:` shape](../reference/select-project-africa-full-atspi-evidence.md#workflow-accepted-no-op-justification) only for a documentation-only recovery that makes no live Select Project success claim.
 
 If GitHub metadata is unavailable, report `Current blocker: environment dependency`. If branch/head drift is observed, the report must not publish `No-op justification:`; it must first re-establish the exact PR head or stop with the blocker.
 

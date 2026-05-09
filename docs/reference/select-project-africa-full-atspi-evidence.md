@@ -155,7 +155,7 @@ Use a no-op justification only when all of these conditions are true:
 
 | Condition | Required evidence |
 | --- | --- |
-| Exact PR head | `gh pr view` reports `headRefOid=78b6f807eb4f30df4401de40a58246f499969cc3`, and local `git rev-parse HEAD` matches it. |
+| Exact PR head | `gh pr view` reports `headRefOid`, and local `git rev-parse HEAD` matches it exactly. |
 | Clean worktree | `git status --short --branch` has no uncommitted repository changes unrelated to the no-op report. |
 | Merge readiness | GitHub reports `mergeStateStatus=CLEAN`, and every required status check in `statusCheckRollup` has `status=COMPLETED` and `conclusion=SUCCESS`; if GitHub reports `DIRTY`, the report names one `merge dirtiness` blocker instead of claiming readiness. |
 | Review metadata | `reviewDecision` is recorded exactly. Empty review decision is reported as owner-free/unset and is not described as approval. |
@@ -171,7 +171,7 @@ For PR #437, use this report shape only after the executable checks prove the re
 ```markdown
 No-op justification:
 - Current branch: `feat/issue-415-rabbithole-wave7-select-project-starter-lane-follo`
-- Current head: `78b6f807eb4f30df4401de40a58246f499969cc3`
+- Current head: `<verified headRefOid matching git rev-parse HEAD>`
 - PR metadata command: `gh pr view 437 --repo rysweet/RabbitHole --json number,title,state,headRefName,headRefOid,baseRefName,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup,url`
 - Worktree cleanliness: `git status --short --branch` showed only the documented no-op report changes, or no repository changes when no-op recovery is reported without edits.
 - Merge-ready evidence: `mergeStateStatus=CLEAN`, every required check in `statusCheckRollup` completed with `SUCCESS`, and branch refs point at the verified head.
