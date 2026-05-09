@@ -19,7 +19,8 @@ Use the command guide in
 - [4. Edit and write a second project archive](#4-edit-and-write-a-second-project-archive)
 - [5. Reopen the edited archive](#5-reopen-the-edited-archive)
 - [6. Export and inspect the player archive](#6-export-and-inspect-the-player-archive)
-- [7. Run the focused validation](#7-run-the-focused-validation)
+- [7. Trace the security hardening](#7-trace-the-security-hardening)
+- [8. Run the focused validation](#8-run-the-focused-validation)
 
 ## Goal
 
@@ -184,7 +185,50 @@ try (ZipFile zipFile = new ZipFile(exportFile)) {
 This is export archive evidence only. It does not prove player runtime behavior
 or rendering correctness.
 
-## 7. Run the focused validation
+## 7. Trace the security hardening
+
+The archive IO layer applies defense-in-depth protections at every boundary.
+Trace the following protections through the source while reviewing the seam:
+
+### XXE protection in XmlProjectIo
+
+Open `XmlProjectIo.readArchiveXml()` and locate the `DocumentBuilderFactory`
+configuration block. Confirm that secure-processing is enabled and DOCTYPE
+declarations plus external entity features are disabled before the factory
+creates any parser. This block protects every XML read — `programType.xml`,
+`resources.xml`, and type-archive payloads — from XXE injection.
+
+### Zip-slip guard in ResourceExportNames
+
+Open `ResourceExportNames.isSafeRelativeEntryName(String)` and trace the
+rejection checks: absolute paths, backslash, `..`, `.`, and Windows drive
+prefixes. This guard runs on every entry name before any read or write
+processing.
+
+### Entry allowlisting on read
+
+In `XmlProjectIo.readResourceData()`, confirm that
+`ResourceExportNames.isResourceEntryName(entryName)` gates resource entry reads.
+In `JsonProjectIo.readResource()` and `readTweedleType()`, confirm that the
+corresponding `isResourceEntryName` and `isSourceEntryName` checks gate their
+entry reads.
+
+### Path-leak assertion in tests
+
+In `IoUtilitiesTest`, find `assertZipEntryNamesDoNotLeakLocalPaths`. This
+iterates every entry in a generated archive and asserts no entry name contains a
+local file system path. The assertion catches regressions where a writer leaks
+the test environment's temporary directory structure into archive entry names.
+
+### Try-with-resources audit
+
+Spot-check three stream reads in each of `XmlProjectIo` and `JsonProjectIo`.
+Confirm that manifest, version, and resource streams use
+`try (InputStream is = zipFile.getInputStream(entry))` rather than bare
+`getInputStream` calls. This prevents file descriptor exhaustion when archive
+reads are interrupted or fail partway through.
+
+## 8. Run the focused validation
 
 From the repository root:
 
@@ -200,5 +244,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 ```
 
 The focused validation completes the tutorial when the deterministic edit
-survives the second `IoUtilities.readProject` call and the edited `.a3p` plus
-exported `.a3w` manifests describe the edited program coherently.
+survives the second `IoUtilities.readProject` call, the edited `.a3p` plus
+exported `.a3w` manifests describe the edited program coherently, and the
+security hardening protections in `XmlProjectIo`, `JsonProjectIo`, and
+`ResourceExportNames` remain intact.

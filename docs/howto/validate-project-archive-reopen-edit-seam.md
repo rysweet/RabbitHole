@@ -18,6 +18,7 @@ For a guided walkthrough, see
 - [Run primary validation](#run-primary-validation)
 - [Run headless bridge validation when needed](#run-headless-bridge-validation-when-needed)
 - [Run compatibility validation when needed](#run-compatibility-validation-when-needed)
+- [Verify security hardening](#verify-security-hardening)
 - [Inspect PR checks](#inspect-pr-checks)
 - [Run no-timeout QA/scenario evidence](#run-no-timeout-qascenario-evidence)
 - [Review docs, PR description, and quality audit evidence](#review-docs-pr-description-and-quality-audit-evidence)
@@ -258,6 +259,55 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
 If no archive parsing or writing code changed and the primary validation passes,
 the historical guard is optional for this narrow PR recovery.
 
+## Verify security hardening
+
+When the diff touches `XmlProjectIo`, `JsonProjectIo`, or `ResourceExportNames`,
+verify that the security hardening is intact by reviewing the following
+protections in the changed code:
+
+### XXE protection
+
+Confirm that `XmlProjectIo.readArchiveXml()` still configures the
+`DocumentBuilderFactory` with all four protections before parsing any XML entry:
+
+```text
+FEATURE_SECURE_PROCESSING = true
+disallow-doctype-decl = true
+external-general-entities = false
+external-parameter-entities = false
+```
+
+The `IoUtilitiesTest` suite includes a negative characterization that constructs
+an archive with an external-entity `resources.xml` payload and asserts that the
+reader rejects it. The test method `externalEntityResourcesXml` builds the
+crafted payload; the assertion must fail with an XML parse error, not succeed
+with injected content.
+
+### Zip-slip guard
+
+Confirm that `ResourceExportNames.isSafeRelativeEntryName(String)` rejects
+absolute paths, backslash separators, `..` parent traversal, `.` self-reference,
+and Windows drive prefixes. The guard is called on every entry name before read
+or write processing.
+
+The `IoUtilitiesTest` suite includes `assertZipEntryNamesDoNotLeakLocalPaths`
+which iterates every entry in a generated archive and asserts that no entry name
+contains an absolute local file system path from the test environment.
+
+### Entry allowlisting
+
+Confirm that `ResourceExportNames.isResourceEntryName(String)` accepts only
+`resources/` and `resources0/` through `resourcesN/` prefixed entries, and that
+`isSourceEntryName(String)` accepts only `src/` prefixed entries. Both guards are
+used in the `XmlProjectIo` and `JsonProjectIo` read paths to skip unexpected
+entries.
+
+### Resource leak prevention
+
+Confirm that manifest, version, resource, and type stream reads in both
+`XmlProjectIo` and `JsonProjectIo` use try-with-resources. Look for
+`try (InputStream ...)` patterns around every `ZipFile.getInputStream()` call.
+
 ## Inspect PR checks
 
 Inspect PR check state after validation:
@@ -349,6 +399,11 @@ Use the failing assertion to choose the smallest responsible seam:
 | Exported `.a3w` manifest or Tweedle entry is stale | `IoUtilities.exportProject`, `JsonProjectIo`, and Tweedle source export naming. |
 | Corrupt or unsupported archives read successfully | `IoUtilities` reader selection and JSON/XML failure handling. |
 | Historical `.a3c` or `.a3w` guard fails | `HistoricalArchiveRoundTripCharacterizationTest` and the touched archive routing/writer surface. |
+| XXE or external entity test fails | `XmlProjectIo.readArchiveXml()` secure-processing and DOCTYPE-disable features in `DocumentBuilderFactory`. |
+| Zip-slip or path traversal test fails | `ResourceExportNames.isSafeRelativeEntryName()` and `ZipEntryContainer.validateSafeEntryName()`. |
+| Resource entry rejected unexpectedly | `ResourceExportNames.isResourceEntryName()` prefix allowlist for `resources/` and `resourcesN/`. |
+| Source entry rejected unexpectedly | `ResourceExportNames.isSourceEntryName()` prefix check for `src/`. |
+| Resource leak or FD exhaustion | try-with-resources blocks in `XmlProjectIo` and `JsonProjectIo` stream reads. |
 
 Fix only repository-owned project archive IO behavior needed for these tests. Do
 not add broad fallback behavior that turns malformed archives into partial

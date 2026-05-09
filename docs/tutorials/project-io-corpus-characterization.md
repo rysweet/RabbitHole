@@ -107,6 +107,16 @@ That absence is intentional. It documents that generated editable project
 archives currently use XML program payloads even though they include
 `manifest.json`.
 
+Assert that archive entries are safe:
+
+```java
+assertZipEntryNamesDoNotLeakLocalPaths(projectArchive);
+```
+
+This verifies no entry name contains an absolute local file system path from the
+test environment, and confirms that resource entries follow the `resources/`
+prefix convention enforced by `ResourceExportNames.isResourceEntryName()`.
+
 Decode `manifest.json` and assert:
 
 ```text

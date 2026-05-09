@@ -17,6 +17,7 @@ of the contract.
 - [Archive contracts](#archive-contracts)
 - [Canonical save/reopen/edit chain](#canonical-savereopenedit-chain)
 - [API reference](#api-reference)
+- [Archive security protections](#archive-security-protections)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
 - [Examples](#examples)
@@ -367,6 +368,46 @@ part of the behavior under test.
 This routing is an observable compatibility contract. A change that routes
 `.a3p` archives through JSON must update the archive contract, reader behavior,
 and characterization tests together.
+
+## Archive security protections
+
+All archive readers and writers enforce defense-in-depth protections. These are
+part of the characterization contract and must not be relaxed when adding new
+corpus coverage.
+
+### XXE protection
+
+`XmlProjectIo.readArchiveXml()` disables DOCTYPE declarations and external
+entity resolution via `DocumentBuilderFactory` feature flags before parsing any
+XML entry. This prevents XXE injection through crafted `.a3p` or `.a3c` archives.
+`IoUtilitiesTest` includes a negative characterization (`externalEntityResourcesXml`)
+that constructs an archive with an external-entity payload and asserts that the
+reader rejects it.
+
+### Entry safety
+
+`ResourceExportNames.isSafeRelativeEntryName(String)` validates every archive
+entry name before read or write processing. It rejects absolute paths, backslash
+separators, `..` parent traversal, `.` self-reference, and Windows drive
+prefixes. `assertZipEntryNamesDoNotLeakLocalPaths` in `IoUtilitiesTest` asserts
+that no generated archive entry leaks local file system paths.
+
+`ResourceExportNames.isResourceEntryName(String)` allowlists resource entries to
+`resources/` and `resourcesN/` prefixes. `isSourceEntryName(String)` allowlists
+source entries to `src/` prefixes. Both guards are applied in `XmlProjectIo` and
+`JsonProjectIo` read paths to skip unexpected entries.
+
+### Resource leak prevention
+
+Manifest, version, resource, and type stream reads in both `XmlProjectIo` and
+`JsonProjectIo` use try-with-resources to prevent file descriptor exhaustion.
+Archive read failures release resources cleanly at the IO boundary.
+
+### Info-leak limits
+
+Error messages use contextual summaries (file path, entry name, failure reason)
+without dumping full manifest payloads, archive contents, or resource bytes.
+`JsonProjectIo` truncates unsupported Tweedle decode reasons to 512 characters.
 
 ## Configuration
 

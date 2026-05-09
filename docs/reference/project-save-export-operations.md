@@ -136,7 +136,10 @@ claim. It does not prove desktop Save-menu completion, full Save dialog
 automation, visible rendering correctness, grading, full lesson automation, or
 player runtime behavior. See
 [Project Archive Reopen/Edit Seam](./project-archive-reopen-edit-seam.md) for
-the detailed archive contract.
+the detailed archive contract, including
+[security hardening](./project-archive-reopen-edit-seam.md#security-and-failure-boundaries)
+(XXE protection, zip-slip guard, entry allowlisting, resource leak prevention,
+and info-leak cleanup).
 
 ## Headless loaded-project bridge
 

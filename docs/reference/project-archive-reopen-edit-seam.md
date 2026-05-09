@@ -29,6 +29,12 @@ For neighboring generated archive coverage, see
 - [Archive behavior](#archive-behavior)
 - [Reader routing](#reader-routing)
 - [Security and failure boundaries](#security-and-failure-boundaries)
+  - [XXE protection](#xxe-protection)
+  - [Zip-slip path traversal guard](#zip-slip-path-traversal-guard)
+  - [Entry allowlisting](#entry-allowlisting)
+  - [Resource leak prevention](#resource-leak-prevention)
+  - [Info-leak cleanup](#info-leak-cleanup)
+  - [Boundary rules](#boundary-rules)
 - [Configuration](#configuration)
 - [Validation](#validation)
 - [Neighboring headless IDE bridge](#neighboring-headless-ide-bridge)
@@ -181,8 +187,82 @@ and characterization tests together.
 
 ## Security and failure boundaries
 
-Treat every project archive as untrusted input. Reader, writer, and evidence
-changes must preserve these boundaries:
+Treat every project archive as untrusted input. The archive IO layer enforces
+defense-in-depth protections at read, write, and export boundaries.
+
+### XXE protection
+
+`XmlProjectIo.readArchiveXml()` configures the `DocumentBuilderFactory` with
+secure-processing mode and disables DOCTYPE declarations and external entity
+resolution before parsing any XML entry in a `.a3p` or `.a3c` archive:
+
+```java
+DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+```
+
+This prevents XML External Entity (XXE) injection, billion-laughs expansion, and
+server-side request forgery through crafted archives. The protection applies to
+every XML path in the archive reader — `programType.xml`, `resources.xml`, and
+type-archive XML payloads.
+
+### Zip-slip path traversal guard
+
+`ResourceExportNames.isSafeRelativeEntryName(String)` validates every archive
+entry name before it is read or written. The guard rejects:
+
+| Pattern | Rejection reason |
+| --- | --- |
+| Absolute paths (`/`, `C:\`) | Prevents writes outside the archive target. |
+| Backslash separators (`\`) | Blocks Windows path confusion on Unix hosts. |
+| Parent traversal (`..`) | Prevents zip-slip escape to parent directories. |
+| Self-reference (`.`) | Blocks ambiguous current-directory entries. |
+| Windows drive prefixes (`X:`) | Prevents drive-letter rooted extraction. |
+
+Write paths call `ZipEntryContainer.validateSafeEntryName()` to enforce the same
+rules before creating any entry in a new archive.
+
+### Entry allowlisting
+
+Archive readers constrain which entries they process:
+
+| Reader | Allowed prefixes | Guard method |
+| --- | --- | --- |
+| `XmlProjectIo.readResourceData()` | `resources/`, `resources0/`…`resourcesN/` | `ResourceExportNames.isResourceEntryName(String)` |
+| `JsonProjectIo.readResource()` | `resources/`, `resources0/`…`resourcesN/` | `ResourceExportNames.isResourceEntryName(String)` |
+| `JsonProjectIo.readTweedleType()` | `src/` | `ResourceExportNames.isSourceEntryName(String)` |
+
+Entries that do not match the allowed prefix for their context are skipped
+silently rather than processed. This prevents a crafted archive from injecting
+unexpected payloads outside the expected resource and source namespaces.
+
+### Resource leak prevention
+
+All archive stream reads use try-with-resources to prevent file descriptor
+exhaustion:
+
+- Manifest stream reads in `XmlProjectIo` and `JsonProjectIo`
+- Version entry reads in both readers
+- Resource data stream reads in `XmlProjectIo.readResourceData()`
+- Type/Tweedle entry reads in `JsonProjectIo.readTweedleType()`
+- `ZipFile` instances in both readers and in characterization tests
+
+### Info-leak cleanup
+
+Error messages from archive failures use contextual summaries — file path,
+entry name, and failure reason — without dumping full manifest payloads, archive
+contents, or resource bytes. `JsonProjectIo` truncates unsupported Tweedle
+decode reasons to `MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH` (512 characters) to
+prevent diagnostic messages from leaking large source fragments.
+`ResourceExportNames.sanitizeFileName()` strips path prefixes and replaces
+separators before using file names in log messages or resource identifiers.
+
+### Boundary rules
+
+Reader, writer, and evidence changes must preserve these additional boundaries:
 
 | Boundary | Required behavior |
 | --- | --- |

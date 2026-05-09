@@ -90,7 +90,19 @@ test needs to prove resource rebinding after readback.
 ## Assert archive entries and routing
 
 Open the generated archive with `ZipFile` and assert the entries that define the
-current contract.
+current contract. Also assert that entry names pass the safety checks:
+
+- Call `assertZipEntryNamesDoNotLeakLocalPaths` on every generated archive to
+  verify no entry name contains an absolute local file system path.
+- Confirm that resource entries match the `resources/` or `resourcesN/` prefix
+  convention enforced by `ResourceExportNames.isResourceEntryName()`.
+- Confirm that source entries match the `src/` prefix convention enforced by
+  `ResourceExportNames.isSourceEntryName()`.
+
+When adding a new archive fixture that includes XML parsing (`.a3p` or `.a3c`),
+the reader's XXE protection (`XmlProjectIo.readArchiveXml()`) applies
+automatically. Do not override the `DocumentBuilderFactory` configuration to
+enable DOCTYPE or external entities.
 
 For resource-bearing `.a3p` project archives:
 

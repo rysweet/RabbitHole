@@ -257,6 +257,14 @@ Keep the fixture synthetic. The test should create all `.a3p` and `.a3w` files
 under `TemporaryFolder`, mutate the reopened `Project`, inspect zip entries
 directly when needed, and let `IOException` or version failures fail the test.
 
+When the round-trip test generates archives, also verify the security
+protections documented in
+[Project Archive Reopen/Edit Seam § Security](../reference/project-archive-reopen-edit-seam.md#security-and-failure-boundaries):
+
+- Call `assertZipEntryNamesDoNotLeakLocalPaths` on each generated archive.
+- Confirm resource entries match `resources/` or `resourcesN/` prefixes.
+- Do not override the `DocumentBuilderFactory` XXE-protection configuration.
+
 ## Run the focused tests
 
 Run the existing module test goal:
