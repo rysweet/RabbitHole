@@ -19,6 +19,7 @@ ARCHIVE_FIXTURE_SCENARIO = (
     / "scenarios"
     / "archive-fixture-smoke.yaml"
 )
+REFERENCE_DOC = REPO_ROOT / "docs/reference/archive-player-boundary.md"
 EXPECTED_DIRECT_MAVEN_FLAGS = [
     "-DincludeSims=false",
     "-Dinstall4j.skip",
@@ -27,6 +28,7 @@ EXPECTED_DIRECT_MAVEN_FLAGS = [
     "-Dsurefire.failIfNoSpecifiedTests=false",
     "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest",
 ]
+DOC_CONTRACT_TEST_PATH = "tests/test_archive_player_boundary_docs.py"
 
 
 def read_doc(path: Path) -> str:
@@ -102,6 +104,12 @@ class ArchivePlayerBoundaryDocsContractTest(unittest.TestCase):
                 self.assertIn("HistoricalArchiveRoundTripCharacterizationTest", doc)
                 for forbidden_claim in forbidden_claims:
                     self.assertNotIn(f"proves {forbidden_claim}", doc)
+
+    def test_reference_doc_names_docs_contract_guard(self) -> None:
+        doc = read_doc(REFERENCE_DOC)
+
+        self.assertIn(DOC_CONTRACT_TEST_PATH, doc)
+        self.assertIn("wrapper, scenario, and direct\nMaven evidence stay aligned", doc)
 
 
 if __name__ == "__main__":

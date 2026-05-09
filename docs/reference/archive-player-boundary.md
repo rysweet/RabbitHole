@@ -154,6 +154,10 @@ The wrapper validates scenario metadata, initializes `tweedle-lang`, and runs
 the focused Maven characterization. It is validation packaging; it is not the
 archive/player feature itself.
 
+The documentation examples are guarded by
+`tests/test_archive_player_boundary_docs.py` so wrapper, scenario, and direct
+Maven evidence stay aligned with this archive/player boundary.
+
 ## QA packaging
 
 The outside-in scenario that packages this evidence is:
