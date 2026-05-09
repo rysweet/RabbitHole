@@ -131,6 +131,30 @@ public class ModelExportTest {
   }
 
   @Test
+  public void modelExporterNamesClassResourceVariantsByTextureOnly() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.setBoundingBox("TestProp", AxisAlignedBox.createAxisAlignedBox(-1.0, 0.0, -2.0, 1.0, 3.0, 2.0));
+    exporter.addResource("TestProp", "Default", "ALICE", null, null);
+    exporter.addResource("TestProp", "BlueStripe", "ALICE", null, null);
+
+    Document xml = parseXml(exporter.createXMLString());
+    NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
+
+    assertEquals(2, resources.getLength());
+    assertEquals("DEFAULT", ((Element) resources.item(0)).getAttribute("resourceName"));
+    Element blueStripe = (Element) resources.item(1);
+    assertEquals("BLUE_STRIPE", blueStripe.getAttribute("resourceName"));
+    assertEquals("TestProp", blueStripe.getAttribute("modelName"));
+    assertEquals("BLUE_STRIPE", blueStripe.getAttribute("textureName"));
+
+    String javaCode = exporter.createJavaCode();
+    assertTrue(javaCode.contains("\tDEFAULT,"));
+    assertTrue(javaCode.contains("\tBLUE_STRIPE;"));
+    assertFalse(javaCode.contains("TEST_PROP_BLUE_STRIPE"));
+    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
+  }
+
+  @Test
   public void modelExporterHonorsForcedEnumNamesWithoutTrailingComma() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
     exporter.addResource("VariantProp", "Default", "SIMS2", null, null);

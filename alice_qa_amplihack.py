@@ -13,6 +13,7 @@ USAGE = """usage:
   amplihack alice-qa validate
   amplihack alice-qa list
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
+  amplihack model-export verify <class-resource-texture-boundary|xml-file-output-boundary>
   amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
 
 Run from the Alice repository root or one of its child directories.
@@ -45,6 +46,25 @@ TWEEDLE_DECODE_SCENARIOS = {
 }
 
 
+MODEL_EXPORT_SCENARIOS = {
+    "class-resource-texture-boundary": {
+        "description": "Model exporter keeps class resource variants named by texture only",
+        "module": "core/model-loading",
+        "tests": "ModelExportTest#modelExporterNamesClassResourceVariantsByTextureOnly",
+    },
+    "xml-file-output-boundary": {
+        "description": "Model exporter writes XML and thumbnail paths inside the resource package boundary",
+        "module": "core/model-loading",
+        "tests": (
+            "ModelExportTest#"
+            "createXmlFileWithFreshGenerationPersistsMissingBoundingBoxes"
+            "+createXmlFileWritesPackageResourcePathAndGeneratedXml"
+            "+modelExporterResolvesThumbnailPathInsideClassResourceDirectory"
+        ),
+    },
+}
+
+
 def find_repo_root(start: Path) -> Path | None:
     for candidate in (start, *start.parents):
         runners = candidate / "qa" / "outside-in" / "alice-desktop" / "runners"
@@ -57,18 +77,7 @@ def run_from_repo(root: Path, command: list[str]) -> int:
     return subprocess.run(command, cwd=root, check=False).returncode
 
 
-def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
-    selected = TWEEDLE_DECODE_SCENARIOS.get(scenario)
-    if selected is None:
-        valid = ", ".join(sorted(TWEEDLE_DECODE_SCENARIOS))
-        print(f"unknown tweedle-decode scenario: {scenario}", file=sys.stderr)
-        print(f"valid scenarios: {valid}", file=sys.stderr)
-        return 2
-
-    description = selected["description"]
-    module = selected["module"]
-    test_selector = selected["tests"]
-    print(f"Running Tweedle decode scenario: {description}")
+def run_maven_verification(root: Path, selected: dict[str, str]) -> int:
     submodule_result = subprocess.run(
         ["git", "submodule", "update", "--init", "tweedle-lang"],
         cwd=root,
@@ -78,26 +87,56 @@ def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
         print("FAIL: unable to initialize tweedle-lang submodule", file=sys.stderr)
         return submodule_result.returncode
 
-    test_result = subprocess.run(
+    return subprocess.run(
         [
             "mvn",
             "-pl",
-            module,
+            selected["module"],
             "-am",
             "-DfailIfNoTests=false",
             "-Dsurefire.failIfNoSpecifiedTests=false",
-            f"-Dtest={test_selector}",
+            f"-Dtest={selected['tests']}",
             "test",
             "-q",
         ],
         cwd=root,
         check=False,
-    )
-    if test_result.returncode == 0:
+    ).returncode
+
+
+def run_tweedle_decode_verification(root: Path, scenario: str) -> int:
+    selected = TWEEDLE_DECODE_SCENARIOS.get(scenario)
+    if selected is None:
+        valid = ", ".join(sorted(TWEEDLE_DECODE_SCENARIOS))
+        print(f"unknown tweedle-decode scenario: {scenario}", file=sys.stderr)
+        print(f"valid scenarios: {valid}", file=sys.stderr)
+        return 2
+
+    description = selected["description"]
+    print(f"Running Tweedle decode scenario: {description}")
+    test_result = run_maven_verification(root, selected)
+    if test_result == 0:
         print(f"PASS: {scenario}")
     else:
         print(f"FAIL: {scenario}", file=sys.stderr)
-    return test_result.returncode
+    return test_result
+
+
+def run_model_export_verification(root: Path, scenario: str) -> int:
+    selected = MODEL_EXPORT_SCENARIOS.get(scenario)
+    if selected is None:
+        valid = ", ".join(sorted(MODEL_EXPORT_SCENARIOS))
+        print(f"unknown model-export scenario: {scenario}", file=sys.stderr)
+        print(f"valid scenarios: {valid}", file=sys.stderr)
+        return 2
+
+    print(f"Running model export scenario: {selected['description']}")
+    test_result = run_maven_verification(root, selected)
+    if test_result == 0:
+        print(f"PASS: {scenario}")
+    else:
+        print(f"FAIL: {scenario}", file=sys.stderr)
+    return test_result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -129,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
             print("tweedle-decode usage: amplihack tweedle-decode verify <scenario>", file=sys.stderr)
             return 2
         return run_tweedle_decode_verification(root, args[2])
+
+    if args[0] == "model-export":
+        if len(args) != 3 or args[1] != "verify":
+            print("model-export usage: amplihack model-export verify <scenario>", file=sys.stderr)
+            return 2
+        return run_model_export_verification(root, args[2])
 
     if args[0] != "alice-qa":
         print(f"unknown command: {args[0]}", file=sys.stderr)
