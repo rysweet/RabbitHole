@@ -14,7 +14,7 @@ userActions:
 expectedOutcomes:
   - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
   - When the gate is enabled, the focused Alice menu bar contract test exits successfully.
-  - Command evidence covers Window menu model registration without making brittle display or manual JavaFX claims.
+  - Command evidence covers Window menu model registration and menu-bar membership lookup without making brittle display or manual JavaFX claims.
 automation:
   cwd: .
   argv:
