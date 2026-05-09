@@ -29,9 +29,13 @@ The QA runner writes and validates that artifact inside the scenario run directo
 | `control` | Selected path and chooser approval evidence |
 | `write` | Output path and size evidence |
 | `readback` | Project readback and marker evidence |
+| `proofTarget` | `single rendered desktop Save path: menu, dialog, control, write, readback` |
+| `claim` | Exact bounded claim text for proven evidence only |
+| `reportingSummary` | Blocked-only summary that says the path was not proven |
 | `blocker` | `null` for proven evidence; one blocker object for blocked evidence |
-| `claim` | Exact bounded claim text for proven evidence |
 | `doesNotClaim` | Explicit non-claims for Save variants and non-Save desktop behavior |
+
+`claim` and `reportingSummary` are status-specific: proven artifacts include `claim`, blocked artifacts include `reportingSummary`, and neither status includes both.
 
 ## Proven evidence
 
