@@ -89,6 +89,9 @@ manual_scenarios = [
     "alice-desktop-open-load-save",
     "alice-desktop-export",
 ]
+manual_command_scenarios = [
+    "alice-desktop-procedure-edit-seam-smoke",
+]
 gated_scenarios = [
     "alice-desktop-exported-project-smoke",
     "alice-desktop-netbeans-package-smoke",
@@ -98,7 +101,6 @@ gated_scenarios = [
     "alice-desktop-future-ui-smoke",
     "alice-desktop-menu-action-smoke",
     "alice-desktop-procedure-edit-handoff-smoke",
-    "alice-desktop-procedure-edit-seam-smoke",
     "alice-desktop-save-menu-dialog-write-proof",
     "alice-desktop-tweedle-decoder-boundary-smoke",
     "alice-desktop-tweedle-decoder-this-call-smoke",
@@ -160,6 +162,23 @@ for scenario_id in manual_scenarios:
         errors.append(f"{scenario_id} must require a durable artifact, log, or notes")
     if "review-notes.txt" not in evidence_text:
         errors.append(f"{scenario_id} must require review-notes.txt for manual acceptance")
+
+for scenario_id in manual_command_scenarios:
+    scenario = catalog.get(scenario_id)
+    if scenario is None:
+        errors.append(f"catalog must contain {scenario_id}")
+        continue
+    if scenario["automationMode"] != "manual-evidence-required":
+        errors.append(f"{scenario_id} must use manual-evidence-required to avoid workflow timeout fields")
+    if "automation" in scenario:
+        errors.append(f"{scenario_id} must not define automation while the focused proof forbids workflow timeouts")
+    if "immediate-qa-backlog" not in scenario.get("tags", []):
+        errors.append(f"{scenario_id} must be tagged as immediate-qa-backlog coverage")
+    evidence_text = "\n".join(scenario["evidence"]["required"]).lower()
+    if "status.txt" not in evidence_text:
+        errors.append(f"{scenario_id} must require status.txt evidence")
+    if not any(token in evidence_text for token in ("command.log", "artifact", "project", "failure")):
+        errors.append(f"{scenario_id} must require command, artifact, project, or failure-path evidence")
 
 instructor_student = catalog.get("alice-desktop-instructor-student-setup")
 if instructor_student is None:

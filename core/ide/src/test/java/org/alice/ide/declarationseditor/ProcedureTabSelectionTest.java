@@ -2,6 +2,7 @@ package org.alice.ide.declarationseditor;
 
 import org.junit.Test;
 import org.alice.ide.IDE;
+import org.alice.ide.codeeditor.CodeEditor;
 import org.lgna.croquet.Application;
 import org.lgna.croquet.DocumentFrame;
 import org.lgna.croquet.Operation;
@@ -40,6 +41,7 @@ public class ProcedureTabSelectionTest {
     assertNull(ProcedureTabSelection.getSelectedProcedure(editor));
     assertNull(ProcedureTabSelection.getSelectedProcedureCodeComposite(editor));
     assertNull(ProcedureTabSelection.getSelectedCodeEditorCode(editor));
+    assertNull(ProcedureTabSelection.getSelectedCodeEditorBackingClassName(editor));
   }
 
   @Test
@@ -81,11 +83,13 @@ public class ProcedureTabSelectionTest {
     UserMethod[] selected = new UserMethod[1];
     CodeComposite[] selectedComposite = new CodeComposite[1];
     AbstractCode[] selectedCodeEditorCode = new AbstractCode[1];
+    String[] selectedCodeEditorBackingClassName = new String[1];
 
     SwingUtilities.invokeAndWait(() -> {
       selected[0] = ProcedureTabSelection.selectProcedureInEditor(editor, procedure, null);
       selectedComposite[0] = ProcedureTabSelection.getSelectedProcedureCodeComposite(editor);
       selectedCodeEditorCode[0] = ProcedureTabSelection.getSelectedCodeEditorCode(editor);
+      selectedCodeEditorBackingClassName[0] = ProcedureTabSelection.getSelectedCodeEditorBackingClassName(editor);
     });
 
     assertSame(procedure, selected[0]);
@@ -93,6 +97,7 @@ public class ProcedureTabSelectionTest {
     assertSame(expectedComposite, selectedComposite[0]);
     assertSame(procedure, selectedComposite[0].getDeclaration());
     assertSame(procedure, selectedCodeEditorCode[0]);
+    assertEquals(CodeEditor.class.getName(), selectedCodeEditorBackingClassName[0]);
   }
 
   @Test(expected = IllegalArgumentException.class)

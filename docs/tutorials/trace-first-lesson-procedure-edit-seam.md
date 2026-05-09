@@ -94,8 +94,8 @@ The edit step uses:
 --edit-spec append-comment:<deterministic proof text>
 ```
 
-`EatmeEditProcedure` finds or creates the targeted scene method named by
-`scene.eatmeFirstLesson`.
+`EatmeEditProcedure` requires the targeted scene method named by
+`scene.eatmeFirstLesson` to exist and fails closed when it is missing.
 
 The proof is accepted only after the edited project is reopened, the placed
 bunny field is still present, and the targeted scene procedure contains the
@@ -126,45 +126,27 @@ The procedure-edit step writes:
 
 ```text
 edited-project.a3p
-procedure-edit.json
-procedure-edit-command.json
-procedure.diff.json
-procedure-tab-selection.json
+first-lesson-code-editor-action-proof.json
 ```
 
 The key review points are:
 
 | Artifact | Review point |
 | --- | --- |
-| `procedure-edit.json` | Names `scene.eatmeFirstLesson`, the edit spec, `placed-project.a3p` input handoff, statement counts, and `edited-project.a3p`. |
-| `procedure-edit-command.json` | Confirms the deterministic `append-comment` command completed and changed the statement count by one. |
-| `procedure.diff.json` | Records method names before and after the edit and the statement-count delta. |
-| `procedure-tab-selection.json` | Records the Croquet/DeclarationsEditor tab-selection helper result for the selected method. |
+| `first-lesson-code-editor-action-proof.json` | Names `scene.eatmeFirstLesson`, the edit spec, `placed-project.a3p` input handoff, selected tab/code-editor backing observations, statement counts, marker counts, and `edited-project.a3p`. |
 
-The final assertion reopens `edited-project.a3p`; the JSON files are asserted
-artifacts in the JUnit temporary workspace, not a substitute for the AST/project
+The final assertion reopens `edited-project.a3p`; the JSON file is an asserted
+artifact in the JUnit temporary workspace, not a substitute for the AST/project
 assertion and not retained by the QA smoke.
 
-## Step 6: Handle the desktop edit-action blocker
+## Step 6: Keep the action claim narrow
 
-Because the AST edit succeeds but the repository does not expose a stable desktop
-code-editor edit action, every successful procedure-edit run currently writes
-exactly one blocker:
-
-```text
-procedure-ui-action-no-go.json
-```
-
-This blocker is acceptable only when it precisely names the missing desktop
-edit-action target and includes stable blocker codes. It is not a general
-blocker for object placement, project handoff, method lookup/creation, or AST
-editing failures. It also does not turn the AST edit into a desktop UI automation
-proof.
-
-Review its `doesNotClaim` list before citing the evidence. The seam excludes:
+Successful procedure-edit runs write the action proof artifact and do not write
+`procedure-ui-action-no-go.json`. Review the proof's `doesNotClaim` list before
+citing the evidence. The seam excludes:
 
 ```text
-desktop UI action completion
+broad desktop UI automation
 full Alice UI automation
 visible rendering correctness
 first-lesson completion

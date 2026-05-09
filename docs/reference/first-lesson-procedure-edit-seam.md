@@ -23,10 +23,10 @@ The seam proves one repository-owned behavior:
 
 1. `EatmePlaceObject.run(...)` loads a synthetic/generated test Alice project
    and writes `placed-project.a3p` plus narrow placement evidence.
-2. `EatmeEditProcedure.run(...)` loads that `placed-project.a3p`, selects
-   `scene.eatmeFirstLesson`, finds or creates the targeted scene method, applies
-   the supported deterministic procedure edit, and writes `edited-project.a3p`
-   plus narrow AST edit evidence.
+2. `EatmeEditProcedure.run(...)` loads that `placed-project.a3p`, selects the
+   existing `scene.eatmeFirstLesson` method, applies the supported deterministic
+   procedure edit, and writes `edited-project.a3p` plus narrow action proof
+   evidence.
 3. The focused JUnit characterization reopens `edited-project.a3p` and asserts
    both that the placed bunny field is still present and that the expected
    `Comment` statement exists in the targeted scene procedure.
@@ -45,6 +45,12 @@ public desktop edit action, or blocked by the missing public
 `CodeEditor`/`CodeComposite` edit invocation contract. It does not replace this
 AST/project edit proof, and this AST/project edit proof does not replace the live
 target/action seam.
+
+The focused backing-action seam is [First-Lesson Code-Editor Action
+Proof](./first-lesson-code-editor-action-proof.md). That proof owns the narrow
+claim that the selected `scene.eatmeFirstLesson` `CodeComposite` and
+`CodeEditor.getCode()` backing model accept one deterministic append-comment
+action and produce target-only marker evidence.
 
 ## Usage
 
@@ -121,9 +127,9 @@ Accepted success criteria:
 | Step | Required observation |
 | --- | --- |
 | Placement | `placed-project.a3p`, `placement.json`, and `scene.diff.json` exist in the evidence directory. |
-| Edit | `edited-project.a3p`, `procedure-edit.json`, `procedure-edit-command.json`, `procedure.diff.json`, and `procedure-tab-selection.json` exist in the evidence directory. |
-| AST assertion | Reopening `edited-project.a3p` finds the placed bunny field and finds or creates `scene.eatmeFirstLesson` with the deterministic appended `Comment` statement. |
-| UI boundary | Every successful procedure-edit run emits exactly one `procedure-ui-action-no-go.json` blocker artifact recording the missing desktop code-editor edit action target. |
+| Edit | `edited-project.a3p` and `first-lesson-code-editor-action-proof.json` exist in the evidence directory. |
+| AST assertion | Reopening `edited-project.a3p` finds the placed bunny field and the existing `scene.eatmeFirstLesson` method with the deterministic appended `Comment` statement. |
+| UI boundary | Successful runs do not emit `procedure-ui-action-no-go.json`. |
 
 The focused Maven test creates these artifacts inside a JUnit `TemporaryFolder`
 and asserts their contents before the workspace is discarded. The
@@ -146,11 +152,7 @@ from the JUnit temporary workspace.
 | `placement.json` | `EatmePlaceObject` | `eatme.alice-object-placement-artifact/v1` | Object identifier, scene type, field name, field type, resource, and placed project file name. |
 | `scene.diff.json` | `EatmePlaceObject` | `eatme.alice-object-placement-diff/v1` | Scene field names before and after placement. |
 | `edited-project.a3p` | `EatmeEditProcedure` | Alice project archive | Project after deterministic procedure edit. |
-| `procedure-edit.json` | `EatmeEditProcedure` | `eatme.alice-procedure-edit-artifact/v1` | Procedure selector, edit spec, input project artifact, scene type, method name, method creation flag, statement counts, and edited project file name. |
-| `procedure-edit-command.json` | `EatmeEditProcedure` | `eatme.alice-procedure-edit-command/v1` | Command-level append-comment result and statement-count delta. |
-| `procedure.diff.json` | `EatmeEditProcedure` | `eatme.alice-procedure-edit-diff/v1` | Scene method names before and after the edit plus statement-count delta. |
-| `procedure-tab-selection.json` | `EatmeEditProcedure` | `eatme.alice-procedure-tab-selection/v1` | Croquet/DeclarationsEditor tab-selection helper evidence for the targeted `UserMethod`. |
-| `procedure-ui-action-no-go.json` | `EatmeEditProcedure` | `eatme.alice-code-procedure-ui-action-no-go/v1` | Precise blocker when a desktop code-editor edit action target is not available. |
+| `first-lesson-code-editor-action-proof.json` | `EatmeEditProcedure` | `eatme.alice-first-lesson-code-editor-action-proof/v1` | Procedure selector, edit spec, input project artifact, selected tab/code-editor backing evidence, statement counts, marker counts, and edited project file name. |
 
 `EatmePlaceObject` also writes one JSON result object to standard output:
 
@@ -166,14 +168,11 @@ from the JUnit temporary workspace.
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version` | `eatme.alice-procedure-edit-result/v1`. |
-| `status` | `edited` when the project archive and edit evidence were written. |
+| `schema_version` | `eatme.alice-first-lesson-code-editor-action-proof-result/v1`. |
+| `status` | `proved` when the project archive and action proof evidence were written. |
 | `procedure_selector` | The requested selector, such as `scene.eatmeFirstLesson`. |
 | `edited_project_artifact` | Always `edited-project.a3p`. |
-| `procedure_edit_command` | Always `procedure-edit-command.json`. |
-| `procedure_or_code_diff` | Always `procedure.diff.json`. |
-| `procedure_tab_selection` | Always `procedure-tab-selection.json`. |
-| `procedure_ui_action_no_go` | Always `procedure-ui-action-no-go.json`. |
+| `action_proof` | Always `first-lesson-code-editor-action-proof.json`. |
 
 ## API reference
 
@@ -286,41 +285,22 @@ Project PID handling, launcher behavior, rendering, or broad desktop automation.
 
 ## Blocker contract
 
-`procedure-ui-action-no-go.json` is scoped only to the missing desktop
-code-editor UI edit action target. If object placement, project handoff, method
-lookup/creation, or AST editing cannot be exercised, the characterization must
-fail or surface that error directly; it must not repurpose
-`procedure-ui-action-no-go.json` as a general placement-to-AST blocker.
-
-For the current seam, every successful `EatmeEditProcedure` run emits
-`procedure-ui-action-no-go.json` because the AST edit is implemented but no
-stable desktop code-editor edit action target is available yet. The blocker
-artifact uses schema `eatme.alice-code-procedure-ui-action-no-go/v1` and must
-include:
-
-| Field | Required content |
-| --- | --- |
-| `status` | `blocked` |
-| `source` | `EatmeEditProcedure` |
-| `procedure_selector` | The targeted selector, such as `scene.eatmeFirstLesson`. |
-| `edit_spec` | The requested edit spec. |
-| `exact_missing_ui_edit_action_target` | The precise desktop code-editor edit target that is unavailable. |
-| `blocker_codes` | Stable machine-readable codes for the missing seam. |
-| `required_next` | The minimum implementation steps needed to unblock the seam. |
-| `doesNotClaim` | Explicit exclusions for UI action completion, rendering, lesson completion, grading, and creative assessment. |
-
-The blocker must not be accompanied by additional speculative blocker files.
+The implemented proof emits `first-lesson-code-editor-action-proof.json` on
+success and does not emit `procedure-ui-action-no-go.json`. If object placement,
+project handoff, target lookup, backing selection, marker isolation, or AST
+editing cannot be exercised, the characterization must fail or surface that
+error directly; it must not write success-shaped evidence.
 
 ## Evidence boundaries
 
 This seam may claim only:
 
-- Generated placement and procedure-edit artifacts exist.
+- Generated placement and first-lesson action proof artifacts exist.
 - `placed-project.a3p` is accepted as the input to the deterministic edit step.
 - `edited-project.a3p` reopens, still contains the placed bunny field, and
   contains the expected AST-level procedure edit.
 - The Croquet/DeclarationsEditor tab-selection helper selected the targeted
-  method when its artifact is present.
+  method and the selected `CodeEditor.getCode()` backing matched that method.
 
 This seam must not claim:
 
@@ -343,17 +323,12 @@ evidence/
   edited-project.a3p
   placed-project.a3p
   placement.json
-  procedure-edit-command.json
-  procedure-edit.json
-  procedure-tab-selection.json
-  procedure.diff.json
-  procedure-ui-action-no-go.json
+  first-lesson-code-editor-action-proof.json
   scene.diff.json
 ```
 
 The focused Maven test asserts this shape in a JUnit temporary directory. The QA
 smoke records that the Maven proof ran successfully; it does not preserve this
-directory. The proof accepts `procedure-ui-action-no-go.json` only as a narrow
-blocker for desktop code-editor action invocation. The AST/project chain remains
-proven by reopening `edited-project.a3p`, checking that the placed bunny field
-survived the handoff, and checking the targeted `UserMethod` body.
+directory. The AST/project chain remains proven by reopening
+`edited-project.a3p`, checking that the placed bunny field survived the handoff,
+and checking the targeted `UserMethod` body.

@@ -51,6 +51,7 @@ Review the assertions for these facts:
 | `getSelectedProcedure(editor)` returns the expected `UserMethod`. | The editor tab state reports the target procedure as selected. |
 | `getSelectedProcedureCodeComposite(editor).getDeclaration()` is the expected `UserMethod`. | The selected declaration tab is the expected `CodeComposite`. |
 | `getSelectedCodeEditorCode(editor)` is the expected `UserMethod`. | The selected tab's backing code-editor model is the target procedure code. |
+| `getSelectedCodeEditorBackingClassName(editor)` is `org.alice.ide.codeeditor.CodeEditor`. | The seam records the concrete backing editor class. |
 
 The test should use a synthetic scene method named `eatmeFirstLesson`. It does
 not need the real first-lesson starter, Select Project automation, Save proof,
@@ -69,6 +70,7 @@ Use the adjacent shards for adjacent claims:
 | --- | --- |
 | Select Project opened the starter | `alice-desktop-select-project-tab-click-exec` and the Select Project evidence reference. |
 | Live desktop target readiness | `alice-desktop-first-lesson-live-procedure-target-observation`. |
+| Deterministic code-editor backing action | [First-Lesson Code-Editor Action Proof](../reference/first-lesson-code-editor-action-proof.md). |
 | AST/project-level procedure edit | `EatmeEditProcedureTest` procedure/edit handoff proof. |
 | Save menu/dialog/write behavior | Save menu/dialog/write proof tests. |
 | Learner-world assessment | Manual boundary evidence only. |
