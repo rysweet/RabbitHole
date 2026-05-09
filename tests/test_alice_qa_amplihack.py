@@ -53,6 +53,7 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
         self.assertIn("amplihack tweedle-decode verify", result.stdout)
+        self.assertIn("literal-arithmetic-return", result.stdout)
         self.assertIn("simple-if-method-call", result.stdout)
 
     def test_scorecard_command_delegates_to_generator_from_repo_root(self) -> None:
@@ -178,6 +179,56 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertIn("PASS: simple-if-player-archive", result.stdout)
         self.assertIn("-pl core/story-api-migration", log)
         self.assertIn("-Dtest=IoUtilitiesTest#jsonPlayerTweedleSimpleIfMethodCallDecodesProgramType", log)
+
+    def test_tweedle_decode_verify_can_target_literal_arithmetic_return_integration_test(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            bin_dir = root / "bin"
+            log_path = root / "commands.log"
+            write_executable(
+                bin_dir / "git",
+                textwrap.dedent(
+                    f"""\
+                    #!/usr/bin/env bash
+                    echo git "$@" >> {log_path}
+                    """
+                ),
+            )
+            write_executable(
+                bin_dir / "mvn",
+                textwrap.dedent(
+                    f"""\
+                    #!/usr/bin/env bash
+                    echo mvn "$@" >> {log_path}
+                    """
+                ),
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "tweedle-decode",
+                    "verify",
+                    "literal-arithmetic-return",
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}"},
+            )
+
+            log = log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("PASS: literal-arithmetic-return", result.stdout)
+        self.assertIn("-pl core/story-api-migration", log)
+        self.assertIn(
+            "-Dtest=HistoricalArchiveRoundTripCharacterizationTest#generatedJsonPlayerArchiveDecodesProgramMethodReturningLiteralArithmetic",
+            log,
+        )
 
 
 if __name__ == "__main__":
