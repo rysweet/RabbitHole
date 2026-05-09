@@ -12,10 +12,9 @@ Implementation files:
 
 The scenario validates exported-project evidence wiring by delegating to the
 Alice outside-in runner. The default Gadugi path remains prepare-only; the
-underlying checked-in Alice scenario is the current generated-project smoke. The
-bounded no-Sims exported Ant build proof is target work for a later scenario
-wiring change. The Gadugi lane does not prove visible rendering, installer
-behavior, save behavior, grading, creative assessment, or full lesson completion.
+underlying checked-in Alice scenario is the bounded no-Sims exported Ant build
+smoke. The Gadugi lane does not prove visible rendering, installer behavior,
+save behavior, grading, creative assessment, or full lesson completion.
 
 ## Contents
 
@@ -42,11 +41,11 @@ lesson workflow:
 3. It uses the outside-in runner's prepare-only mode for the current
    exported-project smoke so the default path proves evidence wiring without
    requiring the gated Maven smoke.
-4. When the underlying gated smoke is executed intentionally today, it runs
-   `ProjectCodeGeneratorStandaloneProjectTest`. After the target Ant build proof
-   is implemented, this lane may prepare or delegate to that proof, but it still
-   must not claim rendered pixels, visible windows, installer behavior, save
-   behavior, grading, creative assessment, or lesson completion.
+4. When the underlying gated smoke is executed intentionally, it runs
+   `Alice3ProjectTemplateAntSmokeTest`. That proof remains bounded to exported
+   Ant target execution and must not claim rendered pixels, visible windows,
+   installer behavior, save behavior, grading, creative assessment, or lesson
+   completion.
 
 For generated launcher behavior itself, see
 [Exported NetBeans Ant Project Behavior](./exported-netbeans-ant-project-behavior.md).
@@ -128,7 +127,7 @@ The surrounding QA environment may set:
 | Variable | Purpose |
 | --- | --- |
 | `NODE_OPTIONS=--max-old-space-size=32768` | Keeps Node-based Gadugi orchestration within the preferred memory limit. |
-| `ALICE_QA_RUN_GATED_SMOKES=1` | Enables the underlying Alice gated command smoke only when intentionally running `run-scenario.sh` without `--prepare-only`. Today that smoke targets `ProjectCodeGeneratorStandaloneProjectTest`; the default Gadugi command remains prepare-only. |
+| `ALICE_QA_RUN_GATED_SMOKES=1` | Enables the underlying Alice gated command smoke only when intentionally running `run-scenario.sh` without `--prepare-only`. That smoke targets `Alice3ProjectTemplateAntSmokeTest`; the default Gadugi command remains prepare-only. |
 
 Do not point Gadugi at `qa/outside-in/alice-desktop/scenarios/`; that directory
 uses the custom Alice outside-in schema. The runnable command selects the
@@ -185,19 +184,16 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Then run the current focused exported-project smoke:
+Then run the focused exported Ant project smoke:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -pl netbeans -am \
-  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
-
-The target exported Ant build proof will use
-`Alice3ProjectTemplateAntSmokeTest` only after the Alice scenario YAML, any
-schema workflow allowlist, runner argv allowlist, and contract tests are updated.
 
 ## Examples
 

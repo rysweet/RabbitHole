@@ -96,7 +96,7 @@ Use one of the supported workflows:
 ```text
 archive-fixture-smoke
 export
-exported-project-smoke
+exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
@@ -145,7 +145,7 @@ assess learner work, or claim full first-lesson completion.
 
 `run-scenario.sh run` accepts either a scenario ID or a direct `.yaml` file inside the active scenario catalog. Use `--evidence-dir <dir>` to write evidence outside the repository, `--timeout-seconds <seconds>` to override argv-backed launch timeout, and `--prepare-only` to intentionally prepare gated smoke evidence without executing the gated command.
 
-To execute the current exported-project smoke:
+To execute the exported Ant project build smoke:
 
 ```bash
 git submodule update --init tweedle-lang
@@ -158,33 +158,18 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-smoke
 ```
 
-The checked-in scenario maps to the current focused Maven smoke:
+The checked-in scenario maps to the focused no-Sims Ant/template Maven smoke:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl netbeans -am \
-  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
-  test
-```
-
-Passing current evidence is limited to generated-project compile and launcher
-handoff behavior. It is not exported Ant target evidence.
-
-The bounded no-Sims exported Ant/NetBeans project build proof is the feature to
-build next. After scenario YAML, schema workflow, runner argv allowlist, and
-contract tests are updated, the lane should run:
-
-```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
   -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
 
-Target passing evidence is limited to exported Ant project build behavior:
+Passing evidence is limited to exported Ant project build behavior:
 generated classes, exported jar and manifest contents, resource packaging, Ant
 `jar`, `run`, `run-test-with-main`, `clean`, and probe markers. It is not
 installer validation, full GUI export journey coverage, visible rendering
@@ -396,7 +381,7 @@ Use one of the supported workflows:
 ```text
 archive-fixture-smoke
 export
-exported-project-smoke
+exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 future-ui-smoke

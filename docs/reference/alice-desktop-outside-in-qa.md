@@ -50,7 +50,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-save-load` | `save-load` | `manual-evidence-required` | Covers saving an `.a3p` project, reopening it, and checking persistence. |
 | `alice-desktop-open-load-save` | `open-load-save` | `manual-evidence-required` | Covers opening an existing `.a3p`, saving a copy, reopening it, and comparing visible state. |
 | `alice-desktop-export` | `export` | `manual-evidence-required` | Covers the current Alice export path and verification of the exported artifact. |
-| `alice-desktop-exported-project-smoke` | `exported-project-smoke` | `gated-command-smoke` | Current generated-project smoke through `ProjectCodeGeneratorStandaloneProjectTest`; the bounded no-Sims Ant/NetBeans template build proof through `Alice3ProjectTemplateAntSmokeTest` is the target feature to wire next. |
+| `alice-desktop-exported-project-smoke` | `exported-project-ant-build-smoke` | `gated-command-smoke` | Bounded no-Sims exported Ant/NetBeans template build proof through `Alice3ProjectTemplateAntSmokeTest`; it covers Ant target execution and concrete build/JAR output only. |
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
@@ -245,11 +245,11 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
 
 `--prepare-only` is the intentional preflight mode for gated command smokes. It writes `outcome=gated-not-run` evidence and returns success without executing the configured command.
 
-### Run the current exported project smoke
+### Run the exported Ant project build smoke
 
-Use the checked-in exported-project smoke for the current generated-source
-compile and launcher handoff evidence. It is a gated Maven smoke, so it runs
-only when `ALICE_QA_RUN_GATED_SMOKES=1` is set:
+Use the checked-in exported-project smoke for bounded no-Sims exported
+Ant/NetBeans template build evidence. It is a gated Maven smoke, so it runs only
+when `ALICE_QA_RUN_GATED_SMOKES=1` is set:
 
 ```bash
 git submodule update --init tweedle-lang
@@ -262,29 +262,25 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-smoke
 ```
 
-The current scenario executes this focused Maven command:
+The scenario executes this focused Maven command:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -pl netbeans -am \
-  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
   test
 ```
 
-Accept the current scenario only as generated-project smoke evidence:
-`status.txt` must record a passed gated command and `command.log` must show
-`ProjectCodeGeneratorStandaloneProjectTest` completed. It is not proof that the
-exported Ant `jar`, `run`, `run-test-with-main`, or `clean` targets executed.
-
-Target feature to build: rewire or extend this lane so the bounded no-Sims
-exported Ant/NetBeans proof runs
-`org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest` and records
-concrete Ant `jar`, `run`, `run-test-with-main`, `clean`, generated classes, jar
-manifest, resource packaging, and probe marker evidence. If target execution
-cannot complete, preserve the failed `status.txt` and `command.log` as the
-blocker record, including the exact Maven command, failing Ant target or
-prerequisite, and missing condition.
+Accept the scenario only as exported Ant project build evidence: `status.txt`
+must record a passed gated command and `command.log` must show
+`Alice3ProjectTemplateAntSmokeTest` completed with Ant `jar`, `run`,
+`run-test-with-main`, `clean`, generated classes, jar manifest, resource
+packaging, and probe marker evidence. If target execution cannot complete,
+preserve the failed `status.txt` and `command.log` as the blocker record,
+including the exact Maven command, failing Ant target or prerequisite, and
+missing condition.
 
 ### Run the Gadugi exported launcher evidence scenario
 
@@ -302,13 +298,13 @@ NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
   --timeout 300000
 ```
 
-The scenario prepares the current `alice-desktop-exported-project-smoke`
-evidence lane through the existing outside-in runner. The default Gadugi path
-uses `--prepare-only` and validates only delegated evidence wiring; it does not
-execute the current generated-project smoke or the target exported Ant build
-proof. It does not prove visible rendering, installer behavior, save behavior,
-grading, creative assessment, or full lesson completion. The default Gadugi path
-uses the underlying runner's `--prepare-only` mode;
+The scenario prepares the `alice-desktop-exported-project-smoke` evidence lane
+through the existing outside-in runner. The default Gadugi path uses
+`--prepare-only` and validates only delegated evidence wiring; it does not
+execute the exported Ant build proof. It does not prove visible rendering,
+installer behavior, save behavior, grading, creative assessment, or full lesson
+completion. The default Gadugi path uses the underlying runner's `--prepare-only`
+mode;
 `ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
 invoked without `--prepare-only`.
 
@@ -419,7 +415,7 @@ supportingEvidence:
 ```text
 archive-fixture-smoke
 export
-exported-project-smoke
+exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
@@ -566,7 +562,7 @@ reviewed assessment contract and evidence mapping exist.
 | Save/load | Save log or notes, saved `.a3p`, screenshot before saving, screenshot after reopening, comparison notes in `review-notes.txt`. |
 | Open/load/save | Open log or notes identifying the source `.a3p`, screenshot after first open, saved copy `.a3p`, screenshot after reopening the copy, comparison decision in `review-notes.txt`. |
 | Export | Export log or notes, screenshot before export, screenshot after export completion, exported artifact, file listing or checksum, `review-notes.txt`. |
-| Exported project smoke | Current evidence is `status.txt`, `command.log`, and the focused no-Sims Maven command targeting `ProjectCodeGeneratorStandaloneProjectTest`; it proves generated-project compile/launcher handoff behavior only. The target Ant build proof will require `Alice3ProjectTemplateAntSmokeTest` evidence for Ant `jar`, `run`, `run-test-with-main`, `clean`, generated classes, jar manifest and contents, resource packaging, probe markers, and no `Java Result:` line after the scenario wiring is implemented. See [Exported NetBeans Ant Project Behavior](./exported-netbeans-ant-project-behavior.md). |
+| Exported project smoke | `status.txt`, `command.log`, and the focused no-Sims Maven command targeting `Alice3ProjectTemplateAntSmokeTest`; required evidence covers Ant `jar`, `run`, `run-test-with-main`, `clean`, generated classes, jar manifest and contents, resource packaging, probe markers, and no `Java Result:` line. It is not installer validation or full GUI export journey evidence. See [Exported NetBeans Ant Project Behavior](./exported-netbeans-ant-project-behavior.md). |
 | NetBeans package smoke | `status.txt`, `command.log`, NetBeans target artifact listing or CI artifact link, representative jar/zip content listing. |
 | Package/install smoke | `status.txt`, `command.log`, package or installer artifact listing, disposable install log or explicit not-produced note. |
 | Archive fixture smoke | `status.txt`, `command.log`, archive fixture path or generated fixture notes, and focused test output proving the fixture seam. |

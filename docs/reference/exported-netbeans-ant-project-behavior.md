@@ -1,9 +1,9 @@
 # Exported NetBeans Ant Project Behavior
 
 This reference documents the exported Alice 3 NetBeans Ant project contract. It
-covers the current generated-project launcher evidence, the target bounded
-no-Sims Ant build proof for generated NetBeans projects, the Ant `run` metadata
-used by exported projects, and the generated
+covers generated-project launcher evidence, the bounded no-Sims Ant build proof
+for generated NetBeans projects, the Ant `run` metadata used by exported
+projects, and the generated
 `AliceJavaFXLauncher` evidence boundary used to prove JavaFX launcher handoff,
 stage validation and minimal scene setup, and deterministic display-unavailable
 no-go behavior.
@@ -14,14 +14,12 @@ stage receipt, minimal scene configuration, and `Program.main(...)` delegation.
 It is not rendering evidence, window visibility evidence, media-loading
 evidence, or proof of a completed user workflow.
 
-Implementation status: the currently wired outside-in scenario
-`alice-desktop-exported-project-smoke` still has workflow
-`exported-project-smoke` and runs
-`ProjectCodeGeneratorStandaloneProjectTest`. The
-`Alice3ProjectTemplateAntSmokeTest` / exported Ant build sections below are the
-target specification for the feature to build. Do not cite them as current
-outside-in evidence until the scenario YAML, any schema workflow allowlist, the
-runner argv allowlist, and PR evidence are updated.
+Implementation status: the wired outside-in scenario
+`alice-desktop-exported-project-smoke` uses workflow
+`exported-project-ant-build-smoke` and runs
+`Alice3ProjectTemplateAntSmokeTest`. Cite it only as bounded exported Ant build
+evidence: it does not validate the installer, full GUI export journey, rendered
+pixels, or visible window behavior.
 
 ## Contents
 
@@ -31,7 +29,7 @@ runner argv allowlist, and PR evidence are updated.
 - [Headless and display-unavailable contract](#headless-and-display-unavailable-contract)
 - [Configuration](#configuration)
 - [Executable characterization](#executable-characterization)
-- [Target exported Ant build proof contract](#target-exported-ant-build-proof-contract)
+- [Exported Ant build proof contract](#exported-ant-build-proof-contract)
 - [API reference](#api-reference)
 - [Validation commands](#validation-commands)
 - [Tutorial: verify exported launcher evidence](#tutorial-verify-exported-launcher-evidence)
@@ -291,11 +289,11 @@ display is present, the test may assert JavaFX handoff and scene/setup evidence;
 it must not claim rendered output unless it captures a display-backed observable
 artifact.
 
-## Target exported Ant build proof contract
+## Exported Ant build proof contract
 
-`Alice3ProjectTemplateAntSmokeTest` is the intended bounded no-Sims proof for
-the exported Ant/NetBeans project build path. The planned feature must not stop
-at generator classpath contracts. It should expand the packaged
+`Alice3ProjectTemplateAntSmokeTest` is the bounded no-Sims proof for the
+exported Ant/NetBeans project build path. The proof does not stop at generator
+classpath contracts. It expands the packaged
 `ProjectTemplate.zip`, generate Alice project source into the template, write
 local `libs.Alice3Library.*` Ant bindings, and execute the template's generated
 Ant targets with the Ant launcher.
@@ -391,7 +389,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-Target command for the exported-project Ant build proof:
+Command for the exported-project Ant build proof:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
@@ -402,23 +400,8 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-Until the feature is wired, the checked-in outside-in scenario executes the
-current generated-project smoke instead:
-
-```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -Dsurefire.failIfNoSpecifiedTests=false \
-  -pl netbeans -am \
-  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
-  test
-```
-
-The current scenario command is useful launcher/generator evidence. It is not
-evidence that the exported Ant `jar`, `run`, `run-test-with-main`, or `clean`
-targets have been executed.
-
-After implementation, the outside-in QA scenario should execute the target
-focused proof through the gated scenario runner:
+The outside-in QA scenario executes the same focused proof through the gated
+scenario runner:
 
 ```bash
 ALICE_QA_RUN_GATED_SMOKES=1 \
@@ -428,9 +411,9 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-ant-build
 ```
 
-Only then are the scenario's `status.txt` and `command.log` review evidence for
-the Ant build proof. The command remains a bounded Ant/template build proof; it
-is not installer validation or full GUI export journey evidence.
+The scenario's `status.txt` and `command.log` are review evidence for the Ant
+build proof. The command remains a bounded Ant/template build proof; it is not
+installer validation or full GUI export journey evidence.
 
 Run the broader no-Sims NetBeans reactor validation after launcher generator,
 template, or NetBeans export behavior changes:

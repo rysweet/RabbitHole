@@ -29,7 +29,7 @@
       "journeys": [
         "project-io-corpus",
         "export",
-        "exported-project-smoke"
+        "exported-project-ant-build-smoke"
       ],
       "notes": "The path names the expected generated fixture shape; the .a3w payload is intentionally not checked in."
     },
