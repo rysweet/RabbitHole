@@ -44,31 +44,115 @@ The feature is bounded archive/player evidence for generated fixtures that enter
 through `IoUtilities.readProject(File)`. It is not a broad archive migration
 feature and it is not desktop Save/Open automation.
 
-## Recovery readiness guard
+## PR #463 recovery evidence guard
 
 Use this page as the source of truth for archive/player boundary evidence during
-owner-free recovery work. A literal no-op recovery is valid only when all of
-these conditions are true for the current head:
+PR #463 recovery. Recovery is a normal branch repair against current
+`origin/develop`; it is not a no-op, owner-free bypass, replacement pull request,
+or manual merge path.
 
-- the local worktree is clean;
-- the pull request head matches the inspected commit;
-- mergeability is clean;
-- required checks are green;
-- this boundary evidence is current and no archive/player documentation, QA
-  scenario, or characterization contract is stale.
+The recovery evidence must record the real branch state that was repaired:
 
-If any required check is pending, unstable, or failing, the recovery result is
-`NOT_MERGE_READY` with the exact blocker until required checks are green. If the
-blocker is unrelated to this archive/player boundary, do not repair these docs or
-broaden the boundary claim; the pull request still is not merge-ready while the
-required check remains unsettled.
+- repository `rysweet/RabbitHole`;
+- pull request number `463`;
+- branch `feat/issue-462-restart-rabbithole-archiveplayer-boundary-lane-thr`;
+- current `origin/develop` commit used as the reconciliation base;
+- repaired branch head SHA after all edits;
+- comparison or mergeability status against `origin/develop`;
+- the exact archive/player boundary evidence surfaces that were rechecked;
+- the repair diff files, including gate, test, script, or schema files when the
+  recovery changes them;
+- validation commands, outcomes, and head SHA for the focused Python contracts,
+  Alice desktop scenario/schema contracts, and Maven characterization tests;
+- explicit confirmation that the pull request was not merged manually and was not
+  replaced, and that no no-op mode was used.
 
-When a failing check points at this boundary, repair only the affected
-archive/player evidence surface: this reference, the matching how-to or
-tutorial, generated-fixture characterization tests, or the two QA smoke scenario
-contracts. Do not manually merge, add checked-in `.a3w` archives, expand runtime
-decode support, or substitute desktop workflow evidence for this archive I/O
-contract.
+Conflict or staleness against `origin/develop` is handled by repairing the
+existing PR branch and refreshing evidence at the final head SHA. Do not mark the
+recovery complete from clean-looking metadata alone. Do not use no-op mode,
+owner-free recovery, stale bypass language, or a success-shaped fallback when the
+branch requires reconciliation.
+
+When the stale surface points at this boundary, repair only the affected
+archive/player evidence surface and its direct contract machinery: this
+reference, the matching how-to or tutorial, generated-fixture characterization
+tests, the two QA smoke scenario contracts, schema/runner allowlist entries, or
+the PR recovery gate/tests that enforce this evidence. Do not manually merge, add
+checked-in `.a3w` archives, expand runtime decode support, or substitute desktop
+workflow evidence for this archive I/O contract.
+
+### PR evidence record shape
+
+The repository PR evidence mechanism records current state as structured,
+reviewable data. The record for this recovery contains at least these fields:
+
+```json
+{
+  "repository": "rysweet/RabbitHole",
+  "prNumber": 463,
+  "branch": "feat/issue-462-restart-rabbithole-archiveplayer-boundary-lane-thr",
+  "baseRef": "develop",
+  "developBaseSha": "0fa26ab5b6d3fb5880c2c68834978caa67243f2b",
+  "headSha": "b67969f41ccf61d85cefc2a8b2ee133a2fa1ac38",
+  "mergeStateStatus": "CLEAN",
+  "recoveryMode": "focused-archive-player-repair",
+  "manualMergePerformed": false,
+  "replacementPullRequestCreated": false,
+  "noOpModeUsed": false,
+  "scope": "archive/player-boundary",
+  "archivePlayerEvidenceSurfaces": [
+    "docs/reference/player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/howto/characterize-player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/tutorials/player-archive-unsupported-this-call-diagnostic.md",
+    "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
+    "qa/outside-in/alice-desktop/scenarios/tweedle-decoder-boundary-smoke.yaml",
+    "core/story-api-migration/src/test/java/org/lgna/project/io/HistoricalArchiveRoundTripCharacterizationTest.java",
+    "core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java"
+  ],
+  "repairDiffFiles": [
+    "scripts/pr463_recovery_gate.py",
+    "tests/test_pr463_owner_free_recovery_gate.py",
+    "tests/test_pr463_archive_player_boundary_contract.py",
+    "docs/reference/player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/howto/characterize-player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/tutorials/player-archive-unsupported-this-call-diagnostic.md",
+    "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
+    "qa/outside-in/alice-desktop/scenarios/tweedle-decoder-boundary-smoke.yaml"
+  ],
+  "validations": [
+    {
+      "name": "python-pr463-contracts",
+      "command": "NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_pr463_owner_free_recovery_gate tests.test_pr463_archive_player_boundary_contract",
+      "outcome": "passed",
+      "headSha": "b67969f41ccf61d85cefc2a8b2ee133a2fa1ac38"
+    },
+    {
+      "name": "alice-desktop-scenario-catalog",
+      "command": "NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/runners/validate-scenarios.sh && NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh",
+      "outcome": "passed",
+      "headSha": "b67969f41ccf61d85cefc2a8b2ee133a2fa1ac38"
+    },
+    {
+      "name": "story-api-migration-characterization",
+      "command": "NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest test",
+      "outcome": "passed",
+      "headSha": "b67969f41ccf61d85cefc2a8b2ee133a2fa1ac38"
+    },
+    {
+      "name": "core-ast-decoder-boundary",
+      "command": "NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeCreatesMethodInvocation+zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+zeroArgumentThisMethodCallDecodeRejectsChainedCall test",
+      "outcome": "passed",
+      "headSha": "b67969f41ccf61d85cefc2a8b2ee133a2fa1ac38"
+    }
+  ]
+}
+```
+
+Use the exact final SHA values from the repaired branch. Placeholder values are
+not acceptable in submitted PR evidence. `archivePlayerEvidenceSurfaces` names
+the bounded evidence being protected. `repairDiffFiles` names the actual files
+changed by the repair and may include gate, test, runner, or schema files that
+are not themselves archive/player evidence.
 
 ## Boundary claim routing
 

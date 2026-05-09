@@ -9,8 +9,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RECOVERY_GATE_PATH = REPO_ROOT / "scripts" / "pr463_recovery_gate.py"
 EXPECTED_PR = 463
+EXPECTED_REPOSITORY = "rysweet/RabbitHole"
 EXPECTED_BRANCH = "feat/issue-462-restart-rabbithole-archiveplayer-boundary-lane-thr"
-EXPECTED_HEAD_SHA = "fb6e8468ece394e35b30b68211023f3080d872d5"
+EXPECTED_BASE_REF = "develop"
+EXPECTED_DEVELOP_BASE_SHA = "1" * 40
+EXPECTED_HEAD_SHA = "2" * 40
+EXPECTED_NODE_OPTIONS = "--max-old-space-size=32768"
+EXPECTED_RECOVERY_MODE = "focused-archive-player-repair"
+EXPECTED_SCOPE = "archive/player-boundary"
 
 REQUIRED_CHECKS = [
     "Alice Coverage Reports/coverage",
@@ -20,21 +26,25 @@ REQUIRED_CHECKS = [
     "GitGuardian Security Checks",
 ]
 
-FOCUSED_REPAIR_PATHS = [
-    "scripts/pr463_recovery_gate.py",
-    "tests/test_pr463_owner_free_recovery_gate.py",
+ARCHIVE_PLAYER_EVIDENCE_SURFACES = [
     "docs/reference/player-archive-unsupported-tweedle-diagnostics.md",
     "docs/howto/characterize-player-archive-unsupported-tweedle-diagnostics.md",
     "docs/tutorials/player-archive-unsupported-this-call-diagnostic.md",
     "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
     "qa/outside-in/alice-desktop/scenarios/tweedle-decoder-boundary-smoke.yaml",
-    "qa/outside-in/alice-desktop/runners/run-scenario.sh",
-    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
-    "qa/outside-in/alice-desktop/schema/scenario.schema.json",
     "core/story-api-migration/src/test/java/org/lgna/project/io/HistoricalArchiveRoundTripCharacterizationTest.java",
     "core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java",
+]
+
+FOCUSED_REPAIR_PATHS = [
+    "scripts/pr463_recovery_gate.py",
+    "tests/test_pr463_owner_free_recovery_gate.py",
     "tests/test_pr463_archive_player_boundary_contract.py",
-    "pyproject.toml",
+    "docs/reference/player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/howto/characterize-player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/tutorials/player-archive-unsupported-this-call-diagnostic.md",
+    "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
+    "qa/outside-in/alice-desktop/scenarios/tweedle-decoder-boundary-smoke.yaml",
 ]
 
 ARCHIVE_SMOKE_ARGV = [
@@ -72,11 +82,45 @@ TWEEDLE_SMOKE_ARGV = [
     "test",
 ]
 
+VALIDATION_COMMANDS = {
+    "python-pr463-contracts": (
+        "NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest "
+        "tests.test_pr463_owner_free_recovery_gate "
+        "tests.test_pr463_archive_player_boundary_contract"
+    ),
+    "alice-desktop-scenario-catalog": (
+        "NODE_OPTIONS=--max-old-space-size=32768 bash "
+        "qa/outside-in/alice-desktop/runners/validate-scenarios.sh && "
+        "NODE_OPTIONS=--max-old-space-size=32768 bash "
+        "qa/outside-in/alice-desktop/tests/test-schema-contract.sh"
+    ),
+    "story-api-migration-characterization": (
+        "NODE_OPTIONS=--max-old-space-size=32768 mvn "
+        "-pl core/story-api-migration -am "
+        "-DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false "
+        "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest test"
+    ),
+    "core-ast-decoder-boundary": (
+        "NODE_OPTIONS=--max-old-space-size=32768 mvn "
+        "-pl core/ast -am "
+        "-DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false "
+        "-Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#"
+        "zeroArgumentThisMethodCallDecodeCreatesMethodInvocation+"
+        "zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+"
+        "zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+"
+        "zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+"
+        "zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+"
+        "zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+"
+        "zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+"
+        "zeroArgumentThisMethodCallDecodeRejectsChainedCall test"
+    ),
+}
+
 
 def load_recovery_gate():
     if not RECOVERY_GATE_PATH.exists():
         raise AssertionError(
-            "scripts/pr463_recovery_gate.py must implement the PR #463 owner-free recovery gate."
+            "scripts/pr463_recovery_gate.py must implement the PR #463 recovery gate."
         )
     spec = importlib.util.spec_from_file_location("pr463_recovery_gate", RECOVERY_GATE_PATH)
     module = importlib.util.module_from_spec(spec)
@@ -92,7 +136,7 @@ def completed_check(name: str, conclusion: str = "success") -> dict:
 def github_pr_view_payload(checks: list[dict] | None = None) -> dict:
     return {
         "url": "https://github.com/rysweet/RabbitHole/pull/463",
-        "baseRefName": "develop",
+        "baseRefName": EXPECTED_BASE_REF,
         "headRefName": EXPECTED_BRANCH,
         "headRefOid": EXPECTED_HEAD_SHA,
         "mergeable": "MERGEABLE",
@@ -110,6 +154,19 @@ def github_success_result(command, checks: list[dict] | None = None) -> subproce
         stdout=json.dumps(github_pr_view_payload(checks)),
         stderr="",
     )
+
+
+def validation_record(name: str, outcome: str = "passed", head_sha: str = EXPECTED_HEAD_SHA) -> dict:
+    return {
+        "name": name,
+        "command": VALIDATION_COMMANDS[name],
+        "outcome": outcome,
+        "headSha": head_sha,
+    }
+
+
+def validation_evidence() -> list[dict]:
+    return [validation_record(name) for name in VALIDATION_COMMANDS]
 
 
 def boundary_evidence() -> dict:
@@ -156,39 +213,44 @@ def workflow_contract(argv: list[str]) -> dict:
     }
 
 
-def merge_ready_evidence() -> dict:
+def repaired_branch_evidence() -> dict:
     return {
-        "repository": "rysweet/RabbitHole",
+        "repository": EXPECTED_REPOSITORY,
         "prNumber": EXPECTED_PR,
         "branch": EXPECTED_BRANCH,
-        "baseRef": "develop",
+        "baseRef": EXPECTED_BASE_REF,
+        "developBaseSha": EXPECTED_DEVELOP_BASE_SHA,
         "headSha": EXPECTED_HEAD_SHA,
         "localHeadSha": EXPECTED_HEAD_SHA,
         "prHeadSha": EXPECTED_HEAD_SHA,
         "worktreeClean": True,
         "mergeable": "MERGEABLE",
         "mergeStateStatus": "CLEAN",
-        "manualMergeUsed": False,
-        "noOpJustificationUsed": True,
-        "repairRequired": False,
-        "pushedRepair": False,
+        "recoveryMode": EXPECTED_RECOVERY_MODE,
+        "manualMergePerformed": False,
+        "replacementPullRequestCreated": False,
+        "noOpModeUsed": False,
+        "scope": EXPECTED_SCOPE,
+        "repairRequired": True,
+        "pushedRepair": True,
+        "archivePlayerEvidenceSurfaces": ARCHIVE_PLAYER_EVIDENCE_SURFACES,
+        "repairDiffFiles": FOCUSED_REPAIR_PATHS,
+        "tweedleLangInitialized": True,
+        "nodeOptions": EXPECTED_NODE_OPTIONS,
         "commands": [
-            ["git", "--no-pager", "status", "--short"],
-            ["gh", "pr", "view", "463", "--json", "headRefOid,mergeable,mergeStateStatus,statusCheckRollup"],
+            ["git", "fetch", "origin", "develop"],
             ["git", "submodule", "update", "--init", "tweedle-lang"],
-            ["python3", "-m", "unittest", "tests.test_pr463_archive_player_boundary_contract"],
+            ["python3", "-m", "unittest", "tests.test_pr463_owner_free_recovery_gate"],
             ["bash", "qa/outside-in/alice-desktop/runners/validate-scenarios.sh"],
+            ["gh", "pr", "view", "463", "--json", "headRefOid,mergeStateStatus,statusCheckRollup"],
         ],
-        "changedFiles": [],
-        "githubActions": {"headSha": EXPECTED_HEAD_SHA, "checks": [completed_check(check) for check in REQUIRED_CHECKS]},
+        "githubActions": {
+            "headSha": EXPECTED_HEAD_SHA,
+            "checks": [completed_check(check) for check in REQUIRED_CHECKS],
+        },
         "boundaryEvidence": boundary_evidence(),
         "qaScenarioContracts": qa_scenario_contracts(),
-        "validations": {
-            "tweedleLangInitialized": True,
-            "nodeOptions": "--max-old-space-size=32768",
-            "pythonContract": {"outcome": "passed"},
-            "scenarioValidation": {"outcome": "passed"},
-        },
+        "validations": validation_evidence(),
         "prEvidence": {
             "headSha": EXPECTED_HEAD_SHA,
             "currentHeadEvidence": True,
@@ -199,10 +261,10 @@ def merge_ready_evidence() -> dict:
     }
 
 
-class Pr463OwnerFreeRecoveryGateUnitTest(unittest.TestCase):
+class Pr463RecoveryGateUnitTest(unittest.TestCase):
     def setUp(self) -> None:
         self.module = load_recovery_gate()
-        self.evidence = merge_ready_evidence()
+        self.evidence = repaired_branch_evidence()
 
     def assert_no_blockers(self, verifier_name: str) -> None:
         verifier = getattr(self.module, verifier_name)
@@ -215,15 +277,24 @@ class Pr463OwnerFreeRecoveryGateUnitTest(unittest.TestCase):
         blockers = verifier(evidence)
         self.assertIn(expected_blocker, blockers)
 
-    def test_pr_state_verifier_requires_clean_current_owner_free_noop_inputs(self) -> None:
+    def test_pr_state_verifier_requires_repaired_existing_branch_against_current_develop(self) -> None:
         self.assert_no_blockers("verify_pr_state")
         blocker_cases = [
             ("dirty worktree", lambda e: e.update({"worktreeClean": False}), "dirty-worktree"),
+            ("missing develop base", lambda e: e.update({"developBaseSha": ""}), "missing-develop-base-sha"),
             ("stale local head", lambda e: e.update({"localHeadSha": "deadbeef"}), "local-head-sha-mismatch"),
             ("stale pr head", lambda e: e.update({"prHeadSha": "deadbeef"}), "pr-head-sha-mismatch"),
             ("not mergeable", lambda e: e.update({"mergeable": "CONFLICTING"}), "pr-not-mergeable"),
-            ("unstable merge state", lambda e: e.update({"mergeStateStatus": "UNSTABLE"}), "pr-merge-state-not-clean"),
-            ("manual merge used", lambda e: e.update({"manualMergeUsed": True}), "manual-merge-used"),
+            ("unstable merge state", lambda e: e.update({"mergeStateStatus": "DIRTY"}), "pr-merge-state-not-clean"),
+            ("wrong recovery mode", lambda e: e.update({"recoveryMode": "owner-free-noop"}), "wrong-recovery-mode"),
+            ("wrong scope", lambda e: e.update({"scope": "general-qa"}), "wrong-recovery-scope"),
+            ("manual merge", lambda e: e.update({"manualMergePerformed": True}), "manual-merge-performed"),
+            (
+                "replacement PR",
+                lambda e: e.update({"replacementPullRequestCreated": True}),
+                "replacement-pr-created",
+            ),
+            ("no-op mode", lambda e: e.update({"noOpModeUsed": True}), "noop-mode-used"),
         ]
         for name, mutate, expected_blocker in blocker_cases:
             with self.subTest(name=name):
@@ -288,7 +359,7 @@ class Pr463OwnerFreeRecoveryGateUnitTest(unittest.TestCase):
         self.assertEqual(EXPECTED_HEAD_SHA, evidence["headSha"])
         self.assertEqual(EXPECTED_HEAD_SHA, evidence["prHeadSha"])
         self.assertEqual(EXPECTED_BRANCH, evidence["branch"])
-        self.assertEqual("develop", evidence["baseRef"])
+        self.assertEqual(EXPECTED_BASE_REF, evidence["baseRef"])
         self.assertEqual("coverage", evidence["githubActions"]["checks"][0]["name"])
         self.assertEqual(
             [
@@ -389,46 +460,43 @@ class Pr463OwnerFreeRecoveryGateUnitTest(unittest.TestCase):
 
         self.assertNotIn(secret, str(context.exception))
 
-    def test_repair_scope_verifier_allows_only_archive_player_boundary_surfaces(self) -> None:
-        repair_evidence = copy.deepcopy(self.evidence)
-        repair_evidence.update(
-            {
-                "repairRequired": True,
-                "noOpJustificationUsed": False,
-                "pushedRepair": True,
-                "changedFiles": FOCUSED_REPAIR_PATHS[:3],
-            }
-        )
-
-        self.assertEqual([], self.module.verify_repair_scope(repair_evidence))
+    def test_repair_scope_verifier_uses_repair_diff_files_separate_from_evidence_surfaces(self) -> None:
+        self.assert_no_blockers("verify_repair_scope")
         self.assert_has_blocker(
             "verify_repair_scope",
-            lambda e: e.update(
-                {
-                    "repairRequired": True,
-                    "changedFiles": ["docs/reference/unrelated-recovery.md"],
-                }
-            ),
+            lambda e: e.update({"repairDiffFiles": []}),
+            "missing-focused-repair-diff",
+        )
+        self.assert_has_blocker(
+            "verify_repair_scope",
+            lambda e: e["repairDiffFiles"].append("docs/reference/unrelated-recovery.md"),
             "unfocused-diff-scope",
         )
         self.assert_has_blocker(
             "verify_repair_scope",
-            lambda e: e.update(
-                {
-                    "repairRequired": True,
-                    "changedFiles": ["qa/fixtures/generated-player-archive.a3w"],
-                }
-            ),
+            lambda e: e["repairDiffFiles"].append("qa/fixtures/generated-player-archive.a3w"),
             "generated-archive-committed",
         )
         self.assert_has_blocker(
             "verify_repair_scope",
-            lambda e: e.update({"repairRequired": True, "pushedRepair": False}),
+            lambda e: e.update({"pushedRepair": False}),
             "focused-repair-not-pushed",
         )
 
-    def test_boundary_evidence_verifier_rejects_stale_docs_overclaims_and_binary_fixtures(self) -> None:
+    def test_boundary_evidence_verifier_rejects_broadened_surface_scope_and_overclaims(self) -> None:
         self.assert_no_blockers("verify_boundary_evidence")
+        self.assert_has_blocker(
+            "verify_boundary_evidence",
+            lambda e: e.update({"archivePlayerEvidenceSurfaces": []}),
+            "archive-player-evidence-surfaces-missing",
+        )
+        self.assert_has_blocker(
+            "verify_boundary_evidence",
+            lambda e: e["archivePlayerEvidenceSurfaces"].append(
+                "qa/outside-in/alice-desktop/scenarios/save-load.yaml"
+            ),
+            "archive-player-evidence-scope-broadened",
+        )
         self.assert_has_blocker(
             "verify_boundary_evidence",
             lambda e: e["boundaryEvidence"].update({"referenceDocCurrent": False}),
@@ -479,36 +547,78 @@ class Pr463OwnerFreeRecoveryGateUnitTest(unittest.TestCase):
             "qa-scenario-validation-not-run",
         )
 
-    def test_validation_verifier_requires_focused_contracts_and_saved_node_options(self) -> None:
+    def test_validation_verifier_requires_structured_focused_records_for_final_head(self) -> None:
         self.assert_no_blockers("verify_validation_evidence")
         self.assert_has_blocker(
             "verify_validation_evidence",
-            lambda e: e["validations"].update({"tweedleLangInitialized": False}),
+            lambda e: e.update({"tweedleLangInitialized": False}),
             "tweedle-lang-not-initialized",
         )
         self.assert_has_blocker(
             "verify_validation_evidence",
-            lambda e: e["validations"].update({"nodeOptions": ""}),
+            lambda e: e.update({"nodeOptions": ""}),
             "missing-node-options",
         )
         self.assert_has_blocker(
             "verify_validation_evidence",
-            lambda e: e["validations"]["pythonContract"].update({"outcome": "failed"}),
+            lambda e: e["validations"][0].update({"outcome": "failed"}),
             "python-contract-validation-failed",
         )
         self.assert_has_blocker(
             "verify_validation_evidence",
-            lambda e: e["validations"]["scenarioValidation"].update({"outcome": "failed"}),
+            lambda e: e["validations"][1].update({"outcome": "failed"}),
             "qa-scenario-validation-failed",
         )
+        self.assert_has_blocker(
+            "verify_validation_evidence",
+            lambda e: e["validations"][2].update({"headSha": "deadbeef"}),
+            "validation-stale-head",
+        )
+        self.assert_has_blocker(
+            "verify_validation_evidence",
+            lambda e: e["validations"][3].update({"command": ""}),
+            "validation-command-missing",
+        )
+        self.assert_has_blocker(
+            "verify_validation_evidence",
+            lambda e: e.update(
+                {
+                    "validations": [
+                        record
+                        for record in e["validations"]
+                        if record["name"] != "core-ast-decoder-boundary"
+                    ]
+                }
+            ),
+            "focused-maven-validation-missing",
+        )
 
-    def test_command_safety_verifier_rejects_manual_merge_and_unsafe_noop_or_push(self) -> None:
+    def test_pr_evidence_verifier_requires_current_head_and_bounded_nonclaims(self) -> None:
+        self.assert_no_blockers("verify_pr_evidence")
+        self.assert_has_blocker(
+            "verify_pr_evidence",
+            lambda e: e["prEvidence"].update({"headSha": "deadbeef"}),
+            "pr-evidence-stale-head",
+        )
+        self.assert_has_blocker(
+            "verify_pr_evidence",
+            lambda e: e["prEvidence"].update({"currentHeadEvidence": False}),
+            "pr-evidence-missing-current-head",
+        )
+        self.assert_has_blocker(
+            "verify_pr_evidence",
+            lambda e: e["prEvidence"].update({"boundedArchivePlayerClaimsOnly": False}),
+            "pr-evidence-overclaims-archive-player-boundary",
+        )
+
+    def test_command_safety_verifier_rejects_manual_merge_noop_replacement_and_unsafe_push(self) -> None:
         self.assert_no_blockers("verify_command_safety")
         blocker_cases = [
             ("gh merge", lambda e: e["commands"].append(["gh", "pr", "merge", "463"]), "manual-merge-used"),
-            ("git merge", lambda e: e["commands"].append(["git", "merge", "origin/develop"]), "manual-merge-used"),
             ("shell gh merge", lambda e: e["commands"].append("true && gh pr merge 463"), "manual-merge-used"),
-            ("noop with repair", lambda e: e.update({"repairRequired": True, "noOpJustificationUsed": True}), "noop-used-despite-required-repair"),
+            ("manual merge flag", lambda e: e.update({"manualMergePerformed": True}), "manual-merge-performed"),
+            ("replacement PR", lambda e: e.update({"replacementPullRequestCreated": True}), "replacement-pr-created"),
+            ("no-op mode", lambda e: e.update({"noOpModeUsed": True}), "noop-mode-used"),
             ("push without repair", lambda e: e.update({"repairRequired": False, "pushedRepair": True}), "unexpected-push-without-repair"),
         ]
         for name, mutate, expected_blocker in blocker_cases:
@@ -516,22 +626,45 @@ class Pr463OwnerFreeRecoveryGateUnitTest(unittest.TestCase):
                 self.assert_has_blocker("verify_command_safety", mutate, expected_blocker)
 
 
-class Pr463OwnerFreeRecoveryGateIntegrationTest(unittest.TestCase):
+class Pr463RecoveryGateIntegrationTest(unittest.TestCase):
     def setUp(self) -> None:
         self.module = load_recovery_gate()
 
-    def test_clean_green_current_head_returns_merge_ready_owner_free_noop(self) -> None:
-        result = self.module.evaluate_readiness(merge_ready_evidence())
+    def test_repaired_current_head_returns_merge_ready_without_noop_language(self) -> None:
+        result = self.module.evaluate_readiness(repaired_branch_evidence())
 
         self.assertEqual("MERGE_READY", result["status"])
         self.assertEqual([], result["blockers"])
         self.assertEqual(EXPECTED_HEAD_SHA, result["headSha"])
-        self.assertFalse(result["repairRequired"])
-        self.assertIn("literal owner-free no-op", result["summary"].lower())
+        self.assertFalse(result["mayUseNoOpJustification"])
+        self.assertEqual(EXPECTED_RECOVERY_MODE, result["recoveryMode"])
+        self.assertIn("focused archive/player repair", result["summary"].lower())
+        self.assertNotIn("owner-free", result["summary"].lower())
+        self.assertNotIn("no-op", result["summary"].lower())
+
+    def test_clean_metadata_without_focused_repair_is_blocked_instead_of_noop_ready(self) -> None:
+        evidence = repaired_branch_evidence()
+        evidence.update(
+            {
+                "recoveryMode": "owner-free-noop",
+                "noOpModeUsed": True,
+                "repairRequired": False,
+                "pushedRepair": False,
+                "repairDiffFiles": [],
+            }
+        )
+
+        result = self.module.evaluate_readiness(evidence)
+
+        self.assertEqual("NOT_MERGE_READY", result["status"])
+        self.assertIn("noop-mode-used", result["blockers"])
+        self.assertIn("wrong-recovery-mode", result["blockers"])
+        self.assertFalse(result["mayUseNoOpJustification"])
+        self.assertNotIn("MERGE_READY", result.get("summary", ""))
 
     def test_pending_coverage_returns_not_merge_ready_without_archive_repair_scope(self) -> None:
-        evidence = merge_ready_evidence()
-        evidence.update({"mergeStateStatus": "UNSTABLE", "noOpJustificationUsed": False})
+        evidence = repaired_branch_evidence()
+        evidence.update({"mergeStateStatus": "UNSTABLE", "repairRequired": False, "pushedRepair": False})
         evidence["githubActions"]["checks"][0].update({"status": "IN_PROGRESS", "conclusion": None})
 
         result = self.module.evaluate_readiness(evidence)
@@ -543,13 +676,13 @@ class Pr463OwnerFreeRecoveryGateIntegrationTest(unittest.TestCase):
         self.assertNotIn("MERGE_READY", result.get("summary", ""))
 
     def test_relevant_archive_player_failure_returns_focused_repair_required_scope(self) -> None:
-        evidence = merge_ready_evidence()
+        evidence = repaired_branch_evidence()
         evidence.update(
             {
                 "mergeStateStatus": "UNSTABLE",
-                "noOpJustificationUsed": False,
                 "repairRequired": True,
                 "pushedRepair": False,
+                "repairDiffFiles": [],
             }
         )
         evidence["githubActions"]["checks"][2].update(
@@ -568,33 +701,10 @@ class Pr463OwnerFreeRecoveryGateIntegrationTest(unittest.TestCase):
         self.assertEqual(FOCUSED_REPAIR_PATHS, result["allowedRepairPaths"])
         self.assertFalse(result["mayUseNoOpJustification"])
 
-    def test_pushed_owner_free_guard_repair_can_be_merge_ready_after_checks_pass(self) -> None:
-        evidence = merge_ready_evidence()
-        evidence.update(
-            {
-                "noOpJustificationUsed": False,
-                "repairRequired": True,
-                "pushedRepair": True,
-                "changedFiles": [
-                    "scripts/pr463_recovery_gate.py",
-                    "tests/test_pr463_owner_free_recovery_gate.py",
-                ],
-            }
-        )
-        evidence["commands"].append(["git", "push", "origin", EXPECTED_BRANCH])
-
-        result = self.module.evaluate_readiness(evidence)
-
-        self.assertEqual("MERGE_READY", result["status"])
-        self.assertEqual([], result["blockers"])
-        self.assertFalse(result["mayUseNoOpJustification"])
-        self.assertIn("focused archive/player guard repair", result["summary"])
-        self.assertNotIn("literal owner-free no-op", result["summary"].lower())
-
     def test_missing_evidence_reports_blockers_instead_of_success_shaped_defaults(self) -> None:
         result = self.module.evaluate_readiness(
             {
-                "repository": "rysweet/RabbitHole",
+                "repository": EXPECTED_REPOSITORY,
                 "prNumber": EXPECTED_PR,
                 "branch": EXPECTED_BRANCH,
             }
@@ -605,6 +715,7 @@ class Pr463OwnerFreeRecoveryGateIntegrationTest(unittest.TestCase):
         self.assertIn("missing-github-actions-evidence", result["blockers"])
         self.assertIn("missing-boundary-evidence", result["blockers"])
         self.assertIn("missing-qa-scenario-contract-evidence", result["blockers"])
+        self.assertIn("missing-validation-evidence", result["blockers"])
         self.assertNotIn("MERGE_READY", result.get("summary", ""))
 
 

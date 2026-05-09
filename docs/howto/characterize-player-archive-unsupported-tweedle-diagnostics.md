@@ -26,19 +26,21 @@ Use this checklist when adding or reviewing the bounded archive/player evidence:
 | Gated command-smoke evidence | Distinguish `gated-not-run` metadata from enabled Maven success evidence. |
 | Claim limits | Do not cite this evidence for full Tweedle/player decode, migration completeness, UI automation, rendering, grading, Save/Open guarantees, or lesson completion. |
 
-## Decide whether a recovery is a no-op
+## Recover stale PR #463 boundary evidence
 
-Before editing this boundary, inspect the current pull request head and checks.
-Use a literal owner-free no-op justification only when the current head is clean,
-mergeability is clean, all required checks are green, and the evidence in this
-guide still matches the implementation.
+When PR #463 is stale or conflicted against current `origin/develop`, repair the
+existing branch. Do not replace the pull request, merge it manually, or use a
+no-op or owner-free bypass. The recovery is complete only after the branch is
+reconciled, the final head SHA is captured, and the focused evidence below is
+refreshed.
 
-If a required check is pending, unstable, or failing, stop at
-`NOT_MERGE_READY` unless the failure clearly belongs to this archive/player
-boundary. Pending coverage, package, or unrelated infrastructure checks are
-blockers, not a reason to broaden this documentation.
+Before editing this boundary, inspect the current pull request head, the current
+`origin/develop` head, and the archive/player evidence surfaces. Treat conflicts
+in `archive-fixture-smoke.yaml` as evidence wording conflicts, not permission to
+broaden the scenario into general archive, player, desktop workflow, rendering,
+grading, Save/Open, or lesson-completion coverage.
 
-When the blocker is in scope, keep the repair narrow:
+Keep the repair narrow:
 
 | Blocker | Allowed repair |
 | --- | --- |
@@ -46,10 +48,18 @@ When the blocker is in scope, keep the repair narrow:
 | Missing manifest-entry evidence drift | Repair the generated fixture characterization and the matching archive I/O wording. |
 | Gated QA smoke drift | Update only the scenario contract, runner allowlist, schema entry, and validation text needed for the affected workflow. |
 | Decoder-boundary selector drift | Update only the focused core AST selector list and the decoder-boundary smoke description. |
+| PR #463 branch conflict or staleness | Reconcile the existing PR branch with current `origin/develop`, preserve archive/player boundary wording, and refresh PR evidence at the final branch SHA. |
 
 Do not repair a recovery blocker by adding checked-in generated archives,
 weakening fail-closed assertions, replacing archive evidence with desktop
 workflow evidence, or claiming support for unsupported Tweedle/player behavior.
+
+Refresh the PR evidence after the final edit, not before. The evidence includes
+the repaired branch SHA, the `origin/develop` base SHA, the mergeability or
+comparison status, the archive/player evidence surfaces that were rechecked, the
+actual repair diff files, focused validation commands with outcomes at the final
+head SHA, and explicit `false` values for manual merge, replacement pull
+request, and no-op mode.
 
 ## Prerequisites
 
@@ -226,6 +236,17 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   test
 ```
 
+Run the focused core AST decoder-boundary characterization when the recovery
+changes or cites the decoder-level unsupported-call evidence:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.serialization.tweedle.TweedleEncoderDecoderTest#zeroArgumentThisMethodCallDecodeCreatesMethodInvocation+zeroArgumentThisMethodCallDecodeRejectsArgumentBearingCall+zeroArgumentThisMethodCallDecodeRejectsOptionalParameterTargetMethod+zeroArgumentThisMethodCallDecodeRejectsUnknownMethod+zeroArgumentThisMethodCallDecodeRejectsDuplicateTargetMethodName+zeroArgumentThisMethodCallDecodeRejectsNonThisTarget+zeroArgumentThisMethodCallDecodeRejectsStaticTargetMethod+zeroArgumentThisMethodCallDecodeRejectsChainedCall \
+  test
+```
+
 If the QA smoke scenario metadata changed, validate the scenario catalog:
 
 ```bash
@@ -243,3 +264,32 @@ generated archive fixture evidence for manifest routing, unsupported Tweedle
 diagnostics, and missing-entry failures; `tweedle-decoder-boundary-smoke` covers
 only the core AST decoder rejection checks for adjacent unsupported method-call
 forms.
+
+For PR #463 recovery, also run the focused Python contract tests that guard the
+recovery evidence and this boundary wording:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest \
+  tests.test_pr463_owner_free_recovery_gate \
+  tests.test_pr463_archive_player_boundary_contract
+```
+
+The owner-free name is retained only because it is the existing test module name.
+The documented recovery behavior rejects owner-free and no-op success paths.
+
+Run the Alice desktop scenario/schema contracts for touched scenarios:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+  bash qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+
+NODE_OPTIONS=--max-old-space-size=32768 \
+  bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+```
+
+Record each PR #463 validation as structured evidence with the command, outcome,
+and final head SHA. A `passed` string without the command and SHA is not enough
+for the recovery gate because it cannot prove which branch state was checked.
+
+Do not cite unrelated QA, UI, rendering, grading, Save/Open, or lesson-completion
+evidence as a substitute for these focused checks.

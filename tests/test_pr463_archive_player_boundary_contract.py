@@ -145,8 +145,9 @@ class Pr463ArchivePlayerBoundaryContractTest(unittest.TestCase):
         self.assertIn("archive i/o", lower)
         self.assertIn("missing-entry", lower)
         self.assertIn("unsupported tweedle diagnostics", lower)
-        self.assertIn("supportingEvidence:\n  - alice-desktop-project-io-smoke", scenario)
         self.assertNotIn("project io", lower)
+        self.assertNotIn("project-io", lower)
+        self.assertNotIn("alice-desktop-project-io-smoke", lower)
 
     def test_tweedle_decoder_boundary_smoke_stays_gated_core_ast_decoder_evidence_only(self) -> None:
         scenario = read_text(TWEEDLE_BOUNDARY_SCENARIO)
@@ -314,6 +315,39 @@ class Pr463ArchivePlayerBoundaryContractTest(unittest.TestCase):
                     text,
                     DIRECT_RUNNER_EXAMPLE_PATTERN,
                 )
+
+    def test_recovery_evidence_docs_require_real_final_sha_status_and_validation_records(self) -> None:
+        reference = read_text(REFERENCE_DOC)
+        lower = normalized(reference)
+
+        required_fragments = (
+            "developbasesha",
+            "headsha",
+            "mergestatestatus",
+            "recoverymode",
+            "focused-archive-player-repair",
+            "manualmergeperformed",
+            "replacementpullrequestcreated",
+            "noopmodeused",
+            "archiveplayerevidencesurfaces",
+            "repairdifffiles",
+            "python-pr463-contracts",
+            "alice-desktop-scenario-catalog",
+            "story-api-migration-characterization",
+            "core-ast-decoder-boundary",
+        )
+        forbidden_fragments = (
+            "<origin/develop sha used for reconciliation>",
+            "<final repaired branch sha>",
+            "<all files changed by the focused repair",
+        )
+
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, lower)
+        for fragment in forbidden_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertNotIn(fragment, lower)
 
 
 if __name__ == "__main__":

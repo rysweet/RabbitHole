@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate PR #463 owner-free recovery evidence before merge-ready claims."""
+"""Evaluate PR #463 focused archive/player recovery evidence before merge-ready claims."""
 
 from __future__ import annotations
 
@@ -21,7 +21,8 @@ EXPECTED_BRANCH = "feat/issue-462-restart-rabbithole-archiveplayer-boundary-lane
 EXPECTED_BASE_REF = "develop"
 EXPECTED_NODE_OPTIONS = "--max-old-space-size=32768"
 EXPECTED_AUTOMATION_MODE = "gated-command-smoke"
-EXPECTED_HEAD_SHA = "fb6e8468ece394e35b30b68211023f3080d872d5"
+EXPECTED_RECOVERY_MODE = "focused-archive-player-repair"
+EXPECTED_SCOPE = "archive/player-boundary"
 DEFAULT_GITHUB_TIMEOUT_SECONDS = 20.0
 DEFAULT_GITHUB_RETRY_ATTEMPTS = 3
 DEFAULT_GITHUB_RETRY_DELAY_SECONDS = 2.0
@@ -75,23 +76,41 @@ EXPECTED_WORKFLOW_ARGV = {
 FOCUSED_REPAIR_PATHS = (
     "scripts/pr463_recovery_gate.py",
     "tests/test_pr463_owner_free_recovery_gate.py",
+    "tests/test_pr463_archive_player_boundary_contract.py",
     "docs/reference/player-archive-unsupported-tweedle-diagnostics.md",
     "docs/howto/characterize-player-archive-unsupported-tweedle-diagnostics.md",
     "docs/tutorials/player-archive-unsupported-this-call-diagnostic.md",
     "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
     "qa/outside-in/alice-desktop/scenarios/tweedle-decoder-boundary-smoke.yaml",
-    "qa/outside-in/alice-desktop/runners/run-scenario.sh",
-    "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
-    "qa/outside-in/alice-desktop/schema/scenario.schema.json",
+)
+FOCUSED_REPAIR_PATH_SET = frozenset(FOCUSED_REPAIR_PATHS)
+ARCHIVE_PLAYER_EVIDENCE_SURFACES = (
+    "docs/reference/player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/howto/characterize-player-archive-unsupported-tweedle-diagnostics.md",
+    "docs/tutorials/player-archive-unsupported-this-call-diagnostic.md",
+    "qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml",
+    "qa/outside-in/alice-desktop/scenarios/tweedle-decoder-boundary-smoke.yaml",
     (
         "core/story-api-migration/src/test/java/org/lgna/project/io/"
         "HistoricalArchiveRoundTripCharacterizationTest.java"
     ),
     "core/ast/src/test/java/org/alice/serialization/tweedle/TweedleEncoderDecoderTest.java",
-    "tests/test_pr463_archive_player_boundary_contract.py",
-    "pyproject.toml",
 )
-FOCUSED_REPAIR_PATH_SET = frozenset(FOCUSED_REPAIR_PATHS)
+ARCHIVE_PLAYER_EVIDENCE_SURFACE_SET = frozenset(ARCHIVE_PLAYER_EVIDENCE_SURFACES)
+REQUIRED_VALIDATION_NAMES = frozenset(
+    (
+        "python-pr463-contracts",
+        "alice-desktop-scenario-catalog",
+        "story-api-migration-characterization",
+        "core-ast-decoder-boundary",
+    )
+)
+MAVEN_VALIDATION_NAMES = frozenset(
+    (
+        "story-api-migration-characterization",
+        "core-ast-decoder-boundary",
+    )
+)
 REQUIRED_STATUS_CHECK_NAMES = frozenset(
     (
         "Alice Coverage Reports/coverage",
@@ -479,7 +498,7 @@ def verify_external_service_errors(evidence: dict[str, Any]) -> list[str]:
 
 
 def verify_pr_state(evidence: dict[str, Any]) -> list[str]:
-    """Require a clean, current PR head before owner-free no-op readiness."""
+    """Require a clean, repaired PR head against the recorded develop base."""
     blockers: list[str] = []
     head_sha = _head_sha(evidence)
     local_head_sha = _text(evidence.get("localHeadSha"))
@@ -495,6 +514,8 @@ def verify_pr_state(evidence: dict[str, Any]) -> list[str]:
         blockers.append("wrong-authoritative-branch")
     if evidence.get("baseRef") not in (EXPECTED_BASE_REF, f"origin/{EXPECTED_BASE_REF}"):
         blockers.append("wrong-base-ref")
+    if not _text(evidence.get("developBaseSha")):
+        blockers.append("missing-develop-base-sha")
     if evidence.get("worktreeClean") is not True:
         blockers.append("dirty-worktree")
     if head_sha and local_head_sha and head_sha != local_head_sha:
@@ -505,8 +526,18 @@ def verify_pr_state(evidence: dict[str, Any]) -> list[str]:
         blockers.append("pr-not-mergeable")
     if _text(evidence.get("mergeStateStatus")).upper() != "CLEAN":
         blockers.append("pr-merge-state-not-clean")
+    if evidence.get("recoveryMode") != EXPECTED_RECOVERY_MODE:
+        blockers.append("wrong-recovery-mode")
+    if evidence.get("scope") != EXPECTED_SCOPE:
+        blockers.append("wrong-recovery-scope")
+    if evidence.get("manualMergePerformed") is True:
+        blockers.append("manual-merge-performed")
     if evidence.get("manualMergeUsed") is True:
         blockers.append("manual-merge-used")
+    if evidence.get("replacementPullRequestCreated") is True:
+        blockers.append("replacement-pr-created")
+    if evidence.get("noOpModeUsed") is True or evidence.get("noOpJustificationUsed") is True:
+        blockers.append("noop-mode-used")
 
     return blockers
 
@@ -551,8 +582,8 @@ def verify_github_actions(evidence: dict[str, Any]) -> list[str]:
 def verify_repair_scope(evidence: dict[str, Any]) -> list[str]:
     """Allow repair diffs only on PR #463 guard and archive/player evidence surfaces."""
     blockers: list[str] = []
-    changed_files = evidence.get("changedFiles")
-    changed_file_list = _as_list(changed_files)
+    repair_diff_files = evidence.get("repairDiffFiles")
+    changed_file_list = _as_list(repair_diff_files)
 
     if evidence.get("repairRequired") is not True:
         return blockers
@@ -594,6 +625,17 @@ def verify_boundary_evidence(evidence: dict[str, Any]) -> list[str]:
         return ["missing-boundary-evidence"]
 
     blockers: list[str] = []
+    surfaces = _as_list(evidence.get("archivePlayerEvidenceSurfaces"))
+    if not surfaces:
+        blockers.append("archive-player-evidence-surfaces-missing")
+    else:
+        broadened_scope = any(
+            not _text(surface) or _text(surface) not in ARCHIVE_PLAYER_EVIDENCE_SURFACE_SET
+            for surface in surfaces
+        )
+        if broadened_scope:
+            blockers.append("archive-player-evidence-scope-broadened")
+
     evidence_stale = boundary.get("headSha") != _head_sha(evidence) or any(
         boundary.get(flag) is not True for flag in BOUNDARY_CURRENT_FLAGS
     )
@@ -645,21 +687,45 @@ def verify_qa_scenario_contracts(evidence: dict[str, Any]) -> list[str]:
 
 def verify_validation_evidence(evidence: dict[str, Any]) -> list[str]:
     """Require focused local validation evidence with the saved Node option."""
-    validations = _as_mapping(evidence.get("validations"))
+    validations = _as_list(evidence.get("validations"))
     if not validations:
         return ["missing-validation-evidence"]
 
     blockers: list[str] = []
-    if validations.get("tweedleLangInitialized") is not True:
+    if evidence.get("tweedleLangInitialized") is not True:
         blockers.append("tweedle-lang-not-initialized")
-    if validations.get("nodeOptions") != EXPECTED_NODE_OPTIONS:
+    if evidence.get("nodeOptions") != EXPECTED_NODE_OPTIONS:
         blockers.append("missing-node-options")
-    if _as_mapping(validations.get("pythonContract")).get("outcome") != "passed":
-        blockers.append("python-contract-validation-failed")
-    if _as_mapping(validations.get("scenarioValidation")).get("outcome") != "passed":
-        blockers.append("qa-scenario-validation-failed")
 
-    return blockers
+    records_by_name: dict[str, dict[str, Any]] = {}
+    for raw_record in validations:
+        record = _as_mapping(raw_record)
+        name = _text(record.get("name"))
+        if name:
+            records_by_name[name] = record
+        if not _text(record.get("command")):
+            blockers.append("validation-command-missing")
+        if record.get("headSha") != _head_sha(evidence):
+            blockers.append("validation-stale-head")
+
+    missing_names = REQUIRED_VALIDATION_NAMES - records_by_name.keys()
+    if "python-pr463-contracts" in missing_names or _normalized_text(
+        records_by_name.get("python-pr463-contracts", {}).get("outcome")
+    ) != "passed":
+        blockers.append("python-contract-validation-failed")
+    if "alice-desktop-scenario-catalog" in missing_names or _normalized_text(
+        records_by_name.get("alice-desktop-scenario-catalog", {}).get("outcome")
+    ) != "passed":
+        blockers.append("qa-scenario-validation-failed")
+    if missing_names & MAVEN_VALIDATION_NAMES:
+        blockers.append("focused-maven-validation-missing")
+    elif any(
+        _normalized_text(records_by_name[name].get("outcome")) != "passed"
+        for name in MAVEN_VALIDATION_NAMES
+    ):
+        blockers.append("focused-maven-validation-failed")
+
+    return _dedupe(blockers)
 
 
 def verify_pr_evidence(evidence: dict[str, Any]) -> list[str]:
@@ -702,6 +768,12 @@ def verify_command_safety(evidence: dict[str, Any]) -> list[str]:
             has_unexpected_push = True
 
     blockers: list[str] = []
+    if evidence.get("manualMergePerformed") is True:
+        blockers.append("manual-merge-performed")
+    if evidence.get("replacementPullRequestCreated") is True:
+        blockers.append("replacement-pr-created")
+    if evidence.get("noOpModeUsed") is True or evidence.get("noOpJustificationUsed") is True:
+        blockers.append("noop-mode-used")
     if has_manual_merge:
         blockers.append("manual-merge-used")
     if has_missing_commands:
@@ -736,27 +808,20 @@ def evaluate_readiness(evidence: dict[str, Any]) -> dict[str, Any]:
     repair_required = _has_archive_player_failure(evidence)
 
     if not blockers:
-        focused_repair_pushed = evidence.get("pushedRepair") is True or evidence.get("repairRequired") is True
-        LOGGER.info("PR #463 owner-free recovery gate passed for head %s", head_sha)
-        if focused_repair_pushed:
-            summary = (
-                "PR #463 is merge-ready after focused archive/player guard repair: "
-                "the current head is clean, checks are green, mergeability is clean, "
-                "and archive/player boundary evidence is current."
-            )
-        else:
-            summary = (
-                "PR #463 is merge-ready with a literal owner-free no-op justification: "
-                "the current head is clean, checks are green, mergeability is clean, "
-                "and archive/player boundary evidence is current."
-            )
+        LOGGER.info("PR #463 focused archive/player recovery gate passed for head %s", head_sha)
+        summary = (
+            "PR #463 is merge-ready after focused archive/player repair: "
+            "the current head is clean, checks are green, mergeability is clean, "
+            "and archive/player boundary evidence is current."
+        )
         return {
             "status": "MERGE_READY",
             "headSha": head_sha,
             "blockers": [],
             "repairRequired": False,
+            "recoveryMode": evidence.get("recoveryMode"),
             "allowedRepairPaths": [],
-            "mayUseNoOpJustification": not focused_repair_pushed,
+            "mayUseNoOpJustification": False,
             "summary": summary,
         }
 
@@ -798,7 +863,7 @@ def load_evidence(path: Path | None) -> dict[str, Any]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Evaluate PR #463 owner-free recovery evidence and print readiness JSON."
+        description="Evaluate PR #463 focused archive/player recovery evidence and print readiness JSON."
     )
     parser.add_argument(
         "evidence",
