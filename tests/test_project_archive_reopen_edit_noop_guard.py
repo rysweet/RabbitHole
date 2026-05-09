@@ -9,6 +9,18 @@ from typing import Iterator
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GUARD_SCRIPT = REPO_ROOT / "scripts" / "project-archive-reopen-edit-noop-guard.sh"
+PR_BRANCH = "wave6-project-reopen-edit-chain-1778302300"
+BASE_BRANCH = "develop"
+VALIDATION_COMMAND = (
+    "NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false "
+    "-Dinstall4j.skip -DfailIfNoTests=false "
+    "-Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am "
+    "-Dtest=org.lgna.project.io.IoUtilitiesTest test"
+)
+SCOPE_EXCLUSIONS = (
+    "Scope exclusions: no full desktop lesson automation, visible rendering "
+    "correctness, grading, or full Save completion claims"
+)
 
 
 class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
@@ -43,8 +55,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def test_guard_accepts_clean_worktree_with_exact_head_noop_evidence(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(self.exact_head_noop_evidence(head), encoding="utf-8")
+            evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(head))
 
             result = self.run_guard(
                 linked_worktree,
@@ -61,8 +72,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
             stale_head = "0" * 40 if head != "0" * 40 else "1" * 40
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(self.exact_head_noop_evidence(stale_head), encoding="utf-8")
+            evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(stale_head))
 
             result = self.run_guard(
                 linked_worktree,
@@ -81,8 +91,7 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
             stale_head = "0" * 40 if head != "0" * 40 else "1" * 40
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(self.exact_head_noop_evidence(stale_head), encoding="utf-8")
+            evidence_file = self.write_evidence(linked_worktree, self.exact_head_noop_evidence(stale_head))
 
             result = self.run_guard(
                 linked_worktree,
@@ -99,25 +108,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def test_guard_rejects_clean_worktree_evidence_without_noop_justification(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(
-                "\n".join(
-                    [
-                        "PR: 402",
-                        "Branch: wave6-project-reopen-edit-chain-1778302300",
-                        "Base: develop",
-                        f"PR head: {head}",
-                        f"Local HEAD: {head}",
-                        "Merge-base status: merge-base equals origin/develop",
-                        "Worktree status: clean",
-                        "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
-                        "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
-                        f"Validation result: exit 0 PASS at {head}",
-                        "Checks: no scoped PR check blocker",
-                        "Files modified: none",
-                    ]
-                ),
-                encoding="utf-8",
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_noop_justification=False),
             )
 
             result = self.run_guard(
@@ -135,10 +128,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def test_guard_rejects_clean_worktree_evidence_with_files_modified_claim(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(
+            evidence_file = self.write_evidence(
+                linked_worktree,
                 self.exact_head_noop_evidence(head) + "\nFiles modified: none\n",
-                encoding="utf-8",
             )
 
             result = self.run_guard(
@@ -156,32 +148,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def test_guard_rejects_clean_worktree_noop_evidence_without_scope_exclusions(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(
-                "\n".join(
-                    [
-                        "PR: 402",
-                        "Branch: wave6-project-reopen-edit-chain-1778302300",
-                        "Base: develop",
-                        f"PR head: {head}",
-                        f"Local HEAD: {head}",
-                        "Merge-base status: merge-base equals origin/develop",
-                        "Worktree status: clean",
-                        "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
-                        "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
-                        f"Validation result: exit 0 PASS at {head}",
-                        "Checks: no scoped PR check blocker",
-                        "Positive claim scope: repository-owned archive reopen/edit behavior only",
-                        "No-op justification:",
-                        "  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at",
-                        f"  {head}, local HEAD matches the PR head, merge-base equals origin/develop, the",
-                        "  origin/develop...HEAD diff is limited to project archive reopen/edit",
-                        "  characterization/readiness surfaces, focused archive reopen/edit validation",
-                        f"  passed at {head}, and no scoped PR check blocker requires a code or docs",
-                        "  change.",
-                    ]
-                ),
-                encoding="utf-8",
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_scope_exclusions=False),
             )
 
             result = self.run_guard(
@@ -199,8 +168,8 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def test_guard_rejects_clean_worktree_noop_evidence_with_out_of_scope_claims(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(
+            evidence_file = self.write_evidence(
+                linked_worktree,
                 self.exact_head_noop_evidence(head)
                 + "\n"
                 + "\n".join(
@@ -211,7 +180,6 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
                         "Full Save completion: proven",
                     ]
                 ),
-                encoding="utf-8",
             )
 
             result = self.run_guard(
@@ -229,34 +197,9 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
     def test_guard_rejects_noop_justification_without_expected_head(self) -> None:
         with self.linked_worktree() as linked_worktree:
             head = self.git_output(linked_worktree, "rev-parse", "HEAD")
-            evidence_file = linked_worktree.parent / "readiness-evidence.md"
-            evidence_file.write_text(
-                "\n".join(
-                    [
-                        "PR: 402",
-                        "Branch: wave6-project-reopen-edit-chain-1778302300",
-                        "Base: develop",
-                        f"PR head: {head}",
-                        f"Local HEAD: {head}",
-                        "Merge-base status: merge-base equals origin/develop",
-                        "Worktree status: clean",
-                        "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
-                        "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
-                        f"Validation result: exit 0 PASS at {head}",
-                        "Checks: no scoped PR check blocker",
-                        "Positive claim scope: repository-owned archive reopen/edit behavior only",
-                        "Scope exclusions: no full desktop lesson automation, visible rendering correctness, grading, or full Save completion claims",
-                        "Stale evidence note: older evidence must not be reused for a different HEAD",
-                        "No-op justification:",
-                        "  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at",
-                        "  the validated PR head, local HEAD matches the PR head, merge-base equals origin/develop, the",
-                        "  origin/develop...HEAD diff is limited to project archive reopen/edit",
-                        "  characterization/readiness surfaces, focused archive reopen/edit validation",
-                        "  passed, and no scoped PR check blocker requires a code or docs",
-                        "  change.",
-                    ]
-                ),
-                encoding="utf-8",
+            evidence_file = self.write_evidence(
+                linked_worktree,
+                self.exact_head_noop_evidence(head, include_noop_head=False),
             )
 
             result = self.run_guard(
@@ -323,32 +266,52 @@ class ProjectArchiveReopenEditNoopGuardTest(unittest.TestCase):
             text=True,
         ).stdout.strip()
 
-    def exact_head_noop_evidence(self, head: str) -> str:
-        return "\n".join(
-            [
-                "PR: 402",
-                "Branch: wave6-project-reopen-edit-chain-1778302300",
-                "Base: develop",
-                f"PR head: {head}",
-                f"Local HEAD: {head}",
-                "Merge-base status: merge-base equals origin/develop",
-                "Worktree status: clean",
-                "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
-                "Validation command: NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/story-api-migration -am -Dtest=org.lgna.project.io.IoUtilitiesTest test",
-                f"Validation result: exit 0 PASS at {head}",
-                "Checks: no scoped PR check blocker",
-                "Positive claim scope: repository-owned archive reopen/edit behavior only",
-                "Scope exclusions: no full desktop lesson automation, visible rendering correctness, grading, or full Save completion claims",
-                "Stale evidence note: older evidence must not be reused for a different HEAD",
-                "No-op justification:",
-                "  PR 402 branch wave6-project-reopen-edit-chain-1778302300 already points at",
-                f"  {head}, local HEAD matches the PR head, merge-base equals origin/develop, the",
-                "  origin/develop...HEAD diff is limited to project archive reopen/edit",
-                "  characterization/readiness surfaces, focused archive reopen/edit validation",
-                f"  passed at {head}, and no scoped PR check blocker requires a code or docs",
-                "  change.",
-            ]
-        )
+    def write_evidence(self, linked_worktree: Path, evidence_text: str) -> Path:
+        evidence_file = linked_worktree.parent / "readiness-evidence.md"
+        evidence_file.write_text(evidence_text, encoding="utf-8")
+        return evidence_file
+
+    def exact_head_noop_evidence(
+        self,
+        head: str,
+        *,
+        include_noop_justification: bool = True,
+        include_scope_exclusions: bool = True,
+        include_noop_head: bool = True,
+    ) -> str:
+        lines = [
+            "PR: 402",
+            f"Branch: {PR_BRANCH}",
+            f"Base: {BASE_BRANCH}",
+            f"PR head: {head}",
+            f"Local HEAD: {head}",
+            f"Merge-base status: merge-base equals origin/{BASE_BRANCH}",
+            "Worktree status: clean",
+            "Diff summary: limited to project archive reopen/edit characterization/readiness surfaces",
+            f"Validation command: {VALIDATION_COMMAND}",
+            f"Validation result: exit 0 PASS at {head}",
+            "Checks: no scoped PR check blocker",
+            "Positive claim scope: repository-owned archive reopen/edit behavior only",
+        ]
+        if include_scope_exclusions:
+            lines.append(SCOPE_EXCLUSIONS)
+        lines.append("Stale evidence note: older evidence must not be reused for a different HEAD")
+        if include_noop_justification:
+            validated_head = head if include_noop_head else "the validated PR head"
+            validation_result = f"passed at {head}," if include_noop_head else "passed,"
+            lines.extend(
+                [
+                    "No-op justification:",
+                    f"  PR 402 branch {PR_BRANCH} already points at",
+                    f"  {validated_head}, local HEAD matches the PR head, merge-base equals",
+                    f"  origin/{BASE_BRANCH}, the origin/{BASE_BRANCH}...HEAD diff is limited to",
+                    "  project archive reopen/edit characterization/readiness surfaces,",
+                    "  focused archive reopen/edit validation",
+                    f"  {validation_result} and no scoped PR check blocker requires a code or docs",
+                    "  change.",
+                ]
+            )
+        return "\n".join(lines)
 
     def run_guard(self, candidate_path: Path, *extra_args: str) -> subprocess.CompletedProcess[str]:
         if not GUARD_SCRIPT.is_file():
