@@ -25,12 +25,16 @@ The contract passes only when each invalid evidence case exits non-zero and the
 validator prints an explicit diagnostic. It exercises:
 
 1. Missing canonical artifact.
-2. Malformed JSON artifact.
-3. Stale artifact.
-4. Proven-looking artifact missing required fields.
-5. Internally inconsistent `status: "proven"` artifact.
-6. Blocked artifact with a known blocker kind.
-7. Blocked artifact with an unknown blocker kind.
+2. Non-canonical artifact filename.
+3. Symlinked artifact.
+4. Malformed JSON artifact.
+5. Stale artifact.
+6. Future-dated artifact beyond the 300-second validator skew allowance.
+7. Scenario, workflow, and run ID identity mismatches.
+8. Proven-looking artifact missing required fields.
+9. Internally inconsistent `status: "proven"` artifact.
+10. Blocked artifact with a known blocker kind.
+11. Blocked artifact with an unknown blocker kind.
 
 ## Run the positive proof contract beside it
 
@@ -72,7 +76,7 @@ canonical artifact filename so the validator reaches the consistency checks.
 1. Copy one fixture to a temporary canonical artifact name.
 2. Run `validate-save-proof-evidence` with the expected scenario, workflow, run ID, and command start epoch.
 3. Confirm the command exits non-zero.
-4. Read stderr and match the diagnostic to the evidence class, such as stale, blocked, missing flags, or inconsistent proven evidence.
+4. Read stderr and match the diagnostic to the evidence class, such as stale, future-dated, identity mismatch, blocked, missing flags, or inconsistent proven evidence.
 5. Keep the result as validator coverage only. Do not convert the rejected artifact into Save proof evidence.
 
 ## Review result

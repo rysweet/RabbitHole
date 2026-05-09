@@ -78,7 +78,9 @@ The blocker object must include non-empty `kind`, `observed`, and `required` fie
 
 ## Fail-closed validation
 
-`run-scenario.sh validate-save-proof-evidence` rejects missing, invalid, stale, future-dated, partial, blocked, unknown-blocker, or internally inconsistent artifacts. It checks scenario/workflow/runId, freshness, required proven flags, output file existence and size, readback marker fields, and blocker shape.
+`run-scenario.sh validate-save-proof-evidence` rejects missing, invalid, stale, future-dated, partial, blocked, unknown-blocker, or internally inconsistent artifacts. It checks the canonical filename, rejects symlinked artifacts, checks scenario/workflow/runId identity, freshness, required proven flags, output file existence and size, readback marker fields, and blocker shape.
+
+Freshness allows at most 300 seconds of future timestamp skew for `generatedAtUtc` or artifact mtime. Anything older than the supplied command start time, or more than 300 seconds ahead of the validator clock, is rejected.
 
 The Save proof scenario has no workflow-level timeout: `automation.timeoutSeconds` is invalid for `save-menu-dialog-write-proof`, and the runner does not wrap this Maven command with shell `timeout`.
 
@@ -91,8 +93,9 @@ qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contra
 ```
 
 It calls `run-scenario.sh validate-save-proof-evidence` directly and proves the
-validator fails closed for missing, malformed, stale, incomplete, blocked,
-unknown-blocker, and internally inconsistent artifacts. Each case must exit
+validator fails closed for missing, malformed, wrong-name, symlinked, stale,
+future-dated, identity-mismatched, incomplete, blocked, unknown-blocker, and
+internally inconsistent artifacts. Each case must exit
 non-zero and print a diagnostic that names the rejected Save proof artifact
 condition.
 

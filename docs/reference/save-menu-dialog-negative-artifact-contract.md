@@ -40,9 +40,12 @@ non-zero and prints an explicit Save proof artifact diagnostic.
 | Case | Artifact condition | Required validator result |
 | --- | --- | --- |
 | Missing artifact | Canonical artifact path does not exist. | Non-zero exit and a diagnostic naming the missing Save proof evidence artifact. |
+| Wrong artifact name | Artifact path uses any basename other than `robot-save-menu-dialog-write-readback-proof.json`. | Non-zero exit and a diagnostic naming the canonical artifact filename. |
+| Symlink artifact | Canonical artifact path is a symlink. | Non-zero exit and a diagnostic rejecting symlinked Save proof evidence. |
 | Malformed artifact | File exists but is not valid JSON. | Non-zero exit and a diagnostic naming invalid Save proof evidence JSON. |
 | Stale artifact | `generatedAtUtc` or artifact mtime predates the supplied command start time. | Non-zero exit and a diagnostic naming stale Save proof evidence or the freshness fields. |
-| Future artifact | `generatedAtUtc` or artifact mtime exceeds the validator clock by more than the allowed skew. | Non-zero exit and a diagnostic naming future Save proof evidence or the freshness fields. |
+| Future artifact | `generatedAtUtc` or artifact mtime exceeds the validator clock by more than the 300-second allowed skew. | Non-zero exit and a diagnostic naming future Save proof evidence or the freshness fields. |
+| Identity mismatch | Artifact `scenario`, `workflow`, or `runId` differs from the validator arguments. | Non-zero exit and a diagnostic naming the mismatched identity field. |
 | Missing required flags | Proven-looking artifact omits required menu, dialog, control, write, or readback fields. | Non-zero exit and a diagnostic naming missing required proven Save proof flags or objects. |
 | Inconsistent proven artifact | `status: "proven"` conflicts with write/readback facts, output size, output path, marker, or filesystem state. | Non-zero exit and a diagnostic naming inconsistent proven Save proof evidence. |
 | Blocked known kind | Artifact reports `status: "blocked"` with a known blocker such as `dialog_not_observed`. | Non-zero exit and a diagnostic naming non-proven blocked Save proof evidence. |
@@ -80,7 +83,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh validate-save-proof-evidence
 | `--scenario` | Expected scenario identity. For this lane, use `alice-desktop-save-menu-dialog-write-proof`. |
 | `--workflow` | Expected workflow identity. For this lane, use `save-menu-dialog-write-proof`. |
 | `--run-id` | Expected run token. It must be a non-empty safe token containing only letters, digits, `.`, `_`, and `-`. |
-| `--started-at-epoch` | Unix epoch used to reject stale artifacts whose `generatedAtUtc` or mtime predates command start. The validator also rejects implausibly future-dated timestamps beyond its clock-skew allowance. |
+| `--started-at-epoch` | Unix epoch used to reject stale artifacts whose `generatedAtUtc` or mtime predates command start. The validator also rejects timestamps more than 300 seconds ahead of its clock. |
 
 ### Success and failure API
 
@@ -106,7 +109,7 @@ present and consistent:
 7. `write.fileWritten`, `write.fileNonempty`, and `write.fileHasExpectedExtension` are `true`.
 8. `write.outputPath` resolves under the artifact directory, exists, and has the recorded `write.outputSizeBytes`.
 9. `readback.projectReadable` is `true`, `readback.marker` is `robotSaveMenuRoundTripMarker`, and `readback.markerPresent` is `true`.
-10. `generatedAtUtc` is an ISO timestamp, is fresh relative to `--started-at-epoch`, and is not implausibly future-dated.
+10. `generatedAtUtc` is an ISO timestamp, is fresh relative to `--started-at-epoch`, and is no more than 300 seconds ahead of the validator clock.
 
 ## Configuration
 
@@ -131,8 +134,9 @@ run, written a project, read it back, or completed the positive proof.
 Reviewers should cite the positive
 `robot-save-menu-dialog-write-readback-proof.json` artifact only when the
 positive scenario reports `status: "proven"` and passes fail-closed validation.
-Use this negative contract as evidence that missing, stale, future-dated,
-blocked, partial, and inconsistent artifacts cannot be accepted as that proof.
+Use this negative contract as evidence that missing, wrong-name, symlinked,
+stale, future-dated, identity-mismatched, blocked, partial, and inconsistent
+artifacts cannot be accepted as that proof.
 
 ## Example diagnostics
 
@@ -143,6 +147,11 @@ missing Save proof evidence artifact robot-save-menu-dialog-write-readback-proof
 invalid Save proof evidence JSON
 stale Save proof evidence: generatedAtUtc/mtime predates command start
 future Save proof evidence: generatedAtUtc/mtime exceeds validator clock skew
+Save proof evidence scenario mismatch
+Save proof evidence workflow mismatch
+Save proof evidence runId mismatch
+Save proof evidence artifact must not be a symlink
+Save proof evidence path must use canonical filename robot-save-menu-dialog-write-readback-proof.json
 missing required proven Save proof flag(s)
 inconsistent proven Save proof evidence
 blocked Save proof evidence is non-proven status
