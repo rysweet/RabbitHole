@@ -12,6 +12,7 @@ registration and the bounded menu/action smoke that verifies it.
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Evidence](#evidence)
+- [Recovery use](#recovery-use)
 - [Examples](#examples)
 - [Non-claims](#non-claims)
 - [Related documentation](#related-documentation)
@@ -89,7 +90,7 @@ stable migration ID, and checks menu-bar membership lookup.
 | Setting | Required value | Purpose |
 | --- | --- | --- |
 | `NODE_OPTIONS` | `--max-old-space-size=32768` | Preserved orchestrator preference for runs launched from Node-backed tooling. |
-| `ALICE_QA_RUN_GATED_SMOKES` | `1` | Enables execution of gated command smoke scenarios. Without it, `alice-desktop-menu-action-smoke` records `gated-not-run` evidence and exits non-zero unless `--prepare-only` is used. |
+| `ALICE_QA_RUN_GATED_SMOKES` | Set to `1` only when intentionally executing the gated runner path | Enables execution of gated command smoke scenarios. Without it, `alice-desktop-menu-action-smoke` records `gated-not-run` evidence and exits non-zero unless `--prepare-only` is used. |
 | `tweedle-lang` submodule | Initialized | Required before Maven reactor validation in this repository. |
 | `-DincludeSims=false` | Maven property | Keeps the focused contract independent of Sims validation. |
 | `-Dinstall4j.skip` | Maven property | Avoids installer packaging work for this contract. |
@@ -146,14 +147,36 @@ registration boundary.
 
 | Evidence artifact | Accepted content |
 | --- | --- |
-| `status.txt` | Gated command outcome for `alice-desktop-menu-action-smoke`, including `gated-not-run` when the gate is missing or `--prepare-only` is used. |
-| `command.log` | The fixed Maven argv for `AliceMenuBarContractTest` from `menu-action-smoke.yaml`. |
-| Maven/Surefire output | A successful run of `org.alice.ide.croquet.models.AliceMenuBarContractTest`. |
+| `status.txt` | Gated command outcome for `alice-desktop-menu-action-smoke`, including `gated-not-run` when the gate is missing or `--prepare-only` is used. This proves runner/gate behavior only. |
+| `command.log` | The fixed Maven argv for `AliceMenuBarContractTest` from `menu-action-smoke.yaml`. This proves command wiring only. |
+| Maven/Surefire output | A successful same-head run of `org.alice.ide.croquet.models.AliceMenuBarContractTest`; this is the readiness artifact for the focused contract. |
 | Review notes | A bounded statement that Window menu model registration and menu-bar membership lookup are covered. |
 
 Do not publish generated evidence directories as durable docs. Keep generated
 evidence under `qa/outside-in/alice-desktop/evidence/` and attach it to the PR
-or review thread when needed.
+or review thread when needed. `status.txt`, `gated-not-run`, and `command.log`
+are not readiness proof unless paired with successful same-head Maven/Surefire
+evidence for `AliceMenuBarContractTest`.
+
+## Recovery use
+
+Use this contract as the feature specification for PR #401-style menu/action
+recoveries. A recovery is ready only when the same PR head supplies all of these
+evidence classes:
+
+| Evidence class | Required proof |
+| --- | --- |
+| Head alignment | Local `git rev-parse HEAD` equals the PR `headRefOid` from `gh pr view`. |
+| GitHub Actions | Required checks are completed successfully for the same head. |
+| Runnable contract | The focused Maven selector for `AliceMenuBarContractTest` exits successfully for the same PR head without a timeout wrapper. |
+| Scenario wiring | Scenario validation plus schema, workflow, and gated-command shell contracts accept `alice-desktop-menu-action-smoke`. |
+| Docs impact | User-facing docs keep the claim limited to Window menu model registration, stable identity, and menu-bar membership lookup. |
+| Quality audit | Three `SEEK -> VALIDATE -> FIX` cycles are documented; the final cycle is clean. |
+| PR description | The PR body records current-head checks, QA/scenario evidence, docs impact, diff scope, audit cycles, bounded claims, and any `NOT_MERGE_READY` blockers. |
+
+If a gated desktop smoke is unavailable and no equivalent accepted artifact
+proves the same contract at the same head, mark the recovery `NOT_MERGE_READY`.
+Do not infer live UI behavior from the headless-safe registration test.
 
 ## Examples
 
