@@ -18,7 +18,7 @@ class ZipEntryContainer {
     return zipEntry == null ? null : zipFile.getInputStream(zipEntry);
   }
 
-  private static void validateSafeEntryName(String name) throws IOException {
+  static void validateSafeEntryName(String name) throws IOException {
     if ((name == null) || name.isEmpty()) {
       throw new IOException("Unsafe archive entry " + name);
     }

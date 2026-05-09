@@ -5,10 +5,10 @@ manifest-declared Tweedle program type either decodes cleanly or stops at a know
 unsupported decoder edge.
 
 This contract is intentionally narrow. It protects the `IoUtilities.readProject`
-boundary for JSON `.a3w` player archives, the legacy resource-only image
-compatibility case, and clear fail-closed behavior for unsupported archive shapes.
-It does not claim full Tweedle decoding, full UI automation, rendering
-validation, or grading validation.
+boundary for JSON `.a3w` player archives, the exact legacy image-resource
+compatibility case, and clear fail-closed behavior for unsupported archive
+shapes. It does not claim full Tweedle decoding, full UI automation, rendering
+validation, grading validation, or broad legacy archive recovery.
 
 ## Contents
 
@@ -16,9 +16,9 @@ validation, or grading validation.
 - [Archive contracts](#archive-contracts)
 - [Resource path safety](#resource-path-safety)
 - [API behavior](#api-behavior)
-- [Configuration](#configuration)
-- [Examples](#examples)
 - [Validation](#validation)
+- [QA packaging](#qa-packaging)
+- [Diagnostics](#diagnostics)
 - [Recovery readiness](#recovery-readiness)
 - [Non-goals](#non-goals)
 
@@ -35,12 +35,16 @@ Use this boundary when reviewing or changing archive behavior in:
 ```text
 core/story-api-migration/src/main/java/org/lgna/project/io/JsonProjectIo.java
 core/story-api-migration/src/test/java/org/lgna/project/io/IoUtilitiesTest.java
+core/story-api-migration/src/test/java/org/lgna/project/io/HistoricalArchiveRoundTripCharacterizationTest.java
 ```
 
 The reader treats a JSON `.a3w` manifest name as the expected player program
 type. The archive must either decode that manifest-declared program type, match
-the narrow legacy image-resource compatibility shape, or fail at
+the exact legacy image-resource compatibility shape, or fail at
 `IoUtilities.readProject` with `IOException`.
+
+The tests use generated temporary archives and production `IoUtilities` routing.
+Do not add checked-in binary `.a3w` payloads for this boundary.
 
 ## Archive contracts
 
@@ -104,11 +108,14 @@ is not a successful player-program decode.
 
 ### Fail-closed unsupported archives
 
-Unsupported legacy player archives fail closed when the archive has no safe
-legacy image-resource recovery. Covered fail-closed shapes include:
+Unsupported player archives fail closed when the archive has no safe legacy
+image-resource recovery. Covered fail-closed shapes include:
 
 | Archive shape | Required behavior |
 | --- | --- |
+| Unsupported manifest-named generated program with an image-resource expression | Throws `IOException`; no partial program readback. |
+| Unsupported manifest-named generated program with a resource field initializer | Throws `IOException`; image bytes can be present without making the archive readable. |
+| Unsupported manifest-declared sibling type | Throws `IOException`; no silent sibling omission. |
 | `Program` extends an unresolved or unsupported parent and has no recoverable image | Throws `IOException`. |
 | Unsupported `Program` plus an audio resource | Throws `IOException`; audio does not use image recovery. |
 | Unsupported `Program` plus an image and an unsupported model reference | Throws `IOException`; no partial image recovery. |
@@ -116,15 +123,9 @@ legacy image-resource recovery. Covered fail-closed shapes include:
 | Unsupported `Program` plus a sibling Tweedle type and an image | Throws `IOException`; no partial recovery when extra type references exist. |
 | Unsupported `Program` plus an image reference with an absolute, drive-letter, traversal, or normalized-escaping path | Throws `IOException`; unsafe archive paths never enter compatibility recovery. |
 
-The stable message fragments for the fail-closed legacy boundary are:
-
-```text
-Unsupported legacy JSON project archive
-Program Tweedle decode is unsupported
-no safe legacy resource recovery applies
-```
-
-Tests should assert stable fragments instead of full-message equality.
+The exact legacy image-resource compatibility case is the only unsupported
+Tweedle path that may return a resource-only project. All neighboring
+unsupported shapes fail at the public read boundary.
 
 ## Resource path safety
 
@@ -178,99 +179,6 @@ The safe recovery check includes manifest shape, resource kind, resource count,
 and safe-entry validation. If any check fails, the public API reports
 `IOException` instead of returning a partial project.
 
-## Configuration
-
-There is no runtime configuration for this behavior. It uses the existing JSON
-player archive reader, Tweedle decoder, JUnit 4 tests, and Maven reactor setup.
-
-From a fresh checkout or worktree, initialize the Tweedle grammar submodule
-before Maven validation:
-
-```bash
-git submodule update --init tweedle-lang
-test -d tweedle-lang/Grammar
-```
-
-Automation can keep the saved Node memory setting:
-
-```bash
-export NODE_OPTIONS=--max-old-space-size=32768
-```
-
-`NODE_OPTIONS` is not an Alice archive reader setting.
-
-## Examples
-
-### Decode a supported player program
-
-```java
-File archive = temporaryFolder.newFile("manifest-type-field-resource.a3w");
-writeJsonPlayerArchive(archive, "ProgramWithField",
-    "class ProgramWithField { WholeNumber count; }");
-
-Project project = IoUtilities.readProject(archive);
-
-assertNotNull(project.getProgramType());
-assertEquals("ProgramWithField", project.getProgramType().getName());
-```
-
-### Assert the legacy fail-closed boundary
-
-```java
-File archive = temporaryFolder.newFile("json-unsupported-super-program.a3w");
-writeJsonPlayerArchive(archive, "Program", "class Program extends MissingSuper {}");
-
-IOException thrown = assertThrows(IOException.class,
-    () -> IoUtilities.readProject(archive));
-
-assertTrue(thrown.getMessage().contains("Unsupported legacy JSON project archive"));
-assertTrue(thrown.getMessage().contains("Program Tweedle decode is unsupported"));
-assertTrue(thrown.getMessage().contains("no safe legacy resource recovery applies"));
-```
-
-### Assert the legacy image-resource compatibility readback
-
-```java
-Project project = IoUtilities.readProject(exportedImagePlayerArchive);
-
-assertNull(project.getProgramType());
-Resource resource = project.getResources().iterator().next();
-assertEquals(ImageResource.class, resource.getClass());
-```
-
-Keep this assertion paired with archive-shape checks that prove the manifest has
-exactly one `Program` type reference and exactly one valid image reference whose
-path is a safe relative archive entry. Generated fixtures should use the exporter
-convention, such as `resources/picture.png`, unless the test is specifically
-covering a legacy archive that names another safe relative entry.
-
-### Assert unsafe image paths fail closed
-
-```java
-ImageReference imageReference = imageReference(UUID.randomUUID(), "evil.png", "png");
-imageReference.file = "../evil.png";
-
-// Given playerArchiveFile is an unsupported legacy Program archive whose only
-// image reference uses imageReference.file. The Program source should stop at
-// the unsupported Tweedle boundary, for example:
-// class Program extends MissingSuper {}
-
-IOException thrown = assertThrows(IOException.class,
-    () -> IoUtilities.readProject(playerArchiveFile));
-
-assertTrue(thrown.getMessage().contains("Unsupported legacy JSON project archive"));
-assertTrue(thrown.getMessage().contains("Program Tweedle decode is unsupported"));
-assertTrue(thrown.getMessage().contains("no safe legacy resource recovery applies"));
-assertNotNull(thrown.getCause());
-assertTrue(thrown.getCause().getMessage().contains(imageReference.file));
-```
-
-Do not assert that unsafe paths are ignored. An archive with an unsafe resource
-path is outside the compatibility shape. Direct supported-resource read failures
-can surface the unsafe entry in the top-level message; unsupported legacy
-recovery wraps that resource-read failure as the cause under the stable legacy
-message.
-
 ## Validation
 
 Run commands from the repository root.
@@ -279,19 +187,42 @@ Focused archive/player boundary tests:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 git submodule update --init tweedle-lang
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.lgna.project.io.IoUtilitiesTest \
+  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
   test
 ```
+
+When reviewing the legacy compatibility helper tests directly, run the
+`IoUtilitiesTest` suite as an additional local check. Keep the wrapper, scenario,
+and direct Maven evidence centered on `HistoricalArchiveRoundTripCharacterizationTest`.
 
 Primary story API migration gate:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   test
+```
+
+Key fail-closed characterization methods include:
+
+```text
+generatedWorldArchiveWithUnsupportedResourceExpressionIsRejectedWithoutPartialProgramDecode
+generatedJsonPlayerArchiveWithResourceFieldInitializerProgramTypeIsRejectedWithoutPartialProgramDecode
+generatedJsonPlayerArchiveWithResourceFieldInitializerSiblingTypeIsRejectedWithoutSilentOmission
+unsupportedLegacyProgramJsonArchiveWithAudioResourceDoesNotUseImageRecovery
+unsupportedLegacyProgramJsonArchiveWithImageAndUnsupportedResourceDoesNotPartiallyRecover
+unsupportedLegacyProgramJsonArchiveWithUnsafeImagePathFailsClosed
+```
+
+The exact compatibility characterization is:
+
+```text
+exportedPlayerArchiveImageResourceRemainsRecoverableWhenProgramTypeIsUnsupported
 ```
 
 QA scenario and contract readiness checks:
@@ -306,6 +237,55 @@ NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/t
 These QA checks validate scenario, gated-command, workflow, and silver-thread
 contracts. They are not proof of full UI automation, rendering correctness, or
 grading behavior.
+
+## QA packaging
+
+The branch-installable QA wrapper packages the same bounded evidence:
+
+```bash
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+  amplihack archive-player-boundary verify
+```
+
+Replace `<branch>` with the branch under review.
+
+The wrapper validates scenario metadata, initializes `tweedle-lang`, and runs
+the focused Maven characterization. It is validation packaging; it is not the
+archive/player feature itself.
+
+The outside-in scenario that packages this evidence is:
+
+```text
+qa/outside-in/alice-desktop/scenarios/archive-fixture-smoke.yaml
+```
+
+The scenario is a gated command smoke for the focused archive characterization
+suite. It does not drive the Alice desktop, sample rendered pixels, grade learner
+work, or complete a lesson.
+
+The documentation examples are guarded by:
+
+```text
+tests/test_archive_player_boundary_docs.py
+```
+
+That guard keeps the wrapper, scenario, and direct
+Maven evidence stay aligned.
+
+## Diagnostics
+
+Tests assert stable message fragments rather than full-message equality.
+Expected diagnostics include:
+
+| Case | Diagnostic content |
+| --- | --- |
+| Unsupported legacy `Program` with no safe image recovery | `Unsupported legacy JSON project archive`, `Program Tweedle decode is unsupported`, and `no safe legacy resource recovery applies`. |
+| Missing or mismatched manifest-named program type | `Project archive manifest names program type '<type>'` and decoded type context such as `decoded type names are [...]`. |
+| Unsupported manifest-declared sibling type | `Project archive contains unsupported manifest-declared Tweedle type names [...]`. |
+| Missing or unsafe legacy image entry | The public legacy error plus a cause naming the missing or unsafe archive entry. |
+
+Diagnostics must not include raw archive payloads, full Tweedle source bodies,
+credentials, stack traces, or user-specific filesystem data.
 
 ## Recovery readiness
 
@@ -329,7 +309,9 @@ grading validation.
 This boundary does not add broad legacy archive recovery. It does not decode
 unsupported Tweedle parent types, method bodies, model references, audio resource
 recovery for unsupported programs, sibling-type partial recovery, rendering
-behavior, learner grading, rubric scoring, or complete player-project semantics.
+behavior, learner grading, rubric scoring, complete player-project semantics,
+Save completion, Sims validation, deployed installer success, or first-lesson
+completion.
 
 Unsupported archives either match the exact legacy image-resource compatibility
 shape or fail closed at `IoUtilities.readProject`.
