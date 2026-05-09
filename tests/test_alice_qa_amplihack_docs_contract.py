@@ -5,6 +5,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+WHITESPACE_RE = re.compile(r"\s+")
+STALE_BRANCH_EXAMPLE_RE = re.compile(r"uvx --from git\+[^ \n]+@<branch>(?:\s|$)")
 
 CLI_DOCS = [
     REPO_ROOT / "qa" / "outside-in" / "alice-desktop" / "README.md",
@@ -19,6 +21,11 @@ NEGATIVE_CONTRACT_DOCS = [
     REPO_ROOT / "docs" / "reference" / "save-menu-dialog-negative-artifact-contract.md",
 ]
 
+POSITIVE_SAVE_PROOF_DOCS = [
+    REPO_ROOT / "docs" / "howto" / "run-save-menu-dialog-write-proof.md",
+    REPO_ROOT / "docs" / "reference" / "save-menu-dialog-write-proof.md",
+]
+
 
 @lru_cache(maxsize=None)
 def read_doc(path: Path) -> str:
@@ -27,7 +34,18 @@ def read_doc(path: Path) -> str:
 
 @lru_cache(maxsize=None)
 def normalized_doc(path: Path) -> str:
-    return re.sub(r"\s+", " ", read_doc(path))
+    return WHITESPACE_RE.sub(" ", read_doc(path))
+
+
+def stale_branch_examples(relative_path: Path, text: str) -> list[str]:
+    if "@<branch>" not in text:
+        return []
+
+    return [
+        f"{relative_path}:{line_number}"
+        for line_number, line in enumerate(text.splitlines(), start=1)
+        if STALE_BRANCH_EXAMPLE_RE.search(line)
+    ]
 
 
 class AliceQaAmplihackDocsContractTest(unittest.TestCase):
@@ -36,14 +54,12 @@ class AliceQaAmplihackDocsContractTest(unittest.TestCase):
 
         for path in CLI_DOCS:
             text = read_doc(path)
-            with self.subTest(path=path.relative_to(REPO_ROOT)):
+            relative_path = path.relative_to(REPO_ROOT)
+            with self.subTest(path=relative_path):
                 if "amplihack alice-qa" in text:
                     self.assertIn("<branch-or-commit>", text)
 
-            for match in re.finditer(r"uvx --from git\+[^ \n]+@<branch>(?:\s|$)", text):
-                stale_examples.append(
-                    f"{path.relative_to(REPO_ROOT)}:{text.count(chr(10), 0, match.start()) + 1}"
-                )
+            stale_examples.extend(stale_branch_examples(relative_path, text))
 
         self.assertEqual(
             [],
@@ -77,6 +93,36 @@ class AliceQaAmplihackDocsContractTest(unittest.TestCase):
             "it is not desktop Save completion evidence.",
             normalized,
         )
+
+    def test_positive_save_docs_distinguish_wrapper_evidence_from_direct_maven_default(self) -> None:
+        for path in POSITIVE_SAVE_PROOF_DOCS:
+            text = read_doc(path)
+            normalized = normalized_doc(path)
+
+            with self.subTest(path=path.relative_to(REPO_ROOT)):
+                self.assertIn("robot-save-menu-dialog-write-readback-proof.json", text)
+                self.assertIn("scenario run directory", normalized)
+                self.assertIn("save-proof-validation.log", text)
+                self.assertIn("-Dorg.alice.eatme.saveProof.evidencePath", text)
+                self.assertIn(
+                    "core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json",
+                    text,
+                )
+
+    def test_positive_save_docs_keep_silver_thread_claim_boundary(self) -> None:
+        for path in POSITIVE_SAVE_PROOF_DOCS:
+            normalized = normalized_doc(path)
+
+            with self.subTest(path=path.relative_to(REPO_ROOT)):
+                self.assertRegex(
+                    normalized,
+                    r"(one rendered path|proves one path|single rendered Save path)",
+                )
+                self.assertIn(
+                    "does not prove Save As, overwrite prompts, cancellation, retry, native file dialogs, "
+                    "every Save variant, lesson completion, grading, or broad desktop automation",
+                    normalized,
+                )
 
 
 if __name__ == "__main__":

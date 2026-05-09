@@ -61,11 +61,25 @@ The direct command is for local debugging. Review evidence should come from the 
 
 ## Read the result
 
-The target proof writes one canonical artifact:
+The target proof writes one canonical artifact name:
 
 ```text
-core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json
+robot-save-menu-dialog-write-readback-proof.json
 ```
+
+When you run through the QA scenario wrapper, the runner writes and validates that artifact inside the scenario run directory under the supplied evidence directory. With the command above, review the matching run under:
+
+```text
+qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof/
+  alice-desktop-save-menu-dialog-write-proof/
+    <run-id>/
+      robot-save-menu-dialog-write-readback-proof.json
+      save-proof-validation.log
+      status.txt
+      command.log
+```
+
+When you run the focused Maven target directly, the artifact path is whatever you pass as `-Dorg.alice.eatme.saveProof.evidencePath`. The debugging command above writes to `core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json`.
 
 Treat the JSON artifact as the source of truth. A successful scenario run means the artifact passed fail-closed validation and reported `status: "proven"` for the same `scenario` and `runId` that the runner passed to Maven.
 
