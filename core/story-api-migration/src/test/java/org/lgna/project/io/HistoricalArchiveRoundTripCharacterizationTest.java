@@ -1249,22 +1249,30 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       String expectedProgramName,
       Project.SceneCameraType expectedSceneCameraType) throws Exception {
     try (ZipFile zipFile = new ZipFile(archive)) {
-      assertNotNull("Generated .a3w archives should declare a version",
-          zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
-      assertNotNull("Generated .a3w archives should contain a manifest",
-          zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
-      assertNotNull("Generated .a3w archives should contain Tweedle source for the program",
-          zipFile.getEntry("src/" + expectedProgramName + ".twe"));
-
-      ProjectManifest manifest = readProjectManifest(zipFile);
-      assertEquals(expectedProgramName, manifest.description.name);
-      assertEquals(IoUtilities.EXPORT_EXTENSION, manifest.metadata.fileType);
-      assertEquals(Manifest.ProjectType.World, manifest.metadata.identifier.type);
-      assertEquals(expectedSceneCameraType, manifest.projectStructure.sceneCameraType);
-      assertTrue("Generated .a3w archives should include the standard library prerequisite",
-          manifest.prerequisites.stream().anyMatch(identifier -> "SceneGraphLibrary".equals(identifier.name)));
-      assertTypeReference(manifest, expectedProgramName, "src/" + expectedProgramName + ".twe");
+      assertWorldManifestFacts(zipFile, expectedProgramName, expectedSceneCameraType);
     }
+  }
+
+  private static ProjectManifest assertWorldManifestFacts(
+      ZipFile zipFile,
+      String expectedProgramName,
+      Project.SceneCameraType expectedSceneCameraType) throws Exception {
+    assertNotNull("Generated .a3w archives should declare a version",
+        zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
+    assertNotNull("Generated .a3w archives should contain a manifest",
+        zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
+    assertNotNull("Generated .a3w archives should contain Tweedle source for the program",
+        zipFile.getEntry("src/" + expectedProgramName + ".twe"));
+
+    ProjectManifest manifest = readProjectManifest(zipFile);
+    assertEquals(expectedProgramName, manifest.description.name);
+    assertEquals(IoUtilities.EXPORT_EXTENSION, manifest.metadata.fileType);
+    assertEquals(Manifest.ProjectType.World, manifest.metadata.identifier.type);
+    assertEquals(expectedSceneCameraType, manifest.projectStructure.sceneCameraType);
+    assertTrue("Generated .a3w archives should include the standard library prerequisite",
+        manifest.prerequisites.stream().anyMatch(identifier -> "SceneGraphLibrary".equals(identifier.name)));
+    assertTypeReference(manifest, expectedProgramName, "src/" + expectedProgramName + ".twe");
+    return manifest;
   }
 
   private static void assertWorldResourceManifestFacts(
@@ -1272,11 +1280,11 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       String expectedProgramName,
       ImageResource expectedResource) throws Exception {
     try (ZipFile zipFile = new ZipFile(archive)) {
-      assertWorldManifestFacts(archive, expectedProgramName, Project.SceneCameraType.WindowCamera);
+      ProjectManifest manifest =
+          assertWorldManifestFacts(zipFile, expectedProgramName, Project.SceneCameraType.WindowCamera);
       assertNotNull("Generated .a3w archives should contain exported image data",
           zipFile.getEntry("resources/" + expectedResource.getName()));
 
-      ProjectManifest manifest = readProjectManifest(zipFile);
       assertImageReference(
           manifest,
           expectedResource.getId(),

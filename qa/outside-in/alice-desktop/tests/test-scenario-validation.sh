@@ -26,7 +26,8 @@ python3 - "$tmp_root/target-scenario.json" "$TARGET_DISPLAY_NAME" "$TARGET_REPOS
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 expected_display_name = sys.argv[2]
 expected_repository_path = sys.argv[3]
 target = scenario.get("targetStarter")
@@ -53,7 +54,8 @@ python3 - "$tmp_root/post-open-scenario.json" "$TARGET_DISPLAY_NAME" "$TARGET_RE
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 expected_display_name = sys.argv[2]
 expected_repository_path = sys.argv[3]
 target = scenario.get("targetStarter")
@@ -78,7 +80,8 @@ python3 - "$tmp_root/save-menu-scenario.json" <<'PY'
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 expected_argv = [
     "mvn",
     "-DincludeSims=false",
@@ -131,7 +134,8 @@ python3 - "$tmp_root/archive-fixture-scenario.json" <<'PY'
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 if scenario["workflow"] != "archive-fixture-smoke":
     raise AssertionError("archive fixture scenario workflow must remain archive-fixture-smoke")
 if scenario["automationMode"] != "gated-command-smoke":
@@ -185,7 +189,8 @@ import json
 import sys
 from pathlib import Path
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 repository_path = Path(sys.argv[2])
 required = "\n".join(scenario["evidence"]["required"])
 expected_outcomes = "\n".join(scenario["expectedOutcomes"])

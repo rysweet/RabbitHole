@@ -77,6 +77,7 @@ NON_CLAIMS = (
 )
 QA_WIRING_FILES = (ARCHIVE_SCENARIO, VALIDATOR, RUNNER, SCHEMA, SCHEMA_CONTRACT)
 QA_WORKFLOW_FILES = (ARCHIVE_SCENARIO, VALIDATOR, SCHEMA)
+_current_branch = None
 
 
 def git_output(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -89,10 +90,16 @@ def git_output(*args: str, check: bool = True) -> subprocess.CompletedProcess[st
     )
 
 
+def current_branch() -> str:
+    global _current_branch
+    if _current_branch is None:
+        _current_branch = git_output("branch", "--show-current").stdout.strip()
+    return _current_branch
+
+
 class Pr433MergeReadyContractTest(unittest.TestCase):
     def test_pr_branch_diff_stays_inside_legacy_fixture_round_trip_scope(self) -> None:
-        current_branch = git_output("branch", "--show-current").stdout.strip()
-        if current_branch != PR_BRANCH:
+        if current_branch() != PR_BRANCH:
             raise unittest.SkipTest(f"PR #433 diff-scope contract only runs on {PR_BRANCH}")
 
         changed_files = set(
@@ -114,8 +121,7 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
         )
 
     def test_pr_head_merges_cleanly_into_current_develop(self) -> None:
-        current_branch = git_output("branch", "--show-current").stdout.strip()
-        if current_branch != PR_BRANCH:
+        if current_branch() != PR_BRANCH:
             raise unittest.SkipTest(f"PR #433 mergeability contract only runs on {PR_BRANCH}")
 
         result = git_output("merge-tree", "--write-tree", "origin/develop", "HEAD", check=False)
@@ -179,16 +185,20 @@ class Pr433MergeReadyContractTest(unittest.TestCase):
         self.assertIn("merge-ready PR wording", text)
 
     def test_archive_fixture_lane_keeps_scenario_wiring_and_bounded_claims(self) -> None:
-        scenario_text = ARCHIVE_SCENARIO.read_text(encoding="utf-8")
+        qa_text_by_path = {
+            path: path.read_text(encoding="utf-8")
+            for path in set(QA_WIRING_FILES + QA_WORKFLOW_FILES)
+        }
+        scenario_text = qa_text_by_path[ARCHIVE_SCENARIO]
         characterization_text = CHARACTERIZATION_TEST.read_text(encoding="utf-8")
 
         for path in QA_WIRING_FILES:
             with self.subTest(path=path.relative_to(REPO_ROOT)):
-                text = path.read_text(encoding="utf-8")
+                text = qa_text_by_path[path]
                 self.assertIn("HistoricalArchiveRoundTripCharacterizationTest", text)
         for path in QA_WORKFLOW_FILES:
             with self.subTest(path=path.relative_to(REPO_ROOT)):
-                text = path.read_text(encoding="utf-8")
+                text = qa_text_by_path[path]
                 self.assertIn("archive-fixture-smoke", text)
 
         for required in (
