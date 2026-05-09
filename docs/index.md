@@ -27,9 +27,6 @@ repository.
 ## QA and acceptance testing
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
-- [Merge-ready PR recovery reference](./reference/merge-ready-pr-recovery.md) - readiness contract for no-timeout PR recovery after interrupted automation, including exact-head evidence, draft/review state, QA classification, quality-audit cycles, and blocker output.
-- [Run merge-ready PR recovery](./howto/run-merge-ready-pr-recovery.md) - how to recover a PR through the implemented evidence gate without manually merging or using timeout wrappers.
-- [Tutorial: Trace a model export PR recovery](./tutorials/trace-model-export-pr-recovery.md) - guided walkthrough for bounded model export characterization recovery, scope limits, and non-claims.
 - [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - run and review the target-specific Select Project evidence path for the committed starter project.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
