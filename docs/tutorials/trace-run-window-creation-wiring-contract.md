@@ -100,7 +100,7 @@ Read the negative tests as part of the contract:
 | Reject `/tmp/run-window-created.json` | Prevents absolute-path escape. |
 | Reject missing evidence directory | Avoids silently creating unreviewed evidence roots. |
 | Reject pre-existing artifact symlink | Prevents writing through a symlink to another location. |
-| Escape quotes, slashes, whitespace, and control characters | Keeps display metadata from corrupting deterministic JSON. |
+| Escape quotes, backslashes, whitespace, and control characters | Keeps display metadata from corrupting deterministic JSON. |
 
 If any safety check weakens, the Run-window contract is not satisfied even if a
 JSON file is produced.

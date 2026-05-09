@@ -401,6 +401,7 @@ procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
 run-debug
+run-window-contract
 save-load
 save-menu-dialog-write-proof
 scene-creation

@@ -79,7 +79,7 @@ Review the test as the executable contract for:
 | JSON shape | Schema version, `created` status, creation/wiring scope, evidence source, fixed artifact name, and explicit false claim booleans. |
 | Escaping | Frame title and program type metadata cannot break JSON output. |
 | Path safety | Parent traversal, nested artifact paths, absolute artifact paths, missing directories, symlink evidence directories, and pre-existing artifact symlinks fail closed. |
-| Non-claims | The artifact names unsupported active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, creative assessment, lesson completion, and full UI automation boundaries. |
+| Non-claims | The artifact names unsupported active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, and full UI automation boundaries; the creation/wiring scope excludes creative assessment and lesson completion. |
 
 The shell contract separately asserts that
 `RunComposite#handlePreShowWindow` still calls
