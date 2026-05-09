@@ -35,7 +35,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 
 | Scenario ID | Workflow | Automation mode | Purpose |
 | --- | --- | --- | --- |
-| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers historical archive fixture availability used by decoder and migration characterization smokes. |
+| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers the focused generated legacy fixture round-trip characterization lane for `.a3p`, `.a3w`, `.a3c`, JSON boundary, and fail-closed unsupported archive behavior. |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
 | `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
 | `alice-desktop-select-project-widget-introspection` | `select-project-widget-introspection-smoke` | `xvfb-real-alice` | Enumerates live Select Project Swing widgets through AT-SPI when the ATK wrapper is active, or records the exact ATK/AT-SPI blocker. |

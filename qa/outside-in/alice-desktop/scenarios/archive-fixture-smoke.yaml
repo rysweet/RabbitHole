@@ -10,11 +10,13 @@ preconditions:
 userActions:
   - Run the focused historical archive fixture boundary characterization smoke from the command line.
   - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries.
-  - Confirm unsupported Tweedle method, constructor, complex value, and unresolved parent cases fail explicitly.
+  - Confirm unsupported method calls, complex or mixed initializers, resource initializer binding gaps, and unresolved parent cases fail explicitly.
 expectedOutcomes:
   - The historical archive fixture boundary smoke command exits successfully when the gate is enabled.
   - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
-  - Generated XML fallback .a3p fixtures still save, reopen, and preserve resources through project I/O.
+  - Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.
+  - Generated XML fallback .a3c fixtures write, read, and preserve type resources through IoUtilities archive I/O.
+  - Simple supported .a3w fixtures export, read, re-export, and reread through IoUtilities with manifest-routed Tweedle source.
 automation:
   cwd: .
   argv:
@@ -45,4 +47,4 @@ supportingEvidence:
 tags:
   - archive-fixture
   - command-smoke
-  - project-io
+  - archive-io

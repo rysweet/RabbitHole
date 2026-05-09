@@ -15,6 +15,7 @@ import org.lgna.common.Resource;
 import org.lgna.common.resources.ImageResource;
 import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
+import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.ArithmeticInfixExpression;
 import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BlockStatement;
@@ -1132,6 +1133,34 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
         "GeneratedHistoricalProject",
         Project.SceneCameraType.VRHeadset,
         imageResource);
+  }
+
+  @Test
+  public void generatedXmlArchiveBeforeSupportedMigrationFloorFailsClosed() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-xml-before-migration-floor.a3p");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(projectArchive))) {
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.VERSION_ENTRY_NAME,
+          "3.0.0.0".getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "programType.xml",
+          "<node version=\"3.0\" type=\"org.lgna.project.ast.NamedUserType\"/>"
+              .getBytes(StandardCharsets.UTF_8));
+    }
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      assertNotNull(zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
+      assertNotNull(zipFile.getEntry("programType.xml"));
+      assertNull(zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
+    }
+
+    VersionNotSupportedException thrown =
+        assertThrows(VersionNotSupportedException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertEquals("XML decoder floor should be explicit", 3.1, thrown.getMinimumSupportedVersion(), 0.0);
+    assertEquals("Synthetic archive should fail on its declared XML version", 3.0, thrown.getVersion(), 0.0);
   }
 
   private static void assertXmlTypeArchiveFacts(File archive) throws Exception {
