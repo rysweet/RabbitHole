@@ -4,7 +4,7 @@ This reference documents the negative artifact contract for the
 `save-menu-dialog-write-proof` QA lane. The contract proves that the existing
 Save proof evidence validator fails closed when validator context is missing or
 evidence is missing, wrong-name, symlinked, malformed, non-object, stale,
-future-dated, identity-mismatched, blocked, incomplete, unknown-blocker, or
+future-dated, identity-mismatched, blocked, partial, unknown-blocker, or
 internally inconsistent.
 
 The contract is intentionally separate from the positive Save write/readback
