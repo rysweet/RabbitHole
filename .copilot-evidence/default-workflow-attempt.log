@@ -1,6 +1,7 @@
 Default-workflow readiness evidence for PR #423
-Recorded at: 2026-05-09T11:57:20Z
-Validated source tree commit: 7673b7bdcdb054e94d4de4cdd7748defacf11a80
+Recorded at: 2026-05-09T17:55:13Z
+Validated source tree: PR head 80355ceaeb11dc54c66d7db3bd9434e933939b0f plus the
+blocking evidence/tutorial fixes recorded in this artifact refresh.
 Branch: feat/issue-413-rabbithole-wave7-source-code-generator-characteriz
 Base branch: develop
 Pull request: https://github.com/rysweet/RabbitHole/pull/423
@@ -11,12 +12,13 @@ Scope:
   focused NetBeans ProjectCodeGeneratorTest.
 - The validated source tree includes the review-blocker fixes:
   - durable reference docs no longer carry point-in-time PR status wording;
-  - pyproject.toml remains at alice3-modernization-qa version 0.7.0 because no
-    QA package release is part of this source-generator characterization lane.
-- This evidence refresh validates the PR head that was current when this log was
-  rewritten. If this log is committed after the validated source tree commit
-  above, the only later delta is this evidence artifact; no source, test, docs,
-  or package metadata changed after validation.
+  - pyproject.toml is at alice3-modernization-qa version 0.7.1;
+  - the source-code-generator tutorial assignment snippet matches the
+    characterized AssignmentExpression constructor shape.
+- This evidence refresh is committed with the blocker fixes, so the final commit
+  SHA changes after this file is written. The validated source tree is therefore
+  identified by branch, base PR head, and the blocker-fix scope above instead of
+  by a self-referential final commit SHA.
 - This log is retained as PR-specific review evidence for PR #423. Durable
   repository docs describe stable contracts and do not carry point-in-time PR
   status.
@@ -40,7 +42,7 @@ Result:
 - Diff whitespace validation passed for the source-generator documentation,
   package metadata, evidence log, and ProjectCodeGenerator.java
   review-feedback path.
-- The unrelated QA package version bump was reverted.
+- The QA package metadata is consistently documented at version 0.7.1.
 - PR-specific wording was removed from durable docs and retained only in
   workflow-owned evidence or PR discussion.
 - SourceCodeGeneratorTest now characterizes expression-statement assignment,

@@ -43,11 +43,14 @@ the placeholder item name before emitting the loop header or item access body.
 The same test class protects representative statement and expression output:
 
 ```java
+UserLocal count = new UserLocal("count", Integer.class, false);
 String source = generate(new ExpressionStatement(new AssignmentExpression(
-    new LocalAccess(local),
-    new StringLiteral("hello alice"))));
+    JavaType.getInstance(Integer.class),
+    new LocalAccess(count),
+    AssignmentExpression.Operator.ASSIGN,
+    new IntegerLiteral(4))));
 
-assertTrue(source, source.contains("message=\"hello alice\";"));
+assertEquals("count=4;", source);
 ```
 
 These assertions are intentionally small. They catch generated-source regressions
