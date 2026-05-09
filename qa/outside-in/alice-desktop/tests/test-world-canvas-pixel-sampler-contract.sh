@@ -387,7 +387,9 @@ cat >"$standalone_dir/fake-bin/convert" <<'SH'
 #!/usr/bin/env bash
 set -u
 printf 'convert %s\n' "$*" >>"$SAMPLER_CONVERT_LOG"
-cat >/dev/null
+while IFS= read -r _sampler_input; do
+  :
+done
 printf 'srgba(16,32,48,1)\n'
 printf 'srgb(64,96,128)\n'
 printf '(0,0,0,255)\n'
@@ -411,10 +413,10 @@ assert_contains "$standalone_out" '"samplingMethod": "xwd-convert-target-scoped-
 xwd_count=0
 convert_count=0
 if [ -f "$standalone_dir/xwd.log" ]; then
-  xwd_count=$(grep -c '^xwd$' "$standalone_dir/xwd.log" || true)
+  xwd_count=$(grep -c '^xwd$' "$standalone_dir/xwd.log")
 fi
 if [ -f "$standalone_dir/convert.log" ]; then
-  convert_count=$(grep -c '^convert ' "$standalone_dir/convert.log" || true)
+  convert_count=$(grep -c '^convert ' "$standalone_dir/convert.log")
 fi
 if [ "$xwd_count" -eq 1 ]; then
   pass "standalone sampler captures the root window once per target"

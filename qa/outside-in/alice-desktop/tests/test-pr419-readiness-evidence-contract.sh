@@ -20,10 +20,16 @@ current_branch=$(git -C "$REPO_ROOT" branch --show-current)
 head_sha=$(git -C "$REPO_ROOT" rev-parse HEAD)
 develop_sha=$(git -C "$REPO_ROOT" rev-parse origin/develop)
 merge_base=$(git -C "$REPO_ROOT" merge-base HEAD origin/develop)
-upstream_ref=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+upstream_ref=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>"$tmp_root/upstream-ref.err")
+if [ "$?" -ne 0 ]; then
+  upstream_ref=
+fi
 upstream_sha=
 if [ -n "$upstream_ref" ]; then
-  upstream_sha=$(git -C "$REPO_ROOT" rev-parse "$upstream_ref" 2>/dev/null || true)
+  upstream_sha=$(git -C "$REPO_ROOT" rev-parse "$upstream_ref" 2>"$tmp_root/upstream-sha.err")
+  if [ "$?" -ne 0 ]; then
+    upstream_sha=
+  fi
 fi
 worktree_dirty=$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)
 
