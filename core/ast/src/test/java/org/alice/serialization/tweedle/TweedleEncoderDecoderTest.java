@@ -1609,6 +1609,29 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
+  public void implicitZeroArgumentSameClassMethodCallInConstructorDecodeCreatesMethodInvocation() throws Exception {
+    NamedUserType type = decodeUserType("""
+        class SyntheticType {
+          SyntheticType() { helper(); }
+          void helper() { }
+        }
+        """);
+
+    NamedUserConstructor constructor = (NamedUserConstructor) type.getDeclaredConstructors().get(0);
+    UserMethod helper = userMethodNamed(type, "helper");
+    assertEquals(1, constructor.body.getValue().statements.size());
+    assertTrue(constructor.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) constructor.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+  }
+
+  @Test
   public void zeroArgumentThisMethodCallInConstructorDecodeRejectsArgumentBearingCall() {
     assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
         class SyntheticType {
