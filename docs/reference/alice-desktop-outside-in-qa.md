@@ -465,12 +465,23 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `tab-click-observation.json` | Supporting project-open setup artifact for Select Project tab activation/open attempts. |
 | `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
+| `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact and target-readiness source for bounded world-canvas pixel sampling. |
+| `visible-rendering-pixel-observation.json` or `visible-rendering-pixel-sampling-blocker.json` | Bounded target-scoped raw pixel samples inside one validated Run-window/world-canvas target, or the exact fail-closed blocker. Both keep `visibleRenderingCorrectnessEstablished=false`. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
 For launch runs, `status.txt` records whether the process stayed alive, whether a visible window was detected when a detector is available, whether window inventory was captured, and whether screenshot capture succeeded. Acceptance still requires reviewing the generated evidence, especially `x-window-inventory.json` and `launch.log`; the runner does not currently scan the log for every possible uncaught application exception.
 
-For post-open runtime/display accessibility runs, `status.txt` records `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. `runtime-display-accessibility-status.txt` is probe-local; use `status.txt` for the final scenario decision because it also accounts for controlled-display pixel status. The JSON artifact is the runtime/display machine-readable contract:
+For post-open runtime/display accessibility runs, `status.txt` records
+`runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`,
+`runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`,
+`controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`,
+`visibleRenderingPixelSamplingStatus`, `visibleRenderingPixelSamplingArtifact`,
+`visibleRenderingPixelSamplingBlocker`, and `outcome=passed` or
+`outcome=blocked`. `runtime-display-accessibility-status.txt` is probe-local; use
+`status.txt` for the final scenario decision because it also accounts for
+controlled-display pixel status and bounded target-scoped sampling. The JSON
+artifact is the runtime/display machine-readable contract:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -482,12 +493,19 @@ For post-open runtime/display accessibility runs, `status.txt` records `runtimeD
 | `postOpenRuntimeDisplayAccessibilityObserved` | boolean | `true` only when the post-open runtime/display candidate was observed. |
 | `postOpenWindowObserved` | boolean | `true` only when `post-project-open-observation.json` recorded the prerequisite post-open window signal. |
 | `runtimeDisplayCandidateCount` | integer | Number of accepted runtime/display candidates. |
-| `runtimeDisplayCandidates` | array | Bounded AT-SPI metadata for accepted candidates: child count, name, accessibility tree path, role, and visible/enabled state names. |
+| `runtimeDisplayCandidates` | array | Bounded AT-SPI metadata for accepted candidates: child count, name, accessibility tree path, role, visible/enabled state names, `geometryStatus`, and `screenExtents`. |
 | `scenario` | string | Always `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
 | `status` | enum | `observed` or `blocked`. |
 | `traversalErrors` | array | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
 
-The artifact must not include environment variables, credentials, process dumps, unrelated desktop windows, saved project contents, decoder output, grading state, lesson state, or world execution traces. Acceptance requires both the JSON runtime/display artifact and final `status.txt`: JSON `status=observed` alone is not enough if `controlledDisplayPixelStatus` is blocked or attempted, and JSON `status=blocked` remains the machine-readable runtime/display gap report.
+The artifact must not include environment variables, credentials, process dumps,
+unrelated desktop windows, saved project contents, decoder output, grading state,
+lesson state, or world execution traces. Acceptance requires the JSON
+runtime/display artifact, final `status.txt`, controlled-display source artifact,
+and either the bounded pixel observation artifact or the exact sampling blocker:
+JSON `status=observed` alone is not enough if `controlledDisplayPixelStatus` is
+blocked or attempted, or if `visibleRenderingPixelSamplingStatus` is blocked.
+JSON `status=blocked` remains the machine-readable runtime/display gap report.
 
 Early `xvfb-real-alice` fallback attempts may not produce the full launch artifact set. If Xvfb is missing or no display is available, the runner writes `environment.txt` plus `manual-evidence-checklist.txt` and exits non-zero. If Xvfb starts but exits before Alice launch, the run directory contains `xvfb.log` plus `manual-evidence-checklist.txt`. In these early fallback cases, most scenarios do not write `status.txt` because launch did not reach the evidence-capture phase. The post-open runtime/display accessibility scenario is the exception: it writes `post-open-runtime-display-accessibility-evidence.json` and `status.txt` with a blocked runtime/display accessibility outcome when an early prerequisite prevents collection.
 
@@ -509,7 +527,7 @@ reviewed assessment contract and evidence mapping exist.
 | --- | --- |
 | Launch | Launch log, `x-window-inventory.json`, desktop screenshot, controlled display observation, exit/status/timeout record, Java/Maven/display environment summary. |
 | Select Project interaction smoke | `select-project-window.json` with `interactionProof=select-project-window-visible`, `x-window-inventory.json`, screenshot, license artifacts showing no first-run dialog, status with `selectProjectWaitStatus`, and Java/Maven/display environment summary. |
-| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, `blocker=none`, plus final `status.txt` with `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, and `controlledDisplayPixelStatus=observed`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers. |
+| Post-open runtime/display accessibility evidence | `post-open-runtime-display-accessibility-evidence.json` with `status=observed`, `postOpenRuntimeDisplayAccessibilityObserved=true`, `runtimeDisplayCandidateCount>0`, candidate `geometryStatus`/`screenExtents`, and `blocker=none`, plus final `status.txt` with `outcome=passed`, `runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`, and `visibleRenderingPixelSamplingStatus=observed`. Supporting artifacts include `runtime-display-accessibility-status.txt`, `tab-click-observation.json`, `post-project-open-observation.json`, `controlled-display-pixel-observation.json`, `visible-rendering-pixel-observation.json` or `visible-rendering-pixel-sampling-blocker.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and Java/Maven/display environment summary. If prerequisites are unavailable, the JSON/status artifacts record blocked outcomes with precise blockers and `visibleRenderingCorrectnessEstablished=false`. |
 | Select Project tab-click smoke | `tab-click-observation.json` with `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `evidenceStatus=opened`, matching `openedStarter` metadata, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, and `projectOpenObserved=true`, or existing `blocker`/`blockerDetail` fields plus structured target-specific `nextBlocker` details. See [Select Project Africa Full AT-SPI evidence reference](./select-project-africa-full-atspi-evidence.md). |
 | Select Project widget introspection smoke | `swing-widget-observation.json`, `x-window-inventory.json`, status, launch log, Xvfb log, screenshot, and exact blocker details when AT-SPI or the Java ATK wrapper is unavailable. |
 | Select Project AT-SPI exec smoke | `swing-widget-observation.json` from the AT-SPI exec:exec launch path, launch log, Xvfb log, screenshot, and exact blocker details when the wrapper/process/widget condition is unmet. |

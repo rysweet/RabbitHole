@@ -254,9 +254,20 @@ proof.
 For the artifact API, configuration, examples, and claim boundaries, see
 [First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
 
-## Collect post-open runtime/display accessibility evidence
+## Collect post-open runtime/display and target-scoped pixel evidence
 
-The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario collects evidence for one narrow post-open runtime/display signal. It reuses the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and project-open setup, then runs a read-only AT-SPI probe against the live Alice accessibility tree. The claim is limited to accessibility-visible runtime/display state after a project is open; it is not a full rendering, world execution, grading, lesson completion, Save, Select Project, installer, or decoder proof. For the complete artifact API and review contract, see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
+The `alice-desktop-post-open-runtime-display-accessibility-evidence` scenario
+collects evidence for one bounded post-open rendering-adjacent step. It reuses
+the supported Alice launch, isolated license acceptance, Xvfb, ATK wrapper, and
+project-open setup, then runs a read-only AT-SPI probe against the live Alice
+accessibility tree. The runner validates exactly one visible/showing
+Run-window/world-canvas target with positive screen-coordinate extents before it
+attempts target-scoped pixel sampling. A successful run records raw RGBA samples
+inside that target under controlled conditions. A blocked run records the exact
+target or sampler blocker. Neither result is a full rendering, visible rendering
+correctness, world execution, grading, lesson completion, Save, Select Project,
+installer, or decoder proof. For the complete artifact API and review contract,
+see [Post-open runtime/display accessibility evidence](../reference/post-open-runtime-display-accessibility-evidence.md).
 
 Command from the repository root:
 
@@ -284,6 +295,7 @@ post-project-open-observation.json
 post-open-runtime-display-accessibility-evidence.json
 runtime-display-accessibility-status.txt
 controlled-display-pixel-observation.json
+visible-rendering-pixel-observation.json or visible-rendering-pixel-sampling-blocker.json
 status.txt
 screenshot.png or screenshot.xwd
 ```
@@ -306,7 +318,15 @@ screenshot.png or screenshot.xwd
       "name": "Scene display",
       "path": "application/0/3",
       "role": "canvas",
-      "states": ["enabled", "showing", "visible"]
+      "states": ["enabled", "showing", "visible"],
+      "geometryStatus": "available",
+      "screenExtents": {
+        "coordinateType": "screen",
+        "x": 144,
+        "y": 188,
+        "width": 996,
+        "height": 642
+      }
     }
   ],
   "scenario": "alice-desktop-post-open-runtime-display-accessibility-evidence",
@@ -328,7 +348,15 @@ For acceptance, check the minimum decision fields:
       "name": "Scene display",
       "path": "application/0/3",
       "role": "canvas",
-      "states": ["enabled", "showing", "visible"]
+      "states": ["enabled", "showing", "visible"],
+      "geometryStatus": "available",
+      "screenExtents": {
+        "coordinateType": "screen",
+        "x": 144,
+        "y": 188,
+        "width": 996,
+        "height": 642
+      }
     }
   ],
   "blocker": "none"
@@ -354,7 +382,17 @@ If an implementation or environment prerequisite is missing, the runner still wr
 }
 ```
 
-Use `status.txt` for automation and `post-open-runtime-display-accessibility-evidence.json` for detailed review. `runtime-display-accessibility-status.txt` is probe-local and useful for debugging the AT-SPI probe result, but `status.txt` is the final scenario status because it also records `controlledDisplayPixelStatus` and `controlledDisplayPixelBlocker`. `status.txt` records the scenario ID, automation mode, launch display when available, `runtimeDisplayAccessibilityEvidence=post-open-runtime-display-accessibility-evidence.json`, `runtimeDisplayAccessibilityStatus`, `runtimeDisplayAccessibilityBlocker`, `controlledDisplayPixelStatus`, `controlledDisplayPixelBlocker`, and `outcome=passed` or `outcome=blocked`. Review `tab-click-observation.json`, `post-project-open-observation.json`, and `controlled-display-pixel-observation.json` as supporting setup artifacts, especially when the blocker is `post-open-window-not-observed` or a display/pixel blocker.
+Use `status.txt` for automation and
+`post-open-runtime-display-accessibility-evidence.json` for detailed review.
+`runtime-display-accessibility-status.txt` is probe-local and useful for
+debugging the AT-SPI probe result, but `status.txt` is the final scenario status
+because it also records `controlledDisplayPixelStatus`,
+`controlledDisplayPixelBlocker`, `visibleRenderingPixelSamplingStatus`, and
+`visibleRenderingPixelSamplingArtifact`. Review `tab-click-observation.json`,
+`post-project-open-observation.json`, `controlled-display-pixel-observation.json`,
+and either `visible-rendering-pixel-observation.json` or
+`visible-rendering-pixel-sampling-blocker.json` as supporting setup and bounded
+sampling artifacts.
 
 To review the latest run directory without changing it:
 
@@ -369,13 +407,16 @@ python3 -m json.tool \
 ```
 
 Accept the run only when `status.txt` records `outcome=passed`,
-`runtimeDisplayAccessibilityStatus=observed`, and
-`controlledDisplayPixelStatus=observed`, and the JSON decision artifact records
-`status=observed`, `blocker=none`,
+`runtimeDisplayAccessibilityStatus=observed`, `controlledDisplayPixelStatus=observed`,
+and `visibleRenderingPixelSamplingStatus=observed`; the JSON decision artifact
+records `status=observed`, `blocker=none`,
 `postOpenRuntimeDisplayAccessibilityObserved=true`, and
-`runtimeDisplayCandidateCount` greater than zero. Preserve `status=blocked` as
-the correct machine-readable gap report when the environment, post-open setup,
-controlled-display pixels, or runtime/display candidate is unavailable.
+`runtimeDisplayCandidateCount` greater than zero; and
+`visible-rendering-pixel-observation.json` records
+`visibleRenderingCorrectnessEstablished=false`, checked sample points inside the
+validated target, and raw RGBA values. Preserve `status=blocked` as the correct
+machine-readable gap report when the environment, post-open setup,
+controlled-display pixels, target validation, or sampler is unavailable.
 
 ## Prepare evidence for manual workflows
 
