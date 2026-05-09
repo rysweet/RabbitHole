@@ -1585,7 +1585,8 @@ def not_observed_payload(inventory_path: Path) -> dict[str, Any]:
 
 def blocked_payload(inventory_path: Path, exc: Exception) -> dict[str, Any]:
     target_starter = configured_target_starter()
-    blocker_detail = f"Could not read {inventory_path}: {exc}"
+    reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else str(exc)
+    blocker_detail = f"Could not read {inventory_path.name}: {reason}"
     return add_target_metadata(
         {
             "status": "blocked",
@@ -1603,7 +1604,7 @@ def blocked_payload(inventory_path: Path, exc: Exception) -> dict[str, Any]:
         target_starter,
         evidence_status="blocked",
         blocker=next_blocker(
-            f"{inventory_path} could not be read, so no AT-SPI state was observed.",
+            f"{inventory_path.name} could not be read, so no AT-SPI state was observed.",
             "Read x-window-inventory.json before AT-SPI probing.",
             "Identify the Select Project Java PID, then inspect and select the target starter.",
             blocker_detail,

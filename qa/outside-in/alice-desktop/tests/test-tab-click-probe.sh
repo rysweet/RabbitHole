@@ -407,6 +407,9 @@ assert_contains "$output" '"evidenceStatus": "blocked"' "blocked probe output us
 assert_contains "$output" '"targetSelectionObserved": false' "blocked probe output records targetSelectionObserved=false"
 assert_contains "$output" '"openAttempted": false' "blocked probe output records openAttempted=false"
 assert_contains "$output" '"nextBlocker": \{' "blocked probe output includes structured next blocker"
+assert_contains "$output" '"blockerDetail": "Could not read missing-inventory\.json:' "blocked probe output reports only the inventory basename"
+assert_contains "$output" '"observedAtspiState": "missing-inventory\.json could not be read' "blocked probe nextBlocker reports only the inventory basename"
+assert_not_contains "$output" "$tmp_root" "blocked probe output does not disclose the scratch path"
 
 invalid_target_output="$tmp_root/invalid-target-output.json"
 TARGET_STARTER_DISPLAY_NAME="Wonderland" \
