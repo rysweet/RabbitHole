@@ -17,6 +17,7 @@ Gherkin and TLA+ artifacts and enforced by the JUnit artifacts listed here.
 | Backup recovery IO tests | `core/ide/src/test/java/org/alice/ide/ProjectBackupRecoveryIoTest.java` | Characterization tests that use real temporary `.a3p` files for corrupt primary loads, corrupt backup retries, readable backup recovery, and all-backups failure dispatch. |
 | Failure plan tests | `core/ide/src/test/java/org/alice/ide/ProjectLoadFailurePlanTest.java` | Characterization tests for choosing the next recovery action. |
 | Dispatch plan tests | `core/ide/src/test/java/org/alice/ide/ProjectLoadFailureDispatchPlanTest.java` | Characterization tests for user-choice outcomes. |
+| Reference consistency check | `tests/test_formal_spec_contracts_reference.py` | Python unittest that keeps this reference connected to the backup recovery/security Gherkin scenario, the TLA+ `PromptedBackupsAreSafe` invariant, and the documented Java backup-selector boundary. |
 
 ## Public archive API surface
 
@@ -151,25 +152,26 @@ The formal-spec lane has no runtime configuration.
 | Concern | Configuration |
 | --- | --- |
 | Gherkin execution | None. The `.feature` file is a committed acceptance contract and is not wired to Cucumber. |
-| TLA+ execution | Optional local TLC invocation using `BackupLoadRecovery.cfg`; no Maven or CI plugin is required, and TLC was not available for this PR validation. |
+| TLA+ execution | Optional local TLC invocation using `BackupLoadRecovery.cfg`; no Maven or CI plugin is required. |
 | Java validation | Existing Maven/JUnit module tests. |
+| Reference consistency check | The named Python unittest modules below; no extra dependency, network access, generated artifact, Cucumber execution, TLC execution, Maven invocation, UI automation, rendering check, Save completion check, grading check, or Tweedle decode is part of this check. |
 
 ## Focused validation commands
 
 Run commands from the repository root.
 
 ```shell
-mvn -pl core/story-api-migration -am -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest -Dsurefire.failIfNoSpecifiedTests=false test
-mvn -pl core/ide -am -Dtest=ProjectLoadFailurePlanTest,ProjectLoadFailureDispatchPlanTest -Dsurefire.failIfNoSpecifiedTests=false test
+NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest tests.test_formal_spec_contracts_reference tests.test_pr426_formal_contract_wiring
+mvn -pl core/story-api-migration -am -DfailIfNoTests=false -Dtest=IoUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectFileUtilitiesTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectBackupSelectorTest,ProjectBackupRecoveryIoTest -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -pl core/ide -am -DfailIfNoTests=false -Dtest=ProjectLoadFailurePlanTest,ProjectLoadFailureDispatchPlanTest -Dsurefire.failIfNoSpecifiedTests=false test
 ```
 
-The Surefire flag keeps upstream modules without the named test from failing the
-focused run.
+The Maven flags keep upstream reactor modules without tests or without the named
+tests from failing the focused run.
 
-Run the TLA+ model when `tla2tools.jar` is available. TLC was not run for this
-PR validation because no local `tlc`, `tla2tools`, or `tla2tools.jar` was found.
+Run the TLA+ model when `tla2tools.jar` is available.
 
 ```shell
 cd eatme/formal/backup-load-recovery
@@ -186,6 +188,7 @@ java -cp /path/to/tla2tools.jar tlc2.TLC BackupLoadRecovery.cfg
 | Resource preservation and safe entries | Gherkin `@export @resources` and `@security` scenarios | `IoUtilitiesTest` |
 | Missing, future, or corrupt archive metadata | Gherkin `@load @failure` scenarios | `IoUtilitiesTest` |
 | Corrupt primary backup recovery | Gherkin `@backup-recovery` scenarios and TLA+ `MainLoadFails` | `ProjectBackupSelectorTest`, `ProjectBackupRecoveryIoTest`, `ProjectLoadFailurePlanTest`, `ProjectLoadFailureDispatchPlanTest` |
+| Formal/spec backup safety reference mapping | This document's backup recovery model, Gherkin `@load @backup-recovery @security`, and TLA+ `PromptedBackupsAreSafe` | `tests/test_formal_spec_contracts_reference.py` verifies the named files, tags, invariant, and Java source markers remain aligned. |
 | Newest trusted candidate selection and readable recovery outcome | TLA+ `NextBackup`, `OfferReadableBackup`, and `SkipUnreadableBackup` | `ProjectBackupSelectorTest` and `ProjectBackupRecoveryIoTest` |
 | Terminal recovery outcome | TLA+ final-state invariants | `ProjectBackupRecoveryIoTest`, `ProjectLoadFailurePlanTest`, and `ProjectLoadFailureDispatchPlanTest` |
 
@@ -195,5 +198,5 @@ java -cp /path/to/tla2tools.jar tlc2.TLC BackupLoadRecovery.cfg
 | --- | --- |
 | Saved `.a3p` archives include `manifest.json`. | `IoUtilitiesTest.writtenProjectContainsVersionManifestAndProgramTypeEntries`; `ProjectFileUtilitiesTest.saveCopyWritesReadableEditorArchiveWithResourceManifestAndThumbnail` |
 | Saved `.a3p` thumbnail behavior is characterized. | `IoUtilitiesTest.writeProjectIncludesProvidedThumbnailAndManifestIcon` and `IoUtilitiesTest.writeProjectRemainsReadableWithoutThumbnailEntry` |
-| Backup recovery rejects traversal or out-of-directory candidates. | `ProjectBackupSelectorTest.corruptedMainProjectSkipsBackupSymlinkEscapingBackupDirectory`; `ProjectBackupSelectorTest.corruptedMainProjectSkipsBackupSymlinkEvenWhenTargetStaysInBackupDirectory`; `ProjectBackupSelectorTest.corruptedMainProjectSkipsCandidatesFromSymlinkedBackupDirectory` |
+| Backup recovery rejects symlink/out-of-directory candidates. | `ProjectBackupSelectorTest.corruptedMainProjectSkipsBackupSymlinkEscapingBackupDirectory`; `ProjectBackupSelectorTest.corruptedMainProjectSkipsBackupSymlinkEvenWhenTargetStaysInBackupDirectory`; `ProjectBackupSelectorTest.corruptedMainProjectSkipsCandidatesFromSymlinkedBackupDirectory` |
 | Backup recovery uses real temporary archives for readable-backup and all-backups-fail paths. | `ProjectBackupRecoveryIoTest.corruptMainProjectSkipsUnloadableBackupAndLoadsNextBackupWithResources`; `ProjectBackupRecoveryIoTest.corruptMainProjectAndAllBackupsPlanUserVisibleFailure` |
