@@ -49,7 +49,7 @@ core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.jso
 
 ## Interpret the artifact
 
-Use the JSON artifact as the source of truth. Treat blocked JSON artifacts as blocker evidence only.
+Use the JSON artifact as the source of truth. Treat blocked JSON artifacts as negative evidence only: they explain why proof could not complete and are blocker evidence only, never partial success.
 
 | Status | Meaning |
 | --- | --- |
