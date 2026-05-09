@@ -3859,14 +3859,11 @@ PY
     fi
   fi
   if [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
-    set +e
-    validate_run_window_evidence "$run_window_artifact" > "$run_dir/run-window-validation.log" 2>&1
-    run_window_validation_exit=$?
-    set -e
-    if [ "$run_window_validation_exit" -eq 0 ]; then
+    if validate_run_window_evidence "$run_window_artifact" > "$run_dir/run-window-validation.log" 2>&1; then
       run_window_validation_status=created
     else
       run_window_validation_status=failed
+      run_window_validation_exit=$?
       if [ "$exit_code" -eq 0 ]; then
         exit_code=$run_window_validation_exit
       fi

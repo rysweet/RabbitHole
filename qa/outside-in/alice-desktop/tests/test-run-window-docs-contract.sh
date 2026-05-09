@@ -81,7 +81,7 @@ assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'lesson-completion booleans'
 assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'must not use the' "Run-window reference blocks using the artifact beyond scope"
 assert_cached_contains RUN_WINDOW_REFERENCE_CONTENT 'creative-assessment or lesson-completion evidence' "Run-window reference excludes creative and lesson evidence claims"
 
-python3 - "$QA_README" > /dev/null <<'PY'
+python3 - "$QA_README" <<'PY'
 import sys
 from pathlib import Path
 
