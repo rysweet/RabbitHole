@@ -71,6 +71,7 @@ class FakeNode:
         states=None,
         selection_supported=False,
         process_id=None,
+        child_count_error=False,
     ):
         self.name = name
         self._role = role
@@ -81,12 +82,15 @@ class FakeNode:
         self.selection_supported = selection_supported
         self.selected_child_index = None
         self.process_id = process_id
+        self.child_count_error = child_count_error
         self.parent = None
         for child in self.children:
             child.parent = self
 
     @property
     def childCount(self):
+        if self.child_count_error:
+            raise RuntimeError(f"{self.name or self._role} childCount unavailable")
         return len(self.children)
 
     def getChildAtIndex(self, index):
@@ -389,6 +393,17 @@ if blocked.get("openAttempted") is not False:
 if blocked_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open after a target-specific selection capability gap")
 assert_blocker_shape(blocked)
+
+unreadable_app = FakeNode("Alice", "application", process_id=2468, child_count_error=True)
+FakeRegistry.desktop = FakeNode("desktop", "desktop frame", children=[unreadable_app])
+child_count_blocked = probe.probe_tab_click(2468)
+if child_count_blocked.get("status") != "blocked":
+    raise AssertionError(f"expected blocked status for unreadable AT-SPI app childCount, got {child_count_blocked!r}")
+if child_count_blocked.get("blocker") != "select-project-not-accessible":
+    raise AssertionError(
+        "unreadable AT-SPI app childCount must produce a precise blocker instead of crashing, "
+        f"got {child_count_blocked.get('blocker')!r}"
+    )
 PY
 status=$?
 assert_success "$status" "tab-click probe emits target-specific Africa Full opened/blocked evidence"

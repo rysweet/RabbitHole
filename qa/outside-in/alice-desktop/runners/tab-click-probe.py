@@ -659,7 +659,7 @@ def find_alice_app(desktop: Any, java_pid: int) -> tuple[Any | None, int]:
                     continue
         except Exception:
             app_count = 0
-        if alice_app is not None and alice_app.childCount > 0:
+        if alice_app is not None and safe_child_count(alice_app) > 0:
             break
         time.sleep(2)
     return alice_app, app_count
