@@ -263,6 +263,18 @@ The scenario is a gated command smoke for the focused archive characterization
 suite. It does not drive the Alice desktop, sample rendered pixels, grade learner
 work, or complete a lesson.
 
+The Gadugi-compatible evidence scenario for this boundary is:
+
+```text
+qa/outside-in/alice-desktop/gadugi/archive-player-boundary-evidence.yaml
+```
+
+It delegates to the same outside-in runner and archive-fixture smoke scenario,
+with a dependency-free contract test at
+`qa/outside-in/alice-desktop/tests/test-gadugi-archive-player-boundary-contract.sh`.
+For full configuration and usage details, see
+[Gadugi archive/player boundary evidence scenario](./gadugi-archive-player-boundary-evidence.md).
+
 The documentation examples are guarded by:
 
 ```text

@@ -121,6 +121,32 @@ NODE_OPTIONS=--max-old-space-size=32768 ALICE_QA_RUN_GATED_SMOKES=1 \
 The gated run must produce `status.txt`, `command.log`, and test output or a
 Surefire report naming `HistoricalArchiveRoundTripCharacterizationTest`.
 
+## Validate Gadugi evidence wiring
+
+The Gadugi-compatible evidence scenario packages the same archive/player
+boundary evidence for `gadugi-test`:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/archive-player-boundary-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s archive-player-boundary-evidence \
+  --timeout 300000
+```
+
+Run the dependency-free contract test without Gadugi:
+
+```bash
+bash qa/outside-in/alice-desktop/tests/test-gadugi-archive-player-boundary-contract.sh
+```
+
+The contract test checks scenario identity, CLI agent metadata, delegated
+commands, conservative description wording, and absence of stale references.
+For full configuration details, see
+[Gadugi archive/player boundary evidence scenario](../reference/gadugi-archive-player-boundary-evidence.md).
+
 ## Review diagnostics
 
 Use stable message fragments, not full-message equality.

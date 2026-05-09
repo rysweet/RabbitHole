@@ -200,3 +200,20 @@ NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/t
 NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
 NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-silver-thread-status-report.sh
 ```
+
+For Gadugi evidence wiring, validate and run the archive/player boundary
+evidence scenario:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/archive-player-boundary-evidence.yaml
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s archive-player-boundary-evidence \
+  --timeout 300000
+NODE_OPTIONS=--max-old-space-size=32768 bash \
+  qa/outside-in/alice-desktop/tests/test-gadugi-archive-player-boundary-contract.sh
+```
+
+For full Gadugi scenario configuration and contract details, see
+[Gadugi archive/player boundary evidence scenario](../reference/gadugi-archive-player-boundary-evidence.md).
