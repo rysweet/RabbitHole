@@ -28,10 +28,9 @@ does not prove. After this tutorial you will be able to explain the test's
 seven-step journey, the VM listener event contract, and the round-trip fidelity
 assertions.
 
-This tutorial describes the designed behavior. If the test file does not exist
-yet, use this document as a reading guide for the [reference
-specification](../reference/silver-thread-launch-build-run-test.md) and then
-follow its implementation.
+This tutorial traces the implemented test. Open the source in
+`core/ide/src/test/java/org/alice/ide/SilverThreadLaunchBuildRunTest.java`
+alongside this guide.
 
 ## 1. Understand the silver thread
 
@@ -76,13 +75,13 @@ factory pattern.
 Find the method creation with a `Comment`:
 
 ```java
-Comment silverThreadStep = new Comment("silver thread step");
-UserMethod entryMethod = new UserMethod(
-    "runSilverThread",
+Comment commentStatement = new Comment("silver thread: student added this comment tile");
+UserMethod storyMethod = new UserMethod(
+    "performSilverThreadStep",
     Void.TYPE,
     new UserParameter[0],
-    new BlockStatement(silverThreadStep));
-entryMethod.isStatic.setValue(true);
+    new BlockStatement(commentStatement));
+storyMethod.isStatic.setValue(true);
 ```
 
 Key decisions:
@@ -99,7 +98,7 @@ Find the save/reopen sequence:
 
 ```java
 IoUtilities.writeProject(projectFile, project);
-Project loadedProject = new TestFileProjectLoader(projectFile).loadNow();
+Project reopenedProject = new TestFileProjectLoader(projectFile).loadNow();
 ```
 
 **`IoUtilities.writeProject`** writes an `.a3p` archive (a zip file containing
@@ -121,7 +120,7 @@ ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
 RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
 vm.addVirtualMachineListener(listener);
 
-vm.ENTRY_POINT_invoke(null, entryMethod);
+vm.ENTRY_POINT_invoke(null, reopenedMethod);
 ```
 
 **`ENTRY_POINT_invoke(null, method)`** runs a static method headlessly. The
@@ -129,7 +128,7 @@ first argument is `null` because the method is static (no instance needed).
 
 The `RecordingVirtualMachineListener` records `statementExecuting` and
 `statementExecuted` callbacks. For a method body of
-`BlockStatement(Comment("silver thread step"))`, the expected events are:
+`BlockStatement(Comment("silver thread: student added this comment tile"))`, the expected events are:
 
 ```text
 executing:BlockStatement   ← VM enters the method body
@@ -147,8 +146,8 @@ after a save/reopen cycle to prove the deserialized AST executes identically.
 Find the second save/reopen cycle:
 
 ```java
-IoUtilities.writeProject(roundTripFile, loadedProject);
-Project roundTrippedProject = IoUtilities.readProject(roundTripFile);
+IoUtilities.writeProject(secondSave, reopenedProject);
+Project secondReopened = new TestFileProjectLoader(secondSave).loadNow();
 ```
 
 The test asserts four properties survive two serialization cycles:
@@ -156,9 +155,9 @@ The test asserts four properties survive two serialization cycles:
 | Property | Assertion |
 | --- | --- |
 | Program type name | `assertEquals("SilverThreadProgram", ...)` |
-| Method name | `assertEquals("runSilverThread", ...)` |
+| Method name | `assertEquals("performSilverThreadStep", ...)` |
 | Statement count | `assertEquals(1, ...)` |
-| Comment text | `assertEquals("silver thread step", ...)` |
+| Comment text | `assertEquals("silver thread: student added this comment tile", ...)` |
 
 This is stronger than a file-exists check. It proves full AST fidelity: the
 program structure, method identity, statement content, and comment text are all

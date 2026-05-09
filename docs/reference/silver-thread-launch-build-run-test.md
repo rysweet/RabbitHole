@@ -54,13 +54,13 @@ The test covers exactly these two journeys:
 
 ## Implementation status
 
-This document is the design specification. The test is not yet implemented.
+Both test methods are implemented and passing.
 
 | Surface | Current state |
 | --- | --- |
-| `SilverThreadLaunchBuildRunTest` | **Not yet created.** Target: `core/ide/src/test/java/org/alice/ide/`. |
-| `indiaMinimum.a3p` test resource | **Not yet copied.** Source: `core/resources/src/application/resources/starter-projects/indiaMinimum.a3p`. Target: `core/ide/src/test/resources/starters/`. |
-| Maven validation | Target: `mvn -pl core/ide -am -Dtest=SilverThreadLaunchBuildRunTest test`. |
+| `SilverThreadLaunchBuildRunTest` | **Implemented.** `core/ide/src/test/java/org/alice/ide/SilverThreadLaunchBuildRunTest.java`. |
+| `indiaMinimum.a3p` test resource | **Copied.** `core/ide/src/test/resources/starters/indiaMinimum.a3p`. |
+| Maven validation | `mvn -pl core/ide -am -Dtest=SilverThreadLaunchBuildRunTest test` — 2 tests, 0 failures. |
 
 ## Design decisions
 
@@ -173,7 +173,7 @@ After saving and reopening a project, the test asserts:
 | `BlockStatement` | `core/ast` | The method body container. |
 | `ReleaseVirtualMachine` | `core/ast` | Headless VM; `ENTRY_POINT_invoke(null, method)` runs a static method. |
 | `VirtualMachineListener` | `core/ast` | Callback interface for statement execution events. |
-| `IoUtilities` | `core/ast` | `writeProject`, `readProject` for `.a3p` archive serialization. |
+| `IoUtilities` | `core/story-api-migration` | `writeProject`, `readProject` for `.a3p` archive serialization. |
 | `FileProjectLoader` | `core/ide` | Production project loader; `TestFileProjectLoader` is a private inner class (same pattern as `ProjectOpenSaveExportJourneyTest`) that exposes the protected `load()` method. |
 | `JavaType` | `core/ast` | `getInstance(SProgram.class)` provides the program supertype. |
 
@@ -182,8 +182,8 @@ After saving and reopening a project, the test asserts:
 No system properties or environment variables are required beyond
 `NODE_OPTIONS=--max-old-space-size=32768` for the Maven reactor build.
 
-The test uses `target/headless-silver-thread/` as its working directory for
-temporary `.a3p` files. These files are created under Maven's build output
+The test uses `target/silver-thread-e2e/` and `target/silver-thread-starter/`
+as working directories for temporary `.a3p` files. These files are created under Maven's build output
 directory and are cleaned by `mvn clean`.
 
 ## Test resources

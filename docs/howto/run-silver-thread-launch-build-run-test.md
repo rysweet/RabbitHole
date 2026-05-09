@@ -10,9 +10,7 @@ reference](../reference/silver-thread-launch-build-run-test.md).
 
 ## Before you start
 
-Confirm the test class and test resource exist. If either is missing, the test
-has not been implemented yet — see the [reference](../reference/silver-thread-launch-build-run-test.md)
-for the design specification.
+Confirm the test class and test resource exist:
 
 ```bash
 test -f core/ide/src/test/java/org/alice/ide/SilverThreadLaunchBuildRunTest.java && echo "Test class OK" || echo "Test class MISSING"
