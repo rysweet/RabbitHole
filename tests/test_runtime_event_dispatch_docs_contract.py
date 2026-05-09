@@ -1,4 +1,6 @@
 import argparse
+import contextlib
+import io
 import subprocess
 import sys
 import tempfile
@@ -120,17 +122,17 @@ def main(argv: list[str]) -> int:
     return run_noop_guard(args.worktree, args.expected_branch, args.check_only)
 
 
-def run_guard(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [
-            sys.executable,
-            str(CONTRACT_PATH),
-            "--guard-check",
-            *args,
-        ],
-        cwd=cwd or REPO_ROOT,
-        capture_output=True,
-        text=True,
+def run_guard(*args: str) -> subprocess.CompletedProcess[str]:
+    guard_args = ["--guard-check", *args]
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        returncode = main(guard_args)
+    return subprocess.CompletedProcess(
+        [sys.executable, str(CONTRACT_PATH), *guard_args],
+        returncode,
+        stdout.getvalue(),
+        stderr.getvalue(),
     )
 
 
@@ -187,7 +189,6 @@ class RuntimeEventDispatchNoOpGuardContractTest(unittest.TestCase):
                 "--expected-branch",
                 EXPECTED_BRANCH,
                 "--check-only",
-                cwd=Path(directory),
             )
 
         self.assertNotEqual(0, result.returncode)
