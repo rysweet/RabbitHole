@@ -228,14 +228,16 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
         Thread.currentThread().getContextClassLoader())) {
       Object scene = instantiateGeneratedScene(classLoader);
       Object sceneActivationHandler = sceneActivationHandlerFor(scene);
-      SceneActivationEvent expectedEvent = new SceneActivationEvent();
+      assertNotNull("Generated listener registration should install a runtime scene activation handler",
+          sceneActivationHandler);
+      SceneActivationEvent firedEvent = new SceneActivationEvent();
       sceneActivationHandler.getClass()
           .getMethod("handleEventFire", SceneActivationEvent.class)
-          .invoke(sceneActivationHandler, expectedEvent);
+          .invoke(sceneActivationHandler, firedEvent);
       assertTrue("Generated scene activation listener should receive the fired runtime event argument",
           sceneActivationEventPayloadLatch.await(5, TimeUnit.SECONDS));
       assertSame("Generated listener should receive the same SceneActivationEvent payload fired by the handler",
-          expectedEvent,
+          firedEvent,
           recordedSceneActivationEvent);
     } finally {
       recordedSceneActivationEvent = null;
