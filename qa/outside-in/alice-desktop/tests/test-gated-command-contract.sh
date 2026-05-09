@@ -85,6 +85,20 @@ assert_contains "$enabled_run_dir/status.txt" '^timeoutPolicy=none$' "project IO
 assert_not_contains "$enabled_run_dir/status.txt" '^timeoutSeconds=' "project IO smoke omits workflow timeout"
 rm -f "$fake_bin/timeout"
 
+exported_ant_evidence="$tmp_root/exported-ant-evidence"
+PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 \
+  "$RUNNER" run alice-desktop-exported-project-smoke --evidence-dir "$exported_ant_evidence" >"$tmp_root/exported-ant.out" 2>"$tmp_root/exported-ant.err"
+status=$?
+assert_success "$status" "enabled exported project Ant build smoke executes argv directly"
+exported_ant_run_dir=$(single_child_dir "$exported_ant_evidence/alice-desktop-exported-project-smoke")
+status=$?
+assert_success "$status" "enabled exported project Ant build scenario creates one evidence directory"
+assert_contains "$exported_ant_run_dir/command.log" 'Alice3ProjectTemplateAntSmokeTest' "exported project Ant build smoke selects the actual Ant/template smoke test"
+assert_contains "$exported_ant_run_dir/command.log" '^-DincludeSims=false|-DincludeSims=false' "exported project Ant build smoke is no-Sims"
+assert_contains "$exported_ant_run_dir/command.log" '-DfailIfNoTests=false' "exported project Ant build smoke keeps focused reactor fail-if-no-tests flag"
+assert_not_contains "$exported_ant_run_dir/command.log" 'ProjectCodeGeneratorStandaloneProjectTest' "exported project Ant build smoke must not stop at standalone generator coverage"
+assert_contains "$exported_ant_run_dir/status.txt" '^outcome=passed$' "exported project Ant build smoke records pass outcome when the focused command exits zero"
+
 package_enabled_evidence="$tmp_root/package-enabled-evidence"
 PATH="$fake_bin:$PATH" ALICE_QA_RUN_GATED_SMOKES=1 ALICE_QA_FAKE_PACKAGE_MARKER="$package_marker" \
   "$RUNNER" run alice-desktop-package-install-smoke --evidence-dir "$package_enabled_evidence" >"$tmp_root/package-enabled.out" 2>"$tmp_root/package-enabled.err"

@@ -61,6 +61,10 @@ if "first-lesson-live-procedure-target-observation" not in workflow_enum:
     raise AssertionError(
         "schema workflow enum must include first-lesson-live-procedure-target-observation"
     )
+if "exported-project-ant-build-smoke" not in workflow_enum:
+    raise AssertionError("schema workflow enum must include exported-project-ant-build-smoke")
+if "exported-project-smoke" in workflow_enum:
+    raise AssertionError("schema workflow enum must not keep the stale exported-project-smoke workflow")
 
 required_automation = set(automation.get("required", []))
 expected_automation = {"cwd", "argv", "readyWaitSeconds"}
@@ -132,11 +136,12 @@ expected_argv = {
         "mvn",
         "-DincludeSims=false",
         "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
         "-Dsurefire.failIfNoSpecifiedTests=false",
         "-pl",
         "netbeans",
         "-am",
-        "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest",
+        "-Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest",
         "test",
     ),
     (
