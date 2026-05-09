@@ -51,10 +51,16 @@ ALLOWED_DIFF = [
     "qa/outside-in/alice-desktop/tests/test-schema-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-workflow-contract.sh",
     "qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh",
+    "qa/outside-in/alice-desktop/tests/test-gadugi-window-menu-contract.sh",
+    "qa/outside-in/alice-desktop/gadugi/window-menu-registration-evidence.yaml",
+    "docs/howto/run-gadugi-window-menu-registration-evidence.md",
     "docs/reference/pr401-ui-action-menu-contract-evidence.md",
+    "docs/reference/gadugi-window-menu-registration-evidence.md",
     "docs/reference/window-menu-action-contract.md",
+    "docs/tutorials/gadugi-window-menu-registration-evidence.md",
     "docs/index.md",
     "tests/test_pr401_ui_action_menu_contract_evidence.py",
+    "tests/test_pr401_gadugi_integration.py",
     "pyproject.toml",
 ]
 
