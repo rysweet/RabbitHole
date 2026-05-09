@@ -24,8 +24,35 @@ EXPECTED_VALIDATION_COMMAND = (
     "-Dsurefire.failIfNoSpecifiedTests=false "
     f"-Dtest={EXPECTED_TEST_SELECTOR} test"
 )
+REQUIRED_CHECK_NAMES = frozenset(
+    (
+        "GitGuardian Security Checks",
+        "Alice Checkstyle CI/build (pull_request)",
+        "Alice Coverage Reports/coverage (pull_request)",
+        "Alice NetBeans Package CI/package-netbeans (pull_request)",
+        "Alice Test CI/test (pull_request)",
+    )
+)
 GREEN_CHECK_CONCLUSIONS = frozenset(("success",))
 COMPLETED_CHECK_STATUSES = frozenset(("completed",))
+PASSING_WORDS = frozenset(("passed", "validated", "green"))
+MERGE_READY_EVIDENCE_HEADINGS = frozenset(
+    (
+        "## merge-ready evidence",
+        "## current-head merge-ready gate evidence",
+    )
+)
+MARKDOWN_HEADING_PATTERN = re.compile(r"^(#{1,6})\s+\S")
+FULL_GIT_SHA_PATTERN = re.compile(r"[0-9a-fA-F]{40}")
+FULL_GIT_SHA_EXACT_PATTERN = re.compile(r"[0-9a-fA-F]{40}\Z")
+GITHUB_CHECKS_GREEN_LINE_PATTERN = re.compile(
+    r"^\s*[-*]?\s*GitHub checks:\s*green for\s+",
+    re.IGNORECASE,
+)
+FOCUSED_VALIDATION_RESULT_PATTERN = re.compile(
+    r"focused validation result:\s*passed\b",
+    re.IGNORECASE,
+)
 QA_OVERCLAIM_PATTERN = re.compile(
     r"\b(desktop qa|manual scenario|scenario validation|qa scenario)\b",
     re.IGNORECASE,
@@ -36,10 +63,7 @@ LOGGER = logging.getLogger("pr402_finalization_gate")
 
 
 def _is_merge_ready_evidence_heading(line: str) -> bool:
-    return line.strip().lower() in {
-        "## merge-ready evidence",
-        "## current-head merge-ready gate evidence",
-    }
+    return line.strip().lower() in MERGE_READY_EVIDENCE_HEADINGS
 
 
 def tweedle_submodule_command() -> list[str]:
@@ -72,51 +96,66 @@ def _dedupe(blockers: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(blockers))
 
 
+def is_full_git_sha(value: Any) -> bool:
+    """Return whether value is exactly one full 40-character Git SHA."""
+    return bool(FULL_GIT_SHA_EXACT_PATTERN.fullmatch(_text(value)))
+
+
+def _same_sha(left: str, right: str) -> bool:
+    return left.lower() == right.lower()
+
+
 def _contains_head(text: str, head_sha: str) -> bool:
-    return bool(head_sha) and head_sha in text
+    return bool(head_sha) and head_sha.lower() in text.lower()
 
 
-def _extract_merge_ready_section(pr_body: str) -> str:
-    lines = pr_body.splitlines()
-    start_index: int | None = None
-    start_level = 0
-    heading_pattern = re.compile(r"^(#{1,6})\s+\S")
+def _merge_ready_section_lines(lines: list[str]) -> list[str] | None:
+    bounds = _merge_ready_section_bounds(lines)
+    if bounds is None:
+        return None
+    start_index, end_index = bounds
+    return lines[start_index:end_index]
 
-    for index, line in enumerate(lines):
-        if _is_merge_ready_evidence_heading(line):
-            start_index = index
-            start_level = 2
-            break
 
-    if start_index is None:
-        return ""
+def _merge_ready_section_bounds(lines: list[str]) -> tuple[int, int] | None:
+    for start_index, line in enumerate(lines):
+        if not _is_merge_ready_evidence_heading(line):
+            continue
+        start_level = _heading_level(line)
+        end_index = next(
+            (
+                index
+                for index in range(start_index + 1, len(lines))
+                if 0 < _heading_level(lines[index]) <= start_level
+            ),
+            len(lines),
+        )
+        return start_index, end_index
+    return None
 
-    end_index = len(lines)
-    for index in range(start_index + 1, len(lines)):
-        match = heading_pattern.match(lines[index])
-        if match and len(match.group(1)) <= start_level:
-            end_index = index
-            break
 
-    return "\n".join(lines[start_index:end_index])
+def _heading_level(line: str) -> int:
+    match = MARKDOWN_HEADING_PATTERN.match(line)
+    return len(match.group(1)) if match else 0
 
 
 def _line_mentions_checks_for_head(line: str, head_sha: str) -> bool:
-    normalized = line.lower()
-    return (
-        "github checks" in normalized
-        and "green" in normalized
-        and _contains_head(line, head_sha)
-    )
+    match = GITHUB_CHECKS_GREEN_LINE_PATTERN.match(line)
+    return bool(match) and _contains_head(line[match.end() :], head_sha)
 
 
 def _line_is_untied_qa_claim(line: str, head_sha: str) -> bool:
     if not QA_OVERCLAIM_PATTERN.search(line):
         return False
     lowered = line.lower()
-    if "passed" not in lowered and "validated" not in lowered and "green" not in lowered:
+    if not any(word in lowered for word in PASSING_WORDS):
         return False
     return not _contains_head(line, head_sha)
+
+
+def _line_has_focused_validation_result_for_head(line: str, head_sha: str) -> bool:
+    match = FOCUSED_VALIDATION_RESULT_PATTERN.search(line)
+    return bool(match) and _contains_head(line[match.end() :], head_sha)
 
 
 def evaluate_checks(
@@ -126,23 +165,40 @@ def evaluate_checks(
 ) -> list[str]:
     """Require completed successful GitHub checks for the same observed head SHA."""
     blockers: list[str] = []
-    if not observed_head_sha or not checks_head_sha or observed_head_sha != checks_head_sha:
+    if (
+        not is_full_git_sha(observed_head_sha)
+        or not is_full_git_sha(checks_head_sha)
+        or not _same_sha(observed_head_sha, checks_head_sha)
+    ):
         blockers.append("github-checks-stale-head")
 
     if not status_check_rollup:
         blockers.append("github-checks-unavailable")
         return _dedupe(blockers)
 
+    observed_required_checks: set[str] = set()
+    found_incomplete_check = False
+    found_non_green_check = False
     for raw_check in status_check_rollup:
         check = _as_mapping(raw_check)
+        name = _text(check.get("name")).strip()
+        if name in REQUIRED_CHECK_NAMES:
+            observed_required_checks.add(name)
         status = _normalized_text(check.get("status"))
         conclusion = _normalized_text(check.get("conclusion"))
         if status not in COMPLETED_CHECK_STATUSES:
-            blockers.append("github-checks-not-complete")
+            found_incomplete_check = True
         elif conclusion not in GREEN_CHECK_CONCLUSIONS:
-            blockers.append("github-checks-not-green")
+            found_non_green_check = True
 
-    return _dedupe(blockers)
+    if observed_required_checks != REQUIRED_CHECK_NAMES:
+        blockers.append("github-checks-missing-required")
+    if found_incomplete_check:
+        blockers.append("github-checks-not-complete")
+    if found_non_green_check:
+        blockers.append("github-checks-not-green")
+
+    return blockers
 
 
 def evaluate_pr_body(
@@ -151,36 +207,55 @@ def evaluate_pr_body(
     validation_command: str,
 ) -> list[str]:
     """Require current-head PR body evidence without untied QA overclaims."""
-    section = _extract_merge_ready_section(_text(pr_body))
-    evidence_text = section or _text(pr_body)
+    body = _text(pr_body)
+    body_lines = body.splitlines()
+    section_lines = _merge_ready_section_lines(body_lines)
+    if section_lines is None:
+        evidence_text = body
+        evidence_lines = body_lines
+    else:
+        evidence_text = "\n".join(section_lines)
+        evidence_lines = section_lines
     blockers: list[str] = []
+    has_current_head = _contains_head(evidence_text, observed_head_sha)
+    has_stale_head = any(
+        not _same_sha(match.group(0), observed_head_sha)
+        for match in FULL_GIT_SHA_PATTERN.finditer(evidence_text)
+    )
 
-    if not _contains_head(evidence_text, observed_head_sha):
+    if not has_current_head or has_stale_head:
         blockers.append("pr-body-stale-head")
     if not any(
         _line_mentions_checks_for_head(line, observed_head_sha)
-        for line in evidence_text.splitlines()
+        for line in evidence_lines
     ):
         blockers.append("pr-body-checks-not-tied-to-head")
     if validation_command not in evidence_text:
         blockers.append("pr-body-missing-focused-validation")
-    if not re.search(
-        rf"focused validation result:\s*passed\b.*{re.escape(observed_head_sha)}",
-        evidence_text,
-        re.IGNORECASE,
+    if not any(
+        _line_has_focused_validation_result_for_head(line, observed_head_sha)
+        for line in evidence_lines
     ):
         blockers.append("pr-body-missing-focused-validation-result")
-    if any(_line_is_untied_qa_claim(line, observed_head_sha) for line in evidence_text.splitlines()):
+    if any(_line_is_untied_qa_claim(line, observed_head_sha) for line in evidence_lines):
         blockers.append("pr-body-qa-evidence-not-current")
 
-    return _dedupe(blockers)
+    return blockers
 
 
-def evaluate_validation(validation: dict[str, Any]) -> list[str]:
+def evaluate_validation(validation: dict[str, Any], observed_head_sha: str) -> list[str]:
     """Require Tweedle init and the exact focused Maven validation success."""
     evidence = _as_mapping(validation)
+    validation_head_sha = _text(evidence.get("validationHeadSha"))
     blockers: list[str] = []
 
+    if not is_full_git_sha(validation_head_sha):
+        blockers.append("invalid-validation-head-sha")
+    elif not is_full_git_sha(observed_head_sha) or not _same_sha(
+        validation_head_sha,
+        observed_head_sha,
+    ):
+        blockers.append("focused-validation-stale-head")
     if evidence.get("tweedleLangInitialized") is not True:
         blockers.append("tweedle-lang-not-initialized")
     if evidence.get("command") != focused_validation_command():
@@ -214,26 +289,14 @@ def update_merge_ready_evidence(pr_body: str, head_sha: str) -> str:
     replacement = render_merge_ready_evidence(head_sha)
     body = _text(pr_body)
     lines = body.splitlines()
-    start_index: int | None = None
-    heading_pattern = re.compile(r"^(#{1,6})\s+\S")
+    bounds = _merge_ready_section_bounds(lines)
 
-    for index, line in enumerate(lines):
-        if _is_merge_ready_evidence_heading(line):
-            start_index = index
-            break
-
-    if start_index is None:
+    if bounds is None:
         if body.strip():
             return body.rstrip() + "\n\n" + replacement
         return replacement
 
-    end_index = len(lines)
-    for index in range(start_index + 1, len(lines)):
-        match = heading_pattern.match(lines[index])
-        if match and len(match.group(1)) <= 2:
-            end_index = index
-            break
-
+    start_index, end_index = bounds
     return "\n".join(lines[:start_index] + replacement.splitlines() + lines[end_index:])
 
 
@@ -245,13 +308,37 @@ def _no_op_justification(head_sha: str) -> str:
     )
 
 
+def evaluate_head_shas(
+    observed_head_sha: str,
+    reread_head_sha: str,
+    checks_head_sha: str,
+) -> list[str]:
+    """Validate snapshot head fields before any mutation or no-op decision."""
+    blockers: list[str] = []
+    if not is_full_git_sha(observed_head_sha):
+        blockers.append("invalid-observed-head-sha")
+    if not is_full_git_sha(reread_head_sha):
+        blockers.append("invalid-reread-head-sha")
+    if not is_full_git_sha(checks_head_sha):
+        blockers.append("invalid-checks-head-sha")
+    if (
+        is_full_git_sha(observed_head_sha)
+        and is_full_git_sha(reread_head_sha)
+        and not _same_sha(observed_head_sha, reread_head_sha)
+    ):
+        blockers.append("pr-head-changed-during-finalization")
+    return blockers
+
+
 def decide_finalization(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Decide whether PR #402 finalization is blocked, a no-op, or a body update."""
     evidence = _as_mapping(snapshot)
     observed_head_sha = _text(evidence.get("observedHeadSha"))
     reread_head_sha = _text(evidence.get("rereadHeadSha"))
     checks_head_sha = _text(evidence.get("checksHeadSha"))
-    validation = _as_mapping(evidence.get("validation"))
+    validation = dict(_as_mapping(evidence.get("validation")))
+    if "validationHeadSha" not in validation:
+        validation["validationHeadSha"] = evidence.get("validationHeadSha")
     pr_body = _text(evidence.get("prBody"))
 
     if evidence.get("prNumber") != EXPECTED_PR_NUMBER:
@@ -263,18 +350,10 @@ def decide_finalization(snapshot: dict[str, Any]) -> dict[str, Any]:
             "summary": "Finalization is blocked: wrong-pr-number",
         }
 
-    if observed_head_sha and reread_head_sha and observed_head_sha != reread_head_sha:
-        LOGGER.info("PR #402 finalization blocked because the PR head changed")
-        return {
-            "status": "NOT_MERGE_READY",
-            "updatePrBody": False,
-            "blockers": ["pr-head-changed-during-finalization"],
-            "summary": "Finalization evidence is stale because PR head changed during finalization.",
-        }
-
     hard_blockers = _dedupe(
-        evaluate_checks(observed_head_sha, checks_head_sha, _as_list(evidence.get("statusCheckRollup")))
-        + evaluate_validation(validation)
+        evaluate_head_shas(observed_head_sha, reread_head_sha, checks_head_sha)
+        + evaluate_checks(observed_head_sha, checks_head_sha, _as_list(evidence.get("statusCheckRollup")))
+        + evaluate_validation(validation, observed_head_sha)
     )
     if hard_blockers:
         LOGGER.info("PR #402 finalization blocked by %d criterion/criteria", len(hard_blockers))

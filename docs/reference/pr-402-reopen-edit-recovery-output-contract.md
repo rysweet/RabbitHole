@@ -20,9 +20,9 @@ Use it with
 
 ## Contract
 
-The PR 402 recovery path is a workflow output contract, not a new archive IO
-feature. It recovers a default-workflow implementation step that produced no file
-changes by requiring one of two explicit outcomes:
+The PR 402 recovery path is a workflow output contract, not a new project
+archive behavior feature. It recovers a default-workflow implementation step
+that produced no file changes by requiring one of two explicit outcomes:
 
 | Outcome | Required output |
 | --- | --- |
@@ -77,7 +77,7 @@ git fetch origin --prune
 ```
 
 Collect exact-head evidence with read-only git and GitHub inspection plus focused
-archive IO validation:
+project archive reopen/edit validation:
 
 ```bash
 local_head="$(git rev-parse HEAD)"
@@ -99,8 +99,8 @@ Inspect PR checks:
 gh pr checks 402
 ```
 
-The recovery output may cite the PR checks as green only when these checks are
-successful at the exact current PR head:
+The recovery output may cite the PR checks as green only when the full expected
+check set is present, completed, and successful at the exact current PR head:
 
 ```text
 GitGuardian Security Checks
@@ -114,6 +114,11 @@ If GitHub or `gh` evidence is unavailable because of authentication, rate limits
 network errors, unavailable fields, pending checks, or stale PR metadata, report
 `NOT_MERGE_READY`. Do not convert a service failure into `NO_OP_GUARD`.
 
+When updating the PR body evidence block, use affirmative current-head wording:
+`GitHub checks: green for <current PR head>`. Contradictory wording such as
+`not green`, missing required checks, malformed short SHAs, or any stale
+40-character SHA inside the merge-ready evidence block invalidates readiness.
+
 Run the focused archive reopen/edit characterization:
 
 ```bash
@@ -121,9 +126,12 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn \
   -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=IoUtilitiesTest \
+  -Dtest=org.lgna.project.io.IoUtilitiesTest#savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported \
   test
 ```
+
+Record the focused validation result only with the same 40-character PR head
+that was observed immediately before finalization.
 
 Record no-timeout QA/scenario evidence:
 
@@ -266,8 +274,8 @@ Checks:
 Validation:
   NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am
   -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
-  -Dtest=IoUtilitiesTest test
-Result: passed with exit code 0
+  -Dtest=org.lgna.project.io.IoUtilitiesTest#savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported test
+Result: passed with exit code 0 at <current PR head>
 Runnable QA/scenario evidence:
   NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
   exit 0 at <current PR head>; no timeout wrappers

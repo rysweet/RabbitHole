@@ -85,6 +85,7 @@ def finalization_snapshot(
     checks: list[dict[str, str]] | None = None,
     validation_command: str = EXPECTED_VALIDATION_COMMAND,
     validation_exit_code: int = 0,
+    validation_head: str = HEAD_SHA,
 ) -> dict:
     return {
         "prNumber": 402,
@@ -101,6 +102,7 @@ def finalization_snapshot(
                 "savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported"
             ),
             "tweedleLangInitialized": True,
+            "validationHeadSha": validation_head,
         },
         "scope": "evidence-only",
     }
@@ -158,6 +160,18 @@ class Pr402FinalizationUnitContractTest(unittest.TestCase):
             self.module.evaluate_checks(HEAD_SHA, HEAD_SHA, pending_checks),
         )
 
+        arbitrary_single_check = [
+            {
+                "name": "Unrequired Check",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+            }
+        ]
+        self.assertIn(
+            "github-checks-missing-required",
+            self.module.evaluate_checks(HEAD_SHA, HEAD_SHA, arbitrary_single_check),
+        )
+
     def test_pr_body_requires_current_head_green_checks_and_focused_validation(self) -> None:
         self.assertEqual(
             [],
@@ -185,9 +199,25 @@ class Pr402FinalizationUnitContractTest(unittest.TestCase):
             ),
         )
         self.assertIn(
+            "pr-body-checks-not-tied-to-head",
+            self.module.evaluate_pr_body(
+                current_pr_body(checks_line=f"- GitHub checks: not green for `{HEAD_SHA}`"),
+                HEAD_SHA,
+                EXPECTED_VALIDATION_COMMAND,
+            ),
+        )
+        self.assertIn(
             "pr-body-missing-focused-validation",
             self.module.evaluate_pr_body(
                 current_pr_body(command=CLASS_WIDE_VALIDATION_COMMAND),
+                HEAD_SHA,
+                EXPECTED_VALIDATION_COMMAND,
+            ),
+        )
+        self.assertIn(
+            "pr-body-stale-head",
+            self.module.evaluate_pr_body(
+                current_pr_body(extra_line=f"- Previous PR head: `{STALE_HEAD_SHA}`"),
                 HEAD_SHA,
                 EXPECTED_VALIDATION_COMMAND,
             ),
@@ -204,28 +234,41 @@ class Pr402FinalizationUnitContractTest(unittest.TestCase):
     def test_validation_result_requires_tweedle_init_exact_command_and_success(self) -> None:
         self.assertEqual(
             [],
-            self.module.evaluate_validation(finalization_snapshot()["validation"]),
+            self.module.evaluate_validation(finalization_snapshot()["validation"], HEAD_SHA),
         )
 
         missing_tweedle = finalization_snapshot()["validation"]
         missing_tweedle["tweedleLangInitialized"] = False
         self.assertIn(
             "tweedle-lang-not-initialized",
-            self.module.evaluate_validation(missing_tweedle),
+            self.module.evaluate_validation(missing_tweedle, HEAD_SHA),
         )
 
         broad_selector = finalization_snapshot()["validation"]
         broad_selector["command"] = CLASS_WIDE_VALIDATION_COMMAND
         self.assertIn(
             "focused-validation-command-mismatch",
-            self.module.evaluate_validation(broad_selector),
+            self.module.evaluate_validation(broad_selector, HEAD_SHA),
         )
 
         failed_validation = finalization_snapshot()["validation"]
         failed_validation["exitCode"] = 1
         self.assertIn(
             "focused-validation-failed",
-            self.module.evaluate_validation(failed_validation),
+            self.module.evaluate_validation(failed_validation, HEAD_SHA),
+        )
+
+        missing_validation_head = finalization_snapshot()["validation"]
+        missing_validation_head.pop("validationHeadSha")
+        self.assertIn(
+            "invalid-validation-head-sha",
+            self.module.evaluate_validation(missing_validation_head, HEAD_SHA),
+        )
+
+        stale_validation_head = finalization_snapshot(validation_head=STALE_HEAD_SHA)["validation"]
+        self.assertIn(
+            "focused-validation-stale-head",
+            self.module.evaluate_validation(stale_validation_head, HEAD_SHA),
         )
 
 
@@ -272,6 +315,74 @@ class Pr402FinalizationWorkflowContractTest(unittest.TestCase):
         self.assertEqual("NOT_MERGE_READY", result["status"])
         self.assertFalse(result["updatePrBody"])
         self.assertIn("pr-head-changed-during-finalization", result["blockers"])
+        self.assertNotIn("prBodyPatch", result)
+
+    def test_untrusted_green_check_subset_blocks_noop(self) -> None:
+        result = self.module.decide_finalization(
+            finalization_snapshot(
+                checks=[
+                    {
+                        "name": "Unrequired Check",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                    }
+                ]
+            )
+        )
+
+        self.assertEqual("NOT_MERGE_READY", result["status"])
+        self.assertFalse(result["updatePrBody"])
+        self.assertIn("github-checks-missing-required", result["blockers"])
+
+    def test_stale_validation_head_blocks_noop(self) -> None:
+        result = self.module.decide_finalization(
+            finalization_snapshot(validation_head=STALE_HEAD_SHA)
+        )
+
+        self.assertEqual("NOT_MERGE_READY", result["status"])
+        self.assertFalse(result["updatePrBody"])
+        self.assertIn("focused-validation-stale-head", result["blockers"])
+
+    def test_top_level_validation_head_is_accepted_for_snapshot_compatibility(self) -> None:
+        snapshot = finalization_snapshot()
+        snapshot["validation"].pop("validationHeadSha")
+        snapshot["validationHeadSha"] = HEAD_SHA
+
+        result = self.module.decide_finalization(snapshot)
+
+        self.assertEqual("NO_OP_GUARD", result["status"])
+        self.assertFalse(result["updatePrBody"])
+
+    def test_contradictory_body_check_evidence_is_refreshed_not_nooped(self) -> None:
+        result = self.module.decide_finalization(
+            finalization_snapshot(
+                pr_body=current_pr_body(
+                    checks_line=f"- GitHub checks: not green for `{HEAD_SHA}`"
+                )
+            )
+        )
+
+        self.assertEqual("UPDATE_PR_BODY", result["status"])
+        self.assertTrue(result["updatePrBody"])
+        self.assertIn("pr-body-checks-not-tied-to-head", result["bodyEvidenceBlockers"])
+
+    def test_malformed_head_sha_blocks_noop_and_body_update(self) -> None:
+        result = self.module.decide_finalization(
+            finalization_snapshot(
+                observed_head="abc123",
+                reread_head="abc123",
+                checks_head="abc123",
+                validation_head="abc123",
+                pr_body=current_pr_body("abc123"),
+            )
+        )
+
+        self.assertEqual("NOT_MERGE_READY", result["status"])
+        self.assertFalse(result["updatePrBody"])
+        self.assertIn("invalid-observed-head-sha", result["blockers"])
+        self.assertIn("invalid-reread-head-sha", result["blockers"])
+        self.assertIn("invalid-checks-head-sha", result["blockers"])
+        self.assertIn("invalid-validation-head-sha", result["blockers"])
         self.assertNotIn("prBodyPatch", result)
 
     def test_unavailable_github_checks_are_reported_not_nooped(self) -> None:
