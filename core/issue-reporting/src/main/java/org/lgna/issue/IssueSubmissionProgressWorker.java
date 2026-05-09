@@ -69,21 +69,25 @@ public class IssueSubmissionProgressWorker extends WorkerWithProgress<Boolean, S
   }
 
   protected Boolean doInternal_onBackgroundThread(Issue.Builder issueBuilder) throws Exception {
-    this.publish("issueBuilder: " + issueBuilder);
-    this.publish("attach project: " + this.isProjectAttachmentDesired);
+    this.publishProgressMessage("issueBuilder: " + issueBuilder);
+    this.publishProgressMessage("attach project: " + this.isProjectAttachmentDesired);
     for (int i = 0; i < 20; i++) {
-      this.publish(Integer.toString(i));
+      this.publishProgressMessage(Integer.toString(i));
       Thread.sleep(200);
     }
     return true;
   }
 
+  protected void publishProgressMessage(String message) {
+    this.publish(message);
+  }
+
   @Override
   protected final Boolean do_onBackgroundThread() throws Exception {
-    this.publish(START_MESSAGE);
+    this.publishProgressMessage(START_MESSAGE);
     Issue.Builder issueBuilder = this.owner.createIssueBuilder();
     boolean rv = this.doInternal_onBackgroundThread(issueBuilder);
-    this.publish(END_MESSAGE);
+    this.publishProgressMessage(END_MESSAGE);
     return rv;
   }
 
