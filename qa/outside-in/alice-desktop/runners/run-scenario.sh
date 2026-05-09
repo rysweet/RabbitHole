@@ -3862,8 +3862,8 @@ PY
     if validate_run_window_evidence "$run_window_artifact" > "$run_dir/run-window-validation.log" 2>&1; then
       run_window_validation_status=created
     else
-      run_window_validation_status=failed
       run_window_validation_exit=$?
+      run_window_validation_status=failed
       if [ "$exit_code" -eq 0 ]; then
         exit_code=$run_window_validation_exit
       fi
