@@ -1,208 +1,259 @@
-# Generated Story API Listener Runtime Dispatch Characterization
+# Headless Runtime Dispatch and Generated Story API Listener Source Characterization
 
-This reference defines the bounded, headless NetBeans characterization target
-for generated Story API listener wiring. The feature must prove that a synthetic
-Alice project can generate scene listener registration source, compile that
-generated Java, load the generated scene, invoke listener registration, and
-observe one callback through the existing runtime scene activation dispatch seam.
+This reference defines the bounded headless characterization lane for runtime
+event dispatch and generated Story API listener source. It covers two evidence
+targets, implemented by three required executable test methods:
 
-The feature is an evidence lane for listener wiring only. It does not launch the
-Alice desktop, run full world playback, assert visible correctness, grade learner
-work, or claim export completion.
+1. `core/ast` proves that a small static story method dispatches virtual-machine
+   statement events to registered listeners without desktop startup.
+2. `netbeans` proves that generated Story API listener registration source is
+   emitted, compiles, registers a generated listener, and observes one scene
+   activation callback through the existing headless runtime dispatch seam.
+
+The lane does not launch Alice desktop, execute full world playback, assert
+visible correctness, grade learner work, complete Save workflows, or provide
+full UI automation evidence.
 
 ## Contents
 
 - [Feature intent](#feature-intent)
-- [Generated-source contract](#generated-source-contract)
-- [Headless dispatch contract](#headless-dispatch-contract)
+- [Core AST virtual-machine event contract](#core-ast-virtual-machine-event-contract)
+- [Generated listener source contract](#generated-listener-source-contract)
+- [Headless scene activation dispatch contract](#headless-scene-activation-dispatch-contract)
 - [Executable characterization](#executable-characterization)
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
 - [Examples](#examples)
-- [Tutorial: review listener runtime dispatch](#tutorial-review-listener-runtime-dispatch)
+- [Tutorial: review the characterization lane](#tutorial-review-the-characterization-lane)
 - [Compatibility rules](#compatibility-rules)
 - [Limits](#limits)
 
 ## Feature intent
 
-The feature belongs to the NetBeans generated-source test suite:
+The feature protects current Alice behavior with deterministic, no-Sims tests.
+It is intentionally narrower than desktop playback.
+
+The `core/ast` target builds a static `UserMethod` containing a `BlockStatement`
+and `Comment`, invokes it through `ReleaseVirtualMachine`, and observes
+`VirtualMachineListener` callbacks in execution order. It also proves that
+removing the listener stops future event delivery.
+
+The `netbeans` target builds a synthetic Alice project in memory, writes it to a
+temporary `.a3p`, generates Java source with `ProjectCodeGenerator`, compiles the
+generated files, loads the generated scene, registers the generated scene
+activation listener, fires `EventManager.sceneActivated()`, and observes the
+generated listener callback with a bounded latch.
+
+Evidence for this lane must come from existing headless runtime seams and
+generated source. It must not depend on JavaFX startup, Swing windows, NetBeans
+UI, exported launcher execution, full playback, visual rendering, grading, Save
+completion, or real project payloads.
+
+## Core AST virtual-machine event contract
+
+The `core/ast` characterization target is:
+
+```text
+core/ast/src/test/java/org/lgna/project/virtualmachine/VirtualMachineHeadlessRuntimeEventTest.java
+```
+
+It protects the headless virtual-machine listener dispatch contract for a small
+story method body.
+
+| Runtime surface | Contract |
+| --- | --- |
+| `ReleaseVirtualMachine` | Invokes a static story method without gallery assets, JavaFX, Swing, or scene rendering. |
+| `VirtualMachineListener` | Receives statement execution callbacks for the invoked AST body while registered. |
+| `BlockStatement` | Emits `statementExecuting` before contained statements and `statementExecuted` after them. |
+| `Comment` | Emits statement execution callbacks as a simple deterministic child statement. |
+| `removeVirtualMachineListener(...)` | Stops subsequent listener delivery for the removed listener. |
+
+The accepted event sequence is:
+
+```text
+executing:BlockStatement
+executing:Comment
+executed:Comment
+executed:BlockStatement
+```
+
+After listener removal, invoking the same static story method again must not add
+new entries to the recording listener. This proves listener registration and
+unregistration behavior without broadening the lane into world playback.
+
+## Generated listener source contract
+
+The generated-source characterization target is:
 
 ```text
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
 ```
 
-It covers one narrow behavior slice:
-
-1. Build a deterministic synthetic `Program` and `Scene` AST in memory.
-2. Write the project to a temporary `.a3p` archive with `IoUtilities.writeProject`.
-3. Generate Java source with `ProjectCodeGenerator.generateCode(..., false)`.
-4. Assert that generated `Scene.java` contains listener registration source.
-5. Compile all generated Java source files with the JDK compiler.
-6. Load the generated scene class through the test class loader.
-7. Invoke the generated listener registration path through explicit reflection
-   targets.
-8. Fire `EventManager.sceneActivated()`, the existing headless runtime scene
-   activation seam.
-9. Assert that the generated listener observes the runtime callback, callback
-   count, and `SceneActivationEvent` payload from that same dispatch with a
-   bounded `CountDownLatch`.
-
-This is generated listener registration plus headless runtime dispatch
-characterization. Passing evidence must come from generated source, generated
-Java compilation, explicit listener registration, and the existing scene
-activation dispatch path. It must not start Alice, JavaFX, Swing, NetBeans UI,
-exported launcher code, a desktop event loop, full world playback, grading, or
-visible rendering checks.
-
-## Generated-source contract
-
-The characterization protects source emitted for scene listener registration
-calls on `SScene`.
+The source-generation contract protects listener registration emitted for a
+synthetic `Scene` type assignable to `org.lgna.story.SScene`.
 
 | Synthetic AST call | Required generated source |
 | --- | --- |
-| `SScene.addTimeListener(TimeListener, Number, AddTimeListener.Detail...)` with a fixture listener and interval `2` | `this.addTimeListener(...,2);` shape with generated listener registration on `this` |
-| `SScene.addSceneActivationListener(SceneActivationListener)` with a fixture listener | `this.addSceneActivationListener(...);` shape with generated listener registration on `this` |
+| `SScene.addTimeListener(TimeListener, Number, AddTimeListener.Detail...)` with the source-only fixture argument and interval `2` | `Scene.java` contains `this.addTimeListener(null,2);`. |
+| `SScene.addSceneActivationListener(SceneActivationListener)` with the source-only fixture argument | `Scene.java` contains `this.addSceneActivationListener(null);`. |
+| `SScene.addSceneActivationListener(SceneActivationListener)` with the runtime-dispatch fixture listener | `Scene.java` contains `this.addSceneActivationListener((SceneActivationEvent p0) ->` and the generated lambda calls `ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationRuntimeDispatch(p0);`. |
 
-Scene activation is the runtime dispatch seam for this lane. Time listener source
-may remain in the generated fixture to preserve the existing source-generation
-contract, but the headless runtime assertion observes scene activation dispatch.
+The synthetic project must be built in memory and written only to temporary test
+files. `ProjectCodeGenerator.generateCode(..., false)` emits the Java source.
+The characterization then verifies the expected listener registration source and
+compiles every generated `.java` file with the JDK compiler.
 
-The calls are placed in a synthetic `Scene` user type assignable to
-`org.lgna.story.SScene`. The fixture method is named `handleActiveChanged`,
-accepts `Boolean isActive` and `Integer activationCount`, and contains generated
-listener registration code. The scene type is reachable through a `Program` field
-so `ProjectCodeGenerator` emits both `Program.java` and `Scene.java`.
+Generated listener source must remain textually recognizable, compiler-valid,
+and usable by the headless dispatch seam. A failure means generated Story API
+listener source changed, stopped emitting the expected registration path, no
+longer compiles against the current Story API classpath, or no longer connects to
+the expected runtime callback path.
 
-The accepted output is textually recognizable, Java-compiler valid, and usable by
-the headless dispatch seam. A test failure means generated Story API listener
-source changed, stopped emitting the listener registration path, no longer
-compiles against the current Story API classpath, or no longer participates in
-the expected scene activation callback path.
+## Headless scene activation dispatch contract
 
-## Headless dispatch contract
-
-The runtime portion uses existing Alice runtime types only. It does not add a
-test-only dispatch bypass or production behavior.
+Scene activation is the runtime dispatch seam for generated Story API listener
+participation.
 
 | Runtime surface | Contract |
 | --- | --- |
 | `EventManager.sceneActivated()` | Fires the existing headless scene activation dispatch path used by Story API runtime code. |
-| `SceneActivationHandler` | Adapts scene activation events from the runtime dispatch path to registered Story API scene activation listeners. |
-| `AbstractEventHandler` | Provides the event handler base behavior used by the runtime dispatch path. |
-| `ComponentExecutor` | Delivers callbacks asynchronously, so validation must wait with a bounded timeout. |
-| `CountDownLatch` | Observes callback delivery without sleeping indefinitely or depending on timing-only assertions. |
+| `SceneActivationHandler` | Adapts runtime scene activation events to registered Story API scene activation listeners. |
+| `AbstractEventHandler` | Provides event handler base behavior for the dispatch path. |
+| `ComponentExecutor` | May deliver callbacks asynchronously, so validation waits with a bounded timeout. |
+| `CountDownLatch` | Observes callback delivery without unbounded waits or timing-only assertions. |
 
-The generated listener must record enough callback evidence to prove dispatch
-participation:
+The generated listener registration path must be invoked before dispatch. The
+test must assert that registration alone has not already recorded a payload or
+released the latch. After `EventManager.sceneActivated()` fires, the generated
+listener must record exactly one callback and a `SceneActivationEvent` payload
+from that dispatch.
 
-1. The callback count reaches the expected value.
-2. The latch is released before the bounded timeout.
-3. The callback receives a `SceneActivationEvent` payload object from the same
-   `EventManager.sceneActivated()` dispatch that releases the latch.
-4. Payload assertions stay within the existing event type. The current
-   `SceneActivationEvent` exposes no scene-specific public properties, so the
-   required payload assertion is object delivery and type.
-5. Listener registration alone does not synthesize a callback or payload before
-   the runtime dispatch seam fires.
-
-A direct `SceneActivationHandler.handleEventFire(...)` invocation may be useful
-as a lower-level helper characterization, but it does not satisfy this feature's
-runtime dispatch contract. Count, latch, and payload evidence for this lane must
-all be observed from the generated listener after `EventManager.sceneActivated()`
-is fired.
-
-Cleanup is explicit. Registered listener state must not leak into other tests,
-and executor-backed asynchronous work must be allowed to complete before the
-temporary class loader and generated classes are discarded.
+A direct `SceneActivationHandler.handleEventFire(...)` call may characterize a
+lower-level helper, but it does not satisfy this feature. The count, latch, and
+payload evidence for this lane must be observed from the generated listener
+after `EventManager.sceneActivated()` fires.
 
 ## Executable characterization
 
-The target executable characterizations are:
+The feature has two evidence targets: the `core/ast` runtime listener dispatch
+target and the `netbeans` generated-source/runtime-dispatch target. Those
+targets are represented by these three required executable test methods:
 
 ```text
+VirtualMachineHeadlessRuntimeEventTest.headlessStaticStoryMethodNotifiesListenerAroundBlockAndCommentStatements
 ProjectCodeGeneratorStoryApiGeneratedSourceTest.generatedSyntheticSceneListenerRegistrationSourceCompiles
 ProjectCodeGeneratorStoryApiGeneratedSourceTest.generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch
 ```
 
-`generatedSyntheticSceneListenerRegistrationSourceCompiles` preserves the
-generated-source and compiler-validity contract. It succeeds when:
+`headlessStaticStoryMethodNotifiesListenerAroundBlockAndCommentStatements`
+succeeds when:
 
-1. `Scene.java` is generated from the synthetic project.
+1. A static `UserMethod` containing a `BlockStatement` and `Comment` runs through
+   `ReleaseVirtualMachine`.
+2. The registered `VirtualMachineListener` records the expected before/after
+   statement event sequence.
+3. Removing the listener prevents additional event recording on the next
+   invocation.
+
+`generatedSyntheticSceneListenerRegistrationSourceCompiles` succeeds when:
+
+1. A deterministic synthetic project generates `Scene.java`.
 2. `Scene.java` contains the expected listener registration calls.
-3. Every generated `.java` file in the temporary source directory compiles.
+3. Every generated `.java` file compiles.
 
-`generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch` is the
-runtime feature test. It succeeds when:
+`generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch` succeeds
+when:
 
 1. Generated source is compiled and loaded by the test.
-2. The generated scene or generated listener registration method is invoked
+2. The generated scene and generated listener registration path are invoked
    through explicit reflection targets.
-3. `EventManager.sceneActivated()` is fired for the generated/headless scene.
-4. The generated scene activation listener callback captures the delivered
-   `SceneActivationEvent` object and releases a `CountDownLatch` before the
-   bounded timeout.
-5. The observed callback count and payload type assertions match the expected
-   single scene activation dispatch.
-6. Pre-dispatch assertions confirm generated registration has not already
-   released the latch or recorded a runtime payload.
+3. Pre-dispatch assertions confirm registration has not synthesized a runtime
+   payload or released the latch.
+4. `EventManager.sceneActivated()` fires for the generated headless scene.
+5. The generated listener callback captures one `SceneActivationEvent` payload
+   and releases a `CountDownLatch` before the bounded timeout.
 
-The executable test intentionally keeps callback count and payload assertions in
-the same `EventManager.sceneActivated()` dispatch path. Direct
-`SceneActivationHandler.handleEventFire(...)` payload checks are not accepted as a
-substitute because they do not prove generated listener participation in the
-runtime dispatch seam.
-
-The tests create only temporary files. The generated project archive, source
-directory, and compiled classes directory are managed by JUnit's temporary
-folder rule and are not persisted in the repository.
+The executable tests create only temporary files. Generated project archives,
+source directories, and class directories are managed by JUnit temporary
+locations and are not persisted in the repository.
 
 ## API reference
 
-This feature adds no public Java API and should not require production generator
-or runtime API changes. The stable surface is the behavior of existing Alice APIs
-when exercised by generated Story API source and test helpers.
+This feature adds no public Java API. It characterizes existing runtime and
+generator behavior.
 
 | Surface | Contract |
 | --- | --- |
-| `ProjectCodeGenerator.generateCode(File, File, ..., false)` | Generates Java source for the synthetic Alice project while skipping NetBeans formatting in the test helper. |
-| `IoUtilities.writeProject(File, Project)` | Writes the deterministic synthetic AST fixture to a temporary `.a3p` input. |
-| `AstUtilities.lookupMethod(...)` | Resolves the Story API methods used by the fixture instead of hard-coding generated Java text as input. |
-| `SScene.addTimeListener(TimeListener, Number, AddTimeListener.Detail...)` | Remains source-generatable as a scene instance call with listener, interval, and optional detail arguments. |
-| `SScene.addSceneActivationListener(SceneActivationListener)` | Remains source-generatable as a scene instance call with the listener argument and participates in the headless scene activation seam after registration. |
-| `EventManager.sceneActivated()` | Provides the runtime dispatch seam for the characterization without desktop startup or full playback. |
+| `ReleaseVirtualMachine.ENTRY_POINT_invoke(...)` | Executes the static story method used by the headless `core/ast` characterization. |
+| `ReleaseVirtualMachine.addVirtualMachineListener(...)` | Registers the listener that observes statement execution events. |
+| `ReleaseVirtualMachine.removeVirtualMachineListener(...)` | Removes the listener and prevents additional callback recording. |
+| `VirtualMachineListener.statementExecuting(...)` | Receives before-execution statement events for the synthetic method body. |
+| `VirtualMachineListener.statementExecuted(...)` | Receives after-execution statement events for the synthetic method body. |
+| `IoUtilities.writeProject(File, Project)` | Writes the deterministic synthetic project to a temporary `.a3p` input for generated-source tests. |
+| `ProjectCodeGenerator.generateCode(File, File, ..., false)` | Generates Java source for the temporary synthetic Alice project while skipping NetBeans formatting in the test helper. |
+| `AstUtilities.lookupMethod(...)` | Resolves Story API methods used by the fixture instead of hard-coding generated Java as input. |
+| `SScene.addTimeListener(...)` | Remains source-generatable as a scene instance listener registration call. |
+| `SScene.addSceneActivationListener(...)` | Remains source-generatable and participates in the headless scene activation seam after registration. |
+| `EventManager.sceneActivated()` | Provides the generated-listener runtime dispatch seam without desktop startup or full playback. |
 | `CountDownLatch.await(timeout, unit)` | Bounds asynchronous callback validation so the test fails instead of hanging. |
 
-Production generator or runtime behavior should not change for this evidence lane
-unless implementation exposes a directly related defect. In that case the
-behavior change must be documented and covered by focused characterization tests.
+Production generator or runtime behavior should not change for this evidence
+lane unless implementation exposes a directly related defect. Any behavior
+change must be covered by focused characterization tests and documented as a
+separate compatibility decision.
 
 ## Configuration
 
-Run commands from the repository root. Initialize the Tweedle grammar submodule
-before broad Maven validation:
+Run commands from the repository root resolved by Git:
+
+```bash
+WORKTREE_ROOT="$(git rev-parse --show-toplevel)"
+git -C "$WORKTREE_ROOT" branch --show-current
+```
+
+If this lane adds a Python TDD/no-op guard, the concrete guard path is
+`tests/test_runtime_event_dispatch_docs_contract.py`. That guard must fail
+closed when the checked path is not inside a Git worktree. It must use
+`git rev-parse --show-toplevel` to resolve the actual linked-worktree root,
+verify the expected branch, and run status or no-op checks with
+`git -C "$WORKTREE_ROOT" ...`. It must not silently fall back to a parent
+directory, a non-git path, or an unlinked workspace.
+
+Initialize the Tweedle grammar submodule before Maven validation:
 
 ```bash
 git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-If a surrounding Node-based orchestrator runs the lane, keep the saved memory
-setting. Maven does not consume this setting directly, but the automation wrapper
-does:
+Use the saved Node memory setting when running automation wrappers around Maven:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
 ```
 
-No Sims, nonfree modules, Git LFS files, GUI display, Xvfb, network access,
-external Alice project payloads, desktop runtime, or exported launcher execution
-are required for this characterization.
+No Sims payloads, Git LFS assets, GUI display, Xvfb, desktop runtime, exported
+launcher execution, external Alice project payloads, or Save workflow automation
+are required for this characterization. The characterization itself performs no
+network I/O; Maven still follows the normal repository dependency
+resolution/cache behavior for the checkout.
 
 ## Validation commands
 
-Run the focused NetBeans characterization:
+Run the focused `core/ast` headless runtime dispatch characterization:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest \
+  test
+```
+
+Run the focused NetBeans generated listener source and dispatch
+characterization:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -214,7 +265,7 @@ mvn -pl netbeans -am \
 ```
 
 When Maven reports missing generated Tweedle parser classes, check the submodule
-before changing generated-source tests:
+before changing the characterization:
 
 ```bash
 git submodule status tweedle-lang
@@ -223,24 +274,53 @@ test -d tweedle-lang/Grammar
 
 ## Examples
 
+### Virtual-machine event sequence
+
+The `core/ast` test records this sequence for a static story method whose body is
+a block containing one comment:
+
+```text
+executing:BlockStatement
+executing:Comment
+executed:Comment
+executed:BlockStatement
+```
+
+This proves statement listener dispatch for the small method body only. It is
+not evidence that a rendered world played correctly.
+
 ### Expected generated `Scene.java` listener registration shape
 
-The characterization accepts generated listener registration source shaped like:
+The source-only generated-listener characterization accepts listener
+registration shaped exactly like the current executable assertions:
 
 ```java
-void handleActiveChanged(Boolean isActive, Integer activationCount) {
-  this.addTimeListener(timeListener, 2);
-  this.addSceneActivationListener(sceneActivationListener);
+void handleActiveChanged(Boolean isActive,Integer activationCount) {
+  this.addTimeListener(null,2);
+  this.addSceneActivationListener(null);
 }
 ```
 
-The listener variables are fixture-controlled generated-source inputs. They are
-not external scripts, user-supplied class names, file paths, or production API
-extensions.
+The source-only fixture intentionally uses `null` listener arguments so the
+assertion stays narrow: it proves the generator emits the scene instance
+registration calls and that the generated Java still compiles. It does not prove
+runtime listener dispatch.
 
-### Expected headless dispatch observation
+The runtime-dispatch fixture uses a generated lambda instead:
 
-The runtime characterization follows this shape:
+```java
+this.addSceneActivationListener((SceneActivationEvent p0) ->
+    ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationRuntimeDispatch(p0));
+```
+
+That lambda is the bridge from generated source to the bounded headless runtime
+dispatch assertion. The listener values are fixture-controlled generated-source
+inputs. They are not external scripts, user-supplied class names, production API
+extensions, or desktop automation hooks.
+
+### Expected headless scene activation observation
+
+The generated-listener runtime characterization follows this shape:
 
 ```java
 CountDownLatch callbackObserved = new CountDownLatch(1);
@@ -257,46 +337,66 @@ assertEquals(1, observedCallbackCount.get());
 assertTrue(observedEvent.get() instanceof SceneActivationEvent);
 ```
 
-The example shows the contract, not a new public API. Implementations should use
-the exact existing method signatures and payload types exposed by the runtime
+The example describes the contract, not a new public API. Implementations should
+use the exact existing method signatures and payload types exposed by the runtime
 seam.
 
 ### Review checklist
 
-Use this checklist when reviewing changes that affect generated Story API
-listener wiring:
-
 | Question | Accepted answer |
 | --- | --- |
-| Does the fixture use synthetic AST input? | Yes, the project is built in memory and written to a temporary `.a3p`. |
+| Does `core/ast` run without desktop startup? | Yes, it invokes a static AST method through `ReleaseVirtualMachine`. |
+| Does listener removal stop subsequent event recording? | Yes, the second invocation leaves the recorded event list unchanged. |
+| Does the generated-source fixture use synthetic AST input? | Yes, the project is built in memory and written to a temporary `.a3p`. |
 | Does generated source include listener registration on `this`? | Yes, `Scene.java` contains the expected listener registration calls. |
 | Does generated Java compile? | Yes, all generated `.java` files compile with the JDK compiler. |
-| Does the runtime assertion use `EventManager.sceneActivated()`? | Yes, dispatch flows through the existing headless runtime seam. |
-| Are count and payload observed from the same runtime dispatch? | Yes, the generated listener callback captures both after `EventManager.sceneActivated()` fires. |
+| Does scene activation evidence use `EventManager.sceneActivated()`? | Yes, dispatch flows through the existing headless runtime seam. |
+| Are count and payload observed from the same runtime dispatch? | Yes, the generated listener callback captures both after `sceneActivated()` fires. |
 | Is callback validation async-safe? | Yes, a bounded `CountDownLatch` observes the callback and fails on timeout. |
-| Does the test launch Alice or a GUI toolkit? | No, it never starts desktop runtime, JavaFX, Swing, NetBeans UI, or a display loop. |
-| Does the test require Sims, LFS, exported projects, or real project payloads? | No, all inputs are deterministic synthetic fixtures. |
+| Does the lane launch Alice or a GUI toolkit? | No, it never starts desktop runtime, JavaFX, Swing, NetBeans UI, or a display loop. |
+| Does the lane require Sims, LFS, exported projects, or real project payloads? | No, all inputs are deterministic synthetic fixtures. |
 
-## Tutorial: review listener runtime dispatch
+## Tutorial: review the characterization lane
 
-Use this flow when changing generated-source behavior near Story API listener
-registration or scene activation dispatch.
+Use this flow when changing virtual-machine listener dispatch, generated Story
+API listener source, or scene activation dispatch.
 
-### Step 1: Start from a no-Sims checkout
+### Step 1: Resolve the linked worktree
 
-From the repository root:
+From the checkout you intend to validate:
 
 ```bash
-git submodule update --init tweedle-lang
-test -d tweedle-lang/Grammar
+WORKTREE_ROOT="$(git rev-parse --show-toplevel)"
+git -C "$WORKTREE_ROOT" status --short --branch
 ```
 
-Do not fetch Git LFS assets or Sims payloads for this test. The fixture creates
-the Alice project it needs.
+If Git cannot resolve a worktree root, stop and fix the path. Do not treat a
+non-git directory as clean or no-op.
 
-### Step 2: Run the focused test class
+### Step 2: Initialize required generated grammar inputs
 
-Run:
+```bash
+git -C "$WORKTREE_ROOT" submodule update --init tweedle-lang
+test -d "$WORKTREE_ROOT/tweedle-lang/Grammar"
+```
+
+Do not fetch Sims or Git LFS assets for this lane.
+
+### Step 3: Run the focused `core/ast` dispatch proof
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl core/ast -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest \
+  test
+```
+
+If this fails, inspect listener registration, statement event order, and listener
+removal before changing broader runtime code.
+
+### Step 4: Run the focused generated-listener proof
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -307,30 +407,19 @@ mvn -pl netbeans -am \
   test
 ```
 
-### Step 3: Inspect the generated-source contract first
+If generated-source assertions fail, inspect `Scene.java` first. If compilation
+succeeds but the latch is not released, verify that the generated registration
+method was invoked and that dispatch still flows through
+`EventManager.sceneActivated()`. Do not replace the dispatch proof with direct
+listener invocation.
 
-If source assertions fail, inspect generated `Scene.java` before runtime
-dispatch. A useful fix preserves the listener registration contract or documents
-and tests an intentional compatibility change.
+### Step 5: Keep claims bounded
 
-### Step 4: Inspect registration before dispatch
-
-If compilation succeeds but the latch is not released, verify that the generated
-scene or generated registration method is loaded and invoked through the expected
-reflection targets. Do not replace the dispatch call with direct listener
-invocation or direct `SceneActivationHandler.handleEventFire(...)`; that would
-prove only payload shape, not participation in the runtime dispatch seam.
-
-### Step 5: Keep failures bounded
-
-Use a bounded latch timeout and assert the callback count and
-`SceneActivationEvent` payload after the latch releases. Do not use unbounded
-waits, arbitrary sleeps as the only proof, or desktop playback to make the
-callback happen.
-
-Do not broaden the test into GUI launch, exported project execution, visible
-rendering, grading, or real `.a3p` corpus loading. Those behaviors belong to
-separate lanes.
+Review notes may claim headless virtual-machine listener dispatch,
+compiler-valid generated listener registration source, and one generated scene
+activation listener callback through the headless runtime seam. They must not
+claim desktop runtime execution, full world playback, visible correctness,
+grading, Save completion, exported launcher behavior, or full UI automation.
 
 ## Compatibility rules
 
@@ -338,19 +427,29 @@ Changes in this area must preserve these rules:
 
 | Rule | Reason |
 | --- | --- |
-| Keep the fixture synthetic and deterministic. | The test must run in a normal no-Sims checkout without LFS payloads. |
-| Keep the source assertion narrow. | The characterization protects listener source generation, not wholesale formatting of generated files. |
+| Keep the `core/ast` fixture small and static. | The test protects listener dispatch without needing scene state, gallery assets, or playback. |
+| Assert listener removal behavior. | The lane protects both registration and unregistration boundaries. |
+| Keep generated-source fixtures synthetic and deterministic. | The tests must run in a normal no-Sims checkout without LFS payloads. |
+| Keep source assertions narrow. | The characterization protects listener registration source, not wholesale formatting of generated files. |
 | Compile generated Java after text assertions. | Text presence alone does not prove generated Story API source remains type-correct. |
-| Use the existing scene activation dispatch seam. | The lane should prove runtime participation without adding test-only dispatch bypasses. |
+| Use the existing scene activation dispatch seam. | The lane proves runtime participation without test-only dispatch bypasses. |
 | Validate asynchronous callbacks with a bounded latch. | Dispatch may use executor-backed delivery and must not race or hang CI. |
-| Avoid production rewrites for characterization-only changes. | The lane exists to preserve current Alice 3 behavior unless a defect is directly exposed. |
-| Do not launch desktop, playback, grading, or export paths. | Those claims require separate seams and acceptance evidence. |
+| Resolve guard paths through Git. | No-op or TDD guards must fail closed outside the real linked worktree. |
+| Avoid production rewrites for characterization-only changes. | The lane preserves current Alice behavior unless a directly related defect is exposed. |
+| Do not launch desktop, playback, grading, Save, or export paths. | Those claims require separate evidence lanes. |
 
 ## Limits
 
-This characterization does not prove that Alice desktop playback works, that a
-world renders correctly, that learner work is graded, that exported launchers are
-complete, or that all event ordering cases are correct. It proves only that
-deterministic generated Story API listener registration source compiles and can
-participate in one bounded headless scene activation dispatch through the
-existing runtime seam.
+This characterization does not prove that Alice desktop runtime execution works,
+that a full world plays back correctly, that a scene renders visibly, that
+learner work is graded, that Save completes, that exported launchers run, or that
+full UI automation is correct.
+
+It proves only that:
+
+1. a small static AST method dispatches virtual-machine statement events to a
+   registered listener in headless execution and stops dispatching to that
+   listener after removal;
+2. deterministic generated Story API listener registration source compiles; and
+3. the generated scene activation listener can participate in one bounded
+   headless scene activation dispatch through the existing runtime seam.
