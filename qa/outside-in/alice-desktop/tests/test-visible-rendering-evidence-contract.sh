@@ -32,8 +32,8 @@ import re
 import sys
 
 positive_correctness_patterns = (
-    re.compile(r"\b(proves?|proved|establish(?:es|ed)?|confirms?|validates?|verifies?)\b.{0,80}?\b(visible|visual|rendered|rendering)\b.{0,60}?\b(correct|correctness|correctly|valid|passed)\b"),
-    re.compile(r"\b(visible|visual|rendered|rendering)\b.{0,60}?\b(correct|correctness|correctly)\b.{0,60}?\b(proven|proved|established|confirmed|validated|verified|passed)\b"),
+    re.compile(r"\b(proves?|proved|establish(?:es|ed)?|confirms?|validates?|verifies?)\b.{0,80}?\b(visible|visual|rendered|rendering)\b.{0,60}?\b(correct|correctness|correctly|valid|validity|passed)\b"),
+    re.compile(r"\b(visible|visual|rendered|rendering)\b.{0,60}?\b(correct|correctness|correctly|validity)\b.{0,60}?\b(proven|proved|established|confirmed|validated|verified|passed)\b"),
     re.compile(r"\bvisibly correct\b"),
 )
 negation_markers = (
@@ -97,7 +97,7 @@ def is_negated(sentence):
 
 def key_implies_visible_correctness(key):
     lower = key.lower()
-    return "correct" in lower and any(
+    return ("correct" in lower or "validity" in lower) and any(
         token in lower
         for token in ("visible", "visual", "rendered", "rendering", "world")
     )
@@ -119,6 +119,7 @@ def positive_correctness_value(value):
             "passed",
             "performed",
             "success",
+            "valid",
             "validated",
             "verified",
         }
@@ -152,7 +153,7 @@ def unsupported_claims_document_boundary(value):
 def text_documents_boundary(texts):
     return any(
         ("visible" in sentence or "visual" in sentence or "render" in sentence)
-        and ("correct" in sentence or "correctness" in sentence)
+        and ("correct" in sentence or "correctness" in sentence or "validity" in sentence)
         and is_negated(sentence)
         for text in texts
         for sentence in sentences(text)
@@ -347,6 +348,32 @@ status=$?
 assert_failure "$status" "invalid overclaim fixture is rejected by the nonclaim contract"
 assert_contains "$INVALID_OVERCLAIM_FIXTURE" '"expectedContractResult": "rejected"' "invalid overclaim fixture is explicitly marked as a negative fixture"
 assert_contains "$tmp_root/invalid-overclaim-fixture.err" 'visibleRenderingCorrectnessEstablished=false|correctnessCheck must be not-performed|positive visible-correctness claims' "invalid overclaim fixture fails for visible-correctness overclaim semantics"
+
+validity_overclaim_payload="$tmp_root/invalid-validity-overclaim-fixture.json"
+python3 - "$validity_overclaim_payload" <<'PY'
+import json
+import sys
+
+payload = {
+    "schemaVersion": 1,
+    "status": "observed",
+    "visibleRenderingCorrectnessEstablished": False,
+    "renderArtifacts": [{"kind": "screenshot", "supports": "artifact-production-only"}],
+    "limitations": ["Render output proves visual validity."],
+    "unsupportedClaims": ["full-visible-rendering-correctness"],
+}
+with open(sys.argv[1], "w", encoding="utf-8") as output:
+    json.dump(payload, output, indent=2, sort_keys=True)
+    output.write("\n")
+PY
+status=$?
+assert_success "$status" "validity-overclaim fixture is wrapped as render-evidence contract input"
+assert_render_nonclaim_json "$validity_overclaim_payload" "invalid validity-overclaim fixture" \
+  >"$tmp_root/invalid-validity-overclaim-fixture.out" \
+  2>"$tmp_root/invalid-validity-overclaim-fixture.err"
+status=$?
+assert_failure "$status" "visual-validity wording is rejected as a visible-correctness overclaim"
+assert_contains "$tmp_root/invalid-validity-overclaim-fixture.err" 'positive visible-correctness claims' "validity-overclaim fixture fails for the visual validity overclaim"
 
 unobserved_correctness_status_payload="$tmp_root/invalid-unobserved-correctness-status-fixture.json"
 python3 - "$unobserved_correctness_status_payload" <<'PY'
