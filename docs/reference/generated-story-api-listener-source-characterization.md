@@ -30,7 +30,6 @@ Tweedle/player decoding or full first-lesson completion.
 - [API reference](#api-reference)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
-- [Examples](#examples)
 - [Tutorial: review the characterization lane](#tutorial-review-the-characterization-lane)
 - [Review evidence handoff](#review-evidence-handoff)
 - [Generated-source specimen reference](#generated-source-specimen-reference)
