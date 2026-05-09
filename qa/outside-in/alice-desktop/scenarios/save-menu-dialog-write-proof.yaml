@@ -29,7 +29,6 @@ automation:
     - -am
     - -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest
     - test
-  timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:

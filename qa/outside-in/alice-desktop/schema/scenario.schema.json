@@ -81,7 +81,6 @@
       "required": [
         "cwd",
         "argv",
-        "timeoutSeconds",
         "readyWaitSeconds"
       ],
       "properties": {
@@ -719,6 +718,38 @@
         "required": [
           "automation"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "workflow": {
+            "const": "save-menu-dialog-write-proof"
+          }
+        },
+        "required": [
+          "workflow"
+        ]
+      },
+      "then": {
+        "properties": {
+          "automation": {
+            "not": {
+              "required": [
+                "timeoutSeconds"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "automation": {
+            "required": [
+              "timeoutSeconds"
+            ]
+          }
+        }
       }
     }
   ],

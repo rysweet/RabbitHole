@@ -1,0 +1,40 @@
+{
+  "blocker": {
+    "kind": "dialog_not_observed",
+    "observed": "Robot clicked the Save menu item, but no live Swing JFileChooser was observed.",
+    "required": "A rendered Save dialog opened by the Robot-clicked production Save menu item."
+  },
+  "control": {
+    "approvedSelection": false,
+    "selectedPathSet": false
+  },
+  "dialog": {
+    "dialogShowing": false,
+    "dialogType": "Swing JFileChooser",
+    "saveDialogObserved": false
+  },
+  "generatedAtUtc": "2099-01-01T00:00:00Z",
+  "menu": {
+    "fileMenuOpened": true,
+    "saveActionIdentityMatched": true,
+    "saveMenuItemInvoked": true
+  },
+  "readback": {
+    "marker": "robotSaveMenuRoundTripMarker",
+    "markerPresent": false,
+    "projectReadable": false
+  },
+  "requiresNextEvidence": [
+    "Run the Save proof under a desktop session where Robot can open the production Save dialog."
+  ],
+  "runId": "contract-run-1",
+  "scenario": "alice-desktop-save-menu-dialog-write-proof",
+  "schemaVersion": "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1",
+  "status": "blocked",
+  "workflow": "save-menu-dialog-write-proof",
+  "write": {
+    "fileWritten": false,
+    "outputPath": "projects/robot-save-menu-proof.a3p",
+    "outputSizeBytes": 0
+  }
+}

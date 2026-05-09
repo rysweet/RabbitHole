@@ -2,21 +2,23 @@
 
 This reference documents the implemented Alice desktop outside-in QA scenario
 contract for post-open runtime/display accessibility evidence, controlled-display
-screenshot-consistency evidence, Run-window world-canvas pixel sampling target
-readiness, and the fail-closed pixel-sampling blocker after target readiness.
+screenshot-consistency evidence, Run-window/world-canvas target readiness, and
+bounded target-scoped raw pixel sampling.
 
-The implemented scenario proves two narrow claims: after Alice opens a project
-through the existing supported launch/open path, the live accessibility tree
-exposes at least one runtime/display candidate, and the controlled-display
-screenshot artifact is internally consistent with the pixel metadata recorded
-for that same artifact. It also records either one bounded screen-coordinate
-world-canvas pixel sampling target or the exact blocker that prevents target
-identification. When a target is ready, the current implementation records a
-pixel-sampling blocker instead of claiming correctness because it has not sampled
-rendered-world pixels inside that target. None of these claims prove
-world-canvas pixel correctness, deployed installer success, full world execution,
-grading, lesson completion, active Save behavior, active Select Project behavior,
-or decoder behavior.
+The implemented scenario establishes one bounded evidence step after Alice opens a
+project through the existing supported launch/open path: the live accessibility
+tree exposes a runtime/display candidate, the controlled-display screenshot
+artifact is internally consistent with its pixel metadata, and the runner either
+identifies exactly one visible/showing Run-window/world-canvas target with valid
+positive screen-coordinate extents, then attempts raw pixel sampling strictly
+inside that target. Success is limited to: the Run-window/world-canvas target was
+identified and raw RGBA pixels were sampled under controlled conditions. It does
+not prove
+world-canvas pixel correctness, visible rendering correctness, deployed installer
+success, full world execution, grading, lesson completion, active Save behavior,
+active Select Project behavior, or decoder behavior.
+The executable nonclaim boundary is documented in
+[Visible rendering evidence nonclaim contract](./visible-rendering-evidence-nonclaim-contract.md).
 
 ## Contents
 
@@ -27,7 +29,8 @@ or decoder behavior.
 - [Evidence API](#evidence-api)
 - [Controlled-display screenshot-consistency API](#controlled-display-screenshot-consistency-api)
 - [World-canvas pixel target readiness API](#world-canvas-pixel-target-readiness-api)
-- [World-canvas pixel sampling blocker API](#world-canvas-pixel-sampling-blocker-api)
+- [World-canvas pixel sampling API](#world-canvas-pixel-sampling-api)
+- [Sampler CLI API](#sampler-cli-api)
 - [Review workflow](#review-workflow)
 - [Examples](#examples)
 - [Review rules](#review-rules)
@@ -51,22 +54,30 @@ runner starts Alice with the `alice-ide-atk` Maven execution, performs the
 supported project-open setup, captures a controlled-display screenshot, then
 invokes the read-only runtime/display probe. The implemented probe records
 bounded runtime/display candidate summaries: `name`, `role`, `path`,
-`childCount`, `states`, `geometryStatus`, and `screenExtents`.
+`childCount`, `states`, `visible`, `showing`, `geometryStatus`, and
+`screenExtents`.
 
 The controlled-display artifact records screenshot-consistency metadata for
 that same screenshot and embeds `worldCanvasPixelTarget`. The target is
 `target-ready` only when exactly one visible/showing runtime/display candidate
 has positive screen-coordinate extents. Otherwise the runner writes
 `visible-rendering-pixel-target-blocker.json` with the exact missing target and
-next unblocker. The runner also writes
-`visible-rendering-pixel-sampling-blocker.json` until it can sample and check
-pixels inside a target-ready world-canvas region.
+next unblocker, and the final sampling seam writes
+`visible-rendering-pixel-sampling-blocker.json` with
+`world-canvas-pixel-target-not-ready`. When the target is ready, the runner passes
+only the validated target geometry to `world-canvas-pixel-sampler.py`. A
+successful sampler result writes `visible-rendering-pixel-observation.json` with
+bounded sample coordinates, raw RGBA values, and
+`visibleRenderingCorrectnessEstablished=false`. Missing target data, ambiguous
+target data, invalid geometry, unavailable sampler support, failed sampling,
+incomplete pixels, malformed RGBA values, overclaiming output, or unchecked
+pixels keep the final `visible-rendering-pixel-sampling-blocker.json` path.
 
 The probe, screenshot-consistency step, and target-readiness step are
 observational. They do not click controls, save projects, select new starters,
 execute worlds, grade work, inspect decoder output, mutate project data,
-sample world-canvas pixels, compare screenshots, or infer rendered-world
-correctness from a generic desktop screenshot.
+compare screenshots, infer rendered-world correctness from a generic desktop
+screenshot, or infer correctness from raw target-scoped pixels.
 
 ## Usage
 
@@ -104,12 +115,14 @@ Generated evidence is local run output. Keep it uncommitted. Use
 accessibility decision and `controlled-display-pixel-observation.json` for the
 controlled-display screenshot-consistency decision. Review
 `worldCanvasPixelTarget.status`: `target-ready` means the runner found exactly
-one repeatable screen-coordinate target for future pixel sampling; `blocked`
+one repeatable screen-coordinate target for target-scoped sampling; `blocked`
 means `visible-rendering-pixel-target-blocker.json` names the exact missing
-target and next unblocker. Review
-`visible-rendering-pixel-sampling-blocker.json` for the next fail-closed seam;
-`renderedWorldPixelsObserved=false` means no visible rendered-world correctness
-claim was made.
+target and next unblocker. Review either
+`visible-rendering-pixel-observation.json` for bounded raw RGBA samples inside
+that target or `visible-rendering-pixel-sampling-blocker.json` for the precise
+sampling blocker. Both paths keep
+`visibleRenderingCorrectnessEstablished=false` to make clear that no visible
+rendering correctness claim was made.
 
 ## Configuration
 
@@ -120,6 +133,7 @@ claim was made.
 | `ALICE_QA_DISPLAY` | Reuses a specific X display instead of selecting one automatically. |
 | `ALICE_QA_SCREEN` | Sets Xvfb screen geometry. Defaults to `1280x900x24`. |
 | `ALICE_QA_READY_WAIT_SECONDS` | Overrides the scenario readiness wait before screenshot capture and probe steps. |
+| `ALICE_QA_WORLD_CANVAS_PIXEL_SAMPLER` | Overrides the target-scoped sampler path for focused contracts; defaults to `qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py`. |
 
 Runtime prerequisites:
 
@@ -131,6 +145,7 @@ Runtime prerequisites:
 | `python3-pyatspi` | Lets the probe read the AT-SPI accessibility tree. |
 | `/usr/share/java/java-atk-wrapper.jar` | Makes Swing accessibility data visible to AT-SPI for the spawned Java process. |
 | AT-SPI2 accessibility bus | Provides the live accessibility registry for the user session. |
+| `xwd` and ImageMagick `convert` | Let the default sampler read raw RGBA pixels from the controlled display without persisting a full screenshot. |
 
 ## Scenario interface
 
@@ -157,11 +172,12 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 | Automation mode | `xvfb-real-alice` |
 | Launch path | Existing Alice IDE Maven launch path with the AT-SPI wrapper execution. |
 | Decision artifact | `post-open-runtime-display-accessibility-evidence.json` |
-| Final status artifact | `status.txt` with `outcome=passed` only when runtime/display accessibility, controlled-display screenshot consistency, and world-canvas pixel sampling are observed. Until sampling exists, target-ready runs remain `outcome=blocked` and point to the pixel-sampling blocker. |
+| Final status artifact | `status.txt` with `outcome=passed` only when runtime/display accessibility, controlled-display screenshot consistency, and bounded world-canvas pixel sampling are observed with `visibleRenderingCorrectnessEstablished=false`. Blocked runs point to `visible-rendering-pixel-sampling-blocker.json`. |
 | Probe-local status artifact | `runtime-display-accessibility-status.txt`, written by the probe before the runner writes final scenario status. Use it for debugging the probe result, not as the final pass/fail decision. |
 | Screenshot-consistency artifact | `controlled-display-pixel-observation.json` with `schemaVersion=1`, `claimScope=controlled-display-screenshot-consistency`, relative screenshot path when captured, dimensions when metadata is available, pixel-observation metadata, `worldCanvasPixelTarget`, and explicit unsupported claims. |
 | World-pixel blocker artifact | `visible-rendering-pixel-target-blocker.json`, written only when target identification is missing, invalid, or ambiguous. |
-| Pixel-sampling blocker artifact | `visible-rendering-pixel-sampling-blocker.json`, written until rendered-world pixels inside the target-ready region are sampled and checked. |
+| Pixel-sampling observation artifact | `visible-rendering-pixel-observation.json`, written only when the validated target was sampled under controlled conditions and raw RGBA samples were checked for completeness and shape. |
+| Pixel-sampling blocker artifact | `visible-rendering-pixel-sampling-blocker.json`, written when the target is unavailable or sampling cannot produce a bounded observation. Target-ready runs with no usable sampler use blocker `world-canvas-pixel-sampler-unavailable`. |
 | Supporting setup artifacts | `tab-click-observation.json`, `post-project-open-observation.json`, `x-window-inventory.json`, launch log, Xvfb log, screenshot, and environment summary. |
 | Default evidence root | `qa/outside-in/alice-desktop/evidence/` unless `--evidence-dir` is supplied. |
 
@@ -191,8 +207,13 @@ controlledDisplayPixelBlocker=<blocker>
 visibleRenderingPixelTargetBlocker=visible-rendering-pixel-target-blocker.json
 visibleRenderingPixelSamplingStatus=blocked
 visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json
-visibleRenderingPixelSamplingBlocker=<blocker>
+visibleRenderingPixelSamplingBlocker=<exact target or sampler blocker>
+visibleRenderingCorrectnessEstablished=false
 ```
+
+`visibleRenderingPixelSamplingStatus=observed` and
+`visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-observation.json`
+are valid only for checked raw RGBA samples inside one validated target.
 
 `runtime-display-accessibility-status.txt` is a probe-local status file with the
 same runtime/display accessibility keys. The runner writes it before final
@@ -336,7 +357,7 @@ The full artifact fields are:
 | `postOpenRuntimeDisplayAccessibilityObserved` | `true` only when accepted runtime/display candidates were found. |
 | `postOpenWindowObserved` | Whether `post-project-open-observation.json` already recorded the prerequisite post-open window signal. |
 | `runtimeDisplayCandidateCount` | Count of accepted runtime/display candidates emitted in the artifact. |
-| `runtimeDisplayCandidates` | Bounded AT-SPI summaries for accepted candidates: `childCount`, `name`, `path`, `role`, `states`, `geometryStatus`, and `screenExtents`. |
+| `runtimeDisplayCandidates` | Bounded AT-SPI summaries for accepted candidates: `childCount`, `name`, `path`, `role`, `states`, `visible`, `showing`, `geometryStatus`, and `screenExtents`. |
 | `scenario` | Scenario ID that produced the artifact. |
 | `status` | `observed` or `blocked`. |
 | `traversalErrors` | Non-fatal AT-SPI traversal errors collected while searching; empty when none were seen. |
@@ -480,8 +501,8 @@ An observed screenshot-consistency result means only that the runner captured a
 controlled-display screenshot, read its dimensions, and recorded pixel metadata
 that points back to that same screenshot. A `target-ready`
 `worldCanvasPixelTarget` means only that the runner found a repeatable
-screen-coordinate region for future pixel sampling. It does not mean the runner
-sampled pixels inside a world canvas or validated rendered-world content.
+screen-coordinate region for target-scoped sampling. It does not mean the runner
+validated rendered-world content or established visible rendering correctness.
 
 ### Blocked screenshot-consistency artifact
 
@@ -581,11 +602,12 @@ non-numeric dimensions, zero or negative `width`/`height`, and non-screen
 coordinate extents make that candidate ineligible for target readiness and
 ineligible for ambiguity counting.
 
-Target-ready evidence is the handoff point for a later pixel sampler. That
-sampler may crop or sample inside `screenExtents` from the same controlled
-display screenshot. This shard does not define color expectations, image
-baselines, visual diffs, grading rules, world execution assertions, or rendered
-content pass/fail logic.
+Target-ready evidence is the only handoff point for
+`world-canvas-pixel-sampler.py`. The sampler receives one validated
+`screenExtents` object and samples strictly inside that region from the controlled
+display. This shard does not define color expectations, image baselines, visual
+diffs, grading rules, world execution assertions, or rendered content pass/fail
+logic.
 
 ### World-canvas pixel target blocker
 
@@ -696,47 +718,191 @@ visible/showing candidate has valid positive screen-coordinate extents:
 }
 ```
 
-Both examples are blockers. Neither example is a substitute for a pixel sampler,
-visible-rendering proof, rendered-world oracle, or world-canvas pixel
+Both examples are blockers. Neither example is a substitute for the bounded
+pixel-sampling artifact, a rendered-world oracle, or a world-canvas pixel
 correctness claim.
 
-## World-canvas pixel sampling blocker API
+## World-canvas pixel sampling API
 
-The next seam after target readiness is:
+The sampling seam has one success artifact and one blocker artifact:
 
 ```text
+visible-rendering-pixel-observation.json
 visible-rendering-pixel-sampling-blocker.json
 ```
 
-The artifact is intentionally blocked until the runner samples pixels inside a
-target-ready `screenExtents` region and checks them against an explicit
-rendered-world expectation. Its source artifact is always
-`controlled-display-pixel-observation.json`; target metadata inside that source
-is a prerequisite for sampling, not proof that rendered-world pixels were
-observed.
+The source artifact is always `controlled-display-pixel-observation.json`.
+Target metadata inside that source is a prerequisite for sampling, not proof that
+rendered-world content is correct. The executable contract treats the source
+artifact and sampler output as untrusted input. Missing, unreadable, malformed,
+non-object, differently named, or semantically invalid source JSON must produce a
+blocked pixel-sampling artifact. So must a missing target, ambiguous target,
+hidden target, non-screen-coordinate geometry, non-positive extents, unavailable
+sampler backend, failed capture, incomplete sample set, malformed RGBA value, or
+unchecked sampler result.
 
-The executable contract treats the source artifact as untrusted input. Missing,
-unreadable, malformed, non-object, or semantically invalid source JSON must
-produce a blocked pixel-sampling artifact, never a success-shaped rendering
-claim. A controlled-display artifact with `worldCanvasPixelTarget.status`
-`target-ready` can only move the blocker to
-`world-canvas-pixel-sampling-not-implemented`. It cannot set
-`renderedWorldPixelsObserved=true`, increase `sampleCount`, or name a
-`samplingMethod`.
+### Observed target-scoped pixel artifact
 
-A target-ready blocker has this shape:
+`visible-rendering-pixel-observation.json` is written only after the runner has
+validated exactly one target and `world-canvas-pixel-sampler.py` has returned
+checked raw samples strictly inside the target bounds.
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "observed",
+  "blocker": "none",
+  "blockerDetail": "",
+  "claim": "run-window-world-canvas-target-sampled-rendering-correctness-not-asserted",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
+  "boundedClaim": "The run-window/world-canvas target was identified and sampled under controlled conditions.",
+  "sourceArtifact": "controlled-display-pixel-observation.json",
+  "targetSourceArtifact": "post-open-runtime-display-accessibility-evidence.json",
+  "visibleRenderingCorrectnessEstablished": false,
+  "renderedWorldPixelsObserved": true,
+  "prerequisiteTargetStatus": "target-ready",
+  "sampleCount": 3,
+  "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+  "samples": [
+    {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+    {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+    {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
+  ],
+  "worldCanvasPixelTarget": {
+    "identified": true,
+    "status": "target-ready",
+    "candidatePath": "application/0/3",
+    "candidateName": "Scene display",
+    "candidateRole": "canvas",
+    "geometryStatus": "available",
+    "screenExtents": {
+      "coordinateType": "screen",
+      "x": 144,
+      "y": 188,
+      "width": 996,
+      "height": 642
+    },
+    "selectionRule": "single-visible-showing-runtime-display-candidate-with-valid-screen-extents"
+  },
+  "pixelSampling": {
+    "status": "observed",
+    "pixelsSampled": true,
+    "samplesChecked": true,
+    "sampleCount": 3,
+    "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+    "sampler": "world-canvas-pixel-sampler.py",
+    "samplePoints": [
+      {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+      {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+      {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
+    ],
+    "samplePointRule": "inside-target-bounds-only",
+    "correctnessCheck": "not-performed"
+  },
+  "limitations": [
+    "Raw RGBA samples are bounded observation data only.",
+    "No color expectation, image baseline, visual diff, world execution assertion, or rendered-world correctness oracle was applied."
+  ],
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
+  ]
+}
+```
+
+Minimum fields for accepting bounded sampling observation:
+
+```json
+{
+  "schemaVersion": 1,
+  "status": "observed",
+  "blocker": "none",
+  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
+  "claimScopeDetail": "target-scoped-raw-pixel-observation-only",
+  "sourceArtifact": "controlled-display-pixel-observation.json",
+  "visibleRenderingCorrectnessEstablished": false,
+  "renderedWorldPixelsObserved": true,
+  "prerequisiteTargetStatus": "target-ready",
+  "sampleCount": 3,
+  "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+  "samples": [
+    {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+    {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+    {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
+  ],
+  "worldCanvasPixelTarget": {
+    "identified": true,
+    "status": "target-ready",
+    "geometryStatus": "available",
+    "screenExtents": {
+      "coordinateType": "screen",
+      "x": 144,
+      "y": 188,
+      "width": 996,
+      "height": 642
+    }
+  },
+  "pixelSampling": {
+    "status": "observed",
+    "pixelsSampled": true,
+    "samplesChecked": true,
+    "sampleCount": 3,
+    "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+    "samplePoints": [
+      {"name": "center", "point": {"x": 642, "y": 509}, "rgba": [32, 48, 64, 255], "checked": true},
+      {"name": "upper-left-inset", "point": {"x": 145, "y": 189}, "rgba": [31, 47, 63, 255], "checked": true},
+      {"name": "lower-right-inset", "point": {"x": 1138, "y": 828}, "rgba": [28, 44, 60, 255], "checked": true}
+    ],
+    "correctnessCheck": "not-performed"
+  },
+  "unsupportedClaims": [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
+  ]
+}
+```
+
+Each sample point must be inside the validated screen extents. Each `rgba` value
+must contain four integers from 0 through 255. The default sampler emits the
+center point plus upper-left and lower-right inset points when those coordinates
+are unique; very small targets may produce fewer unique checked samples. The
+runner rejects empty samples, mismatched `sampleCount`, missing RGBA values,
+out-of-bounds coordinates, unchecked samples, or any sampler output that attempts
+to assert correctness.
+
+### Pixel-sampling blocker artifact
+
+`visible-rendering-pixel-sampling-blocker.json` is the machine-readable result
+when bounded sampling cannot run or cannot support the controlled observation
+claim. It records `renderedWorldPixelsObserved=false` and
+`visibleRenderingCorrectnessEstablished=false`.
 
 ```json
 {
   "schemaVersion": 1,
   "status": "blocked",
-  "blocker": "world-canvas-pixel-sampling-not-implemented",
+  "blocker": "world-canvas-pixel-sampler-unavailable",
+  "blockerDetail": "A valid world-canvas target was identified, but the target-scoped pixel sampler is unavailable or not executable.",
   "claimScope": "visible-rendering-world-canvas-pixel-sampling",
   "claimScopeDetail": "target-ready-sampling-not-observed",
   "sourceArtifact": "controlled-display-pixel-observation.json",
   "prerequisiteTargetStatus": "target-ready",
-  "exactNextUnblocker": "sample-run-window-world-canvas-pixels",
+  "exactNextUnblocker": "provide-world-canvas-pixel-sampler",
   "renderedWorldPixelsObserved": false,
+  "visibleRenderingCorrectnessEstablished": false,
   "sampleCount": 0,
   "worldCanvasPixelTarget": {
     "identified": true,
@@ -751,7 +917,7 @@ A target-ready blocker has this shape:
   },
   "pixelSampling": {
     "status": "blocked",
-    "blocker": "world-canvas-pixel-sampling-not-implemented",
+    "blocker": "world-canvas-pixel-sampler-unavailable",
     "pixelsSampled": false,
     "sampleCount": 0,
     "samplingMethod": null
@@ -759,59 +925,151 @@ A target-ready blocker has this shape:
   "unsupportedClaims": [
     "world-canvas-pixel-correctness",
     "full-visible-rendering-correctness",
-    "rendered-world-correctness"
+    "rendered-world-correctness",
+    "full-ui-automation",
+    "world-execution",
+    "grading",
+    "save-behavior",
+    "first-lesson-completion"
   ]
 }
 ```
 
-The minimum decision fields for accepting this blocker proof are:
+Valid blocker values include:
+
+| Blocker | Meaning | Exact next unblocker |
+| --- | --- | --- |
+| `world-canvas-pixel-target-not-ready` | Target identification failed, was ambiguous, or had invalid geometry. | `reliable-run-window-world-canvas-pixel-sampling-target` |
+| `world-canvas-pixel-sampler-unavailable` | A target is ready, but no usable pixel sampler is available. | `provide-world-canvas-pixel-sampler` |
+| `world-canvas-pixel-sampling-failed` | The sampler ran but failed to capture raw pixels inside the target. | `sample-run-window-world-canvas-pixels` |
+| `world-canvas-pixel-sampling-incomplete` | The sampler returned no samples, mismatched `sampleCount`, out-of-bounds points, malformed RGBA values, or omitted required sample fields. | `complete-run-window-world-canvas-pixel-sample-set` |
+| `world-canvas-pixel-samples-unchecked` | Samples were present but not checked for bounds, shape, and RGBA validity. | `check-target-scoped-pixel-samples-before-claiming-observation` |
+| `world-canvas-pixel-sampler-overclaimed` | The sampler attempted to assert correctness instead of raw bounded observation. | `remove-correctness-claims-from-sampler-output` |
+| `world-canvas-pixel-source-artifact-invalid` | The controlled-display source artifact is absent, malformed, or semantically invalid. | `valid-controlled-display-pixel-observation-source-artifact` |
+
+Pixel-sampling artifacts list the same unsupported claims the runner enforces:
+world-canvas pixel correctness, full visible rendering correctness,
+rendered-world correctness, full UI automation, world execution, grading, Save
+behavior, and first-lesson completion. Do not treat the controlled-display
+screenshot, target-ready geometry, or raw RGBA samples as rendered-world
+correctness.
+
+## Sampler CLI API
+
+`world-canvas-pixel-sampler.py` is the focused raw-pixel sampler used by
+`run-scenario.sh` after target readiness has already been established. It is also
+safe to run directly in contract tests or local diagnostics when you provide one
+validated target JSON file.
+
+```bash
+qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py \
+  --target-json target-ready.json \
+  --output sampler-output.json
+```
+
+The sampler reads from the current X display. It requires `xwd` and ImageMagick
+`convert` on `PATH`. It does not launch Alice, find a target, inspect AT-SPI,
+compare screenshots, apply color expectations, perform visual diffs, or decide
+whether rendering is correct.
+
+### Target input
+
+The input file must be a JSON object with positive screen-coordinate extents:
+
+```json
+{
+  "identified": true,
+  "status": "target-ready",
+  "screenExtents": {
+    "coordinateType": "screen",
+    "x": 160,
+    "y": 120,
+    "width": 320,
+    "height": 240
+  }
+}
+```
+
+Only `screenExtents` is required by the sampler. The runner supplies the full
+`worldCanvasPixelTarget` object from `controlled-display-pixel-observation.json`
+so the intermediate sampler output can be wrapped with source-artifact,
+target-readiness, unsupported-claim, and final status metadata.
+
+### Observed sampler output
+
+When capture succeeds, the direct sampler output is intentionally smaller than
+`visible-rendering-pixel-observation.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "sampleCount": 3,
+  "samples": [
+    {
+      "checked": true,
+      "name": "center",
+      "point": {
+        "x": 320,
+        "y": 240
+      },
+      "rgba": [32, 48, 64, 255]
+    },
+    {
+      "checked": true,
+      "name": "upper-left-inset",
+      "point": {
+        "x": 161,
+        "y": 121
+      },
+      "rgba": [31, 47, 63, 255]
+    },
+    {
+      "checked": true,
+      "name": "lower-right-inset",
+      "point": {
+        "x": 478,
+        "y": 358
+      },
+      "rgba": [28, 44, 60, 255]
+    }
+  ],
+  "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+  "status": "observed"
+}
+```
+
+The sampler chooses the center point plus upper-left and lower-right inset points
+that fit inside the validated target. Very small targets may produce fewer unique
+points because duplicate coordinates are collapsed. Each sample is raw RGBA data
+only.
+
+### Blocked sampler output
+
+The sampler writes a blocked JSON artifact instead of throwing a success-shaped
+result when input or capture is unusable:
 
 ```json
 {
   "schemaVersion": 1,
   "status": "blocked",
-  "blocker": "world-canvas-pixel-sampling-not-implemented",
-  "claimScope": "visible-rendering-world-canvas-pixel-sampling",
-  "claimScopeDetail": "target-ready-sampling-not-observed",
-  "sourceArtifact": "controlled-display-pixel-observation.json",
-  "prerequisiteTargetStatus": "target-ready",
-  "renderedWorldPixelsObserved": false,
-  "sampleCount": 0,
-  "pixelSampling": {
-    "status": "blocked",
-    "pixelsSampled": false,
-    "sampleCount": 0,
-    "samplingMethod": null
-  },
-  "unsupportedClaims": [
-    "world-canvas-pixel-correctness",
-    "full-visible-rendering-correctness",
-    "rendered-world-correctness"
-  ]
+  "blocker": "target-geometry-invalid",
+  "blockerDetail": "Target screenExtents must be positive screen coordinates."
 }
 ```
 
-The `unsupportedClaims` values above are an include-at-least set. A valid
-artifact may list additional unsupported claims, but it must not omit these
-three exclusions while pixel sampling remains blocked.
+Direct sampler blocker values are:
 
-If target selection is blocked, the same artifact uses
-`blocker=world-canvas-pixel-target-not-ready` and
-`prerequisiteTargetStatus=blocked` or `unavailable`. In both cases,
-`renderedWorldPixelsObserved=false`, `pixelsSampled=false`, and `sampleCount=0`
-are required. Do not treat the controlled-display screenshot or target-ready
-geometry as rendered-world pixel evidence.
+| Blocker | Meaning |
+| --- | --- |
+| `target-json-unreadable` | The target file could not be read or parsed as JSON. |
+| `target-json-invalid` | The parsed target is not a JSON object. |
+| `target-geometry-invalid` | `screenExtents` is missing, not screen coordinates, non-numeric, zero-sized, or negative. |
+| `pixel-sampling-failed` | `xwd`, `convert`, root-window capture, pixel extraction, or RGBA parsing failed. |
 
-When the source artifact is malformed, absent, non-object, named differently
-from `controlled-display-pixel-observation.json`, or semantically invalid for
-the controlled-display screenshot-consistency contract, the runner records
-`prerequisiteTargetStatus=unavailable`, preserves
-`sourceArtifact=controlled-display-pixel-observation.json`, and keeps the same
-non-claim fields: `renderedWorldPixelsObserved=false`,
-`pixelSampling.pixelsSampled=false`, `sampleCount=0`, and
-`pixelSampling.samplingMethod=null`. Reviewers should treat that artifact as the
-exact blocker for the source-artifact boundary, not as evidence that the world
-canvas is invisible or incorrectly rendered.
+The sampler exits after writing JSON for both observed and blocked outcomes. A
+blocked sampler output is not final scenario status; the runner converts it into
+`visible-rendering-pixel-sampling-blocker.json` and keeps
+`visibleRenderingCorrectnessEstablished=false`.
 
 ## Review workflow
 
@@ -837,12 +1095,12 @@ Use this review sequence for every run:
 5. Review `tab-click-observation.json` and
     `post-project-open-observation.json` to understand the supporting project-open
     setup.
-6. Accept the implemented runtime/display and screenshot-consistency setup only
-     when `runtimeDisplayAccessibilityStatus=observed` and
-     `controlledDisplayPixelStatus=observed`; then review
-     `visible-rendering-pixel-sampling-blocker.json` as the honest next blocker
-     unless `visibleRenderingPixelSamplingStatus=observed` is implemented in a
-     future slice.
+6. Accept the implemented runtime/display, screenshot-consistency, and bounded
+      sampling setup only when `runtimeDisplayAccessibilityStatus=observed`,
+      `controlledDisplayPixelStatus=observed`,
+      `visibleRenderingPixelSamplingStatus=observed`, and
+      `visibleRenderingCorrectnessEstablished=false`. Otherwise review
+      `visible-rendering-pixel-sampling-blocker.json` as the precise blocker.
 
 If the decision artifact is `status=blocked`, preserve it as the run result. A
 blocked artifact is useful evidence about the missing prerequisite or missing
@@ -853,13 +1111,13 @@ correctness, deployed installer success, full world execution, grading, lesson
 completion, active Save behavior, active Select Project behavior, or decoder
 behavior.
 
-Target-ready metadata is accepted only as pixel sampling target readiness. It is
-not a rendering correctness assertion, and target-ready runs remain blocked at
-the pixel-sampling seam until rendered-world pixels are sampled and checked.
+Target-ready metadata is accepted only as pixel sampling target readiness. Raw
+pixel samples are accepted only as bounded target-scoped observation. Neither is
+a rendering correctness assertion.
 
 ## Examples
 
-### Review observed setup with blocked pixel sampling
+### Review observed setup with bounded pixel sampling
 
 ```bash
 run_dir=qa/outside-in/alice-desktop/evidence/post-open-runtime-display/\
@@ -871,20 +1129,21 @@ python3 -m json.tool \
 sed -n '1,120p' "$run_dir/status.txt"
 ```
 
-The current target-ready path remains blocked at the pixel-sampling seam. Review
-it only as runtime/display and screenshot-consistency evidence when `status.txt`
-records:
+Review the run only as runtime/display, screenshot-consistency, and bounded
+target-scoped pixel observation when
+`status.txt` records:
 
 ```text
-outcome=blocked
+outcome=passed
 runtimeDisplayAccessibilityStatus=observed
 runtimeDisplayAccessibilityBlocker=none
 controlledDisplayPixelStatus=observed
 controlledDisplayPixelBlocker=none
-visibleRenderingPixelTargetStatus=<target-ready|blocked>
-visibleRenderingPixelTargetArtifact=<controlled-display-pixel-observation.json|visible-rendering-pixel-target-blocker.json>
-visibleRenderingPixelSamplingStatus=blocked
-visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-sampling-blocker.json
+visibleRenderingPixelTargetStatus=target-ready
+visibleRenderingPixelTargetArtifact=controlled-display-pixel-observation.json
+visibleRenderingPixelSamplingStatus=observed
+visibleRenderingPixelSamplingArtifact=visible-rendering-pixel-observation.json
+visibleRenderingCorrectnessEstablished=false
 ```
 
 and the JSON artifact records:
@@ -903,8 +1162,35 @@ the project-open setup and run environment. Review
 `controlled-display-pixel-observation.json` for screenshot-consistency evidence
 and the embedded `worldCanvasPixelTarget`. If the target is blocked, review
 `visible-rendering-pixel-target-blocker.json` for the exact next unblocker. If
-the target is ready, review `visible-rendering-pixel-sampling-blocker.json` and
-confirm `renderedWorldPixelsObserved=false`.
+the target is ready, review `visible-rendering-pixel-observation.json` and
+confirm `pixelSampling.pixelsSampled=true`,
+`pixelSampling.samplesChecked=true`, sample coordinates are inside the target
+extents, raw RGBA values are well-formed, and
+`visibleRenderingCorrectnessEstablished=false`.
+
+### Review blocked pixel sampling
+
+When target validation or sampling fails closed, review:
+
+```bash
+python3 -m json.tool "$run_dir/visible-rendering-pixel-sampling-blocker.json"
+```
+
+Accept the blocker as the run result only when it records:
+
+```text
+status=blocked
+sourceArtifact=controlled-display-pixel-observation.json
+renderedWorldPixelsObserved=false
+pixelSampling.status=blocked
+pixelSampling.pixelsSampled=false
+```
+
+The blocker must name an exact `blocker` and `exactNextUnblocker`.
+Target-ready runs without usable sampler support use
+`blocker=world-canvas-pixel-sampler-unavailable`. Target-not-ready runs use
+`blocker=world-canvas-pixel-target-not-ready`. Do not replace either blocker
+with a manual statement that the world canvas rendered correctly or incorrectly.
 
 ### Review a blocked run
 
@@ -951,30 +1237,34 @@ substitute for target-ready evidence.
 ## Review rules
 
 1. The JSON artifact is the runtime/display decision artifact.
-2. Final visible-rendering acceptance requires `status.txt` to record
-   `outcome=passed`, `controlledDisplayPixelStatus=observed`, and
-   `visibleRenderingPixelSamplingStatus=observed`.
+2. Bounded pixel-sampling acceptance requires `status.txt` to record
+   `outcome=passed`, `controlledDisplayPixelStatus=observed`,
+   `visibleRenderingPixelSamplingStatus=observed`, and
+   `visibleRenderingCorrectnessEstablished=false`.
 3. `status=observed` is accepted only with `blocker=none` and at least one
    runtime/display candidate.
 4. `controlled-display-pixel-observation.json` is accepted only as
    screenshot-consistency evidence, with
    `claimScope=controlled-display-screenshot-consistency`.
 5. `worldCanvasPixelTarget.identified=true` means only that the runner has
-   identified a repeatable screen-coordinate target for future pixel sampling. It
+   identified a repeatable screen-coordinate target for pixel sampling. It
    does not prove Run-window/world-canvas pixel correctness.
 6. `visible-rendering-pixel-target-blocker.json` means target readiness is
    blocked and the exact unblocker is
    `reliable-run-window-world-canvas-pixel-sampling-target`.
-7. `visible-rendering-pixel-sampling-blocker.json` means the source artifact was
-   read only as a sampling prerequisite and target readiness was not enough to
-   prove visible rendering; no rendered-world pixels were sampled.
-8. `status=blocked` is an honest blocked result, not a failed documentation
+7. `visible-rendering-pixel-observation.json` means raw RGBA samples
+   were collected strictly inside one validated target under controlled
+   conditions; it is not a visible rendering correctness claim.
+8. `visible-rendering-pixel-sampling-blocker.json` means the source artifact or
+   sampler could not produce bounded checked samples and names the exact
+   unblocker.
+9. `status=blocked` is an honest blocked result, not a failed documentation
    claim and not a success substitute.
-9. `tab-click-observation.json`, `post-project-open-observation.json`, launch,
+10. `tab-click-observation.json`, `post-project-open-observation.json`, launch,
    window, pixel, and post-open accessibility artifacts support this lane, but
    none of them expands it into full rendering correctness.
-10. Generated evidence stays under `qa/outside-in/alice-desktop/evidence/` or a
-    caller-provided evidence directory and remains uncommitted.
+11. Generated evidence stays under `qa/outside-in/alice-desktop/evidence/` or a
+     caller-provided evidence directory and remains uncommitted.
 
 ## Validation commands
 
@@ -988,16 +1278,19 @@ bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-contract.sh
 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-probe.sh
 bash qa/outside-in/alice-desktop/tests/test-visible-rendering-evidence-contract.sh
+bash qa/outside-in/alice-desktop/tests/test-world-canvas-pixel-sampler-contract.sh
 ```
 
 The current contract tests cover schema/validator/runner parity, the
 runtime/display artifact name, status fields, blocked fallback behavior,
 runtime/display candidate summaries, and the narrow runtime/display claim token.
 The visible-rendering evidence contract test covers the screenshot-consistency
-artifact fields, `target-ready` shape, exact target-blocker shape, the
-pixel-sampling blocker/source-artifact boundary, geometry metadata, blocked
-fallback behavior, forbidden overclaiming language, and narrow
-screenshot-consistency claim tokens.
+artifact fields, `target-ready` shape, exact target-blocker shape, fail-closed
+sampling blockers, geometry metadata, blocked fallback behavior, forbidden
+overclaiming language, and narrow screenshot-consistency and target-scoped
+sampling claim tokens. The sampler contract covers target-ready success,
+sampler-unavailable, missing/ambiguous/invalid target blockers, and
+overclaim rejection.
 
 ## Troubleshooting
 
@@ -1015,6 +1308,7 @@ screenshot-consistency claim tokens.
 | `root-directory-property-missing`, `core-resources-distribution-prep-failed`, or `core-resources-distribution-not-created` | Alice root-directory launch preparation failed. | Review `root-directory-prep.json` and `root-directory-prep.log`; initialize/build the resources distribution before rerunning. |
 | `license-acceptance-prep-failed` or `first-run-license-agreement-visible` | First-run license handling blocked launch automation. | Use `ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1` only in controlled QA launches and review `license-acceptance.json` plus `license-dialog.json`. |
 | `screenshot-capture-failed`, `screenshot-captured-uniform-black`, or `screenshot-pixel-analysis-unavailable` | Controlled-display pixel evidence is unavailable, so `outcome=passed` is not valid even if the runtime/display JSON is observed. | Review `controlled-display-pixel-observation.json`, `screenshot.log`, and the screenshot artifact. |
-| `world-canvas-pixel-sampling-not-implemented` | Target readiness exists, but the runner has not sampled pixels inside the target region. | Preserve `visible-rendering-pixel-sampling-blocker.json`; do not claim rendered-world correctness until sampled pixels are checked. |
+| `world-canvas-pixel-sampler-unavailable` | Target readiness exists, but no usable pixel sampler is available. | Preserve `visible-rendering-pixel-sampling-blocker.json`; provide a target-scoped sampler backend before claiming bounded sampling observation. |
+| `world-canvas-pixel-sampling-failed`, `world-canvas-pixel-sampling-incomplete`, `world-canvas-pixel-samples-unchecked`, or `world-canvas-pixel-sampler-overclaimed` | Sampling could not produce checked raw RGBA samples strictly inside the validated target without overclaiming. | Preserve `visible-rendering-pixel-sampling-blocker.json`; fix sampling before writing `visible-rendering-pixel-observation.json`. |
 | `screenshot-metadata-unavailable` | The runner captured a screenshot but could not safely read dimensions from that same artifact. | Preserve `controlled-display-pixel-observation.json` with a non-observed status and review `visible-rendering-pixel-target-blocker.json`; do not invent dimensions. |
 | `reliable-run-window-world-canvas-pixel-sampling-target` | The implementation has not identified a stable Run-window/world-canvas pixel target. | Treat `visible-rendering-pixel-target-blocker.json` as the exact next blocker for target readiness. |

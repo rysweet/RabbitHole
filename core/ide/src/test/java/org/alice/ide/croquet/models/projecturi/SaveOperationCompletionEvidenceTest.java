@@ -4,11 +4,14 @@ import org.junit.Test;
 import org.lgna.croquet.history.UserActivity;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class SaveOperationCompletionEvidenceTest {
@@ -298,10 +301,246 @@ public class SaveOperationCompletionEvidenceTest {
     assertTrue(json, json.contains("\"saved file completed\""));
   }
 
+  @Test
+  public void canonicalSaveCompletionEvidenceUsesSingleRenderedProofArtifactContract() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("canonical-rendered-save-proof"));
+    File savedFile = Files.writeString(testDir.resolve("robot-save-menu-proof.a3p"), "project").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(savedFile, testDir);
+
+    Path artifact = evidence.write(evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT));
+
+    assertEquals(
+        "robot-save-menu-dialog-write-readback-proof.json",
+        artifact.getFileName().toString());
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"schemaVersion\": \"eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1\""));
+    assertFalse(json, json.contains("\"schema_version\""));
+    assertTrue(json, json.contains("\"scenario\": \"alice-desktop-save-menu-dialog-write-proof\""));
+    assertTrue(json, json.contains("\"workflow\": \"save-menu-dialog-write-proof\""));
+    assertTrue(json, json.contains("\"runId\": "));
+    assertTrue(json, json.contains("\"generatedAtUtc\": "));
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"blocker\": {"));
+    assertTrue(json, json.contains("\"kind\": \"file_menu_not_showing\""));
+    assertFalse(json, json.contains("\"claim\": "));
+  }
+
+  @Test
+  public void canonicalEvidenceDerivesEarliestPreciseBlockerWhenDialogWasNeverReached() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("canonical-missing-dialog-proof"));
+    File targetFile = testDir.resolve("robot-save-menu-proof.a3p").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(targetFile, testDir);
+
+    Path artifact = evidence.write(evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT));
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"blocker\": {"));
+    assertTrue(json, json.contains("\"kind\": \"file_menu_not_showing\""));
+    assertTrue(json, json.contains("\"observed\": "));
+    assertTrue(json, json.contains("\"required\": "));
+    assertTrue(json, json.contains("\"requiresNextEvidence\": ["));
+    assertFalse(json, json.contains("\"status\": \"proven\""));
+    assertFalse(json, json.contains("\"claim\": "));
+  }
+
+  @Test
+  public void canonicalEvidenceDoesNotProveWriteOnlyArtifactWithoutReadbackMarker() throws Exception {
+    Path testDir = newTestDir();
+    Path evidenceDir = Files.createDirectories(testDir.resolve("canonical-write-without-readback-proof"));
+    File savedFile = Files.writeString(testDir.resolve("write-only.a3p"), "not a readable Alice archive").toFile();
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(savedFile, testDir);
+    evidence.robotFileMenuOpened = true;
+    evidence.robotSaveItemClicked = true;
+    evidence.saveActionIdentityMatched = true;
+    evidence.chooserObserved = true;
+    evidence.dialogShowing = true;
+    evidence.selectedFileVerified = true;
+    evidence.targetInsideProofRoot = true;
+    evidence.approvedSelection = true;
+    evidence.normalizedSelectedFile = savedFile.getCanonicalPath();
+
+    Path artifact = evidence.write(evidenceDir.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT));
+
+    String json = Files.readString(artifact);
+    assertTrue(json, json.contains("\"status\": \"blocked\""));
+    assertTrue(json, json.contains("\"kind\": \"readback_failed\""));
+    assertTrue(json, json.contains("\"fileWritten\": true"));
+    assertTrue(json, json.contains("\"fileNonempty\": true"));
+    assertTrue(json, json.contains("\"projectReadable\": false"));
+    assertTrue(json, json.contains("\"markerPresent\": false"));
+    assertFalse(json, json.contains("\"status\": \"proven\""));
+    assertFalse(json, json.contains("\"claim\": "));
+  }
+
+  @Test
+  public void configuredSaveProofArtifactMustStayUnderProofRoot() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path outsideRoot = newTestDir().resolve("outside-root");
+    Path outsideArtifact = outsideRoot.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+    String previousEvidencePath = System.getProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY);
+    System.setProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+        outsideArtifact.toString());
+    try {
+      IllegalArgumentException thrown = assertThrows(
+          IllegalArgumentException.class,
+          () -> SaveOperationCompletionEvidence.configuredSaveProofArtifact(proofRoot));
+
+      assertTrue(thrown.getMessage().contains("must stay under the proof root"));
+      assertFalse(Files.exists(outsideRoot));
+    } finally {
+      restoreProperty(
+          SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+          previousEvidencePath);
+    }
+  }
+
+  @Test
+  public void configuredSaveProofRunIdRejectsUnsafeTokens() {
+    String previousRunId = System.getProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY);
+    System.setProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY,
+        "../unsafe run id");
+    try {
+      IllegalArgumentException thrown = assertThrows(
+          IllegalArgumentException.class,
+          SaveOperationCompletionEvidence::configuredSaveProofRunId);
+
+      assertTrue(thrown.getMessage().contains("safe token"));
+    } finally {
+      restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY, previousRunId);
+    }
+  }
+
+  @Test
+  public void configuredSaveProofScenarioRejectsUnexpectedScenario() {
+    String previousScenario = System.getProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY);
+    System.setProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY,
+        "alice-desktop-other-scenario");
+    try {
+      IllegalArgumentException thrown = assertThrows(
+          IllegalArgumentException.class,
+          SaveOperationCompletionEvidence::configuredSaveProofScenario);
+
+      assertTrue(thrown.getMessage().contains(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO));
+    } finally {
+      restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY, previousScenario);
+    }
+  }
+
+  @Test
+  public void canonicalProofArtifactRejectsOutsideParentWithoutCreatingIt() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path target = Files.writeString(proofRoot.resolve("robot-save-menu-proof.a3p"), "project");
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(target.toFile(), proofRoot);
+    Path outsideRoot = newTestDir().resolve("outside-root");
+    Path outsideArtifact = outsideRoot.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+
+    IllegalArgumentException thrown = assertThrows(
+        IllegalArgumentException.class,
+        () -> evidence.write(outsideArtifact));
+
+    assertTrue(thrown.getMessage().contains("escapes proof root"));
+    assertFalse(Files.exists(outsideRoot));
+  }
+
+  @Test
+  public void canonicalProofArtifactRefusesSymlinkOverwrite() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path target = Files.writeString(proofRoot.resolve("robot-save-menu-proof.a3p"), "project");
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(target.toFile(), proofRoot);
+    Path outsideRoot = Files.createDirectories(newTestDir().resolve("outside-root")).toRealPath();
+    Path outsideArtifact = Files.writeString(
+        outsideRoot.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT),
+        "{}");
+    Path symlinkArtifact = proofRoot.resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+    try {
+      Files.createSymbolicLink(symlinkArtifact, outsideArtifact);
+    } catch (IOException | SecurityException | UnsupportedOperationException e) {
+      return;
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> evidence.write(symlinkArtifact));
+    assertTrue(thrown.getMessage().contains("refuses to overwrite symlink"));
+  }
+
+  @Test
+  public void canonicalProofArtifactRejectsSymlinkParentBeforeCreatingOutsideDirectory() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path target = Files.writeString(proofRoot.resolve("robot-save-menu-proof.a3p"), "project");
+    SaveOperationCompletionEvidence.SaveProofEvidence evidence =
+        SaveOperationCompletionEvidence.saveProofEvidence(target.toFile(), proofRoot);
+    Path outsideRoot = Files.createDirectories(newTestDir().resolve("outside-root")).toRealPath();
+    Path symlinkParent = proofRoot.resolve("linked-parent");
+    try {
+      Files.createSymbolicLink(symlinkParent, outsideRoot);
+    } catch (IOException | SecurityException | UnsupportedOperationException e) {
+      return;
+    }
+
+    Path nestedArtifact = symlinkParent.resolve("nested")
+        .resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+    IOException thrown = assertThrows(IOException.class, () -> evidence.write(nestedArtifact));
+
+    assertTrue(thrown.getMessage().contains("escapes proof root"));
+    assertFalse(Files.exists(outsideRoot.resolve("nested")));
+  }
+
+  @Test
+  public void configuredSaveProofArtifactRejectsSymlinkParentBeforeCreatingOutsideDirectory() throws Exception {
+    Path proofRoot = Files.createDirectories(newTestDir().resolve("proof-root")).toRealPath();
+    Path outsideRoot = Files.createDirectories(newTestDir().resolve("outside-root")).toRealPath();
+    Path symlinkParent = proofRoot.resolve("linked-parent");
+    try {
+      Files.createSymbolicLink(symlinkParent, outsideRoot);
+    } catch (IOException | SecurityException | UnsupportedOperationException e) {
+      return;
+    }
+    Path nestedArtifact = symlinkParent.resolve("nested")
+        .resolve(SaveOperationCompletionEvidence.SAVE_PROOF_ARTIFACT);
+    String previousEvidencePath = System.getProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY);
+    System.setProperty(
+        SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+        nestedArtifact.toString());
+    try {
+      IllegalArgumentException thrown = assertThrows(
+          IllegalArgumentException.class,
+          () -> SaveOperationCompletionEvidence.configuredSaveProofArtifact(proofRoot));
+
+      assertTrue(thrown.getMessage().contains("writable canonical directory"));
+      assertFalse(Files.exists(outsideRoot.resolve("nested")));
+    } finally {
+      restoreProperty(
+          SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY,
+          previousEvidencePath);
+    }
+  }
+
   private static Path newTestDir() throws Exception {
     return Files.createDirectories(Path.of(
         "target",
         "save-operation-completion-evidence-test",
         UUID.randomUUID().toString()));
+  }
+
+  private static void restoreProperty(String name, String value) {
+    if (value == null) {
+      System.clearProperty(name);
+    } else {
+      System.setProperty(name, value);
+    }
   }
 }
