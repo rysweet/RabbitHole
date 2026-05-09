@@ -460,7 +460,9 @@ workflow. It calls `run-scenario.sh validate-save-proof-evidence` directly to
 prove missing, malformed, stale, blocked, partial, unknown-blocker, and
 internally inconsistent Save proof artifacts fail closed with explicit
 diagnostics. It does not run the desktop Save path or claim full desktop Save
-completion.
+completion. It also does not claim Save As behavior, visible rendering
+correctness, grading, lesson completion, learner assessment, broad UI
+automation, or native dialog automation.
 
 Run the focused contract directly or through the branch-installable wrapper:
 

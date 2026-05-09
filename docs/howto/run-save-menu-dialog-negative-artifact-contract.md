@@ -102,6 +102,10 @@ Accept the negative contract only when failures are fail-closed and diagnostic.
 Do not cite a passing negative contract as desktop Save completion. It proves
 only that invalid Save proof artifacts cannot be silently accepted.
 
+Keep review wording narrow. This contract does not prove full Save behavior,
+Save As behavior, visible rendering correctness, grading, lesson completion,
+learner assessment, broad UI automation, or native dialog automation.
+
 For the field-level artifact contract, see
 [Save Proof Evidence](../reference/save-proof-evidence.md). For the full
 negative contract specification, see

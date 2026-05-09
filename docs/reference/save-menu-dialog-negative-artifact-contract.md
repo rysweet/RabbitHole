@@ -10,6 +10,11 @@ proof. It does not run Alice, does not open the desktop, does not invoke Maven,
 does not add a scenario or workflow, and does not prove full desktop Save
 completion.
 
+Keep the claim bounded to fail-closed artifact validation. A passing negative
+contract is not evidence for full Save behavior, Save As behavior, visible
+rendering correctness, grading, lesson completion, learner assessment, broad UI
+automation, or native dialog automation.
+
 ## Scope
 
 The executable contract is:
@@ -153,7 +158,10 @@ fail closed with explicit diagnostics.
 Use the negative contract to guard the artifact validator, not to claim Save
 success. A passing negative contract means bad Save proof artifacts are rejected
 with explicit diagnostics. It does not mean the rendered File-menu Save path has
-run, written a project, read it back, or completed the positive proof.
+run, written a project, read it back, or completed the positive proof. It also
+does not make claims about Save As, visible rendering correctness, grading,
+lesson completion, learner assessment, broad UI automation, or native dialog
+automation.
 
 Reviewers should cite the positive
 `robot-save-menu-dialog-write-readback-proof.json` artifact only when the
