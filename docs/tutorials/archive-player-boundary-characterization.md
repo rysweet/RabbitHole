@@ -26,13 +26,10 @@ Add or review the characterization in:
 core/story-api-migration/src/test/java/org/lgna/project/io/HistoricalArchiveRoundTripCharacterizationTest.java
 ```
 
-Use a method name that states the bounded behavior:
+Use or review the committed test method named for the bounded behavior:
 
-```java
-@Test
-public void generatedJsonPlayerArchiveWithResourceFieldInitializerProgramTypeIsRejectedWithoutPartialProgramDecode() throws Exception {
-  // generate archive, read through IoUtilities, assert IOException diagnostics
-}
+```text
+generatedJsonPlayerArchiveWithResourceFieldInitializerProgramTypeIsRejectedWithoutPartialProgramDecode
 ```
 
 The test belongs in this suite because it protects archive routing and
