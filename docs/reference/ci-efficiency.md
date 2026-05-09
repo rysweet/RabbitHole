@@ -25,8 +25,9 @@ Pull requests to `develop` start these required checks in parallel:
 
 The repository-owned workflows keep their existing names, job names, triggers,
 stale pull request cancellation, and required status semantics. Pull request runs
-from the same branch cancel older in-progress runs; `develop` push runs are kept
-for history.
+for the same pull request cancel older in-progress runs; unrelated pull requests
+do not cancel each other even when their source branches share a name. `develop`
+push runs are kept for history.
 
 ## Measured bottleneck baseline
 

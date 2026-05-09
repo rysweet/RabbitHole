@@ -72,6 +72,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
             "--min-module-line-percent core/model-loading=10.0",
             "--min-module-line-percent core/story-api-migration=75.0",
             "--min-module-line-percent core/tweedle=50.0",
+            "--min-module-line-percent core/scenegraph=10.0",
             "--min-module-line-percent netbeans=25.0",
         ]
 

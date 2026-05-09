@@ -110,6 +110,18 @@ class CiNoopWorkflowContractTest(unittest.TestCase):
                 self.assertNotIn("pull_request_target", workflow)
                 self.assertNotRegex(workflow, r"(?m)^\s+paths(?:-ignore)?:")
 
+    def test_pull_request_concurrency_cancels_only_runs_for_the_same_pr(self) -> None:
+        for key in WORKFLOWS:
+            workflow = read_workflow(key)
+            with self.subTest(workflow=key):
+                self.assertIn("concurrency:", workflow)
+                self.assertIn("github.event.pull_request.number", workflow)
+                self.assertIn(
+                    "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+                    workflow,
+                )
+                self.assertNotIn("github.head_ref", workflow)
+
     def test_each_workflow_has_pr_only_change_scope_step(self) -> None:
         for key in WORKFLOWS:
             workflow = read_workflow(key)
