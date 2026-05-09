@@ -98,8 +98,11 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --prepare-only \
   --evidence-dir qa/outside-in/alice-desktop/evidence/gadugi-run-execution-gap
 
-qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh
+qa/outside-in/alice-desktop/tests/run-tests.sh
 ```
+
+`run-tests.sh` runs the full outside-in contract test suite, which includes the
+`test-run-execution-gap-contract.sh` assertions.
 
 `--prepare-only` is the default evidence-contract lane for Gadugi execution. It
 creates the manual evidence checklist for the current `run-debug` scenario and
@@ -142,8 +145,8 @@ The scenario YAML uses the CLI schema accepted by `gadugi-test validate`.
 | Interface | The scenario is a CLI evidence check, not a browser, desktop, rendering, save, grading, or lesson-completion test. |
 | Delegated catalog validation | The first step runs `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`. |
 | Delegated evidence preparation | The second step runs `qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-run-debug --prepare-only --evidence-dir qa/outside-in/alice-desktop/evidence/gadugi-run-execution-gap`. |
-| Delegated contract test | The third step runs `qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh`. |
-| Verification | The contract test confirms scenario identity, workflow value, automation mode, required evidence artifacts, gap-report artifact reference, prohibited claim wording, manual checklist rendering, and negative cases for missing VM-listener artifacts and payload drift. |
+| Delegated shell tests | The third step runs `qa/outside-in/alice-desktop/tests/run-tests.sh`, which includes `test-run-execution-gap-contract.sh`. |
+| Verification | The contract tests confirm scenario identity, workflow value, automation mode, required evidence artifacts, gap-report artifact reference, prohibited claim wording, manual checklist rendering, and negative cases for missing VM-listener artifacts and payload drift. |
 | Test dependencies | The shell contract test uses shell and Python standard library checks only; it must not require PyYAML or other non-repo dependencies. |
 | Evidence location | Generated outside-in runner evidence is written under `qa/outside-in/alice-desktop/evidence/gadugi-run-execution-gap`. Evidence output is generated runtime data and remains uncommitted. |
 
@@ -169,6 +172,9 @@ NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
 
 NODE_OPTIONS=--max-old-space-size=32768 \
   qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+
+NODE_OPTIONS=--max-old-space-size=32768 \
+  qa/outside-in/alice-desktop/tests/run-tests.sh
 
 NODE_OPTIONS=--max-old-space-size=32768 \
   qa/outside-in/alice-desktop/tests/test-run-execution-gap-contract.sh
