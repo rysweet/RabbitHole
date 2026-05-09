@@ -40,6 +40,10 @@ The gate consumes a JSON object with these top-level fields:
 | `manualMergePerformed` | boolean | yes | Must be `false`. |
 | `replacementPullRequestCreated` | boolean | yes | Must be `false`. |
 | `noOpModeUsed` | boolean | yes | Must be `false`. |
+| `manualMergeUsed` | boolean | no | Checked as an additional merge safety signal. Must be `false` when present. |
+| `noOpJustificationUsed` | boolean | no | Checked alongside `noOpModeUsed`. Must be `false` when present. |
+| `repairRequired` | boolean | no | `true` when the branch needs repair. Drives `REPAIR_REQUIRED` vs `NOT_MERGE_READY` status. |
+| `pushedRepair` | boolean | no | `true` when a repair has been pushed. Required when `repairRequired` is `true`. |
 | `tweedleLangInitialized` | boolean | yes | Must be `true`. |
 | `nodeOptions` | string | yes | Must be `--max-old-space-size=32768`. |
 | `archivePlayerEvidenceSurfaces` | string[] | yes | Bounded list of evidence surface paths. |
@@ -50,6 +54,7 @@ The gate consumes a JSON object with these top-level fields:
 | `githubActions` | object | yes | Live GitHub check state at the PR head SHA. |
 | `prEvidence` | object | yes | PR description merge-readiness evidence. |
 | `commands` | string[] | yes | Commands executed during recovery. |
+| `externalServiceErrors` | object[] | no | Populated by `--refresh-github` on failure. Each entry has `service`, `operation`, and `message`. |
 
 ### Boundary evidence object
 
@@ -171,6 +176,7 @@ Each blocker code identifies a specific merge-readiness failure:
 | `unexpected-push-without-repair` | A `git push` was detected when no repair was required. |
 | `focused-repair-not-pushed` | A required repair was not pushed. |
 | `missing-focused-repair-diff` | Repair was required but no diff files were recorded. |
+| `external-service-error` | A non-GitHub external service produced an error during evidence refresh. |
 
 ## Readiness result
 
@@ -195,7 +201,7 @@ The gate emits a JSON object to stdout:
 | `headSha` | string | The evaluated branch head SHA. |
 | `blockers` | string[] | Blocker codes preventing merge. Empty when `MERGE_READY`. |
 | `repairRequired` | boolean | Whether the branch needs repair before merge readiness. |
-| `recoveryMode` | string | The recovery mode from the evidence. |
+| `recoveryMode` | string | The recovery mode from the evidence. Present only when `MERGE_READY`. |
 | `allowedRepairPaths` | string[] | Paths allowed in the repair diff. Non-empty only when `REPAIR_REQUIRED`. |
 | `mayUseNoOpJustification` | boolean | Always `false`. No-op mode is not permitted for this recovery. |
 | `summary` | string | Human-readable summary of the readiness state. |

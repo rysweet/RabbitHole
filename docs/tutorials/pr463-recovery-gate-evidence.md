@@ -151,6 +151,8 @@ Combine all the pieces:
   "manualMergePerformed": false,
   "replacementPullRequestCreated": false,
   "noOpModeUsed": false,
+  "repairRequired": false,
+  "pushedRepair": false,
   "tweedleLangInitialized": true,
   "nodeOptions": "--max-old-space-size=32768",
   "archivePlayerEvidenceSurfaces": [
