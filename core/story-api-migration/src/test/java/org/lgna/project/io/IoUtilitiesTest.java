@@ -37,6 +37,7 @@ import org.lgna.project.ast.LocalDeclarationStatement;
 import org.lgna.project.ast.MethodInvocation;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.ResourceExpression;
+import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
@@ -783,6 +784,42 @@ public class IoUtilitiesTest {
     ExpressionStatement statement = (ExpressionStatement) pair.body.getValue().statements.get(0);
     assertTrue(statement.expression.getValue() instanceof MethodInvocation);
     MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+    assertEquals(0, conditional.elseBody.getValue().statements.size());
+  }
+
+  @Test
+  public void jsonPlayerTweedleImplicitSameClassMethodCallDecodesProgramType() throws Exception {
+    File exportFile = temporaryFolder.newFile("json-implicit-same-class-call-program.a3w");
+    writeJsonPlayerArchive(exportFile, "Program", """
+        class Program extends SProgram {
+          void run(Boolean ready) {
+            if (ready) { helper(); }
+          }
+          void helper() { }
+        }
+        """);
+
+    Project readProject = IoUtilities.readProject(exportFile);
+
+    NamedUserType programType = readProject.getProgramType();
+    assertNotNull("Player archive should decode the supported implicit same-class call Tweedle slice.", programType);
+    UserMethod run = userMethodNamed(programType, "run");
+    UserMethod helper = userMethodNamed(programType, "helper");
+    assertEquals(1, run.body.getValue().statements.size());
+    assertTrue(run.body.getValue().statements.get(0) instanceof ConditionalStatement);
+    ConditionalStatement conditional = (ConditionalStatement) run.body.getValue().statements.get(0);
+    assertEquals(1, conditional.booleanExpressionBodyPairs.size());
+    BooleanExpressionBodyPair pair = conditional.booleanExpressionBodyPairs.get(0);
+    assertEquals(1, pair.body.getValue().statements.size());
+    assertTrue(pair.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement statement = (ExpressionStatement) pair.body.getValue().statements.get(0);
+    assertTrue(statement.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
     assertSame(helper, invocation.method.getValue());
     assertTrue(invocation.requiredArguments.isEmpty());
     assertTrue(invocation.variableArguments.isEmpty());

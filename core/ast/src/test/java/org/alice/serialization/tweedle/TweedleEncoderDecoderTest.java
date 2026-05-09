@@ -1526,11 +1526,63 @@ public class TweedleEncoderDecoderTest {
   }
 
   @Test
-  public void zeroArgumentThisMethodCallDecodeRejectsImplicitTarget() {
-    assertUnsupportedZeroArgumentThisMethodCallDecode("""
+  public void implicitZeroArgumentSameClassMethodCallDecodeCreatesMethodInvocation() throws Exception {
+    NamedUserType type = decodeUserType("""
         class SyntheticType {
           void caller() { helper(); }
           void helper() { }
+        }
+        """);
+
+    UserMethod caller = userMethodNamed(type, "caller");
+    UserMethod helper = userMethodNamed(type, "helper");
+    assertEquals(1, caller.body.getValue().statements.size());
+    assertTrue(caller.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement stmt = (ExpressionStatement) caller.body.getValue().statements.get(0);
+    assertTrue(stmt.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) stmt.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertTrue(invocation.requiredArguments.isEmpty());
+    assertTrue(invocation.variableArguments.isEmpty());
+    assertTrue(invocation.keyedArguments.isEmpty());
+  }
+
+  @Test
+  public void implicitSameClassMethodCallDecodeRejectsUnknownMethod() {
+    assertUnsupportedImplicitSameClassMethodCallDecode("""
+        class SyntheticType {
+          void caller() { missing(); }
+        }
+        """, "missing");
+  }
+
+  @Test
+  public void implicitSameClassMethodCallDecodeRejectsArgumentBearingCall() {
+    assertUnsupportedArgumentBearingImplicitSameClassMethodCallDecode("""
+        class SyntheticType {
+          void caller() { helper(value: 1); }
+          void helper(WholeNumber value) { }
+        }
+        """, "caller.helper");
+  }
+
+  @Test
+  public void implicitSameClassMethodCallDecodeRejectsOptionalParameterTargetMethod() {
+    assertUnsupportedImplicitSameClassMethodCallDecode("""
+        class SyntheticType {
+          void caller() { helper(); }
+          void helper(WholeNumber value <- 1) { }
+        }
+        """, "helper");
+  }
+
+  @Test
+  public void implicitSameClassMethodCallDecodeRejectsStaticTargetMethod() {
+    assertUnsupportedImplicitSameClassMethodCallDecode("""
+        class SyntheticType {
+          void caller() { helper(); }
+          static void helper() { }
         }
         """, "helper");
   }
@@ -2106,6 +2158,24 @@ public class TweedleEncoderDecoderTest {
 
     assertTrue(thrown.getMessage().contains("argument-bearing explicit this method calls"));
     assertTrue(thrown.getMessage().contains(expectedDetail));
+  }
+
+  private void assertUnsupportedImplicitSameClassMethodCallDecode(String source, String expectedDetail) {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode(source));
+
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains(expectedDetail));
+  }
+
+  private void assertUnsupportedArgumentBearingImplicitSameClassMethodCallDecode(
+      String source,
+      String expectedDetail) {
+    UnsupportedTweedleDecodeException thrown = assertThrows(
+        UnsupportedTweedleDecodeException.class,
+        () -> coder.decode(source));
+
+    assertTrue(thrown.getMessage(), thrown.getMessage().contains(expectedDetail));
   }
 
   private static void assertUnsupportedResourceFieldInitializer(

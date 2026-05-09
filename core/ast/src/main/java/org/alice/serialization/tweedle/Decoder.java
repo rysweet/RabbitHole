@@ -204,7 +204,7 @@ public class Decoder {
         statements.add(decodeConstructorAssignmentStatement(constructor, assignment, parameters, locals, fields));
       } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
           && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
-        statements.add(decodeZeroArgumentThisMethodCallStatement(
+        statements.add(decodeZeroArgumentSameClassMethodCallStatement(
             declaringType, constructor.getName(), methodCall, zeroArgumentMethods));
       } else {
         throw unsupportedConstructorBody(constructor);
@@ -285,7 +285,7 @@ public class Decoder {
         statements.add(decodeWhileLoop(method, allParameters, locals, fields, whileLoop));
       } else if (statement instanceof org.alice.tweedle.ast.ExpressionStatement expressionStatement
           && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
-        statements.add(decodeZeroArgumentThisMethodCallStatement(
+        statements.add(decodeZeroArgumentSameClassMethodCallStatement(
             declaringType, method.getName(), methodCall, zeroArgumentMethods));
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
           && i == method.getBody().size() - 1) {
@@ -301,16 +301,20 @@ public class Decoder {
     return new BlockStatement(statements.toArray(Statement[]::new));
   }
 
-  private Statement decodeZeroArgumentThisMethodCallStatement(
+  private Statement decodeZeroArgumentSameClassMethodCallStatement(
       NamedUserType declaringType,
       String ownerName,
       MethodCallExpression methodCall,
       Map<String, UserMethod> zeroArgumentMethods) {
-    if (!methodCall.hasExplicitTarget() || !(methodCall.getTarget() instanceof ThisExpression)) {
-      throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
-    }
-    if (!methodCall.getArguments().isEmpty()) {
-      throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
+    if (methodCall.hasExplicitTarget()) {
+      if (!(methodCall.getTarget() instanceof ThisExpression)) {
+        throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
+      }
+      if (!methodCall.getArguments().isEmpty()) {
+        throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
+      }
+    } else if (!methodCall.getArguments().isEmpty()) {
+      throw unsupportedArgumentBearingImplicitSameClassMethodCall(ownerName, methodCall);
     }
     UserMethod targetMethod = zeroArgumentMethods.get(methodCall.getMethodName());
     if (targetMethod == null) {
@@ -367,7 +371,7 @@ public class Decoder {
       if (expression instanceof org.alice.tweedle.ast.AssignmentExpression assignment) {
         decoded.add(decodeMethodAssignmentStatement(method, assignment, parameters, locals, fields));
       } else if (expression instanceof MethodCallExpression methodCall) {
-        decoded.add(decodeZeroArgumentThisMethodCallStatement(
+        decoded.add(decodeZeroArgumentSameClassMethodCallStatement(
             declaringType, method.getName(), methodCall, zeroArgumentMethods));
       } else {
         throw unsupportedSimpleIfBody(method);
@@ -1093,7 +1097,8 @@ public class Decoder {
 
   private UnsupportedTweedleDecodeException unsupportedSimpleIfBody(TweedleMethod method) {
     return new UnsupportedTweedleDecodeException(
-        "Only assignment statements and explicit zero-argument this-method calls are supported "
+        "Only assignment statements, explicit zero-argument this-method calls, "
+            + "and implicit zero-argument same-class method calls are supported "
             + "in Tweedle simple if bodies by the AST decoder: " + method.getName());
   }
 
@@ -1101,7 +1106,8 @@ public class Decoder {
       String ownerName,
       MethodCallExpression methodCall) {
     return new UnsupportedTweedleDecodeException(
-        "Only explicit zero-argument this-method calls declared on the current Tweedle type "
+        "Only explicit zero-argument this-method calls or implicit zero-argument same-class method calls "
+            + "declared on the current Tweedle type "
             + "are supported by the AST decoder: "
             + ownerName + "." + describeMethodCall(methodCall));
   }
@@ -1111,6 +1117,14 @@ public class Decoder {
       MethodCallExpression methodCall) {
     return new UnsupportedTweedleDecodeException(
         "Tweedle " + ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS + " are not supported by the AST decoder: "
+            + ownerName + "." + describeMethodCall(methodCall));
+  }
+
+  private UnsupportedTweedleDecodeException unsupportedArgumentBearingImplicitSameClassMethodCall(
+      String ownerName,
+      MethodCallExpression methodCall) {
+    return new UnsupportedTweedleDecodeException(
+        "Tweedle argument-bearing implicit same-class method calls are not supported by the AST decoder: "
             + ownerName + "." + describeMethodCall(methodCall));
   }
 
