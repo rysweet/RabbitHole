@@ -52,6 +52,7 @@ repository.
 - [Tutorial: Trace the Run-Window Creation/Wiring Contract](./tutorials/trace-run-window-creation-wiring-contract.md) - guided review of the Run-window evidence writer, fixed artifact shape, path-safety checks, and non-claim boundary.
 - [Desktop procedure edit and Save automation](./reference/desktop-procedure-edit-and-save-automation.md) - checked-in hook points, next tests, and unproven limits for procedure tab selection and project Save automation.
 - [Gadugi exported launcher evidence scenario](./reference/gadugi-exported-launcher-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for exported launcher evidence checks.
+- [Gadugi run-window contract evidence scenario](./reference/gadugi-run-window-contract-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for Run-window creation/wiring evidence checks.
 - [Headless-safe desktop action characterization](./reference/headless-safe-desktop-action-characterization.md) - JavaFX/Swing headless startup contract, Croquet action-flow seams, validation commands, and compatibility rules.
 - [Characterize headless-safe desktop actions](./howto/characterize-headless-safe-desktop-actions.md) - how to add or review desktop action characterization without display-dependent tests.
 - [Tutorial: Trace a Desktop Action Journey](./tutorials/desktop-action-journey-characterization.md) - guided walkthrough from outside-in menu/action smoke evidence to headless-safe Save action tests.

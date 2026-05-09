@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the Run-window creation/wiring evidence contract and artifact API, see [Run-Window Creation/Wiring Contract](../../../docs/reference/run-window-creation-wiring-contract.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the Run-window creation/wiring evidence contract and artifact API, see [Run-Window Creation/Wiring Contract](../../../docs/reference/run-window-creation-wiring-contract.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the Gadugi Run-window contract evidence scenario, see [Gadugi run-window contract evidence](../../../docs/reference/gadugi-run-window-contract-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -10,7 +10,7 @@ For user-facing instructions, see [Run Alice desktop outside-in QA](../../../doc
 | --- | --- | --- |
 | `scenarios/` | User-like workflows, expected outcomes, evidence requirements, automation mode | Java implementation details or brittle internal UI assumptions |
 | `contracts/` | Declarative claim-boundary records, including the learner-world assessment blocker | Runner behavior or assessment implementation |
-| `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence contract checks | The custom Alice scenario schema or full desktop/rendering claims |
+| `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher, run-render-affordance, and Run-window contract evidence checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `schema/` | Scenario structure and allowed field values | Business logic |
 | `runners/` | Thin wrappers around existing Maven/Alice commands | New build systems, hidden dependencies, or product behavior changes |
 | `evidence/` | Local run artifacts produced by the runner | Source-controlled product assets |
@@ -281,6 +281,30 @@ invoked without `--prepare-only`. The Gadugi lane validates launcher evidence
 wiring and JavaFX handoff/no-go checks only; it does not prove visible
 rendering, save behavior, grading, creative assessment, or full lesson
 completion.
+
+The Gadugi Run-window contract evidence scenario is also under `gadugi/`.
+Validate and run it with `gadugi-test` installed on `PATH`:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/run-window-contract-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s run-window-contract-evidence \
+  --timeout 300000
+```
+
+That Gadugi scenario delegates to the `alice-desktop-run-window-contract` runner
+in prepare-only mode by default and writes evidence under
+`qa/outside-in/alice-desktop/evidence/gadugi-run-window-contract`.
+`ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
+invoked without `--prepare-only`. The Gadugi lane validates Run-window
+creation/wiring evidence only; it does not prove active rendering, run
+execution, world execution correctness, rendering correctness, Save behavior,
+grading, creative assessment, lesson completion, or full UI automation. For the
+full reference, see
+[Gadugi run-window contract evidence scenario](../../../docs/reference/gadugi-run-window-contract-evidence.md).
 
 For branch-installable outside-in checks, run the thin `amplihack` wrapper from a checkout of the branch:
 
