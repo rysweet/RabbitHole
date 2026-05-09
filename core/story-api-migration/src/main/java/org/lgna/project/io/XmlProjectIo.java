@@ -135,7 +135,9 @@ public class XmlProjectIo implements ProjectIo {
       if (is == null) {
         return null;
       }
-      return ManifestEncoderDecoder.fromJson(readContent(is), ProjectManifest.class);
+      try (InputStream manifestStream = is) {
+        return ManifestEncoderDecoder.fromJson(readContent(manifestStream), ProjectManifest.class);
+      }
     }
 
     private static Project.SceneCameraType sceneCameraType(ProjectManifest manifest) {
