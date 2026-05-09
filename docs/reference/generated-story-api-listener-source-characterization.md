@@ -1,10 +1,10 @@
 # Generated Story API Listener Runtime Dispatch Characterization
 
-This reference defines the bounded, headless NetBeans characterization for
-generated Story API listener wiring. The feature proves that a synthetic Alice
-project can generate scene listener registration source, compile that generated
-Java, load the generated scene, invoke listener registration, and observe one
-callback through the existing runtime scene activation dispatch seam.
+This reference defines the bounded, headless NetBeans characterization target
+for generated Story API listener wiring. The feature must prove that a synthetic
+Alice project can generate scene listener registration source, compile that
+generated Java, load the generated scene, invoke listener registration, and
+observe one callback through the existing runtime scene activation dispatch seam.
 
 The feature is an evidence lane for listener wiring only. It does not launch the
 Alice desktop, run full world playback, assert visible correctness, grade learner
@@ -44,7 +44,8 @@ It covers one narrow behavior slice:
    targets.
 8. Fire `EventManager.sceneActivated()`, the existing headless runtime scene
    activation seam.
-9. Assert that the generated listener observes the runtime callback with a
+9. Assert that the generated listener observes the runtime callback, callback
+   count, and `SceneActivationEvent` payload from that same dispatch with a
    bounded `CountDownLatch`.
 
 This is generated listener registration plus headless runtime dispatch
@@ -66,8 +67,7 @@ calls on `SScene`.
 
 Scene activation is the runtime dispatch seam for this lane. Time listener source
 may remain in the generated fixture to preserve the existing source-generation
-contract, but the headless runtime assertion observes scene activation dispatch
-unless implementation details make another already-existing seam safer.
+contract, but the headless runtime assertion observes scene activation dispatch.
 
 The calls are placed in a synthetic `Scene` user type assignable to
 `org.lgna.story.SScene`. The fixture method is named `handleActiveChanged`,
@@ -89,7 +89,7 @@ test-only dispatch bypass or production behavior.
 | Runtime surface | Contract |
 | --- | --- |
 | `EventManager.sceneActivated()` | Fires the existing headless scene activation dispatch path used by Story API runtime code. |
-| `SceneActivationHandler` | Adapts scene activation events to registered Story API scene activation listeners. |
+| `SceneActivationHandler` | Adapts scene activation events from the runtime dispatch path to registered Story API scene activation listeners. |
 | `AbstractEventHandler` | Provides the event handler base behavior used by the runtime dispatch path. |
 | `ComponentExecutor` | Delivers callbacks asynchronously, so validation must wait with a bounded timeout. |
 | `CountDownLatch` | Observes callback delivery without sleeping indefinitely or depending on timing-only assertions. |
@@ -99,10 +99,17 @@ participation:
 
 1. The callback count reaches the expected value.
 2. The latch is released before the bounded timeout.
-3. The callback receives a `SceneActivationEvent` payload object.
+3. The callback receives a `SceneActivationEvent` payload object from the same
+   `EventManager.sceneActivated()` dispatch that releases the latch.
 4. Payload assertions stay within the existing event type. The current
    `SceneActivationEvent` exposes no scene-specific public properties, so the
    required payload assertion is object delivery and type.
+
+A direct `SceneActivationHandler.handleEventFire(...)` invocation may be useful
+as a lower-level helper characterization, but it does not satisfy this feature's
+runtime dispatch contract. Count, latch, and payload evidence for this lane must
+all be observed from the generated listener after `EventManager.sceneActivated()`
+is fired.
 
 Cleanup is explicit. Registered listener state must not leak into other tests,
 and executor-backed asynchronous work must be allowed to complete before the
@@ -110,7 +117,7 @@ temporary class loader and generated classes are discarded.
 
 ## Executable characterization
 
-The executable characterizations are:
+The target executable characterizations are:
 
 ```text
 ProjectCodeGeneratorStoryApiGeneratedSourceTest.generatedSyntheticSceneListenerRegistrationSourceCompiles
@@ -124,17 +131,25 @@ generated-source and compiler-validity contract. It succeeds when:
 2. `Scene.java` contains the expected listener registration calls.
 3. Every generated `.java` file in the temporary source directory compiles.
 
-`generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch` extends
-the same characterization path one step into runtime dispatch. It succeeds when:
+`generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch` is the
+runtime feature test. It succeeds when:
 
 1. Generated source is compiled and loaded by the test.
 2. The generated scene or generated listener registration method is invoked
    through explicit reflection targets.
 3. `EventManager.sceneActivated()` is fired for the generated/headless scene.
-4. The generated scene activation listener callback releases a
-   `CountDownLatch` before the bounded timeout.
-5. The observed callback count and payload assertions match the expected single
-   scene activation dispatch.
+4. The generated scene activation listener callback captures the delivered
+   `SceneActivationEvent` object and releases a `CountDownLatch` before the
+   bounded timeout.
+5. The observed callback count and payload type assertions match the expected
+   single scene activation dispatch.
+
+Split tests that separately prove `EventManager.sceneActivated()` callback
+delivery and direct `SceneActivationHandler.handleEventFire(...)` payload
+delivery are transitional evidence only. They should be consolidated or extended
+before this feature is considered complete, because direct handler payload
+delivery does not prove generated listener participation in the runtime dispatch
+seam.
 
 The tests create only temporary files. The generated project archive, source
 directory, and compiled classes directory are managed by JUnit's temporary
@@ -226,15 +241,17 @@ The runtime characterization follows this shape:
 
 ```java
 CountDownLatch callbackObserved = new CountDownLatch(1);
+AtomicReference<SceneActivationEvent> observedEvent = new AtomicReference<>();
 
 Scene scene = loadGeneratedScene();
-invokeGeneratedListenerRegistration(scene, callbackObserved);
+invokeGeneratedListenerRegistration(scene, callbackObserved, observedEvent);
 
 EventManager eventManager = getExistingRuntimeEventManager(scene);
 eventManager.sceneActivated();
 
 assertTrue(callbackObserved.await(5, TimeUnit.SECONDS));
 assertEquals(1, observedCallbackCount.get());
+assertTrue(observedEvent.get() instanceof SceneActivationEvent);
 ```
 
 The example shows the contract, not a new public API. Implementations should use
@@ -252,6 +269,7 @@ listener wiring:
 | Does generated source include listener registration on `this`? | Yes, `Scene.java` contains the expected listener registration calls. |
 | Does generated Java compile? | Yes, all generated `.java` files compile with the JDK compiler. |
 | Does the runtime assertion use `EventManager.sceneActivated()`? | Yes, dispatch flows through the existing headless runtime seam. |
+| Are count and payload observed from the same runtime dispatch? | Yes, the generated listener callback captures both after `EventManager.sceneActivated()` fires. |
 | Is callback validation async-safe? | Yes, a bounded `CountDownLatch` observes the callback and fails on timeout. |
 | Does the test launch Alice or a GUI toolkit? | No, it never starts desktop runtime, JavaFX, Swing, NetBeans UI, or a display loop. |
 | Does the test require Sims, LFS, exported projects, or real project payloads? | No, all inputs are deterministic synthetic fixtures. |
@@ -297,14 +315,15 @@ and tests an intentional compatibility change.
 If compilation succeeds but the latch is not released, verify that the generated
 scene or generated registration method is loaded and invoked through the expected
 reflection targets. Do not replace the dispatch call with direct listener
-invocation; that would prove only payload shape, not participation in the runtime
-dispatch seam.
+invocation or direct `SceneActivationHandler.handleEventFire(...)`; that would
+prove only payload shape, not participation in the runtime dispatch seam.
 
 ### Step 5: Keep failures bounded
 
-Use a bounded latch timeout and assert the callback count after the latch
-releases. Do not use unbounded waits, arbitrary sleeps as the only proof, or
-desktop playback to make the callback happen.
+Use a bounded latch timeout and assert the callback count and
+`SceneActivationEvent` payload after the latch releases. Do not use unbounded
+waits, arbitrary sleeps as the only proof, or desktop playback to make the
+callback happen.
 
 Do not broaden the test into GUI launch, exported project execution, visible
 rendering, grading, or real `.a3p` corpus loading. Those behaviors belong to
