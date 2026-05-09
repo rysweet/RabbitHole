@@ -68,11 +68,14 @@ ARCHIVE_PLAYER_BOUNDARY_COMMAND = (
 
 def find_repo_root(start: Path) -> Path | None:
     """Return the nearest Alice checkout root at or above start."""
-    for candidate in (start, *start.parents):
+    candidate = start
+    while True:
         runners = candidate / "qa" / "outside-in" / "alice-desktop" / "runners"
         if (runners / "validate-scenarios.sh").is_file() and (runners / "run-scenario.sh").is_file():
             return candidate
-    return None
+        if candidate.parent == candidate:
+            return None
+        candidate = candidate.parent
 
 
 def run_from_repo(root: Path, command: Sequence[str], env: dict[str, str] | None = None) -> int:

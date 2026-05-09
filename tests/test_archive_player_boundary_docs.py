@@ -1,3 +1,4 @@
+from functools import cache
 import re
 import unittest
 from pathlib import Path
@@ -6,11 +7,11 @@ import alice_qa_amplihack
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE_PLAYER_DOCS = [
+ARCHIVE_PLAYER_DOCS = (
     REPO_ROOT / "docs/reference/archive-player-boundary.md",
     REPO_ROOT / "docs/howto/validate-archive-player-boundary.md",
     REPO_ROOT / "docs/tutorials/archive-player-boundary-characterization.md",
-]
+)
 ARCHIVE_FIXTURE_SCENARIO = (
     REPO_ROOT
     / "qa"
@@ -20,31 +21,33 @@ ARCHIVE_FIXTURE_SCENARIO = (
     / "archive-fixture-smoke.yaml"
 )
 REFERENCE_DOC = REPO_ROOT / "docs/reference/archive-player-boundary.md"
-EXPECTED_DIRECT_MAVEN_FLAGS = [
+EXPECTED_DIRECT_MAVEN_FLAGS = (
     "-DincludeSims=false",
     "-Dinstall4j.skip",
     "-pl core/story-api-migration -am",
     "-DfailIfNoTests=false",
     "-Dsurefire.failIfNoSpecifiedTests=false",
     "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest",
-]
+)
 DOC_CONTRACT_TEST_PATH = "tests/test_archive_player_boundary_docs.py"
 
 
+@cache
 def read_doc(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def scenario_argv() -> list[str]:
+@cache
+def scenario_argv() -> tuple[str, ...]:
     scenario = ARCHIVE_FIXTURE_SCENARIO.read_text(encoding="utf-8")
     match = re.search(r"(?m)^  argv:\n(?P<body>(?:    - .+\n)+)", scenario)
     if match is None:
         raise AssertionError("archive fixture smoke scenario must declare automation.argv")
-    return [
+    return tuple(
         line.strip().split("- ", 1)[1]
         for line in match.group("body").splitlines()
         if line.strip()
-    ]
+    )
 
 
 class ArchivePlayerBoundaryDocsContractTest(unittest.TestCase):
