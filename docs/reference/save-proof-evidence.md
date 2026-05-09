@@ -33,9 +33,12 @@ The QA runner writes and validates that artifact inside the scenario run directo
 | `claim` | Exact bounded claim text for proven evidence only |
 | `reportingSummary` | Blocked-only summary that says the path was not proven |
 | `blocker` | `null` for proven evidence; one blocker object for blocked evidence |
+| `requiresNextEvidence` | Schema and reviewer guidance for collecting or qualifying the next artifact; not an incomplete-proof signal when `status` is `proven` |
 | `doesNotClaim` | Explicit non-claims for Save variants and non-Save desktop behavior |
 
 `claim` and `reportingSummary` are status-specific: proven artifacts include `claim`, blocked artifacts include `reportingSummary`, and neither status includes both.
+
+`requiresNextEvidence` is present to keep reviewer guidance beside the machine evidence. In a proven artifact, it does not downgrade the result or mean more evidence is required for the rendered Save path. In a blocked artifact, it explains what must change before Save completion can be cited.
 
 ## Proven evidence
 

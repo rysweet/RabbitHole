@@ -58,6 +58,8 @@ Use the JSON artifact as the source of truth. Treat blocked JSON artifacts as ne
 
 Do not treat Maven success by itself as proof. A blocked artifact is blocker evidence for its `blocker.kind` only; `headless_awt` blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` for a headless AWT display, it is not Save evidence. Use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation. It does not prove full Save completion, including full desktop Save completion.
 
+`requiresNextEvidence` is reviewer guidance, not a second status. In a `status: "proven"` artifact, it does not mean the run is incomplete or that more proof is required for this path; proof is complete when `status` is `proven` and the checklist fields below are true. In a `status: "blocked"` artifact, it tells reviewers what environment or evidence is needed before Save completion may be cited.
+
 Example blocked artifact:
 
 ```json

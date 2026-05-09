@@ -64,6 +64,8 @@ Blocked output is the executable blocker for the missing step. It is not proof o
 
 Use the JSON artifact as the source of truth. Do not treat Maven success by itself as proof. A blocked artifact is blocker evidence for its `blocker.kind` only; `headless_awt` blocked artifacts are only headless-display blocker evidence. If the artifact reports `status: "blocked"` with `blocker.kind` set to `headless_awt`, use that artifact only as headless-display blocker evidence. It does not prove Robot Save activation, full Save completion, or full desktop Save completion.
 
+`requiresNextEvidence` is schema and reviewer guidance emitted with the artifact, not an incomplete-proof signal. For `status: "proven"`, treat it as guidance for future reruns and review expectations; the proof is complete when the status is `proven` and every required menu, dialog, control, write, and readback field is true. For `status: "blocked"`, it describes the next evidence needed before anyone may cite Save completion.
+
 ### Blocked headless-display artifact
 
 This is the complete blocked example for a headless AWT display. It records no successful Save evidence and must not be cited as partial Robot Save proof.
@@ -141,6 +143,8 @@ This is the complete blocked example for a headless AWT display. It records no s
 ### Proven artifact
 
 This is the minimum successful example. It is valid only when every menu, dialog, selected-file, write, and readback field is true for the same rendered run.
+
+The `requiresNextEvidence` entries in this proven example are not extra unmet requirements. They remain in the artifact so reviewers can see the same collection guidance and success threshold on every run.
 
 ```json
 {
