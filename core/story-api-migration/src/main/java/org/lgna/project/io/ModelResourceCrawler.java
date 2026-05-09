@@ -44,6 +44,7 @@ package org.lgna.project.io;
 
 import edu.cmu.cs.dennisc.pattern.Crawlable;
 import edu.cmu.cs.dennisc.pattern.Crawler;
+import org.lgna.common.Resource;
 import org.lgna.project.ast.*;
 import org.lgna.story.resources.DynamicResource;
 import org.lgna.story.resources.JointedModelResource;
@@ -59,6 +60,7 @@ public class ModelResourceCrawler implements Crawler {
   Set<InstanceCreation> personCreations = new HashSet<>();
   Set<DynamicResource> dynamicResources = new HashSet<>();
   Set<NamedUserType> activeUserTypes = new HashSet<>();
+  Set<Resource> resources = new HashSet<>();
 
   @Override
   public void visit(Crawlable crawlable) {
@@ -73,6 +75,9 @@ public class ModelResourceCrawler implements Crawler {
     }
     if (NamedUserType.class.isAssignableFrom(crawlable.getClass())) {
       activeUserTypes.add((NamedUserType) crawlable);
+    }
+    if (ResourceExpression.class.isAssignableFrom(crawlable.getClass())) {
+      resources.add(((ResourceExpression) crawlable).resource.getValue());
     }
   }
 

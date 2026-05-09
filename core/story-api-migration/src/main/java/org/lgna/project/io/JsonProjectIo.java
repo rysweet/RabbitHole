@@ -243,40 +243,40 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       if (manifest == null) {
         return result;
       }
-      Set<AbstractDeclaration> typeTerminals = typeTerminals(manifest);
-      for (ResourceReference resourceReference : manifest.resources) {
-        if (resourceReference instanceof TypeReference typeReference) {
-          result.hasTypeReferences = true;
-          try {
-            NamedUserType type = readTweedleType(
-                typeReference,
-                typeTerminals,
-                allowLiteralArithmeticFieldInitializers);
-            if (type != null) {
-              result.add(type);
-            }
-          } catch (UnsupportedTweedleDecodeException e) {
-            result.addUnsupportedTweedleType(typeReference, e);
+      TypeReadPlan typeReadPlan = typeReadPlan(manifest);
+      result.hasTypeReferences = !typeReadPlan.typeReferences.isEmpty();
+      for (TypeReference typeReference : typeReadPlan.typeReferences) {
+        try {
+          NamedUserType type = readTweedleType(
+              typeReference,
+              typeReadPlan.typeTerminals,
+              allowLiteralArithmeticFieldInitializers);
+          if (type != null) {
+            result.add(type);
           }
+        } catch (UnsupportedTweedleDecodeException e) {
+          result.addUnsupportedTweedleType(typeReference, e);
         }
       }
       return result;
     }
 
-    private static Set<AbstractDeclaration> typeTerminals(Manifest manifest) {
+    private static TypeReadPlan typeReadPlan(Manifest manifest) {
+      List<TypeReference> typeReferences = new ArrayList<>();
       Map<String, NamedUserType> terminalsByName = new LinkedHashMap<>();
       for (ResourceReference resourceReference : manifest.resources) {
-        if (resourceReference instanceof TypeReference typeReference
-            && (typeReference.name != null)
-            && !typeReference.name.isEmpty()) {
-          terminalsByName.computeIfAbsent(typeReference.name, name -> {
-            NamedUserType terminal = new NamedUserType();
-            terminal.name.setValue(name);
-            return terminal;
-          });
+        if (resourceReference instanceof TypeReference typeReference) {
+          typeReferences.add(typeReference);
+          if ((typeReference.name != null) && !typeReference.name.isEmpty()) {
+            terminalsByName.computeIfAbsent(typeReference.name, name -> {
+              NamedUserType terminal = new NamedUserType();
+              terminal.name.setValue(name);
+              return terminal;
+            });
+          }
         }
       }
-      return new LinkedHashSet<>(terminalsByName.values());
+      return new TypeReadPlan(typeReferences, new LinkedHashSet<>(terminalsByName.values()));
     }
 
     private NamedUserType readTweedleType(
@@ -542,6 +542,16 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
     }
 
+    private static class TypeReadPlan {
+      private final List<TypeReference> typeReferences;
+      private final Set<AbstractDeclaration> typeTerminals;
+
+      private TypeReadPlan(List<TypeReference> typeReferences, Set<AbstractDeclaration> typeTerminals) {
+        this.typeReferences = typeReferences;
+        this.typeTerminals = typeTerminals;
+      }
+    }
+
     private static UUID requireUuid(
         ResourceReference resourceReference,
         UUID uuid) throws IOException {
@@ -590,13 +600,13 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     public void writeProject(OutputStream os, final Project project, DataSource... dataSources) throws IOException {
       final JsonModelIo.ExportFormat format = JsonModelIo.ExportFormat.GLTF;
       Manifest manifest = project.createExportManifest();
-      Set<Resource> resources = getResources(project.getProgramType(), CrawlPolicy.COMPLETE);
+      ModelResourceCrawler crawler = new ModelResourceCrawler();
+      project.getProgramType().crawl(crawler, CrawlPolicy.COMPLETE);
+      Set<Resource> resources = crawler.resources;
       compareResources(project.getResources(), resources);
 
       List<DataSource> entries = collectEntries(manifest, resources, dataSources);
       Set<String> manifestResourceNames = manifestResourceNames(manifest);
-      ModelResourceCrawler crawler = new ModelResourceCrawler();
-      project.getProgramType().crawl(crawler, CrawlPolicy.COMPLETE);
       entries.addAll(createEntriesForTypes(manifest, crawler.activeUserTypes, manifestResourceNames));
       Map<String, Set<JointedModelResource>> modelResources = crawler.modelResources;
       for (Set<JointedModelResource> resourceSet : modelResources.values()) {
