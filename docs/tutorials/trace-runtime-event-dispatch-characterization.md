@@ -169,8 +169,8 @@ EventManager.sceneActivated()
 After dispatch, the test waits on a bounded `CountDownLatch` and asserts:
 
 - The dispatch counter is exactly one.
-- The recorded `SceneActivationEvent` is not null and is the exact instance fired
-  through dispatch.
+- The recorded event is not null and its class is exactly `SceneActivationEvent`
+  (verified with `assertSame` on the `Class` object, not instance identity).
 - The latch was released before the timeout.
 
 This proves the generated listener receives one callback with the correct payload

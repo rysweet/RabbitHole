@@ -117,16 +117,21 @@ behavior, and that documentation stays within the headless/non-claim scope.
 | Event list unchanged after listener removal | `removeVirtualMachineListener(...)` stops delivery for the removed listener. |
 | No desktop startup required | The static method runs through `ReleaseVirtualMachine` without JavaFX, Swing, or scene rendering. |
 
-### Generated listener source and dispatch
+### Generated listener source (source-shape assertions)
 
 | Assertion | Meaning |
 | --- | --- |
 | `Scene.java` contains listener registration calls | `addTimeListener(null,2)` and `addSceneActivationListener(null)` source is present. |
 | Generated `.java` files compile | All files compile against the current Story API classpath. |
+
+### Generated listener runtime dispatch (dispatch assertions)
+
+| Assertion | Meaning |
+| --- | --- |
 | Runtime-dispatch lambda is generated | `addSceneActivationListener((SceneActivationEvent p0) -> ...)` connects to the test's static recorder. |
 | Pre-dispatch count is zero | Registration alone does not synthesize a callback. |
 | Post-dispatch count is one | `EventManager.sceneActivated()` delivers exactly one callback. |
-| Payload is the expected `SceneActivationEvent` | The generated listener receives the exact event object from dispatch. |
+| Payload type is `SceneActivationEvent` | The recorded event's class is exactly `SceneActivationEvent` (type check, not instance identity). |
 | Latch completes within bounded timeout | Asynchronous delivery is validated without unbounded waits. |
 
 ## Troubleshooting
