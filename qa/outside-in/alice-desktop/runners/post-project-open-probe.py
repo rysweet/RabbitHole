@@ -311,7 +311,7 @@ def target_starter_open_not_proven_payload(tab_click_path: Path, tab_click: dict
     blocker_detail = (
         f"{tab_click_path.name} contains targetStarter metadata but does not record "
         "evidenceStatus=opened with targetStarterObserved identifying the target, "
-        "targetSelectionObserved=true, openAttempted=true, "
+        "safe startersTabSafety, targetSelectionObserved=true, openAttempted=true, "
         "openedStarter matching targetStarter, and projectOpenObserved=true; "
         "generic main-window observation cannot prove the Africa Full starter "
         "was opened."
@@ -417,6 +417,16 @@ def target_starter_observed_matches(observed: Any, target_starter: dict[str, Any
     )
 
 
+def starters_tab_safety_matches(safety: Any) -> bool:
+    return (
+        isinstance(safety, dict)
+        and safety.get("tabName") == "Starters"
+        and safety.get("activationAttempted") is True
+        and safety.get("activatedBeforeTargetSearch") is True
+        and safety.get("targetSearchScope") == "active-starters-tab"
+    )
+
+
 def target_starter_gate_payload(
     tab_click_path: Path,
     tab_click: dict[str, Any],
@@ -432,6 +442,7 @@ def target_starter_gate_payload(
         tab_click.get("evidenceStatus") != "opened"
         or tab_click.get("openedStarter") != target_starter
         or not target_starter_observed_matches(tab_click.get("targetStarterObserved"), target_starter)
+        or not starters_tab_safety_matches(tab_click.get("startersTabSafety"))
         or tab_click.get("targetSelectionObserved") is not True
         or tab_click.get("openAttempted") is not True
         or not tab_click.get("projectOpenObserved", False)
