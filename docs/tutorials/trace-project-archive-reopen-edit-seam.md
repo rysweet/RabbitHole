@@ -1,7 +1,8 @@
 # Tutorial: Trace the Project Archive Reopen/Edit Seam
 
 This tutorial walks through the bounded project archive journey protected by
-`ProjectOpenSaveExportJourneyTest` and `FileProjectLoaderTest`.
+`ProjectOpenSaveExportJourneyTest` and `FileProjectLoaderTest`, and shows the
+edit assertion required for the complete reopen/edit seam.
 
 Read the contract first in
 [Project Archive Reopen/Edit Seam](../reference/project-archive-reopen-edit-seam.md).
@@ -21,8 +22,8 @@ Use the command guide in
 
 ## Goal
 
-Protect the archive IO behavior that Alice needs before higher-level desktop
-workflows can depend on it:
+Protect the archive reader/writer behavior that Alice needs before higher-level
+desktop workflows can depend on it:
 
 ```text
 valid .a3p archive -> file-backed reopen -> in-memory edit -> second .a3p write
@@ -61,7 +62,7 @@ File exportedProjectFile = workingDirectory.resolve("classroom-export.a3w").toFi
 
 ## 2. Write the original archive
 
-Write the project with production archive IO:
+Write the project with the production archive writer:
 
 ```java
 Project originalProject = new Project(programType("ClassroomProgram"), Project.SceneCameraType.WindowCamera);
@@ -100,16 +101,17 @@ This assertion proves the file-backed loader reached the project archive reader.
 
 ## 4. Edit and write a second archive
 
-Apply a deterministic in-memory edit to the reopened project, then write a new
-project archive:
+To complete the reopen/edit seam, apply a deterministic in-memory edit to the
+reopened project, then write a new project archive:
 
 ```java
 loadedProject.getProgramType().name.setValue("EditedClassroomProgram");
 IoUtilities.writeProject(savedProjectFile, loadedProject);
 ```
 
-The edit must be asserted after reopening the second archive. Checking only that
-`savedProjectFile` exists would miss stale-write regressions.
+The edit must be asserted after reopening the second archive and after export
+readback. Checking only that `savedProjectFile` exists would miss stale-write
+regressions.
 
 ## 5. Reopen and export
 
@@ -122,7 +124,7 @@ assertNotNull(savedProject);
 assertEquals("EditedClassroomProgram", savedProject.getProgramType().getName());
 ```
 
-Export the reopened project and read it back through production IO:
+Export the reopened project and read it back through production archive reading:
 
 ```java
 IoUtilities.exportProject(exportedProjectFile, savedProject);
@@ -132,8 +134,8 @@ assertNotNull(exportedProject);
 assertEquals("EditedClassroomProgram", exportedProject.getProgramType().getName());
 ```
 
-The export readback is archive IO evidence only. It does not prove player
-runtime behavior or rendering correctness.
+The export readback is project archive reader/writer evidence only. It does not
+prove player runtime behavior or rendering correctness.
 
 ## 6. Check invalid and classification paths
 
@@ -189,5 +191,6 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-The focused tests complete the tutorial when the edited project state survives
-the second reopen and the loader still rejects invalid archives clearly.
+The focused tests complete the tutorial when the deterministic edit survives the
+second reopen and export readback, and the loader still rejects invalid archives
+clearly.

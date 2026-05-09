@@ -12,7 +12,7 @@ For a guided walkthrough, see
 
 - [Prerequisites](#prerequisites)
 - [Prepare the worktree](#prepare-the-worktree)
-- [Check the no-op guard root](#check-the-no-op-guard-root)
+- [Check guard root detection](#check-guard-root-detection)
 - [Run focused validation](#run-focused-validation)
 - [Review failures](#review-failures)
 - [Review claims](#review-claims)
@@ -45,7 +45,7 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-When refreshing an active project archive IO branch, bring in the current
+Only when refreshing an active pull request recovery branch, bring in the current
 integration branch with a merge unless the branch can be fast-forwarded without
 rewriting active pull request history:
 
@@ -55,13 +55,13 @@ git merge origin/develop
 ```
 
 Resolve only conflicts required by the archive reopen/edit seam, its
-characterization tests, archive fixtures, or the no-op guard. Do not use this
-workflow for broad project IO cleanup.
+characterization tests, archive fixtures, or a guard script used by the branch.
+Do not use this workflow for broad project archive reader/writer cleanup.
 
-## Check the no-op guard root
+## Check guard root detection
 
-Before relying on a no-op or TDD guard result, verify that the guard evaluates
-the actual git worktree root:
+If a branch uses a no-op or TDD guard script, verify that the guard evaluates the
+actual git worktree root:
 
 ```bash
 candidate_path="$PWD"
@@ -71,7 +71,9 @@ git -C "$repo_root" status --short
 
 The guard result is valid only when `repo_root` is the linked worktree under
 review. If `git rev-parse --show-toplevel` fails, the guard must fail clearly;
-it must not silently inspect a copied session directory or a non-git path.
+it must not silently inspect a copied session directory or a non-git path. This
+is a contract for any guard used by the seam, not a claim that this guide names a
+specific script.
 
 ## Run focused validation
 
@@ -86,12 +88,17 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-`ProjectOpenSaveExportJourneyTest` covers the headless archive journey:
+`ProjectOpenSaveExportJourneyTest` must cover the complete headless archive
+journey before the reopen/edit seam is complete:
 
 ```text
 write .a3p -> reopen with FileProjectLoader -> edit Project -> write .a3p
 -> reopen with FileProjectLoader -> export .a3w -> read exported archive
 ```
+
+A test that writes the reopened project without a deterministic edit covers only
+the narrower reopen/write/reopen/export path. Add the edit assertion before
+making complete reopen/edit claims.
 
 `FileProjectLoaderTest` covers direct loader behavior:
 
@@ -113,10 +120,10 @@ Use the failing assertion to choose the smallest responsible seam:
 | --- | --- |
 | Valid `.a3p` does not reopen | `FileProjectLoader`, `AbstractFileProjectLoader`, and `IoUtilities.projectReader(File)` routing. |
 | Corrupt archive succeeds or hides the error path | `AbstractFileProjectLoader.load()` and `handleLoadException(File, Exception)`. |
-| Edited state does not survive the second reopen | Project archive write path, `ProjectFileUtilities.saveCopyOfProjectTo(File)`, or `IoUtilities.writeProject(File, Project)`. |
-| Exported archive cannot be read | `ProjectFileUtilities.exportCopyOfProjectTo(File)` or `IoUtilities.exportProject(File, Project)`. |
+| Edited state does not survive the second reopen | Project archive write path or `IoUtilities.writeProject(File, Project)` in the headless journey; review `ProjectFileUtilities.saveCopyOfProjectTo(File)` separately when changing IDE save-copy behavior. |
+| Exported archive cannot be read | `IoUtilities.exportProject(File, Project)` in the headless journey; review `ProjectFileUtilities.exportCopyOfProjectTo(File)` separately when changing IDE export-copy behavior. |
 | VR-ready or backup classification changes | `FileProjectLoader.getUri()`, `FileProjectLoader.shouldBeSaved()`, and `UriProjectLoader` classification helpers. |
-| No-op guard reports the wrong state | Root detection and git diff/status commands; they must run against `git rev-parse --show-toplevel`. |
+| Guard script reports the wrong state | Root detection and git diff/status commands; they must run against `git rev-parse --show-toplevel`. |
 
 Keep fixes local to the archive reopen/edit seam. Do not add display-backed UI
 automation, grading behavior, rendering assertions, broad loader rewrites, or
@@ -124,13 +131,14 @@ first-lesson workflow claims to satisfy these tests.
 
 ## Review claims
 
-A passing focused run supports this claim:
+After the focused tests include the edit assertion, a passing run supports this
+claim:
 
 ```text
-The repository-owned project archive reopen/edit seam is ready: valid .a3p
-archives reopen through FileProjectLoader, edited project state can be written,
-reopened, and exported headlessly, and invalid archive/loader classification
-behavior remains characterized.
+The repository-owned project archive reopen/edit seam is ready when valid .a3p
+archives reopen through FileProjectLoader, deterministic edited project state can
+be written, reopened, and exported headlessly, and invalid archive/loader
+classification behavior remains characterized.
 ```
 
 Do not claim desktop Save completion, full UI automation, visible rendering

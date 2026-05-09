@@ -1,9 +1,13 @@
 # Project Archive Reopen/Edit Seam
 
-The project archive reopen/edit seam is the repository-owned contract for opening
-an Alice `.a3p` archive from disk, editing the loaded project model, writing the
-edited project, reopening it, and exporting it as `.a3w` without desktop UI
-automation.
+The project archive reopen/edit seam is the repository-owned contract for
+opening an Alice `.a3p` archive from disk, editing the loaded project model,
+writing the project again, reopening it, and exporting it as `.a3w` without
+desktop UI automation.
+
+There are two coverage levels. The lower-bound headless journey protects archive
+write, reopen, second write, second reopen, export, and readback. The complete
+reopen/edit seam additionally requires an edit persistence assertion.
 
 Use this reference with
 [Validate the Project Archive Reopen/Edit Seam](../howto/validate-project-archive-reopen-edit-seam.md)
@@ -16,7 +20,7 @@ and
 - [API surfaces](#api-surfaces)
 - [Loader behavior](#loader-behavior)
 - [Archive write and export behavior](#archive-write-and-export-behavior)
-- [No-op guard behavior](#no-op-guard-behavior)
+- [Root-detection contract for guard scripts](#root-detection-contract-for-guard-scripts)
 - [Configuration](#configuration)
 - [Validation](#validation)
 - [Boundaries](#boundaries)
@@ -33,7 +37,7 @@ And the edited Project is written to a new .a3p archive
 And the edited archive is reopened
 And the reopened Project is exported to .a3w
 Then the edited project-owned state survives the second reopen
-And the exported archive is readable through the production project IO API
+And the exported archive is readable through the production project archive reader
 ```
 
 The journey stays below Alice desktop Save UI. It uses production project archive
@@ -50,8 +54,8 @@ read/write/export code and direct file-backed loader behavior.
 | `org.alice.ide.uricontent.UriProjectLoader.getUri()` | Reports the active project URI used for save/reopen classification. |
 | `org.alice.ide.uricontent.UriProjectLoader.shouldBeSaved()` | Reports whether the loader points at a save destination that does not exist yet. |
 | `org.alice.ide.uricontent.UriProjectLoader.getMainProjectFile()` | Maps normal project archives and named backup archives back to their main project file. |
-| `org.alice.ide.ProjectFileUtilities.saveCopyOfProjectTo(File)` | Writes the current up-to-date project model to a `.a3p` archive with project manifest data. |
-| `org.alice.ide.ProjectFileUtilities.exportCopyOfProjectTo(File)` | Writes the forced up-to-date project model to a `.a3w` export archive. |
+| `org.alice.ide.ProjectFileUtilities.saveCopyOfProjectTo(File)` | Adjacent IDE save-copy surface covered by `ProjectFileUtilitiesTest`; not exercised by `ProjectOpenSaveExportJourneyTest`. |
+| `org.alice.ide.ProjectFileUtilities.exportCopyOfProjectTo(File)` | Adjacent IDE export-copy surface covered by `ProjectFileUtilitiesTest`; not exercised by `ProjectOpenSaveExportJourneyTest`. |
 | `org.lgna.project.io.IoUtilities.writeProject(File, Project)` | Lower-level archive writer used by headless characterization tests. |
 | `org.lgna.project.io.IoUtilities.exportProject(File, Project)` | Lower-level player archive exporter used by headless characterization tests. |
 | `org.lgna.project.io.IoUtilities.readProject(File)` | Production reader used to verify saved and exported archives. |
@@ -73,7 +77,9 @@ private static class TestFileProjectLoader extends FileProjectLoader {
 }
 ```
 
-A complete headless reopen/write/export flow uses real temporary files:
+A complete headless reopen/write/export flow uses real temporary files. To make
+it the reopen/edit seam, mutate the loaded project before the second write and
+assert the edited state after the second reopen and export readback:
 
 ```java
 File originalProjectFile = workingDirectory.resolve("classroom.a3p").toFile();
@@ -93,8 +99,8 @@ IoUtilities.exportProject(exportedProjectFile, reopenedProject);
 Project exportedProject = IoUtilities.readProject(exportedProjectFile);
 ```
 
-The assertion that matters is the edited project-owned state after the second
-reopen. A file-exists assertion alone is not enough.
+The required assertion is the edited project-owned state after the second reopen
+and exported archive readback. A file-exists assertion alone is not enough.
 
 ## Loader behavior
 
@@ -103,7 +109,7 @@ or unsupported inputs without returning a partial project.
 
 | Input | Loader behavior |
 | --- | --- |
-| Existing valid `.a3p` archive | Returns a `Project` whose program type and resources were read through production project IO. |
+| Existing valid `.a3p` archive | Returns a `Project` whose program type and resources were read through the production project archive reader. |
 | Corrupt archive bytes | Returns `null` after delegating the IO failure to `handleLoadException(File, Exception)`. |
 | Missing file | Returns `null` after surfacing the existing unable-to-open-file path. |
 | Alice 2 `.a2w` file | Returns `null`; Alice 3 does not load Alice 2 worlds through this loader. |
@@ -122,8 +128,8 @@ URI classification remains part of the seam:
 
 ## Archive write and export behavior
 
-The save/reopen/edit/export journey preserves project-owned model data through
-real archive bytes:
+The complete saving, reopening, editing, saving again, reopening again, and
+exporting journey preserves project-owned model data through real archive bytes:
 
 1. Write the original project to `.a3p`.
 2. Reopen the `.a3p` through `FileProjectLoader`.
@@ -139,11 +145,12 @@ Project archive tests may inspect stable archive entries such as
 that structure is the behavior under review. They should not depend on desktop
 rendering, native file choosers, or user event timing.
 
-## No-op guard behavior
+## Root-detection contract for guard scripts
 
-The TDD/no-op guard evaluates the actual git-linked worktree root before it
-decides whether a change is empty. It must not compare a copied session
-directory, detached artifact directory, or non-git path.
+This document does not name an implemented no-op or TDD guard script. If this
+seam uses one, that guard must evaluate the actual git-linked worktree root
+before it decides whether a change is empty. It must not compare a copied
+session directory, detached artifact directory, or non-git path.
 
 The guard resolves the repository root with git:
 
@@ -164,9 +171,9 @@ git -C "$repo_root" status --short
 git -C "$repo_root" diff --name-only
 ```
 
-If root detection fails, the guard fails clearly instead of treating the path as
-a clean no-op. This protects linked worktrees and avoids false failures caused by
-session copies.
+If root detection fails, the guard must fail clearly instead of treating the path
+as a clean no-op. This protects linked worktrees and avoids false failures caused
+by session copies.
 
 ## Configuration
 
@@ -200,9 +207,10 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-The characterization is ready when `ProjectOpenSaveExportJourneyTest` proves the
-headless project archive journey and `FileProjectLoaderTest` proves valid,
-invalid, VR-ready, and backup classification behavior.
+The focused command is ready for the complete seam when
+`ProjectOpenSaveExportJourneyTest` includes the deterministic edit assertion and
+proves the headless project archive journey, while `FileProjectLoaderTest` proves
+valid, invalid, VR-ready, and backup classification behavior.
 
 ## Boundaries
 
@@ -214,7 +222,7 @@ This seam does not claim:
 - visible rendering correctness;
 - grading or learner assessment correctness;
 - full first-lesson completion;
-- runtime player behavior beyond reading the exported archive through project IO.
+- runtime player behavior beyond reading the exported archive through the project archive reader.
 
 Use the separate Save-menu proof lane for bounded desktop Save evidence. Keep
-this seam focused on repository-owned project archive IO.
+this seam focused on repository-owned project archive reader/writer behavior.
