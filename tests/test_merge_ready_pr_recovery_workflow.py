@@ -175,8 +175,8 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         runner = FakeRunner(
             body=complete_pr_body(),
             checks=[
-                {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
-                {"name": "tests", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/tests"},
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
+                {"name": "tests", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/tests"},
             ],
         )
 
@@ -218,8 +218,8 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         runner = FakeRunner(
             body="Local validation passed.",
             checks=[
-                {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
-                {"name": "tests", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/tests"},
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
+                {"name": "tests", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/tests"},
             ],
         )
 
@@ -288,7 +288,7 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
             with self.subTest(metadata_overrides=metadata_overrides):
                 runner = FakeRunner(
                     body=complete_pr_body(),
-                    checks=[{"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS"}],
+                    checks=[{"name": "build", "state": "SUCCESS", "bucket": "pass"}],
                     metadata_overrides=metadata_overrides,
                 )
 
@@ -310,7 +310,7 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
                 "QA/scenario evidence: documented-manual; applicable QA path was discovered but not run",
             ),
             checks=[
-                {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
             ],
             diff_output=f"M\t{qa_path}\n",
             find_stdout="qa/outside-in/alice-desktop/tests/run-tests.sh\n",
@@ -335,7 +335,7 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         runner = FakeRunner(
             body=complete_pr_body(),
             checks=[
-                {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
             ],
             head_after="e" * 40,
         )
@@ -356,7 +356,7 @@ class MergeReadyRecoveryWorkflowContractTest(unittest.TestCase):
         runner = FakeRunner(
             body=complete_pr_body(),
             checks=[
-                {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
+                {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
             ],
         )
 

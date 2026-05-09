@@ -145,10 +145,10 @@ class MergeReadyRecoveryUnitContractTest(unittest.TestCase):
         self.assertNotIn("abc123", failure)
         self.assertLessEqual(len(failure), 320)
 
-    def test_checks_require_stable_sha_and_all_green_completed_conclusions(self) -> None:
+    def test_checks_require_stable_sha_and_all_green_check_states(self) -> None:
         checks = [
-            {"name": "build", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/build"},
-            {"name": "focused-tests", "state": "COMPLETED", "conclusion": "SUCCESS", "link": "https://example.invalid/tests"},
+            {"name": "build", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/build"},
+            {"name": "focused-tests", "state": "SUCCESS", "bucket": "pass", "link": "https://example.invalid/tests"},
         ]
 
         green = as_mapping(
@@ -175,7 +175,7 @@ class MergeReadyRecoveryUnitContractTest(unittest.TestCase):
 
         pending = as_mapping(
             self.recovery.evaluate_checks(
-                checks=[{"name": "build", "state": "IN_PROGRESS", "conclusion": None, "link": "https://example.invalid/build"}],
+                checks=[{"name": "build", "state": "IN_PROGRESS", "bucket": "pending", "link": "https://example.invalid/build"}],
                 head_before=HEAD_SHA,
                 head_after=HEAD_SHA,
                 local_head=HEAD_SHA,

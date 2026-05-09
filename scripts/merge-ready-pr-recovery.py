@@ -33,6 +33,7 @@ NON_CLAIMS = (
     "assessment, full lesson completion, or full Tweedle/player decode claimed"
 )
 GREEN_CONCLUSIONS = {"SUCCESS"}
+GREEN_CHECK_BUCKETS = {"pass"}
 PR_METADATA_FIELDS = "number,state,isDraft,reviewDecision,baseRefName,headRefName,headRefOid,title,url"
 PR_BODY_REQUIREMENTS = {
     "Head SHA": ["Head SHA", "head sha"],
@@ -352,12 +353,18 @@ def evaluate_checks(
 
     for check in checks:
         name = str(check.get("name") or "<unnamed check>")
-        state = str(check.get("state") or "")
-        conclusion = check.get("conclusion")
-        if state != "COMPLETED" or conclusion not in GREEN_CONCLUSIONS:
+        state = str(check.get("state") or "").upper()
+        bucket = str(check.get("bucket") or "").lower()
+        conclusion = str(check.get("conclusion") or "").upper()
+        is_green = (
+            bucket in GREEN_CHECK_BUCKETS
+            or state in GREEN_CONCLUSIONS
+            or (state == "COMPLETED" and conclusion in GREEN_CONCLUSIONS)
+        )
+        if not is_green:
             blockers.append(
                 "NOT_MERGE_READY: GitHub Actions check "
-                f"{name} is state={state or 'unknown'} conclusion={conclusion or 'none'}."
+                f"{name} is state={state or 'unknown'} bucket={bucket or 'none'} conclusion={conclusion or 'none'}."
             )
 
     return {"status": status_from_blockers(blockers, "green"), "checks": checks, "blockers": blockers}
@@ -661,7 +668,7 @@ def collect_ci_evidence(
 ) -> dict[str, Any]:
     checks_result = run_and_require(
         runner,
-        ["gh", "pr", "checks", str(inputs.pr_number), "--json", "name,state,conclusion,link"],
+        ["gh", "pr", "checks", str(inputs.pr_number), "--json", "name,state,bucket,link"],
         cwd=root,
         context="read PR checks",
     )
