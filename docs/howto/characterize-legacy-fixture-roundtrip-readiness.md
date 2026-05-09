@@ -290,6 +290,63 @@ is complete and CI is pending" rather than "strict merge-ready". Strict
 merge-ready wording is reserved for a current-base branch with completed required
 checks and final-head focused evidence.
 
+## 11. Finalize PR #433 with the no-timeout current-head profile
+
+PR #433 uses the same bounded lane with fixed current-head evidence. This is a
+PR-specific finalization profile for PR `433` in `rysweet/RabbitHole`; do not
+reuse it as a generic approval or merge workflow.
+
+The accepted head is:
+
+```text
+06888c85f7e9175b872a9e23709046d44be5bf16
+```
+
+Confirm local and GitHub state with read-only commands:
+
+```bash
+git rev-parse HEAD
+gh pr view 433 --repo rysweet/RabbitHole \
+  --json headRefOid,state,isDraft,baseRefName,mergeStateStatus,reviewDecision,statusCheckRollup
+```
+
+Proceed only when local `HEAD` and GitHub `headRefOid` both equal
+`06888c85f7e9175b872a9e23709046d44be5bf16`, the PR is open and non-draft,
+`mergeStateStatus` is `CLEAN`, and the required/relevant PR checks in
+`statusCheckRollup` are successful for the same head. If `reviewDecision` is
+empty, say the PR was reviewed/finalized with current evidence; do not say it is
+formally approved.
+
+Refresh the focused lane without an external timeout wrapper:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/story-api-migration -am \
+  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  test
+```
+
+Then run the PR-specific merge-ready contract:
+
+```bash
+python3 -m unittest tests.test_pr433_merge_ready_contract
+```
+
+Use merge-ready wording only if both commands pass for the accepted head and the
+diff remains inside the focused legacy fixture round-trip lane. Do not manually
+merge the PR.
+
+Use this literal no-op statement only for the finalization/evidence run when
+that run edits no repository files. Do not use it for documentation-retcon work
+or any other task that changes files:
+
+```text
+No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head 06888c85f7e9175b872a9e23709046d44be5bf16 matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
+```
+
 ## Review checklist
 
 | Question | Required answer |

@@ -21,6 +21,7 @@ shapes fail at the archive I/O boundary with explicit checked failures.
 - [Desktop QA smoke](#desktop-qa-smoke)
 - [PR evidence wording](#pr-evidence-wording)
 - [Merge-ready evidence contract](#merge-ready-evidence-contract)
+- [PR #433 no-timeout finalization profile](#pr-433-no-timeout-finalization-profile)
 - [Examples](#examples)
 - [Claim boundaries](#claim-boundaries)
 
@@ -395,6 +396,84 @@ merge-ready evidence after the target branch changes. If the target branch has
 changed since that review, update the branch, rerun the focused evidence that
 can be affected by the merge, and refresh the PR body before claiming strict
 merge-ready status.
+
+## PR #433 no-timeout finalization profile
+
+PR #433 uses the legacy fixture round-trip lane as a PR-specific no-timeout
+finalization profile. Treat this section as a fixed PR #433 evidence profile,
+not as a reusable merge workflow. The profile has no new Java API and no
+user-facing configuration surface. Its stable interface is the current-head
+evidence checklist, the focused Maven command, the PR-specific contract test,
+and read-only GitHub PR state.
+
+| Surface | Required value |
+| --- | --- |
+| Pull request | `433` |
+| Repository | `rysweet/RabbitHole` |
+| Expected final head | `06888c85f7e9175b872a9e23709046d44be5bf16` |
+| Focused lane | Generated legacy fixture round-trip readiness in `core/story-api-migration` |
+| Maven test | `org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest` |
+| PR contract test | `tests.test_pr433_merge_ready_contract` |
+| Node memory setting | `NODE_OPTIONS=--max-old-space-size=32768` |
+| Timeout policy | Run the focused Maven validation directly; do not wrap it in an external timeout helper. |
+| Merge policy | Do not manually merge the pull request. |
+
+Use read-only commands to confirm that local and GitHub state refer to the same
+head:
+
+```bash
+git rev-parse HEAD
+gh pr view 433 --repo rysweet/RabbitHole \
+  --json headRefOid,state,isDraft,baseRefName,mergeStateStatus,reviewDecision,statusCheckRollup
+```
+
+The accepted current-head result is:
+
+```text
+06888c85f7e9175b872a9e23709046d44be5bf16
+```
+
+Before writing merge-ready wording, the GitHub PR state must show:
+
+| Field | Required interpretation |
+| --- | --- |
+| `headRefOid` | Equals `06888c85f7e9175b872a9e23709046d44be5bf16` and local `HEAD`. |
+| `state` | `OPEN`. |
+| `isDraft` | `false`. |
+| `mergeStateStatus` | `CLEAN`. |
+| `statusCheckRollup` | Required/relevant PR checks are successful for the same head. |
+| `reviewDecision` | Claim approval only when this field is `APPROVED`; an empty value is not approval. |
+
+Run the focused no-timeout lane from the repository root:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/story-api-migration -am \
+  -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest \
+  test
+```
+
+Then run the PR-specific merge-ready contract:
+
+```bash
+python3 -m unittest tests.test_pr433_merge_ready_contract
+```
+
+The contract keeps the diff bounded to the legacy fixture round-trip test,
+docs, QA scenario, and PR contract surfaces. If the head SHA, base branch,
+mergeability, checks, or diff scope changes, refresh this evidence before using
+merge-ready wording.
+
+Use the no-op justification only for the finalization/evidence run when that run
+does not edit repository files. Do not use it for documentation-retcon commits
+or any task that changes docs or implementation files.
+
+```text
+No-op justification: no repository files were changed during the finalization/evidence run because current local/GitHub head 06888c85f7e9175b872a9e23709046d44be5bf16 matches, required/relevant PR checks in statusCheckRollup are successful for the same head, mergeability is clean, and the diff remains inside the focused legacy fixture round-trip lane.
+```
 
 ## Examples
 
