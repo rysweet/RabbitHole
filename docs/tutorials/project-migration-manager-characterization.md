@@ -10,7 +10,8 @@ This tutorial walks through adding a generated XML-string characterization for a
 - [2. Build a generated XML-string fixture](#2-build-a-generated-xml-string-fixture)
 - [3. Migrate from the historical version](#3-migrate-from-the-historical-version)
 - [4. Assert the final and absent names](#4-assert-the-final-and-absent-names)
-- [5. Run validation](#5-run-validation)
+- [5. Guard the current-version boundary](#5-guard-the-current-version-boundary)
+- [6. Run validation](#6-run-validation)
 
 ## Goal
 
@@ -22,11 +23,12 @@ legacy project XML reference can move through an intermediate class name and end
 at the current resource class name in one migration pass.
 ```
 
-The layer starts with table-level invariants, version-gated applicability, and
-concrete rewrite seams. Each concrete seam uses generated strings that look like
-Alice project XML. It does not commit a binary project archive, bundled media,
-or Git LFS fixture. Production code stays unchanged; the tests document existing
-protected migration hotspots through characterization coverage.
+The layer starts with table-level invariants, version-gated applicability,
+concrete rewrite seams, and a current-version guard. Each concrete seam uses
+generated strings that look like Alice project XML. It does not commit a binary
+project archive, bundled media, or Git LFS fixture. Production code stays
+unchanged; the tests document existing protected migration hotspots through
+characterization coverage.
 
 ## 1. Choose a narrow seam
 
@@ -90,6 +92,7 @@ the migration contract:
 | Text migration versions | Each result version is valid, round-trippable, and strictly increasing. |
 | AST migration versions | The same invariant holds for AST migrations. |
 | Applicability threshold | A `3.1.20.0.0` text migration applies to `3.1.19.0.0`, but not to `3.1.20.0.0` or later. |
+| Current version guard | The compiled current version has no pending text or AST migrations. |
 
 Use only the serialized fragments needed for the behavior:
 
@@ -122,6 +125,22 @@ declaring class text:
 ```java
 String source = "name=\"BONE_PILE\">\n<declaringClass name=\"org.lgna.story.resources.prop.BonesResource\"";
 ```
+
+For a selected accessor or resource-field migration, keep the fixture just as
+small:
+
+```java
+String source = String.join("\n",
+    "name=\"LEFT_THUMB_1\">",
+    "<declaringClass name=\"org.lgna.story.resources.biped.Alien\"",
+    "name=\"getRightClavicle\">",
+    "<declaringClass name=\"org.lgna.story.SFlyer\""
+);
+```
+
+When a resource-field test protects one migration table entry, it can select that
+`TextMigration` directly and call `migrate(source)`. That style documents the
+entry's replacement behavior, not the full `ProjectMigrationManager` pipeline.
 
 ## 3. Migrate from the historical version
 
@@ -211,7 +230,25 @@ public void textMigrationCascadesLegacyDresserThroughIntermediateResourceNames()
 }
 ```
 
-## 5. Run validation
+## 5. Guard the current-version boundary
+
+Add a small guard for the manager's compiled current version:
+
+```java
+@Test
+public void managerReportsNoPendingMigrationsAtCurrentVersion() {
+  Version currentVersion = manager.getCurrentVersion();
+
+  assertFalse(manager.hasTextMigrationsFor(currentVersion));
+  assertFalse(manager.hasAstMigrationsFor(currentVersion));
+}
+```
+
+This guard belongs next to the migration characterization tests because it
+protects the table/version relationship that migration refactors can accidentally
+break.
+
+## 6. Run validation
 
 Initialize the grammar submodule from a fresh checkout or worktree:
 
@@ -220,7 +257,8 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Run the focused migration test:
+Run the focused migration test after characterization changes and before relying
+on production refactors:
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -230,6 +268,9 @@ mvn -pl core/story-api-migration -am \
   -Dtest=org.lgna.project.migration.ProjectMigrationManagerTest \
   test
 ```
+
+Do not replace this command with CI no-op mode, no-op justification, or a
+branch-policy shortcut when the change touches migration characterization.
 
 Run the story API migration module tests:
 

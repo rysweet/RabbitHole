@@ -10,7 +10,8 @@ ordering, text migration helpers, or a protected migration hotspot.
 - [2. Build the smallest generated fixture](#2-build-the-smallest-generated-fixture)
 - [3. Migrate from the source version that proves the behavior](#3-migrate-from-the-source-version-that-proves-the-behavior)
 - [4. Assert final output and rejected intermediates](#4-assert-final-output-and-rejected-intermediates)
-- [5. Validate the characterization](#5-validate-the-characterization)
+- [5. Guard current-version completion](#5-guard-current-version-completion)
+- [6. Validate the characterization](#6-validate-the-characterization)
 - [Review checklist](#review-checklist)
 
 ## Prerequisites
@@ -49,6 +50,7 @@ Concrete migration seams protect selected compatibility rewrites:
 | Legacy class rename | Start before the rename and assert the final migrated class name. |
 | Multi-step resource consolidation | Assert the final resource name and the absence of old and intermediate names. |
 | Boundary rewrite | Assert the rewrite before the boundary and unchanged selected text at or after the boundary. |
+| Field or accessor rewrite | Assert the selected legacy field/accessor reaches the current name without broad archive fixtures. Use a direct `TextMigration` seam when the behavior under review is one table entry rather than full manager ordering. |
 
 Avoid broad archive fixtures when a generated XML string exercises the behavior.
 The characterization layer protects migration compatibility without adding
@@ -76,6 +78,18 @@ For a boundary field rewrite, the fixture can stay narrower:
 
 ```java
 String source = "name=\"BONE_PILE\">\n<declaringClass name=\"org.lgna.story.resources.prop.BonesResource\"";
+```
+
+For a selected field/accessor rewrite, keep only the field or method name and the
+declaring class that makes the migration meaningful:
+
+```java
+String source = String.join("\n",
+    "name=\"LEFT_THUMB_1\">",
+    "<declaringClass name=\"org.lgna.story.resources.biped.Alien\"",
+    "name=\"getRightClavicle\">",
+    "<declaringClass name=\"org.lgna.story.SFlyer\""
+);
 ```
 
 Keep fixtures deterministic and generated in Java source. Do not copy Alice
@@ -128,10 +142,25 @@ Absence checks are part of the contract. They catch refactors that apply only th
 first migration, stop at an intermediate resource class, or run the table out of
 order.
 
-## 5. Validate the characterization
+## 5. Guard current-version completion
 
-Run the focused migration characterization before changing production migration
-code:
+Keep a small guard that proves the compiled current version has no remaining
+text or AST migrations:
+
+```java
+Version currentVersion = manager.getCurrentVersion();
+
+assertFalse(manager.hasTextMigrationsFor(currentVersion));
+assertFalse(manager.hasAstMigrationsFor(currentVersion));
+```
+
+This guard catches accidental version metadata regressions and migration-table
+entries whose result version moves beyond the current project version.
+
+## 6. Validate the characterization
+
+Run the focused migration characterization after characterization changes and
+before relying on production refactors:
 
 ```sh
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -141,6 +170,9 @@ mvn -pl core/story-api-migration -am \
   -Dtest=org.lgna.project.migration.ProjectMigrationManagerTest \
   test
 ```
+
+Do not use CI no-op mode, no-op justification, or branch-policy shortcuts as a
+replacement for this focused validation.
 
 Run the full story API migration module when the migration change is not purely
 test or documentation work:
