@@ -17,6 +17,7 @@ observation schema is present and accepted by a reviewed contract.
 - [Configuration](#configuration)
 - [Artifact API](#artifact-api)
 - [Observation evidence boundary](#observation-evidence-boundary)
+- [Current-head nonclaim review](#current-head-nonclaim-review)
 - [Allowed wording](#allowed-wording)
 - [Rejected wording](#rejected-wording)
 - [Examples](#examples)
@@ -298,6 +299,35 @@ defines visual-correctness observation fields, the observer, the observation
 method, the accepted scope, and the exact criteria. This render-evidence
 contract rejects artifacts that try to derive that state from file existence,
 screenshots, generated output, target readiness, or sampled pixels.
+
+## Current-head nonclaim review
+
+Current-head review evidence uses the same nonclaim boundary as static fixtures.
+The reviewer accepts only evidence generated after the PR branch or PR ref has
+been reconciled with `origin/develop`. Stale screenshots, stale controlled-display
+artifacts, stale sampled pixels, and stale generated files may be retained only as
+superseded comparison material; they are not current review evidence.
+
+A current-head render-adjacent artifact is reviewable when it is paired with
+external review metadata for the reconciled `HEAD`, the scenario ID, the run
+directory timestamp, and one of these bounded decisions. The current runner does
+not emit Git SHAs into `environment.txt`; reviewers record the commit coordinates
+in PR notes, review notes, or CI artifact metadata that points at the run
+directory.
+
+| Decision | Required nonclaim wording |
+| --- | --- |
+| Screenshot captured | The controlled-display screenshot was captured; visible correctness was not checked. |
+| Target ready | Exactly one target-ready geometry was identified; target readiness is not visual correctness. |
+| Pixels sampled | Raw target-scoped RGBA values were sampled; `pixelSampling.correctnessCheck=not-performed`. |
+| Blocked | The artifact names the exact blocker and next unblocker; the blocked run is not a substitute for correctness evidence. |
+
+Review summaries, readiness notes, PR descriptions, and documentation snippets
+may say that runtime/display, target-readiness, or raw sampling signals were
+observed only when the current-head artifacts contain those exact signals. They
+must not say or imply that Alice rendering, world-canvas pixels, full UI behavior,
+accessibility compliance, world execution, Save behavior, Select Project
+behavior, grading, or lesson completion is correct.
 
 ## Allowed wording
 

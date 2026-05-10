@@ -202,7 +202,10 @@ ProjectMigrationManager manager = ProjectMigrationManager.getInstance();
 ```
 
 `ProjectMigrationManager` owns the ordered arrays of `TextMigration` and
-`AstMigration` instances for Alice projects. The ordering is part of the
+`AstMigration` instances for Alice projects. The text migration data is held
+in a `TextMigrationRegistry` class hierarchy — see the
+[TextMigrationRegistry extraction reference](./text-migration-registry.md)
+for the split strategy and file inventory. The ordering is part of the
 compatibility contract because each applied migration advances the working
 version.
 

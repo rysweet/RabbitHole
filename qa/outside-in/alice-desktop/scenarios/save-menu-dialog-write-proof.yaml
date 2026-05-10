@@ -1,4 +1,5 @@
 id: alice-desktop-save-menu-dialog-write-proof
+name: Robot Save menu dialog control and project write/readback proof
 title: Robot Save menu dialog control and project write/readback proof
 workflow: save-menu-dialog-write-proof
 automationMode: gated-command-smoke
@@ -48,3 +49,7 @@ tags:
   - immediate-qa-backlog
   - save-menu
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
