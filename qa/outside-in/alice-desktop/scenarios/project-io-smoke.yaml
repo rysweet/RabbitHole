@@ -1,5 +1,7 @@
 id: alice-desktop-project-io-smoke
 title: Archive-level project saving, reopening, editing, saving again, reopening again, and exporting smoke
+name: Project save, reopen, edit, save again, reopen again, and export smoke
+title: Project save, reopen, edit, save again, reopen again, and export smoke
 workflow: project-io-smoke
 automationMode: gated-command-smoke
 preconditions:
@@ -46,3 +48,7 @@ tags:
   - immediate-qa-backlog
   - project-io
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

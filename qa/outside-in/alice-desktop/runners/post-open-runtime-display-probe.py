@@ -18,8 +18,19 @@ from pathlib import Path
 from typing import Any
 
 CLAIM = "post-open-runtime-display-accessibility-evidence"
+TARGET_DISCOVERY_SCOPE = "accessibility-runtime-display-targets-only"
 SELECT_PROJECT_TITLE = "Select Project"
 ARTIFACT_NAME = "post-open-runtime-display-accessibility-evidence.json"
+UNSUPPORTED_CLAIMS = [
+    "full-ui-automation",
+    "visible-rendering-correctness",
+    "full-world-execution",
+    "grading",
+    "save-completion",
+    "sims-validation",
+    "installer-deployment-success",
+    "broad-accessibility-compliance",
+]
 RUNTIME_NAME_TOKENS = (
     "scene",
     "display",
@@ -97,6 +108,7 @@ def base_payload(
         "blocker": blocker,
         "blockerDetail": blocker_detail,
         "claim": CLAIM,
+        "targetDiscoveryScope": TARGET_DISCOVERY_SCOPE,
         "scenario": scenario_id,
         "automationMode": automation_mode,
         "javaPid": java_pid,
@@ -105,6 +117,7 @@ def base_payload(
         "runtimeDisplayCandidateCount": len(runtime_candidates),
         "runtimeDisplayCandidates": runtime_candidates,
         "traversalErrors": traversal_errors or [],
+        "unsupportedClaims": UNSUPPORTED_CLAIMS,
     }
 
 
@@ -117,8 +130,8 @@ def state_names(accessible: Any) -> list[str]:
     states: list[str] = []
     try:
         raw_states = state_set.getStates()
-    except Exception:
-        raw_states = []
+    except Exception as exc:
+        raise RuntimeError(f"failed to enumerate states for accessible: {exc}") from exc
     for state in raw_states:
         states.append(str(state).rsplit(".", 1)[-1].lower())
     return sorted(set(states))
@@ -326,6 +339,12 @@ def collect_candidates(pyatspi: Any, alice_app: Any) -> tuple[list[dict[str, Any
 
 
 def probe_runtime_display(java_pid: int, scenario_id: str, automation_mode: str) -> dict[str, Any]:
+    context = {
+        "scenario_id": scenario_id,
+        "automation_mode": automation_mode,
+        "java_pid": java_pid,
+        "post_open_window_observed": True,
+    }
     try:
         import pyatspi  # noqa: PLC0415
     except ImportError:
@@ -333,52 +352,16 @@ def probe_runtime_display(java_pid: int, scenario_id: str, automation_mode: str)
             status="blocked",
             blocker="pyatspi-not-installed",
             blocker_detail="python3-pyatspi is not installed.",
-            scenario_id=scenario_id,
-            automation_mode=automation_mode,
-            java_pid=java_pid,
-            post_open_window_observed=True,
+            **context,
         )
 
-    try:
-        alice_app, app_count, app_errors = find_alice_app(pyatspi, java_pid)
-    except Exception as exc:
-        return base_payload(
-            status="blocked",
-            blocker="at-spi-registry-unavailable",
-            blocker_detail=f"Cannot connect to or traverse AT-SPI registry: {exc}",
-            scenario_id=scenario_id,
-            automation_mode=automation_mode,
-            java_pid=java_pid,
-            post_open_window_observed=True,
-        )
-
-    if alice_app is None:
-        return base_payload(
-            status="blocked",
-            blocker="atk-wrapper-not-loaded",
-            blocker_detail=(
-                f"Java process PID {java_pid} was not found in the AT-SPI registry "
-                f"({app_count} total AT-SPI apps visible)."
-            ),
-            scenario_id=scenario_id,
-            automation_mode=automation_mode,
-            java_pid=java_pid,
-            post_open_window_observed=True,
-            traversal_errors=app_errors,
-        )
+    alice_app, app_errors, blocker_payload = resolve_alice_app(pyatspi, java_pid, context)
+    if blocker_payload is not None:
+        return blocker_payload
 
     candidates, candidate_errors = collect_candidates(pyatspi, alice_app)
     traversal_errors = app_errors + candidate_errors
-    available_candidates = [
-        candidate
-        for candidate in candidates
-        if candidate.get("geometryStatus") == "available"
-        and isinstance(candidate.get("screenExtents"), dict)
-    ]
-    if len(available_candidates) > 1:
-        for candidate in candidates:
-            if candidate.get("geometryStatus") == "available":
-                candidate["geometryStatus"] = "ambiguous-candidates"
+    mark_ambiguous_available_candidates(candidates)
     if not candidates:
         return base_payload(
             status="blocked",
@@ -388,24 +371,63 @@ def probe_runtime_display(java_pid: int, scenario_id: str, automation_mode: str)
                 "runtime/display candidate criteria after the post-open window "
                 "state was observed."
             ),
-            scenario_id=scenario_id,
-            automation_mode=automation_mode,
-            java_pid=java_pid,
-            post_open_window_observed=True,
             traversal_errors=traversal_errors,
+            **context,
         )
 
     return base_payload(
         status="observed",
         blocker="none",
         blocker_detail="",
-        scenario_id=scenario_id,
-        automation_mode=automation_mode,
-        java_pid=java_pid,
-        post_open_window_observed=True,
         candidates=candidates[:10],
         traversal_errors=traversal_errors,
+        **context,
     )
+
+
+def resolve_alice_app(
+    pyatspi: Any,
+    java_pid: int,
+    context: dict[str, Any],
+) -> tuple[Any | None, list[str], dict[str, Any] | None]:
+    try:
+        alice_app, app_count, app_errors = find_alice_app(pyatspi, java_pid)
+    except Exception as exc:
+        return None, [], base_payload(
+            status="blocked",
+            blocker="at-spi-registry-unavailable",
+            blocker_detail=f"Cannot connect to or traverse AT-SPI registry: {exc}",
+            **context,
+        )
+
+    if alice_app is not None:
+        return alice_app, app_errors, None
+
+    detail = (
+        f"Java process PID {java_pid} was not found in the AT-SPI registry "
+        f"({app_count} total AT-SPI apps visible)."
+    )
+    return None, app_errors, base_payload(
+        status="blocked",
+        blocker="atk-wrapper-not-loaded",
+        blocker_detail=detail,
+        traversal_errors=app_errors,
+        **context,
+    )
+
+
+def mark_ambiguous_available_candidates(candidates: list[dict[str, Any]]) -> None:
+    available_count = sum(
+        1
+        for candidate in candidates
+        if candidate.get("geometryStatus") == "available"
+        and isinstance(candidate.get("screenExtents"), dict)
+    )
+    if available_count <= 1:
+        return
+    for candidate in candidates:
+        if candidate.get("geometryStatus") == "available":
+            candidate["geometryStatus"] = "ambiguous-candidates"
 
 
 def write_status_file(path: Path, payload: dict[str, Any], artifact_name: str) -> None:
@@ -419,6 +441,57 @@ def write_status_file(path: Path, payload: dict[str, Any], artifact_name: str) -
         f"runtimeDisplayAccessibilityBlocker={payload.get('blocker', '')}",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def payload_from_inputs(args: argparse.Namespace) -> dict[str, Any]:
+    inventory_path = Path(args.inventory)
+    post_open_path = Path(args.post_open_window_observation)
+    context = {"scenario_id": args.scenario_id, "automation_mode": args.automation_mode}
+
+    inventory, inventory_error = read_json(inventory_path)
+    if inventory_error is not None or inventory is None:
+        return base_payload(
+            status="blocked",
+            blocker="input-unreadable",
+            blocker_detail=inventory_error or "Inventory input was unreadable.",
+            **context,
+        )
+
+    post_open, post_open_error = read_json(post_open_path)
+    if post_open_error is not None or post_open is None:
+        return base_payload(
+            status="blocked",
+            blocker="input-unreadable",
+            blocker_detail=post_open_error or "Post-open observation input was unreadable.",
+            **context,
+        )
+
+    if post_open.get("postOpenWindowObserved") is not True:
+        return base_payload(
+            status="blocked",
+            blocker="post-open-window-not-observed",
+            blocker_detail=(
+                f"{post_open_path.name} does not record postOpenWindowObserved=true; "
+                "runtime/display accessibility evidence requires the existing "
+                "post-open window setup to be observed first."
+            ),
+            **context,
+        )
+
+    java_pid = find_java_pid(inventory)
+    if java_pid is None:
+        return base_payload(
+            status="blocked",
+            blocker="java-pid-not-in-inventory",
+            blocker_detail=(
+                f"No Java window found in {inventory_path.name}; cannot identify "
+                "the Alice process for runtime/display AT-SPI introspection."
+            ),
+            post_open_window_observed=True,
+            **context,
+        )
+
+    return probe_runtime_display(java_pid, args.scenario_id, args.automation_mode)
 
 
 def main() -> int:
@@ -435,59 +508,10 @@ def main() -> int:
     parser.add_argument("--automation-mode", required=True, help="Automation mode for status output")
     args = parser.parse_args()
 
-    inventory_path = Path(args.inventory)
-    post_open_path = Path(args.post_open_window_observation)
     output_path = Path(args.output)
     status_path = Path(args.status_file)
     artifact_name = output_path.name
-
-    inventory, inventory_error = read_json(inventory_path)
-    if inventory_error is not None or inventory is None:
-        payload = base_payload(
-            status="blocked",
-            blocker="input-unreadable",
-            blocker_detail=inventory_error or "Inventory input was unreadable.",
-            scenario_id=args.scenario_id,
-            automation_mode=args.automation_mode,
-        )
-    else:
-        post_open, post_open_error = read_json(post_open_path)
-        if post_open_error is not None or post_open is None:
-            payload = base_payload(
-                status="blocked",
-                blocker="input-unreadable",
-                blocker_detail=post_open_error or "Post-open observation input was unreadable.",
-                scenario_id=args.scenario_id,
-                automation_mode=args.automation_mode,
-            )
-        elif post_open.get("postOpenWindowObserved") is not True:
-            payload = base_payload(
-                status="blocked",
-                blocker="post-open-window-not-observed",
-                blocker_detail=(
-                    f"{post_open_path.name} does not record postOpenWindowObserved=true; "
-                    "runtime/display accessibility evidence requires the existing "
-                    "post-open window setup to be observed first."
-                ),
-                scenario_id=args.scenario_id,
-                automation_mode=args.automation_mode,
-            )
-        else:
-            java_pid = find_java_pid(inventory)
-            if java_pid is None:
-                payload = base_payload(
-                    status="blocked",
-                    blocker="java-pid-not-in-inventory",
-                    blocker_detail=(
-                        f"No Java window found in {inventory_path.name}; cannot identify "
-                        "the Alice process for runtime/display AT-SPI introspection."
-                    ),
-                    scenario_id=args.scenario_id,
-                    automation_mode=args.automation_mode,
-                    post_open_window_observed=True,
-                )
-            else:
-                payload = probe_runtime_display(java_pid, args.scenario_id, args.automation_mode)
+    payload = payload_from_inputs(args)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     status_path.parent.mkdir(parents=True, exist_ok=True)

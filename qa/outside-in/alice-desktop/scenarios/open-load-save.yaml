@@ -1,4 +1,5 @@
 id: alice-desktop-open-load-save
+name: Open, load, and save project variants
 title: Open, load, and save project variants
 workflow: open-load-save
 automationMode: manual-evidence-required
@@ -33,3 +34,7 @@ fallback:
 supportingEvidence:
   - alice-desktop-launch
   - alice-desktop-project-io-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
