@@ -1,4 +1,5 @@
 id: alice-desktop-exported-project-smoke
+name: Exported Ant project build smoke
 title: Exported Ant project build smoke
 workflow: exported-project-ant-build-smoke
 automationMode: gated-command-smoke
@@ -47,3 +48,7 @@ tags:
   - immediate-qa-backlog
   - exported-project
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

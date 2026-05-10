@@ -1,4 +1,5 @@
 id: alice-desktop-silver-thread-launch-build-run
+name: Silver thread create-build-save-reopen-run end-to-end smoke
 title: Silver thread create-build-save-reopen-run end-to-end smoke
 workflow: silver-thread-launch-build-run
 automationMode: gated-command-smoke
@@ -46,3 +47,7 @@ tags:
   - silver-thread
   - command-smoke
   - end-to-end
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

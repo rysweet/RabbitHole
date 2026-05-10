@@ -29,7 +29,7 @@ required_top = [
     "evidence",
     "fallback",
 ]
-allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter"}
+allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter", "name", "steps", "agents"}
 EXPECTED_TARGET_STARTER = {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p",

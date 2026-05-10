@@ -1,4 +1,5 @@
 id: alice-desktop-post-open-runtime-display-accessibility-evidence
+name: Post-open runtime/display accessibility evidence
 title: Post-open runtime/display accessibility evidence
 workflow: post-open-runtime-display-accessibility-evidence
 automationMode: xvfb-real-alice
@@ -75,3 +76,7 @@ supportingEvidence:
   - alice-desktop-select-project-atk-exec
 tags:
   - post-open-runtime-display-accessibility-evidence
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

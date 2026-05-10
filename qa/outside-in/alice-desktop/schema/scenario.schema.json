@@ -24,6 +24,16 @@
       "type": "string",
       "minLength": 1
     },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "steps": {
+      "type": "array"
+    },
+    "agents": {
+      "type": "array"
+    },
     "workflow": {
       "type": "string",
       "enum": [
