@@ -22,7 +22,6 @@ import org.lgna.project.virtualmachine.events.WhileLoopIterationEvent;
 import org.lgna.story.SProgram;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
