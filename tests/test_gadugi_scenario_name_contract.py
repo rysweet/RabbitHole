@@ -34,9 +34,14 @@ def scenario_files():
     return sorted(SCENARIOS_DIR.glob("*.yaml"))
 
 
+_yaml_cache: dict[Path, dict] = {}
+
+
 def load_yaml(path: Path) -> dict:
     assert yaml is not None, "PyYAML is required for these tests"
-    return yaml.safe_load(path.read_text(encoding="utf-8"))
+    if path not in _yaml_cache:
+        _yaml_cache[path] = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return _yaml_cache[path]
 
 
 @unittest.skipIf(yaml is None, "PyYAML not installed")
@@ -196,40 +201,34 @@ class TestValidateScenariosShPasses(unittest.TestCase):
 class TestGadugiTestValidate(unittest.TestCase):
     """Integration: gadugi-test validate must report 0 invalid files."""
 
-    def test_gadugi_validate_exits_zero(self) -> None:
-        result = subprocess.run(
+    _result: subprocess.CompletedProcess | None = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls._result = subprocess.run(
             ["gadugi-test", "validate", "scenarios/"],
             cwd=str(GADUGI_BASE),
             capture_output=True,
             text=True,
             timeout=60,
         )
+
+    def test_gadugi_validate_exits_zero(self) -> None:
+        assert self._result is not None
         self.assertEqual(
             0,
-            result.returncode,
-            f"gadugi-test validate failed:\n{result.stdout}\n{result.stderr}",
+            self._result.returncode,
+            f"gadugi-test validate failed:\n{self._result.stdout}\n{self._result.stderr}",
         )
 
     def test_gadugi_reports_zero_invalid(self) -> None:
-        result = subprocess.run(
-            ["gadugi-test", "validate", "scenarios/"],
-            cwd=str(GADUGI_BASE),
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        combined = result.stdout + result.stderr
+        assert self._result is not None
+        combined = self._result.stdout + self._result.stderr
         self.assertIn("Invalid files: 0", combined)
 
     def test_gadugi_reports_30_valid(self) -> None:
-        result = subprocess.run(
-            ["gadugi-test", "validate", "scenarios/"],
-            cwd=str(GADUGI_BASE),
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        combined = result.stdout + result.stderr
+        assert self._result is not None
+        combined = self._result.stdout + self._result.stderr
         self.assertIn("Valid files: 30", combined)
 
 

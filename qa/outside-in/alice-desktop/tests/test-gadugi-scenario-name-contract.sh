@@ -16,140 +16,105 @@ SCHEMA="$BASE_DIR/schema/scenario.schema.json"
 tmp_root=$(create_scratch_root "$SCRIPT_DIR") || exit 1
 trap 'rm -rf "$tmp_root"' EXIT
 
-# ── 1. Every scenario YAML has a name field ──────────────────────────────
+# ── 1-4. YAML field checks (single Python process for all 30 files) ──────
 
-python3 - "$SCENARIOS_DIR" >"$tmp_root/name-field.out" 2>"$tmp_root/name-field.err" <<'PY'
+python3 - "$SCENARIOS_DIR" >"$tmp_root/yaml-checks.out" 2>"$tmp_root/yaml-checks.err" <<'PY'
 from pathlib import Path
+import json
 import sys
 import yaml
 
 scenarios_dir = Path(sys.argv[1])
-errors = []
+results = {"name": [], "title_match": [], "steps_agents": [], "ordering": []}
+
 for path in sorted(scenarios_dir.glob("*.yaml")):
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    data = yaml.safe_load(text)
+
+    # check 1: name field present
     if "name" not in data:
-        errors.append(f"{path.name}: missing 'name' field")
-if errors:
-    raise AssertionError("Scenarios missing name field:\n" + "\n".join(errors))
-print(f"all {len(list(scenarios_dir.glob('*.yaml')))} scenarios have a name field")
-PY
-assert_success "$?" "every scenario YAML has a name field"
-
-# ── 2. name matches title in every scenario ──────────────────────────────
-
-python3 - "$SCENARIOS_DIR" >"$tmp_root/name-title.out" 2>"$tmp_root/name-title.err" <<'PY'
-from pathlib import Path
-import sys
-import yaml
-
-scenarios_dir = Path(sys.argv[1])
-errors = []
-for path in sorted(scenarios_dir.glob("*.yaml")):
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    name = data.get("name", "")
-    title = data.get("title", "")
-    if name != title:
-        errors.append(f"{path.name}: name={name!r} != title={title!r}")
-if errors:
-    raise AssertionError("Scenarios with name/title mismatch:\n" + "\n".join(errors))
-print("all scenario name fields match their title fields")
-PY
-assert_success "$?" "scenario name matches title in every file"
-
-# ── 3. Every scenario YAML has steps and agents fields ───────────────────
-
-python3 - "$SCENARIOS_DIR" >"$tmp_root/steps-agents.out" 2>"$tmp_root/steps-agents.err" <<'PY'
-from pathlib import Path
-import sys
-import yaml
-
-scenarios_dir = Path(sys.argv[1])
-errors = []
-for path in sorted(scenarios_dir.glob("*.yaml")):
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        results["name"].append(f"{path.name}: missing 'name' field")
+    # check 2: name matches title
+    elif data.get("name", "") != data.get("title", ""):
+        results["title_match"].append(
+            f"{path.name}: name={data['name']!r} != title={data.get('title')!r}"
+        )
+    # check 3: steps and agents present
     if "steps" not in data:
-        errors.append(f"{path.name}: missing 'steps' field")
+        results["steps_agents"].append(f"{path.name}: missing 'steps' field")
     if "agents" not in data:
-        errors.append(f"{path.name}: missing 'agents' field")
-if errors:
-    raise AssertionError("Scenarios missing gadugi-test fields:\n" + "\n".join(errors))
-print("all scenarios have steps and agents fields")
-PY
-assert_success "$?" "every scenario YAML has steps and agents fields"
-
-# ── 4. name field appears after id and before workflow ───────────────────
-
-python3 - "$SCENARIOS_DIR" >"$tmp_root/field-order.out" 2>"$tmp_root/field-order.err" <<'PY'
-from pathlib import Path
-import sys
-
-scenarios_dir = Path(sys.argv[1])
-errors = []
-for path in sorted(scenarios_dir.glob("*.yaml")):
-    lines = path.read_text(encoding="utf-8").splitlines()
-    id_line = name_line = title_line = None
-    for i, line in enumerate(lines):
+        results["steps_agents"].append(f"{path.name}: missing 'agents' field")
+    # check 4: name line follows id line
+    id_line = name_line = None
+    for i, line in enumerate(text.splitlines()):
         if line.startswith("id:"):
             id_line = i
         elif line.startswith("name:"):
             name_line = i
-        elif line.startswith("title:"):
-            title_line = i
     if id_line is None or name_line is None:
-        errors.append(f"{path.name}: missing id or name line")
-        continue
-    if name_line <= id_line:
-        errors.append(f"{path.name}: name (line {name_line}) must appear after id (line {id_line})")
-if errors:
-    raise AssertionError("Field ordering issues:\n" + "\n".join(errors))
-print("name field is correctly positioned after id in all scenarios")
+        results["ordering"].append(f"{path.name}: missing id or name line")
+    elif name_line <= id_line:
+        results["ordering"].append(
+            f"{path.name}: name (line {name_line}) must appear after id (line {id_line})"
+        )
+
+# emit results as JSON for individual assertion checking
+json.dump(results, sys.stdout)
 PY
-assert_success "$?" "name field appears after id line in every scenario"
+yaml_status=$?
+assert_success "$yaml_status" "YAML field checks Python process exits 0"
 
-# ── 5. Schema accepts name, steps, and agents properties ─────────────────
+# Parse consolidated results into individual assertions
+python3 - "$tmp_root/yaml-checks.out" >"$tmp_root/yaml-split.out" 2>"$tmp_root/yaml-split.err" <<'PY'
+import json, sys
+results = json.load(open(sys.argv[1]))
+failed = []
+for check, errors in results.items():
+    if errors:
+        failed.append(f"{check}: " + "; ".join(errors))
+if failed:
+    raise AssertionError("\n".join(failed))
+print("all YAML field checks passed")
+PY
+assert_success "$?" "every scenario YAML has name, name==title, steps, agents, correct ordering"
 
-python3 - "$SCHEMA" >"$tmp_root/schema-props.out" 2>"$tmp_root/schema-props.err" <<'PY'
+# ── 5-6. Schema + validator static checks (single Python process) ────────
+
+python3 - "$SCHEMA" "$VALIDATOR" >"$tmp_root/static-checks.out" 2>"$tmp_root/static-checks.err" <<'PY'
 import json
 import sys
 
 schema = json.load(open(sys.argv[1], encoding="utf-8"))
-properties = set(schema.get("properties", {}).keys())
+validator = open(sys.argv[2], encoding="utf-8").read()
 errors = []
+
+# Schema property checks
+properties = set(schema.get("properties", {}).keys())
 for field in ("name", "steps", "agents"):
     if field not in properties:
         errors.append(f"schema properties must include '{field}'")
-if errors:
-    raise AssertionError("\n".join(errors))
 
-name_prop = schema["properties"]["name"]
-if name_prop.get("type") != "string":
-    raise AssertionError("schema name property must be type string")
-if name_prop.get("minLength") != 1:
-    raise AssertionError("schema name property must have minLength 1")
+if "name" in properties:
+    name_prop = schema["properties"]["name"]
+    if name_prop.get("type") != "string":
+        errors.append("schema name property must be type string")
+    if name_prop.get("minLength") != 1:
+        errors.append("schema name property must have minLength 1")
 
 for field in ("steps", "agents"):
-    if schema["properties"][field].get("type") != "array":
-        raise AssertionError(f"schema {field} property must be type array")
+    if field in properties and schema["properties"][field].get("type") != "array":
+        errors.append(f"schema {field} property must be type array")
 
-print("schema accepts name, steps, and agents properties")
-PY
-assert_success "$?" "schema declares name, steps, and agents properties"
-
-# ── 6. validate-scenarios.sh allowed_top includes gadugi fields ──────────
-
-python3 - "$VALIDATOR" >"$tmp_root/allowed-top.out" 2>"$tmp_root/allowed-top.err" <<'PY'
-import sys
-
-validator = open(sys.argv[1], encoding="utf-8").read()
-errors = []
+# Validator allowed_top checks
 for field in ("name", "steps", "agents"):
     if f'"{field}"' not in validator:
         errors.append(f"validate-scenarios.sh must include '{field}' in allowed_top")
+
 if errors:
     raise AssertionError("\n".join(errors))
-print("validate-scenarios.sh allowed_top includes gadugi fields")
+print("schema and validator static checks passed")
 PY
-assert_success "$?" "validate-scenarios.sh allowed_top includes name, steps, agents"
+assert_success "$?" "schema and validator accept name, steps, agents"
 
 # ── 7. gadugi-test validate reports 0 invalid files ──────────────────────
 
