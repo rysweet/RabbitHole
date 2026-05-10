@@ -22,10 +22,12 @@ abstract class DataSourceIo {
       if (dataSource == null) {
         continue;
       }
-      if (names.add(dataSource.getName())) {
+      String name = dataSource.getName();
+      ZipEntryContainer.validateSafeEntryName(name);
+      if (names.add(name)) {
         ZipUtilities.write(zos, dataSource);
       } else {
-        throw new RuntimeException("Attempt to add duplicate entries under the name " + dataSource.getName());
+        throw new IOException("Attempt to add duplicate entries under the name " + name);
       }
     }
     zos.flush();
@@ -35,7 +37,9 @@ abstract class DataSourceIo {
   static void writeDataSources(File outputDirectory, List<DataSource> dataSources) throws IOException {
     outputDirectory.mkdirs();
     for (DataSource dataSource : dataSources) {
-      File outputFile = new File(outputDirectory, dataSource.getName());
+      String name = dataSource.getName();
+      ZipEntryContainer.validateSafeEntryName(name);
+      File outputFile = new File(outputDirectory, name);
       FileUtilities.createParentDirectoriesIfNecessary(outputFile);
       FileOutputStream fos = new FileOutputStream(outputFile);
       dataSource.write(fos);

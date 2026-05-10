@@ -1069,6 +1069,41 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void pr426ProjectArchiveContractRejectsMalformedPlayerArchiveMetadataBeforeXmlFallback() throws Exception {
+    File exportFile = temporaryFolder.newFile("pr426-missing-filetype.a3w");
+    ProjectManifest manifest = new ProjectManifest();
+    manifest.description.name = "Program";
+    manifest.metadata.fileType = null;
+    manifest.resources.add(new TypeReference("Program", "src/Program.twe", "tweedle"));
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(exportFile))) {
+      writeZipEntry(zipOutputStream, ProjectIo.VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
+      writeZipEntry(zipOutputStream, ProjectIo.MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
+      writeZipEntry(zipOutputStream, "src/Program.twe", "class Program {}");
+    }
+
+    IOException thrown = assertThrows(IOException.class, () -> IoUtilities.projectReader(exportFile));
+
+    assertTrue(thrown.getMessage().contains(ProjectIo.MANIFEST_ENTRY_NAME));
+    assertTrue(thrown.getMessage().contains("fileType"));
+  }
+
+  @Test
+  public void pr426ProjectArchiveContractRejectsUnsafeSupplementalEntryNames() throws Exception {
+    Project project = new Project(programType("Program"), Project.SceneCameraType.WindowCamera);
+    File projectFile = temporaryFolder.newFile("pr426-unsafe-supplemental-entry.a3p");
+
+    IOException thrown = assertThrows(
+        IOException.class,
+        () -> IoUtilities.writeProject(
+            projectFile,
+            project,
+            new ByteArrayDataSource("../outside.txt", "unsafe".getBytes(StandardCharsets.UTF_8))));
+
+    assertTrue(thrown.getMessage().contains("../outside.txt"));
+  }
+
+  @Test
   public void jsonPlayerExportUsesSafeDistinctResourceEntries() throws Exception {
     ImageResource first = imageResource("image.png", 0xFFFF0000);
     ImageResource duplicate = imageResource("image.png", 0xFF00FF00);
