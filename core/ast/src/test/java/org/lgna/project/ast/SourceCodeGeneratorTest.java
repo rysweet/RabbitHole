@@ -85,6 +85,15 @@ public class SourceCodeGeneratorTest {
   }
 
   @Test
+  public void stringLiteralEscapesSpecialCharactersInGeneratedJavaSource() {
+    StringLiteral literal = new StringLiteral("line1\n\t\"quote\"\\backslash");
+
+    assertEquals(
+        "\"line1\\n\\t\\\"quote\\\"\\\\backslash\"",
+        generate(literal));
+  }
+
+  @Test
   public void characterizesSpecialPrimitiveLiteralNames() {
     assertEquals("Integer.MAX_VALUE", generateInt(Integer.MAX_VALUE));
     assertEquals("Integer.MIN_VALUE", generateInt(Integer.MIN_VALUE));
@@ -196,6 +205,68 @@ public class SourceCodeGeneratorTest {
   public void characterizesArrayLength() {
     UserLocal items = new UserLocal("items", String[].class, false);
     assertEquals("items.length", generate(new ArrayLength(new LocalAccess(items))));
+  }
+
+  @Test
+  public void characterizesExpressionStatementAssignmentAndStaticMethodCall() {
+    UserLocal count = new UserLocal("count", Integer.class, false);
+    assertEquals(
+        "count=4;",
+        generate(new ExpressionStatement(new AssignmentExpression(
+            JavaType.getInstance(Integer.class),
+            new LocalAccess(count),
+            AssignmentExpression.Operator.ASSIGN,
+            new IntegerLiteral(4)))));
+
+    JavaMethod valueOf = JavaMethod.getInstance(String.class, "valueOf", int.class);
+    assertEquals(
+        "String.valueOf(7);",
+        generate(new ExpressionStatement(new MethodInvocation(
+            new TypeExpression(String.class),
+            valueOf,
+            new SimpleArgument(valueOf.getRequiredParameters().get(0), new IntegerLiteral(7))))));
+  }
+
+  @Test
+  public void characterizesDirectFieldAccessAndInstanceMethodCall() {
+    UserField message = new UserField("message", String.class, new StringLiteral("hi"));
+    assertEquals("this.message", generate(new FieldAccess(new ThisExpression(), message)));
+
+    JavaMethod trim = JavaMethod.getInstance(String.class, "trim");
+    assertEquals(
+        "\" padded \".trim();",
+        generate(new ExpressionStatement(new MethodInvocation(new StringLiteral(" padded "), trim))));
+  }
+
+  @Test
+  public void characterizesIterableForEachLoopHeaderAndBody() {
+    UserLocal item = new UserLocal("item", String.class, true);
+    UserLocal items = new UserLocal("items", Iterable.class, false);
+    ForEachInIterableLoop loop = new ForEachInIterableLoop(
+        item,
+        new LocalAccess(items),
+        new BlockStatement());
+    UserLocal copy = new UserLocal("copy", String.class, true);
+    loop.body.getValue().statements.add(new LocalDeclarationStatement(copy, new LocalAccess(loop.item.getValue())));
+
+    assertEquals(
+        "for(String item : items){final String copy=item;}",
+        generate(loop));
+  }
+
+  @Test
+  public void characterizesDoTogetherRunnableFallbackSnippet() {
+    DoTogether doTogether = new DoTogether(new BlockStatement(
+        new LocalDeclarationStatement(
+            new UserLocal("left", String.class, true),
+            new StringLiteral("L")),
+        new LocalDeclarationStatement(
+            new UserLocal("right", String.class, true),
+            new StringLiteral("R"))));
+
+    assertEquals(
+        "ThreadUtilities.doTogether(new Runnable(){public void run(){final String left=\"L\";}},new Runnable(){public void run(){final String right=\"R\";}});",
+        generate(doTogether));
   }
 
   private static ForEachInArrayLoop forEachLoop(String itemName) {

@@ -3,7 +3,7 @@
 This reference documents the Gadugi-compatible CLI scenario for exported
 launcher evidence checks. The scenario gives Gadugi tooling a repo-owned entry
 point for the Alice desktop outside-in QA lane without changing the custom Alice
-scenario schema.
+scenario schema or expanding the source-code-generator characterization scope.
 
 Implementation files:
 
@@ -13,20 +13,22 @@ Implementation files:
 The scenario validates exported-project evidence wiring by delegating to the
 Alice outside-in runner. The default Gadugi path remains prepare-only; the
 underlying checked-in Alice scenario is the bounded no-Sims exported Ant build
-smoke. The Gadugi lane does not prove visible rendering, installer behavior,
-save behavior, grading, creative assessment, or full lesson completion.
+smoke, while launcher characterization owns JavaFX handoff, launcher marker
+observation, and no-go checks. The Gadugi lane does not prove visible rendering,
+installer behavior, save behavior, grading, creative assessment, or full lesson
+completion.
 
 ## Contents
 
 - [Scope](#scope)
 - [Files](#files)
-- [Usage](#usage)
+- [Command reference](#command-reference)
 - [Configuration](#configuration)
 - [Scenario contract](#scenario-contract)
 - [Validation commands](#validation-commands)
-- [Examples](#examples)
+- [Review checklists](#review-checklists)
 - [Evidence boundaries](#evidence-boundaries)
-- [Troubleshooting](#troubleshooting)
+- [Failure modes reference](#failure-modes-reference)
 
 ## Scope
 
@@ -46,6 +48,9 @@ lesson workflow:
    Ant target execution and must not claim rendered pixels, visible windows,
    installer behavior, save behavior, grading, creative assessment, or lesson
    completion.
+5. Launcher source characterization separately records JavaFX handoff, launcher
+   marker-observation boundaries, and deterministic no-go boundaries without
+   claiming Alice-world rendered pixels or visible-window correctness.
 
 For generated launcher behavior itself, see
 [Exported NetBeans Ant Project Behavior](./exported-netbeans-ant-project-behavior.md).
@@ -62,10 +67,14 @@ For the custom Alice outside-in scenario schema, see
 | `qa/outside-in/alice-desktop/scenarios/exported-project-smoke.yaml` | Custom-schema Alice scenario consumed by the repo-owned outside-in runner. This file remains on the Alice custom schema and is not a Gadugi scenario. |
 
 The `gadugi/` directory exists because `gadugi-test validate` uses a different
-schema than the Alice custom outside-in `scenarios/` directory. Keeping the
-formats separate lets both validators stay strict.
+schema than the Alice custom outside-in `scenarios/` directory. However, every
+scenario in `scenarios/` now carries `name`, `steps`, and `agents` fields so
+that `gadugi-test validate scenarios/` also passes. The `gadugi/` directory
+remains the home for full Gadugi-native scenarios with rich step definitions and
+agent configurations, while `scenarios/` carries the minimal compatibility
+fields alongside the Alice-specific schema.
 
-## Usage
+## Command reference
 
 Run commands from the repository root.
 
@@ -119,8 +128,17 @@ The Gadugi scenario is intentionally small and repo-local.
 | Working directory | `.` | Scenario commands run from the repository root. |
 | Interface | `cli` | The scenario is a command-line evidence check, not a browser, desktop, or rendering test. |
 | Scenario name | `exported-launcher-evidence` | Stable name used with `gadugi-test run -s exported-launcher-evidence`. |
-| Timeout | `180000` in the scenario, `300000` for the PR readiness wrapper run | The YAML keeps individual command timeouts short; the wrapper run leaves enough time for the delegated QA scripts. |
-| Tags | `cli`, `gadugi`, `pr-155`, `exported-launcher`, `launcher-evidence-contract` | Tags make the scenario discoverable as a PR #155 launcher evidence contract check. |
+| Timeout | `180000` in the scenario, `300000` for readiness wrapper runs | The YAML keeps individual command timeouts short; wrapper runs leave enough time for the delegated QA scripts. |
+| Tags | `cli`, `gadugi`, `pr-155`, `exported-launcher`, `launcher-evidence-contract` | `pr-155` is the historical Gadugi scenario identity retained by the existing QA contract; the source-generation characterization can reference that inherited launcher-evidence lane without retargeting the scenario metadata. |
+
+The `pr-155` tag and description text are historical scenario metadata, not a
+claim about the current review or source-generation characterization scope. The
+source-generation characterization uses this existing Gadugi lane as supporting
+launcher-evidence wiring. Retargeting the scenario identity would require
+coordinated changes to
+`exported-launcher-evidence.yaml` and
+`test-gadugi-exported-launcher-contract.sh`, which is outside this reference
+update.
 
 The surrounding QA environment may set:
 
@@ -141,7 +159,7 @@ The scenario YAML uses the CLI schema accepted by `gadugi-test validate`.
 | --- | --- |
 | Identity | The scenario is runnable as `exported-launcher-evidence`. |
 | Location | The file lives at `qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml`, outside the custom Alice scenario catalog. |
-| Interface | The scenario is a CLI evidence check, not a browser, desktop, rendering, save, grading, or lesson-completion test. |
+| Interface | The scenario is a CLI evidence check, not a browser, desktop automation, Alice-world rendering correctness, Save, grading, or lesson-completion test. |
 | Delegated catalog validation | The first step runs `qa/outside-in/alice-desktop/runners/validate-scenarios.sh`. |
 | Delegated evidence preparation | The second step runs `qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-exported-project-smoke --prepare-only --evidence-dir qa/outside-in/alice-desktop/evidence/gadugi-exported-launcher`. |
 | Delegated shell tests | The third step runs `qa/outside-in/alice-desktop/tests/run-tests.sh`. |
@@ -151,9 +169,10 @@ The scenario YAML uses the CLI schema accepted by `gadugi-test validate`.
 
 The scenario text uses conservative evidence-contract wording such as "launcher
 evidence workflow", "JavaFX handoff/no-go evidence contract", and "launcher
-evidence contract". It must not describe the scenario as rendering validation,
-save validation, grading validation, creative assessment, or full lesson
-completion coverage.
+evidence contract". It may refer to the generated launcher's own
+marker-observation boundary, but it must not describe the scenario as Alice-world
+rendering validation, Save validation, grading validation, creative assessment,
+or full lesson-completion coverage.
 
 ## Validation commands
 
@@ -195,7 +214,7 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
-## Examples
+## Review checklists
 
 ### Review the scenario without executing the gated smoke
 
@@ -241,9 +260,9 @@ Accepted Gadugi launcher evidence proves:
 - The Gadugi CLI scenario is valid and runnable.
 - The scenario delegates to the repo-owned Alice outside-in runner.
 - The Alice runner can prepare the current exported-project smoke evidence
-  contract.
-- The evidence wording stays within exported-project build and launcher evidence
-  boundaries.
+   contract.
+- The evidence wording stays within exported-project build, launcher handoff,
+  marker-observation, and no-go boundaries.
 
 It does not prove:
 
@@ -252,14 +271,14 @@ It does not prove:
 - Save behavior.
 - Grading.
 - Creative assessment.
-- Full lesson completion.
+- Full first-lesson completion.
 - A complete instructor or student desktop workflow.
 
-Display-backed, save/load, grading, creative assessment, and lesson-completion
-evidence belongs in separate outside-in Alice desktop scenarios with their own
-evidence artifacts.
+Display-backed world rendering, Save/load, grading, creative assessment, and
+lesson-completion evidence belongs in separate outside-in Alice desktop
+scenarios with their own evidence artifacts.
 
-## Troubleshooting
+## Failure modes reference
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -268,4 +287,4 @@ evidence artifacts.
 | `gadugi-test run` cannot find `exported-launcher-evidence` | The run command is not pointed at the Gadugi directory or the scenario name differs from the contract. | Use `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` from the repository root. |
 | The outside-in runner reports `gated-not-run` | The prepare-only runner path prepared a gated smoke without executing the heavy command. | This is expected for prepare-only evidence. Set `ALICE_QA_RUN_GATED_SMOKES=1` only when intentionally running the current gated smoke without `--prepare-only`. |
 | Maven validation reports missing Tweedle parser grammar files | The Tweedle grammar submodule is not initialized. | Run `git submodule update --init tweedle-lang` and confirm `test -d tweedle-lang/Grammar`. |
-| A review comment says the scenario proves rendering, save behavior, grading, creative assessment, or full lesson completion | The scenario wording is too broad. | Reword it to "launcher evidence wiring", "JavaFX handoff", or "display no-go evidence" and keep those broader claims out of the Gadugi scenario. |
+| A review comment says the scenario proves Alice-world rendering correctness, Save completion, grading, creative assessment, or full first-lesson completion | The scenario wording is too broad. | Reword it to "launcher evidence wiring", "JavaFX handoff", "launcher marker-observation boundary", or "display no-go evidence" and keep those broader claims out of the Gadugi scenario. |

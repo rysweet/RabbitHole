@@ -1,4 +1,5 @@
 id: alice-desktop-export
+name: Export Alice project output
 title: Export Alice project output
 workflow: export
 automationMode: manual-evidence-required
@@ -34,3 +35,7 @@ fallback:
 supportingEvidence:
   - alice-desktop-launch
   - alice-desktop-exported-project-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

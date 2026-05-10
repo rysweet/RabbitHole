@@ -1,4 +1,5 @@
 id: alice-desktop-menu-action-smoke
+name: Desktop menu/action smoke
 title: Desktop menu/action smoke
 workflow: menu-action-smoke
 automationMode: gated-command-smoke
@@ -46,3 +47,7 @@ tags:
   - immediate-qa-backlog
   - menu-action
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

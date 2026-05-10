@@ -1,4 +1,5 @@
 id: alice-desktop-wizard-palette-completion-smoke
+name: Wizard, palette, and completion smoke
 title: Wizard, palette, and completion smoke
 workflow: wizard-palette-completion-smoke
 automationMode: gated-command-smoke
@@ -46,3 +47,7 @@ tags:
   - immediate-qa-backlog
   - wizard-palette-completion
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

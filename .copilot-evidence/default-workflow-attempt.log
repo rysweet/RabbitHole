@@ -1,101 +1,248 @@
-Default-workflow recovery evidence for PR #388
-Recorded at: 2026-05-09T03:33:47Z
-Starting PR head verified: 6838fdf73a7fb2fe329e56563e6de37cdaf003b5
-Base branch verified: develop
+Default-workflow recovery evidence for PR #419
+Recorded at: 2026-05-09T13:23:51Z
+PR: https://github.com/rysweet/RabbitHole/pull/419
+Branch: feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
+Base branch: develop
+Evidence stage: point-in-time PR419 readiness handoff
+Recorded PR branch HEAD at evidence collection: 01bfb5f2adb4eac47df3419145801375ee433fd6
+origin/develop at recovery: 2e1e43c3937a7d163bcc76f1882903a8ad31f1cc
+merge-base(HEAD, origin/develop): 2e1e43c3937a7d163bcc76f1882903a8ad31f1cc
+
+Workflow readiness/review/finalization evidence:
+- Point-in-time evidence boundary: claims below apply only to the recorded branch head and commands listed in this recovery pass.
+- No timeout wrappers were used; NODE_OPTIONS=--max-old-space-size=32768 was exported for focused checks.
+- No manual PR merge was performed for PR #419.
+- Unmerged-path check: git diff --name-only --diff-filter=U produced no output.
+- Conflict-marker check: rg '(<{7}|={7}|>{7})' docs qa pyproject.toml produced no output.
+
+Merge status:
+- The branch contains current origin/develop at the checked recovery
+  point; no rebase was performed and no shared PR history was rewritten.
+- PR #419 was observed at the recorded branch HEAD above when this evidence
+  was collected. This record is point-in-time evidence, not a live-head
+  readiness claim for later commits.
+
+Worktree end state:
+- No unmerged path remains; the previous AA index state for
+  docs/reference/visible-rendering-evidence-nonclaim-contract.md is resolved.
+- The existing PR branch was pushed at the recorded branch HEAD above when
+  this evidence was collected.
+- Later commits must not reuse this record as live-head readiness evidence
+  unless their own checks are rerun and recorded separately.
+
+Intentional changes:
+- Runtime/display accessibility probe artifacts now state the target-discovery
+  scope and unsupported claim classes on both observed and blocked outputs.
+- Standalone world-canvas pixel sampler blocker and observation artifacts now
+  carry bounded sampling scope, non-correctness flags, and unsupported claim
+  classes.
+- Readiness evidence and silver-thread documentation now separate the
+  point-in-time PR419 handoff from transient current-head gate evidence and
+  remove unrelated stale readiness language.
+- Step 9 simplification keeps probe/sampler responsibilities split without
+  broadening claims, removes fake-sampler wording, and converts malformed sampler
+  RGBA output into structured blocker evidence instead of an unhandled failure.
+- Step 9 finalization refactor replaces broad inline Python assertion blocks with
+  direct shell assertions while preserving the bounded evidence checks.
+- Step 9b performance optimization reuses one root-window capture and one
+  ImageMagick `convert` invocation for all checked world-canvas sample points.
+- Step 10 review pass narrows silver-thread doc wording from "full Alice desktop
+  QA contract suite" to "Alice desktop QA contract suite" to avoid implying
+  validation beyond the focused target-discovery lane.
+- Step 6 retcon documentation adds current-head refresh instructions, documents
+  that review Git coordinates are external metadata rather than runner-emitted
+  `environment.txt` fields, resolves the visible-rendering nonclaim reference,
+  and keeps pixel sampling documented as observation-or-blocker for one run.
+- Step 8b external service integration was skipped because this recovery lane
+  introduces no API client implementation, service adapter, or runtime external
+  service call. The recorded `gh pr view` command is review metadata only and is
+  not a repository runtime integration; no retry path was added.
+- Step 20 cleanup tightens readiness and sampler contract shell checks by
+  removing success-shaped fallbacks while preserving the bounded evidence lane.
+- Step 9 current-head simplification adds a focused merge-ready gate contract
+  with direct shell assertions instead of an embedded assertion program.
+- Step 9b current-head gate performance optimization caches PR number, URL,
+  branch, body, head, live GitHub mergeability, review evidence, and check-rollup
+  metadata from one `gh pr view` call instead of repeating network requests.
+- Step 6c documentation refinement documents the review evidence gate,
+  owner-free no-op finalization guard retry, final re-query requirement,
+  PR-specific evidence scope, and merge-only current-head refresh wording.
+
+Current-head merge-ready gate model:
+- Live current-head proof is generated transiently by test-pr419-current-head-readiness-gate-contract.sh at runtime
+  from `git rev-parse HEAD` and one cached `gh pr view 419 --repo rysweet/RabbitHole --json
+  number,url,headRefName,headRefOid,mergeStateStatus,mergeable,reviewDecision,latestReviews,statusCheckRollup,body` response.
+- Tracked evidence must not store or predict the current PR head SHA.
+- The PR body must be updated after the final commit to name the live head SHA and focused gate evidence.
+- The PR body must also name the live mergeability result
+  (`mergeStateStatus=CLEAN`, `mergeable=MERGEABLE`) after the final commit; the
+  gate independently re-reads those fields at runtime.
+- GitHub Actions check rollup, review evidence, and live GitHub mergeability are
+  read from the live PR metadata response.
+- `reviewDecision` and `latestReviews` are fail-closed review evidence; any
+  `CHANGES_REQUESTED` state blocks readiness.
+- Readiness rule: green checks are necessary but not sufficient; runnable QA,
+  clean live GitHub mergeability, non-blocking review evidence, docs impact,
+  focused diff/review, PR description, audit-cycle, and bounded-claim evidence
+  must also be current and explicit.
+- PR description evidence is evaluated live by requiring the PR body to contain
+  the current PR/local head SHA and the current-head readiness gate contract.
+- Focused diff review evidence: local review stayed limited to PR recovery and
+  readiness evidence surfaces; no manual merge was performed.
+- Docs impact evidence: the silver-thread reference now documents the current-head
+  readiness gate, review evidence gate, no-op finalization guard, final re-query
+  requirement, and its `MERGE_READY`/`NOT_MERGE_READY` decision boundary.
+- Bounded claim evidence: this gate does not claim full UI automation, visible
+  rendering correctness, grading, creative assessment, full lesson completion, or
+  full Tweedle/player decode.
+- This gate does not claim full lesson completion.
+- This gate does not claim full Tweedle/player decode.
+
+PRHeadAlignment: the live gate compares local HEAD and PR #419 headRefOid before
+readiness evaluation.
+EvidenceCollector: inspected PR body, GitHub Actions status, readiness docs, the
+focused PR diff scope, and `.copilot-evidence/default-workflow-attempt.log`.
+QAValidationRunner: reran focused repository-owned QA contracts with
+`NODE_OPTIONS=--max-old-space-size=32768`; no timeout wrapper was used.
+QualityAuditCycleRecorder: recorded three SEEK/VALIDATE/FIX cycles below.
+ReadinessGate: applied the missing-evidence policy and refused to infer readiness
+from green checks alone.
+
+Cycle 1 SEEK: current PR head alignment and GitHub Actions freshness.
+Cycle 1 VALIDATE: the live gate uses `gh pr view 419 --repo rysweet/RabbitHole --json
+number,url,headRefName,headRefOid,mergeStateStatus,mergeable,reviewDecision,latestReviews,statusCheckRollup,body`
+and `git rev-parse HEAD` to compare the current PR head, PR body evidence, live
+mergeability, review evidence, and check rollup without relying on tracked SHA
+text.
+Cycle 1 FIX: no repository code fix; recorded that green checks are required but
+not sufficient for merge readiness.
+
+Cycle 2 SEEK: absent or stale runnable QA, documentation, diff-review, and PR body
+evidence for the current head.
+Cycle 2 VALIDATE: focused commands below were rerun locally, the silver-thread
+documentation was updated, and the current-head gate checks PR body evidence at
+runtime.
+Cycle 2 FIX: added the current-head gate contract and documented the transient
+PR body evidence requirement.
+
+Cycle 3 SEEK: over-claims, template residue, repeated remote metadata reads, dead
+readiness code, timeout wrappers, manual merge shortcuts, and broad
+UI/rendering/grading/Tweedle claims.
+Cycle 3 VALIDATE: `git diff --check`, focused QA contracts, template-residue scan,
+and the current-head gate contract checked the changed readiness surfaces after
+PR metadata caching was introduced.
+Cycle 3 FIX: simplified the readiness gate to direct shell assertions, reused one
+cached GitHub metadata response for PR number, URL, branch, body, head, and check
+evaluation, and removed static current-head SHA assertions from tracked evidence.
 
 Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope at starting head was test-only:
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The generated-source characterization asserts that generated Scene.java forwards
-  SceneActivationEvent through the generated scene activation listener lambda.
+- Full origin/develop...HEAD diff reviewed for the existing PR #419 branch.
+- The recovery scope is limited to the RabbitHole accessibility target discovery
+  silver thread and the post-open runtime/display accessibility evidence lane.
+- Durable surfaces in scope:
+  docs/reference/accessibility-target-discovery-silver-thread.md
+  docs/reference/post-open-runtime-display-accessibility-evidence.md
+  docs/reference/alice-desktop-outside-in-qa.md
+  docs/howto/alice-desktop-outside-in-qa.md
+  qa/outside-in/alice-desktop/README.md
+  qa/outside-in/alice-desktop/scenarios/post-open-runtime-display-accessibility-evidence.yaml
+  qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+  qa/outside-in/alice-desktop/runners/run-scenario.sh
+  qa/outside-in/alice-desktop/runners/post-open-runtime-display-probe.py
+  qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py
+  qa/outside-in/alice-desktop/schema/scenario.schema.json
 
-Validation completed at starting head:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
-
-Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result e0242ceec159d25644aedff8a77e62de70e0b8e9.
-- Prior fallback ownership marker is superseded by this default-workflow-owned evidence.
-
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
-
-Default-workflow finalization refresh for PR #388
-Recorded at: 2026-05-09T03:49:48Z
-Current PR head verified before this evidence-only update:
-cec7b96debc2fda4f711069e0ba781d6224fb952
-Base branch verified: develop
-
-Scope re-inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope remains limited to:
-  .copilot-evidence/default-workflow-attempt.exit
-  .copilot-evidence/default-workflow-attempt.log
-  netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
-- The test characterization remains focused on generated Scene.java forwarding
-  SceneActivationEvent through the generated scene activation listener lambda.
-
-Validation completed at current PR head before this evidence-only update:
-- git submodule update --init tweedle-lang
-- NODE_OPTIONS=--max-old-space-size=32768 mvn -pl netbeans -am -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest test -q
-- git merge-tree --write-tree origin/develop HEAD
-
-Result:
-- Focused generated-source characterization passed.
-- merge-tree completed cleanly; write-tree result 52938664ddb5a815cbc06e1940711161baf7f5c1.
-- No unresolved fallback ownership marker remains in tracked evidence.
-
-Limits:
-- This evidence does not claim desktop runtime execution.
-- This evidence does not claim runtime dispatch completion beyond the focused
-  generated-source/headless characterization test.
-- This evidence does not claim export completion.
-
-Default-workflow recovery/finalization for PR #389
-Recorded at: 2026-05-09T03:55:00Z
-Starting PR head verified: b183575ca623d07affb296fe753d30860cad4832
-Base branch verified: develop
-
-Scope inspected:
-- Full origin/develop...HEAD diff reviewed.
-- Diff scope covers the exported-project Ant build smoke workflow rename/wiring,
-  the runner and validator argv allowlists, schema/workflow contract tests, and
-  documentation/evidence-boundary updates.
-- A stale wording blocker was fixed so the docs no longer say the Ant target
-  execution remains unwired.
-
-Validation completed:
-- git submodule update --init tweedle-lang
+Focused validation completed:
+- git rev-parse HEAD
+- git rev-parse '@{u}'
+- git diff --name-only --diff-filter=U
+- rg '(<{7}|={7}|>{7})' docs qa pyproject.toml
+- git diff --check
+- python3 -m py_compile qa/outside-in/alice-desktop/runners/post-open-runtime-display-probe.py qa/outside-in/alice-desktop/runners/world-canvas-pixel-sampler.py
 - NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-schema-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-workflow-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-gated-command-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/test-gadugi-exported-launcher-contract.sh
-- NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/tests/run-tests.sh
-- ALICE_QA_RUN_GATED_SMOKES=1 NODE_OPTIONS=--max-old-space-size=32768 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-exported-project-smoke --evidence-dir /tmp/rabbithole-pr389-exported-ant-evidence
-- git diff --check origin/develop...HEAD
-- git merge-tree clean check against origin/develop
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-schema-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-docs-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-post-open-runtime-display-probe.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-world-canvas-pixel-sampler-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-readiness-evidence-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-current-head-evidence-doc-refinement-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-finalization-evidence-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-pr419-current-head-readiness-gate-contract.sh
+- NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa validate
+- NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa run alice-desktop-post-open-runtime-display-accessibility-evidence --prepare-only
+- NODE_OPTIONS=--max-old-space-size=32768 uvx --from git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow amplihack alice-qa run alice-desktop-run-debug
 
-Result:
-- Prior manual-fallback marker is cleared by default-workflow-owned evidence.
-- Focused QA contracts passed.
-- The gated exported Ant project smoke passed with status.txt outcome=passed,
-  exitCode=0, and Alice3ProjectTemplateAntSmokeTest tests run: 7, failures: 0,
-  errors: 0, skipped: 0.
-- No Ant log contained Java Result.
-- GitHub PR checks for build, package-netbeans, test, and GitGuardian passed at
-  pushed head 96f0834e5259f0b1b96fcbf4e73dd250f0902ab5; coverage was still
-  in progress at the time of base-merge refresh.
+Observed validation outcomes:
+- Scenario validation accepted 29 checked-in scenarios, including the post-open
+  runtime/display accessibility evidence workflow.
+- The schema contract passed and keeps workflow and argv allowlists synchronized
+  across the JSON schema, dependency-free validator, runner, and contract tests.
+- The runtime/display docs contract passed and keeps documentation and scenario
+  wording bounded to observed or blocked accessibility target discovery evidence.
+- The runtime/display contract passed and verifies the scenario ID, workflow,
+  AT-SPI Maven argv, target starter metadata, supporting evidence, and
+  fail-closed blocker artifacts.
+- The runtime/display probe contract passed and verifies observed candidate
+  summaries, missing-target blockers, geometry status fields, and safe artifact
+  shape.
+- The world-canvas pixel sampler contract passed and verifies target-scoped raw
+  RGBA sample artifacts and explicit sampler blockers without promoting samples
+  into rendering-correctness proof.
+- The world-canvas pixel sampler contract passed and verifies the standalone
+  sampler captures the root window once per target, then extracts all checked
+  sample points from that cached capture with one ImageMagick `convert`
+  invocation.
+- The accessibility target discovery silver-thread contract passed and verifies
+  checked-in launch, run/runtime, and Select Project target discovery markers,
+  structured blockers, and bounded scope wording.
+- The PR419 readiness evidence contract passed and verifies point-in-time
+  evidence fields, stale live-head claim removal, validation commands,
+  worktree state, and explicit non-claims.
+- The current-head evidence documentation refinement contract passed and verifies
+  parameterized PR recovery instructions, external Git SHA review metadata,
+  target-readiness blocker visibility, observation-or-blocker pixel sampling
+  wording, fail-on-match conflict-marker guidance, and bounded nonclaim language.
+- The PR419 finalization evidence contract passed and verifies workflow
+  readiness/review/finalization fields, the requested branch, no unmerged paths,
+  no recorded timeout-wrapper or manual PR-merge commands, and bounded
+  point-in-time claims.
+- The PR419 current-head readiness gate contract generates live proof from
+  cached PR metadata and verifies PR number/URL, PR head alignment, PR body
+  current-head evidence, live GitHub mergeability, review evidence with no
+  changes-requested blocker, completed green GitHub Actions, focused QA/scenario
+  evidence, documented audit cycles, and bounded claims.
+- Step 13 outside-in scenario 1 passed from the PR branch through uvx; uv resolved
+  git+https://github.com/rysweet/RabbitHole.git@feat/issue-416-rabbithole-wave7-accessibility-target-lane-follow
+  to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack alice-qa validate`
+  accepted 29 checked-in Alice desktop QA scenarios.
+- Step 13 outside-in runtime/display scenario was executed from the PR branch
+  through uvx and failed closed with `Controlled display pixel proof blocked:
+  alice-window-not-found`; this is a local desktop automation environment blocker
+  for fresh runtime/display evidence, not a broadened accessibility-target claim.
+- Step 13 outside-in scenario 2 passed from the PR branch through uvx; uv resolved
+  the same branch to b7a4952ec5b752c4206eefa0cb04a3e3edc7d7a6 and `amplihack
+  alice-qa run alice-desktop-run-debug` prepared the manual run/debug evidence
+  checklist for the silver-thread manual context lane.
 
-Limits:
-- The exported Ant proof is bounded to Alice3ProjectTemplateAntSmokeTest
-  Ant build/JAR/probe behavior.
-- This evidence does not claim full GUI export journey validation.
-- This evidence does not claim deployed installer validation.
-- This evidence does not claim visible rendering or Sims validation.
+Readiness claim:
+- PR #419 is ready only as a silver-thread accessibility target discovery
+  contract for discovered launch, runtime/display, world-canvas sampling-target,
+  and Select Project accessibility/runtime display targets.
+- Passing focused validation supports only this statement: the repository-owned
+  scenario, schema, runner, probe, sampler, and docs surfaces expose bounded
+  target discovery evidence and fail-closed blocker artifacts for review.
+
+Explicit non-claims:
+- This evidence does not claim full UI automation.
+- This evidence does not claim visible rendering correctness or world-canvas
+  pixel correctness.
+- This evidence does not claim full world execution or world execution
+  correctness.
+- This evidence does not claim grading, lesson completion, or creative assessment.
+- This evidence does not claim Save completion or Save behavior.
+- This evidence does not claim Sims validation.
+- This evidence does not claim deployed installer success or deployment
+  readiness.
+- This evidence does not claim broad accessibility compliance.
