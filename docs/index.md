@@ -11,6 +11,7 @@ repository.
 - [Save Proof Evidence](./reference/save-proof-evidence.md) - Canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
 - [Robot Save Menu Dialog Write/Readback Proof](./reference/robot-save-menu-dialog-write-readback-proof.md) - Reference for the Robot File-menu Save activation, Swing chooser control, `.a3p` write, readback, marker, and blocker artifact contract.
 - [Project IO Corpus Characterization](./reference/project-io-corpus-characterization.md) - Reference for generated `.a3p`, `.a3w`, and `.a3c` archive characterization in `core/story-api-migration`.
+- [Legacy Fixture Round-Trip Readiness](./reference/legacy-fixture-roundtrip-readiness.md) - Reference for the focused generated legacy fixture round-trip lane, fail-closed unsupported archive boundaries, validation command, PR evidence, PR #433 no-timeout finalization profile, merge-ready evidence contract, and explicit non-claims.
 - [JSON `.a3c` Constructor Assignment Characterization](./reference/json-a3c-constructor-assignment-characterization.md) - Narrow feature contract for a generated JSON type archive whose constructor assigns a decoded field.
 - [ProjectMigrationManager Migration Characterization](./reference/project-migration-manager-characterization.md) - Reference for generated XML-string characterization around versioned Alice project text migrations.
 - [TextMigrationRegistry Extraction](./reference/text-migration-registry.md) - Reference for the `TextMigrationRegistry` class hierarchy that holds text migration data extracted from `ProjectMigrationManager`.
@@ -26,11 +27,19 @@ repository.
 - [Run the Save Menu Dialog Write/Readback Proof](./howto/run-save-menu-dialog-write-proof.md) - How to run the focused Robot Save menu/dialog/write/readback QA scenario with Xvfb when needed.
 - [Run the Robot Save Menu Dialog Write/Readback Proof](./howto/run-robot-save-menu-dialog-write-readback-proof.md) - Guide for running the focused Robot Save menu/dialog/write/readback proof and reviewing the canonical artifact contract.
 - [Characterize Project IO Corpus Behavior](./howto/characterize-project-io-corpus.md) - How to add deterministic LFS-free IO corpus characterization around Alice archive readers and writers.
+- [Characterize Legacy Fixture Round-Trip Readiness](./howto/characterize-legacy-fixture-roundtrip-readiness.md) - How to add or review the focused generated fixture round-trip lane, including PR #433 current-head finalization evidence, without broad migration or decode claims.
 - [Tutorial: Add a Save Operation Characterization Test](./tutorials/save-operation-characterization-test.md) - A guided example for the first direct Save operation characterization test.
 - [Tutorial: Trace the Robot Save Menu Dialog Write/Readback Proof](./tutorials/trace-robot-save-menu-dialog-write-readback-proof.md) - Guided review of Robot menu activation, chooser approval, `.a3p` write, readback, marker evidence, and non-claims.
 - [Tutorial: Add a Project IO Corpus Characterization](./tutorials/project-io-corpus-characterization.md) - A guided example for protecting generated `.a3p` archive behavior.
+- [Tutorial: Trace Legacy Fixture Round-Trip Readiness](./tutorials/legacy-fixture-roundtrip-readiness.md) - Guided review of generated `.a3p`, `.a3w`, `.a3c`, fail-closed fixture readiness evidence, and merge-ready PR wording.
 - [Tutorial: Add a ProjectMigrationManager Migration Characterization](./tutorials/project-migration-manager-characterization.md) - A guided example for protecting ordered text migration behavior without binary fixtures.
 - [Tutorial: Trace Source-Code-Generator Characterization](./tutorials/trace-source-code-generator-characterization.md) - Guided review from core AST snippets to generated NetBeans source, Story API listener seams, launcher evidence, and bounded non-claims.
+
+## Issue-reporting characterization
+
+- [IssueSubmissionProgressWorker Characterization](./reference/issue-submission-progress-worker.md) - Reference for the background submission lifecycle, three test seams, `RecordingIssueSubmissionProgressWorker` harness, QA scenario contract, and compatibility rules.
+- [Characterize IssueSubmissionProgressWorker Behavior](./howto/characterize-issue-submission-progress-worker.md) - How to add or review characterization tests for the background submission progress worker seams.
+- [Tutorial: Trace the IssueSubmissionProgressWorker Characterization](./tutorials/trace-issue-submission-progress-worker.md) - Guided review of the three test methods: success-path progress ordering, attachment opt-out carry-through, and exception-path incomplete sequence.
 
 ## QA and acceptance testing
 
@@ -63,6 +72,13 @@ repository.
 - [Gadugi exported launcher evidence scenario](./reference/gadugi-exported-launcher-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for exported launcher evidence checks.
 - [Gadugi runtime event dispatch evidence scenario](./reference/gadugi-runtime-event-dispatch-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for bounded headless runtime dispatch evidence checks.
 - [Headless-safe desktop action characterization](./reference/headless-safe-desktop-action-characterization.md) - JavaFX/Swing headless startup contract, Croquet action-flow seams, validation commands, and compatibility rules.
+- [Gadugi Window menu registration evidence scenario](./reference/gadugi-window-menu-registration-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for PR #401 Window menu registration evidence checks.
+- [Run Gadugi Window menu registration evidence](./howto/run-gadugi-window-menu-registration-evidence.md) - validate, run, and review the Gadugi Window menu registration evidence scenario and contract test.
+- [Tutorial: Trace the Gadugi Window menu registration evidence](./tutorials/gadugi-window-menu-registration-evidence.md) - guided walkthrough from Gadugi scenario to delegated QA runner to underlying menu/action smoke.
+- [Headless-safe desktop action characterization](./reference/headless-safe-desktop-action-characterization.md) - broader JavaFX/Swing headless startup contract, Croquet action-flow seams, validation commands, and compatibility rules.
+- [Window menu action contract](./reference/window-menu-action-contract.md) - canonical focused specification for `WindowMenuModel` registration, stable identity, menu-bar membership lookup, gated smoke usage, and non-claims.
+- [PR #401 UI Action Menu Contract Handoff](./reference/pr401-ui-action-menu-contract-evidence.md) - merge-ready evidence requirements, bounded `alice-desktop-menu-action-smoke` recovery scope, and no-op source justification.
+- [Menu/action contract validation](./reference/headless-safe-desktop-action-characterization.md#menuaction-registration) - bounded reference for `AliceMenuBarContractTest`, Window menu model registration, menu-bar membership lookup, and non-claims.
 - [Characterize headless-safe desktop actions](./howto/characterize-headless-safe-desktop-actions.md) - how to add or review desktop action characterization without display-dependent tests.
 - [Tutorial: Trace a Desktop Action Journey](./tutorials/desktop-action-journey-characterization.md) - guided walkthrough from outside-in menu/action smoke evidence to headless-safe Save action tests.
 - [Expand coverage ratchets](./howto/expand-coverage-ratchets.md) - measure no-Sims coverage, choose safe module floors, and document protected hotspot decisions.

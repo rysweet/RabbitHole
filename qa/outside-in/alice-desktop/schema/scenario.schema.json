@@ -48,6 +48,7 @@
         "future-ui-smoke",
         "generated-listener-runtime-dispatch-smoke",
         "instructor-student-setup",
+        "issue-reporting-smoke",
         "launch",
         "menu-action-smoke",
         "netbeans-package-smoke",
@@ -437,12 +438,14 @@
                   "const": "-pl"
                 },
                 {
+                  "const": "core/issue-reporting"
                   "const": "core/ide"
                 },
                 {
                   "const": "-am"
                 },
                 {
+                  "const": "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest"
                   "const": "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest"
                 },
                 {
