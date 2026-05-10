@@ -74,6 +74,7 @@ public class SilverThreadLaunchBuildRunTest {
     File savedFile = workDir.resolve("silver-thread.a3p").toFile();
     IoUtilities.writeProject(savedFile, project);
     assertTrue("Saved project file must exist on disk", savedFile.isFile());
+    assertTrue("Saved project file must be non-empty", savedFile.length() > 0);
 
     // Step 4: Reopen the saved project via TestFileProjectLoader
     Project reopenedProject = new TestFileProjectLoader(savedFile).loadNow();
@@ -114,6 +115,7 @@ public class SilverThreadLaunchBuildRunTest {
     File secondSave = workDir.resolve("silver-thread-round-trip.a3p").toFile();
     IoUtilities.writeProject(secondSave, reopenedProject);
     assertTrue("Second-save file must exist", secondSave.isFile());
+    assertTrue("Second-save file must be non-empty", secondSave.length() > 0);
 
     Project secondReopened = new TestFileProjectLoader(secondSave).loadNow();
     assertNotNull("Second-reopened project must not be null", secondReopened);
@@ -158,6 +160,7 @@ public class SilverThreadLaunchBuildRunTest {
     File copyFile = workDir.resolve("indiaMinimum-copy.a3p").toFile();
     IoUtilities.writeProject(copyFile, starterProject);
     assertTrue("Saved copy must exist", copyFile.isFile());
+    assertTrue("Saved copy must be non-empty", copyFile.length() > 0);
 
     // Reopen the copy and verify name survived
     Project copiedProject = IoUtilities.readProject(copyFile);

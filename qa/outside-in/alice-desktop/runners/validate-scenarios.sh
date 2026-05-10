@@ -492,6 +492,10 @@ def validate(path, scenario):
     if not isinstance(title, str) or not title.strip():
         errors.append("title must be a non-empty string")
 
+    name = scenario.get("name")
+    if name is not None and name != title:
+        errors.append("name must equal title when present")
+
     workflow = scenario.get("workflow")
     if workflow not in workflow_values:
         errors.append(f"workflow must be one of: {', '.join(sorted(workflow_values))}")
