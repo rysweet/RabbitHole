@@ -1,0 +1,48 @@
+id: alice-desktop-migration-hotspot-characterization-smoke
+title: Migration hotspot characterization smoke
+workflow: migration-hotspot-characterization-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - ProjectMigrationManager characterization tests are available in the checkout.
+userActions:
+  - Run the focused migration hotspot characterization smoke from the command line.
+  - Exercise text-migration versioning, rewriting, cascading, boundary, and idempotency paths.
+  - Confirm all 18 ProjectMigrationManagerTest methods pass.
+expectedOutcomes:
+  - The migration hotspot characterization smoke command exits successfully when the gate is enabled.
+  - Text-migration version mapping, rewriting, and cascading are covered by passing characterization tests.
+  - Boundary conditions and idempotency paths are verified without regression.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/story-api-migration
+    - -am
+    - -Dtest=org.lgna.project.migration.ProjectMigrationManagerTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the migration hotspot characterization smoke command.
+    - Test output or surefire report naming ProjectMigrationManagerTest.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the focused Maven smoke is unavailable, attach the nearest migration characterization evidence.
+    - Do not substitute GUI save/load evidence for this migration hotspot boundary.
+supportingEvidence:
+  - alice-desktop-archive-fixture-smoke
+tags:
+  - migration-hotspot
+  - command-smoke
+  - characterization

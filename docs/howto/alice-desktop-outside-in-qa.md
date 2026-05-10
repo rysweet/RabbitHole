@@ -21,6 +21,7 @@ runtime/display accessibility evidence.
 - [Run the real Alice launch scenario](#run-the-real-alice-launch-scenario)
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
+- [Review the Run-window creation/wiring contract](#review-the-run-window-creationwiring-contract)
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
 - [Review the desktop Run execution gap report](#review-the-desktop-run-execution-gap-report)
 - [Refresh current-head accessibility evidence](#refresh-current-head-accessibility-evidence)
@@ -313,6 +314,103 @@ proof.
 
 For the artifact API, configuration, examples, and claim boundaries, see
 [First-Lesson Live Procedure Target Action Seam](../reference/first-lesson-live-procedure-target-observation.md).
+
+## Review the Run-window creation/wiring contract
+
+The `alice-desktop-run-window-contract` scenario covers only the
+Run-window-created evidence seam. This is a property-gated, passive
+creation/wiring check. It verifies that the Run-window creation
+hook can write a fixed `run-window-created.json` artifact with schema version,
+creation status, contract scope, source metadata, optional frame/program display
+metadata, path-safe artifact naming, JSON escaping, false capability booleans,
+and explicit non-claim boundaries. It does not verify active rendering, run
+execution, world execution correctness, rendering correctness, Save behavior,
+grading, creative assessment, lesson completion, or full UI automation.
+For focused review steps, see [Review the Run-Window Creation/Wiring
+Contract](./review-run-window-creation-wiring-contract.md).
+
+Prepare the scenario without executing the focused Maven command:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-window-contract \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-window-contract
+```
+
+The preflight run writes:
+
+```text
+qa/outside-in/alice-desktop/evidence/run-window-contract/alice-desktop-run-window-contract/<timestamp>/environment.txt
+qa/outside-in/alice-desktop/evidence/run-window-contract/alice-desktop-run-window-contract/<timestamp>/status.txt
+qa/outside-in/alice-desktop/evidence/run-window-contract/alice-desktop-run-window-contract/<timestamp>/manual-evidence-checklist.txt
+```
+
+`status.txt` records `automationMode=gated-command-smoke`,
+`outcome=gated-not-run`, the fixed allowlisted Maven argv, and the checklist
+name. This is the expected prepare-only result; it verifies scenario wiring and
+review instructions, not the artifact contents.
+
+Run the focused contract check in a prepared worktree:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-window-contract \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-window-contract
+```
+
+The runner executes this argv directly, without shell interpretation:
+
+```text
+mvn -DincludeSims=false -Dinstall4j.skip -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false -pl core/ide -am -Dtest=org.alice.tools.EatmeRunWindowEvidenceTest test
+```
+
+The product seam is opt-in through the JVM property
+`org.alice.eatme.runWindowEvidenceDir`. When set, the directory must already
+exist, and the seam writes only `run-window-created.json` under that directory
+without following a pre-existing artifact symlink. A representative artifact is:
+
+```json
+{
+  "schema_version": "eatme.alice-run-window-created/v1",
+  "status": "created",
+  "contract_scope": "run-window-creation-wiring",
+  "evidence_source": "org.alice.stageide.run.RunComposite#handlePreShowWindow",
+  "artifact": "run-window-created.json",
+  "frame_title": "Run Alice",
+  "program_type": "Scene",
+  "active_rendering_claimed": false,
+  "run_program_claimed": false,
+  "run_execution_claimed": false,
+  "world_execution_claimed": false,
+  "rendering_correctness_claimed": false,
+  "save_claimed": false,
+  "grading_claimed": false,
+  "full_ui_automation_claimed": false,
+  "does_not_claim": [
+    "active-rendering",
+    "run-execution",
+    "world-execution-correctness",
+    "rendering-correctness",
+    "save",
+    "grading",
+    "full-ui-automation"
+  ]
+}
+```
+
+Accept the contract evidence only when the fixed artifact name is used,
+the schema and scope fields match the values above, all capability booleans are
+`false`, and `does_not_claim` names the excluded capabilities. Reject artifacts
+with alternate names, path traversal, missing boundaries, success-shaped
+fallback text, or affirmative claims about execution, rendering correctness,
+Save, grading, creative assessment, lesson completion, or full UI automation.
+Creative assessment and lesson completion are excluded by the Run-window
+creation/wiring scope, not by dedicated `creative_assessment_claimed` or
+`lesson_completion_claimed` artifact fields.
 
 ## Collect post-open runtime/display and target-scoped pixel evidence
 

@@ -51,12 +51,14 @@ workflow_values = {
     "issue-reporting-smoke",
     "launch",
     "menu-action-smoke",
+    "migration-hotspot-characterization-smoke",
     "netbeans-package-smoke",
     "open-load-save",
     "package-install-smoke",
     "project-io-smoke",
     "scene-creation",
     "run-debug",
+    "run-window-contract",
     "save-load",
     "save-menu-dialog-write-proof",
     "select-project-interaction-smoke",
@@ -128,9 +130,39 @@ allowed_automation = {
             "-DfailIfNoTests=false",
             "-Dsurefire.failIfNoSpecifiedTests=false",
             "-pl",
+            "core/ide",
+            "-am",
+            "-Dtest=org.alice.tools.EatmeRunWindowEvidenceTest",
+            "test",
+        ),
+    ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
             "core/story-api-migration",
             "-am",
             "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest",
+            "test",
+        ),
+    ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
+            "core/story-api-migration",
+            "-am",
+            "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest",
             "test",
         ),
     ),
@@ -640,9 +672,9 @@ def validate(path, scenario):
         for field in ("cwd", "argv", "readyWaitSeconds"):
             if field not in automation:
                 errors.append(f"automation must include {field} when present")
-        if workflow == "save-menu-dialog-write-proof":
+        if workflow in {"save-menu-dialog-write-proof", "run-window-contract"}:
             if "timeoutSeconds" in automation:
-                errors.append("save-menu-dialog-write-proof must not include automation.timeoutSeconds")
+                errors.append(f"{workflow} must not include automation.timeoutSeconds")
         elif "timeoutSeconds" not in automation:
             errors.append("automation must include timeoutSeconds when present")
         validate_automation_cwd(errors, automation.get("cwd"))
