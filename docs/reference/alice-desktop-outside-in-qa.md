@@ -43,7 +43,7 @@ report](./desktop-run-execution-gap-report.md).
 
 | Scenario ID | Workflow | Automation mode | Purpose |
 | --- | --- | --- | --- |
-| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers historical archive fixture availability used by decoder and migration characterization smokes. |
+| `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` | `gated-command-smoke` | Covers the focused generated legacy fixture round-trip characterization lane for `.a3p`, `.a3w`, `.a3c`, JSON boundary, and fail-closed unsupported archive behavior. |
 | `alice-desktop-launch` | `launch` | `xvfb-real-alice` | Starts the real Alice desktop through Maven under Xvfb and captures launch evidence. |
 | `alice-desktop-select-project-inventory` | `select-project-interaction-smoke` | `xvfb-real-alice` | Waits for the real Select Project chooser after isolated license opt-in and records title, class, process, and geometry without opening a project. |
 | `alice-desktop-select-project-widget-introspection` | `select-project-widget-introspection-smoke` | `xvfb-real-alice` | Enumerates live Select Project Swing widgets through AT-SPI when the ATK wrapper is active, or records the exact ATK/AT-SPI blocker. |
@@ -67,6 +67,8 @@ report](./desktop-run-execution-gap-report.md).
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Covers controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
+| `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
+| `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers bounded Window menu model registration and menu-bar membership lookup through `AliceMenuBarContractTest`, without display, rendering, Save, first-lesson, installer, or Sims claims. |
 | `alice-desktop-save-menu-dialog-write-proof` | `save-menu-dialog-write-proof` | `gated-command-smoke` | Attempts one bounded rendered File-menu Save -> controlled chooser -> written `.a3p` -> readback marker path through `RobotSaveMenuDialogWriteReadbackProofTest`; only a validated `status: "proven"` artifact completes it. |
 | `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` | `gated-command-smoke` | Covers unsupported adjacent Tweedle method-call boundaries for the narrow decoder slice. |
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
@@ -97,6 +99,24 @@ The `alice-desktop-run-debug` manual checklist also asks reviewers to collect or
 link `desktop-run-execution.json` and `desktop-run-runtime.log` when opt-in
 desktop Run execution evidence is enabled; those VM-listener artifacts support
 the manual handoff but are not v1 gap-report `executableToday` entries.
+The menu/action smoke is a gated command contract for the headless-safe
+`AliceMenuBarContractTest` only. When `ALICE_QA_RUN_GATED_SMOKES=1`, the runner
+executes the checked-in scenario argv. With `NODE_OPTIONS` set in the
+environment, that argv is equivalent to:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+The accepted evidence is `status.txt`, `command.log`, and Maven/Surefire output
+naming `AliceMenuBarContractTest`. It proves only Window menu model registration
+and menu-bar membership lookup. It is not full UI automation, rendered menu
+verification, Save completion, first-lesson completion, deployed installer
+success, or Sims validation.
 The accessibility target discovery silver-thread contract is a focused shell
 contract over existing launch, run/debug, post-open runtime/display, and Select
 Project evidence paths. It validates target discovery signals, structured
@@ -183,6 +203,8 @@ Run commands from the repository root.
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
 | `gadugi-test validate scenarios/` | Validate all 30 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
+| `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml` | Validate the Gadugi archive fixture evidence scenario. | Confirms the scenario uses the Gadugi CLI schema. |
+| `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s archive-fixture-evidence --timeout 600000` | Run the Gadugi archive fixture evidence scenario. | Delegates to the outside-in archive-fixture smoke runner and contract test suite. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa list` | Install the QA wrapper from a branch and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa run <scenario-id-or-path>` | Install the QA wrapper from a branch and create evidence in the current checkout. | Delegates to `run-scenario.sh run`. |
 
@@ -339,6 +361,28 @@ completion. The default Gadugi path uses the underlying runner's `--prepare-only
 mode;
 `ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
 invoked without `--prepare-only`.
+
+### Run the Gadugi archive fixture evidence scenario
+
+The archive fixture evidence Gadugi scenario validates PR #433 legacy fixture
+round-trip characterization through the outside-in runner and contract tests.
+Like all Gadugi scenarios, it lives under `qa/outside-in/alice-desktop/gadugi/`.
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s archive-fixture-evidence \
+  --timeout 600000
+```
+
+The scenario delegates to `validate-scenarios.sh`, `run-scenario.sh run
+alice-desktop-archive-fixture-smoke --prepare-only`, and `run-tests.sh`. It uses
+conservative delegation with `assertions: []`. It does not prove full historical
+archive migration, full Tweedle decode, full player decode, arbitrary user
+archive support, UI automation, visible rendering, or desktop save/open behavior.
 
 ### Exit behavior
 
