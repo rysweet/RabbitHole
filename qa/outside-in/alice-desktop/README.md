@@ -2,7 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
-For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the focused launch, run/runtime, and Select Project target-discovery contract, see [Accessibility Target Discovery Silver-Thread Contract](../../../docs/reference/accessibility-target-discovery-silver-thread.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
 
@@ -19,7 +19,7 @@ Generated evidence is ignored by Git. Commit only scenario definitions, schema c
 
 ## Scenario model
 
-Each scenario uses the same fields:
+Each scenario uses the same required fields:
 
 - `id`
 - `title`
@@ -30,6 +30,14 @@ Each scenario uses the same fields:
 - `expectedOutcomes`
 - `evidence.required`
 - `fallback`
+
+Every scenario also carries three gadugi-test compatibility fields:
+
+- `name` — human-readable scenario name, always equal to `title`. Required by `gadugi-test validate`.
+- `steps` — gadugi-test step list. Currently `["validate"]` for all scenarios.
+- `agents` — gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios.
+
+These fields let `gadugi-test validate scenarios/` pass against the canonical gadugi-test schema while the repo-owned `validate-scenarios.sh` remains the primary structural validator.
 
 The target-specific Select Project scenario uses `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
 
@@ -91,6 +99,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desktop/scenarios/launch.yaml
 bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
 uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
+cd qa/outside-in/alice-desktop && gadugi-test validate scenarios/
 ```
 
 Use one of the supported workflows:
@@ -123,10 +132,32 @@ select-project-atk-exec-smoke
 select-project-interaction-smoke
 select-project-tab-click-smoke
 select-project-widget-introspection-smoke
+silver-thread-launch-build-run
 tweedle-decoder-boundary-smoke
 tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
+
+To run the silver thread end-to-end create→build→save→reopen→run smoke:
+
+```bash
+git submodule update --init tweedle-lang
+export NODE_OPTIONS=--max-old-space-size=32768
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-silver-thread-launch-build-run \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/silver-thread
+```
+
+The scenario delegates to `SilverThreadLaunchBuildRunTest` which proves the core
+student journey headlessly: create a project, add a statement, save, reopen,
+execute through the virtual machine, verify execution via listener events, and
+verify round-trip fidelity. It also loads a real starter project, saves a copy,
+and verifies the copy reopens with program type fidelity. No display server,
+JavaFX toolkit, or gallery assets are needed. See the [Silver Thread
+Launch-Build-Run Test reference](../../../docs/reference/silver-thread-launch-build-run-test.md)
+for the full behavior contract and claim boundaries.
 
 To observe only the live first-lesson procedure/code-editor target after Select
 Project opens the configured starter:
@@ -238,6 +269,21 @@ An opened result requires `evidenceStatus=opened`, exact `Africa Full`
 `blockerDetail` fields and adds one structured `nextBlocker`; it is not a full
 Alice UI automation, visible rendering, grading, creative assessment, Save,
 first-lesson, launcher, or decoder claim.
+
+To validate the focused launch, run/runtime, and Select Project accessibility
+target discovery silver thread without launching Alice or claiming full UI
+automation:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
+```
+
+The contract checks scenario metadata, runner/probe target discovery markers,
+structured blocker fields, and bounded scope wording. It validates only the
+narrow target discovery evidence path and does not prove visual correctness,
+rendering correctness, world execution correctness, full world execution, or
+general accessibility compliance.
 
 The Gadugi exported launcher evidence scenario is a separate CLI scenario under
 `gadugi/`, not a custom Alice scenario under `scenarios/`. Validate and run it

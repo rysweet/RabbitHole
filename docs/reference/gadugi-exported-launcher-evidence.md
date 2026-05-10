@@ -67,8 +67,12 @@ For the custom Alice outside-in scenario schema, see
 | `qa/outside-in/alice-desktop/scenarios/exported-project-smoke.yaml` | Custom-schema Alice scenario consumed by the repo-owned outside-in runner. This file remains on the Alice custom schema and is not a Gadugi scenario. |
 
 The `gadugi/` directory exists because `gadugi-test validate` uses a different
-schema than the Alice custom outside-in `scenarios/` directory. Keeping the
-formats separate lets both validators stay strict.
+schema than the Alice custom outside-in `scenarios/` directory. However, every
+scenario in `scenarios/` now carries `name`, `steps`, and `agents` fields so
+that `gadugi-test validate scenarios/` also passes. The `gadugi/` directory
+remains the home for full Gadugi-native scenarios with rich step definitions and
+agent configurations, while `scenarios/` carries the minimal compatibility
+fields alongside the Alice-specific schema.
 
 ## Command reference
 

@@ -1,4 +1,5 @@
 id: alice-desktop-post-project-open-window-state
+name: Prove Alice 3 main window AT-SPI state after Select Project dismissal
 title: Prove Alice 3 main window AT-SPI state after Select Project dismissal
 workflow: post-project-open-window-state-smoke
 automationMode: xvfb-real-alice
@@ -62,3 +63,7 @@ supportingEvidence:
   - alice-desktop-select-project-tab-click-exec
   - alice-desktop-select-project-atk-exec
   - alice-desktop-select-project-widget-introspection
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

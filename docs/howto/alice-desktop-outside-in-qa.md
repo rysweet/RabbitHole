@@ -13,6 +13,8 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
+- [Refresh current-head accessibility evidence](#refresh-current-head-accessibility-evidence)
+- [Validate accessibility target discovery](#validate-accessibility-target-discovery)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
 - [Review the learner-world boundary](#review-the-learner-world-boundary)
 - [Run the exported Ant project smoke](#run-the-exported-ant-project-smoke)
@@ -37,6 +39,12 @@ test -d tweedle-lang/Grammar
 The real desktop launch scenarios use Xvfb when available. The post-open runtime/display accessibility scenario also requires the same AT-SPI stack used by the live Swing probes: `python3-pyatspi`, `libatk-wrapper-java`, and an AT-SPI2 accessibility bus for the current user session. Manual scenarios do not require Xvfb; they generate structured evidence checklists. Gated command smokes do not run heavy Maven or GUI commands unless `ALICE_QA_RUN_GATED_SMOKES=1` is set.
 
 No browser surface is part of this lane, so Playwright is not required. Virtual TTY tools are only useful for terminal wrappers and are not used for Swing GUI interaction.
+
+The focused accessibility target discovery silver-thread contract is a static
+executable check over checked-in QA artifacts. It does not require Xvfb or
+AT-SPI because it validates scenario metadata, runner/probe target discovery
+markers, structured blockers, and bounded scope wording rather than collecting
+fresh desktop evidence.
 
 ## Validate the scenario catalog
 
@@ -284,7 +292,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --timeout-seconds 300
 ```
 
-The runner writes these artifacts in the timestamped run directory when execution reaches evidence capture:
+The runner writes these artifacts in the timestamped run directory when execution reaches evidence capture. Target readiness writes `visible-rendering-pixel-target-blocker.json` only when target identification is blocked. Pixel sampling writes either the observation artifact or the blocker artifact, never both as the result for one run:
 
 ```text
 environment.txt
@@ -299,8 +307,8 @@ post-project-open-observation.json
 post-open-runtime-display-accessibility-evidence.json
 runtime-display-accessibility-status.txt
 controlled-display-pixel-observation.json
-visible-rendering-pixel-sampling-blocker.json
-visible-rendering-pixel-observation.json
+visible-rendering-pixel-target-blocker.json (when target readiness is blocked)
+visible-rendering-pixel-observation.json OR visible-rendering-pixel-sampling-blocker.json
 status.txt
 screenshot.png or screenshot.xwd
 ```
@@ -395,9 +403,10 @@ because it also records `controlledDisplayPixelStatus`,
 `controlledDisplayPixelBlocker`, `visibleRenderingPixelSamplingStatus`, and
 `visibleRenderingPixelSamplingArtifact`. Review `tab-click-observation.json`,
 `post-project-open-observation.json`, `controlled-display-pixel-observation.json`,
-and `visible-rendering-pixel-sampling-blocker.json` or
-`visible-rendering-pixel-observation.json` as supporting setup and the bounded
-sampling result.
+`visible-rendering-pixel-target-blocker.json` when present, and
+`visible-rendering-pixel-sampling-blocker.json` or
+`visible-rendering-pixel-observation.json` as supporting setup, target-readiness,
+and bounded sampling results.
 
 To review the latest run directory without changing it:
 
@@ -427,6 +436,115 @@ validated target, and raw RGBA values. If the sampling status is blocked, review
 `visible-rendering-pixel-sampling-blocker.json` and preserve `status=blocked` as
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, target validation, or sampler is unavailable.
+
+## Refresh current-head accessibility evidence
+
+Use this workflow when a PR branch needs fresh readiness or review evidence after
+`origin/develop` has moved. Run commands from the repository root of the PR
+worktree.
+
+1. Fetch the base and PR ref:
+
+```bash
+git fetch origin develop refs/pull/<pr-number>/head:refs/remotes/origin/pr/<pr-number>
+```
+
+2. Check out the PR branch or PR ref, not `develop`, then reconcile with the
+   current base:
+
+```bash
+git checkout <pr-branch>
+git merge origin/develop
+```
+
+3. After conflicts are resolved, verify the worktree is not in a conflict state:
+
+```bash
+git status --short --branch
+git diff --name-only --diff-filter=U
+if rg '(<{7}|={7}|>{7})' docs qa pyproject.toml; then
+  echo "conflict markers remain" >&2
+  exit 1
+fi
+```
+
+The unmerged-path and conflict-marker checks should print no paths or marker
+matches before evidence is collected.
+
+4. Record the review coordinates before running evidence. These Git coordinates
+   are review metadata; the current runner does not write them into
+   `environment.txt`, so keep them in the PR notes, review notes, or external CI
+   artifact metadata that points at the run directory:
+
+```bash
+git rev-parse HEAD
+git rev-parse origin/develop
+git merge-base HEAD origin/develop
+```
+
+5. Validate the catalog and focused contracts:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+bash qa/outside-in/alice-desktop/tests/test-visible-rendering-evidence-contract.sh
+bash qa/outside-in/alice-desktop/tests/test-world-canvas-pixel-sampler-contract.sh
+qa/outside-in/alice-desktop/tests/run-tests.sh
+```
+
+6. Collect the current-head runtime/display accessibility evidence when live
+   prerequisites are available:
+
+```bash
+ALICE_QA_ACCEPT_LICENSES_FOR_TESTS=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-post-open-runtime-display-accessibility-evidence \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/post-open-runtime-display \
+  --timeout-seconds 300
+```
+
+7. Review only the final run directory. Treat prior evidence from pre-merge PR
+   head, `develop`, or another worktree as superseded unless it is clearly labeled
+   as historical comparison material.
+
+If the live scenario cannot run, keep the generated current-head blocker and name
+the exact missing prerequisite. Common blockers include missing Xvfb, no
+allocatable display, unavailable AT-SPI registry, missing ATK wrapper,
+`python3-pyatspi`, `xwd`, ImageMagick `convert`, Java, Maven, or
+root-directory preparation. A blocked run is a precise limitation report, not a
+runtime/display accessibility observation, accessibility compliance claim, visual
+correctness claim, rendering correctness claim, Save proof, Select Project proof,
+world-execution proof, grading proof, or decoder proof.
+
+## Validate accessibility target discovery
+
+Use the focused accessibility target discovery silver-thread contract when you
+need to validate the checked-in launch, run/runtime, and Select Project target
+discovery evidence without collecting fresh desktop evidence:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh
+```
+
+The contract checks existing scenario metadata, runner wiring, probe field names,
+structured blockers, and bounded scope wording. It covers:
+
+| Lane | Required evidence path |
+| --- | --- |
+| Launch | Launch evidence and structured fallback markers in `launch.yaml` and runner output expectations. |
+| Run/runtime | Manual run/debug artifact names plus post-open runtime/display candidate, geometry, target-ready, and blocker markers. |
+| Select | `Africa Full` target starter observation, selection, open-attempt, opened-starter, project-open, and structured next-blocker markers. |
+
+A passing contract supports only the narrow statement that the repository has
+executable validation for accessibility target discovery signals and structured
+blockers across those lanes. It does not claim full UI automation, visual
+correctness, rendering correctness, world execution correctness, full world
+execution, or general accessibility compliance.
+
+For the complete usage, artifact API, configuration, examples, tutorial, and
+claim boundaries, see [Accessibility Target Discovery Silver-Thread
+Contract](../reference/accessibility-target-discovery-silver-thread.md).
 
 ## Run the exported Ant project smoke
 
