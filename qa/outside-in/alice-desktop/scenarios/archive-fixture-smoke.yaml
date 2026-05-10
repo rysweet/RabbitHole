@@ -1,5 +1,6 @@
 id: alice-desktop-archive-fixture-smoke
 title: Archive/player fixture boundary smoke
+title: Generated legacy fixture and player resource-recovery boundary smoke
 name: Legacy player resource-recovery boundary smoke
 title: Legacy player resource-recovery boundary smoke
 workflow: archive-fixture-smoke
@@ -8,7 +9,7 @@ preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
-  - Historical archive round-trip characterization tests are available in the checkout.
+  - Generated legacy fixture and legacy player resource-recovery characterization tests are available in the checkout.
 userActions:
   - Run the focused historical archive fixture boundary characterization smoke from the command line.
   - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries.
@@ -19,6 +20,17 @@ expectedOutcomes:
   - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
   - Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.
   - Command evidence does not prove full Tweedle/player decode, historical archive migration completeness, full UI automation, visible rendering correctness, grading, Save/Open guarantees, or lesson completion.
+  - Run the focused generated legacy fixture and legacy player resource-recovery boundary characterization smoke from the command line.
+  - Exercise generated LFS-independent .a3p, .a3c, and .a3w archive boundaries, including JSON .a3w archives with manifest-declared image resources.
+  - Confirm unsupported method calls, complex or mixed initializers, resource initializer binding gaps, unresolved parent cases, and unsupported manifest-declared program and sibling Tweedle types fail explicitly.
+expectedOutcomes:
+  - The generated legacy fixture boundary smoke command exits successfully when the gate is enabled and covers legacy player resource-recovery boundaries.
+  - Generated JSON .a3c and .a3w fixtures report explicit decode failures for unsupported type boundaries.
+  - Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.
+  - Generated XML fallback .a3c fixtures write, read, and preserve type resources through IoUtilities archive I/O.
+  - Simple supported .a3w fixtures export, read, re-export, and reread through IoUtilities with manifest-routed Tweedle source.
+  - Generated JSON .a3w fixtures with unsupported resource initializers report explicit archive readback failures.
+  - Supported generated JSON .a3w neighbors remain covered by the same focused characterization suite.
 automation:
   cwd: .
   argv:
@@ -38,6 +50,7 @@ evidence:
   required:
     - status.txt recording the gated command outcome.
     - command.log from the historical archive fixture boundary smoke command.
+    - command.log from the generated legacy fixture and legacy player resource-recovery boundary smoke command.
     - Test output or surefire report naming HistoricalArchiveRoundTripCharacterizationTest.
 fallback:
   mode: manual-evidence-required
@@ -45,11 +58,14 @@ fallback:
     - If the focused Maven smoke is unavailable, attach the nearest archive fixture characterization evidence.
     - Manual GUI save/load evidence remains covered separately by alice-desktop-save-load.
     - Do not substitute UI automation, rendering, grading, Save/Open, or lesson-completion evidence for this archive boundary smoke.
+    - If the focused Maven smoke is unavailable, attach the nearest generated legacy fixture or legacy player resource-recovery characterization evidence.
+    - Do not substitute GUI save/load evidence for this archive/player boundary.
 supportingEvidence:
   - alice-desktop-tweedle-decoder-boundary-smoke
 tags:
   - archive-fixture
   - command-smoke
+  - archive-io
   - archive-player-boundary
   - archive-io
 steps:
