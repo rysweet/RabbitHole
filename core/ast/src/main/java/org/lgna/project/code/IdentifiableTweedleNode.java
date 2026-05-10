@@ -42,8 +42,8 @@
  *******************************************************************************/
 package org.lgna.project.code;
 
-import org.alice.serialization.tweedle.Encoder;
+import org.alice.serialization.tweedle.TweedleEncoder;
 
 public interface IdentifiableTweedleNode {
-  String getCodeIdentifier(Encoder processor);
+  String getCodeIdentifier(TweedleEncoder processor);
 }

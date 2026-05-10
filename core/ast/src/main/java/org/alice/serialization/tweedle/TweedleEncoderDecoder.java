@@ -16,12 +16,12 @@ public class TweedleEncoderDecoder implements EncoderDecoder<String> {
   }
 
   public <N extends ProcessableNode> String encodeProcessable(N node) {
-    return new Encoder().encode(node);
+    return new TweedleEncoder().encode(node);
   }
 
   @Override
   public <N extends AbstractNode & ProcessableNode> String encode(N node, Set<AbstractDeclaration> terminals) {
-    return new Encoder(terminals).encode(node);
+    return new TweedleEncoder(terminals).encode(node);
   }
 
   @Override

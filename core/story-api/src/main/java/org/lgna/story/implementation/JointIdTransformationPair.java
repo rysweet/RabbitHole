@@ -45,7 +45,7 @@ package org.lgna.story.implementation;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.alice.math.immutable.Point3;
 import org.alice.math.immutable.UnitQuaternion;
-import org.alice.serialization.tweedle.Encoder;
+import org.alice.serialization.tweedle.TweedleEncoder;
 import org.lgna.project.code.InstantiableTweedleNode;
 import org.lgna.story.Orientation;
 import org.lgna.story.Position;
@@ -110,7 +110,7 @@ public class JointIdTransformationPair implements InstantiableTweedleNode {
   }
 
   @Override
-  public void encodeDefinition(Encoder processor) {
+  public void encodeDefinition(TweedleEncoder processor) {
     processor.appendNewJointTransformation(id.getCodeIdentifier(processor), transformation);
   }
 }

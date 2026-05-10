@@ -44,7 +44,7 @@
 package org.lgna.story.resources;
 
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
-import org.alice.serialization.tweedle.Encoder;
+import org.alice.serialization.tweedle.TweedleEncoder;
 import org.lgna.project.annotations.FieldTemplate;
 import org.lgna.project.annotations.Visibility;
 import org.lgna.project.code.IdentifiableTweedleNode;
@@ -133,18 +133,18 @@ public class JointId implements InstantiableTweedleNode, IdentifiableTweedleNode
   }
 
 
-  protected String getJointName(Encoder encoder) {
+  protected String getJointName(TweedleEncoder encoder) {
     return toString();
   }
 
   @Override
-  public void encodeDefinition(Encoder encoder) {
+  public void encodeDefinition(TweedleEncoder encoder) {
     encoder.appendNewJointId(getJointName(encoder),
                              parent == null ? "null" : parent.getCodeIdentifier(encoder));
   }
 
   @Override
-  public String getCodeIdentifier(Encoder encoder) {
+  public String getCodeIdentifier(TweedleEncoder encoder) {
     return encoder.getFieldReference(containingClass.getSimpleName(), getJointName(encoder));
   }
 }

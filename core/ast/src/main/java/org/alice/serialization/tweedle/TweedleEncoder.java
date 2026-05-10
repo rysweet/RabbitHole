@@ -18,7 +18,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Consumer;
 
-public class Encoder extends SourceCodeGenerator {
+public class TweedleEncoder extends SourceCodeGenerator {
   private static final String INDENTION = "  ";
   private static final String NODE_DISABLE = "*<";
   private static final String NODE_ENABLE = ">*";
@@ -223,12 +223,12 @@ public class Encoder extends SourceCodeGenerator {
 
   private final Set<AbstractDeclaration> terminalNodes;
 
-  Encoder(Set<AbstractDeclaration> terminals) {
+  TweedleEncoder(Set<AbstractDeclaration> terminals) {
     super(codeOrganizerDefinitionMap, CodeOrganizer.defaultCodeOrganizer);
     terminalNodes = terminals;
   }
 
-  Encoder() {
+  TweedleEncoder() {
     super(codeOrganizerDefinitionMap, CodeOrganizer.defaultCodeOrganizer);
     terminalNodes = new HashSet<>();
   }

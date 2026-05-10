@@ -1,6 +1,6 @@
 package org.lgna.story.resources;
 
-import org.alice.serialization.tweedle.Encoder;
+import org.alice.serialization.tweedle.TweedleEncoder;
 import org.lgna.project.annotations.Visibility;
 
 public class DynamicJointId extends JointId {
@@ -35,12 +35,12 @@ public class DynamicJointId extends JointId {
   }
 
   @Override
-  public String getJointName(Encoder encoder) {
+  public String getJointName(TweedleEncoder encoder) {
     return encoder.getUserJointIdentifier(name);
   }
 
   @Override
-  public String getCodeIdentifier(Encoder encoder) {
+  public String getCodeIdentifier(TweedleEncoder encoder) {
     return encoder.getFieldReference(resource.getModelVariantName() + "Resource", getJointName(encoder));
   }
 }

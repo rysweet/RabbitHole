@@ -3,6 +3,7 @@ package org.alice.serialization.tweedle;
 import org.junit.Test;
 import org.lgna.project.ast.AbstractDeclaration;
 import org.lgna.project.ast.AbstractNode;
+import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.SourceCodeGenerator;
 import org.lgna.project.code.ProcessableNode;
@@ -307,7 +308,14 @@ public class TweedleEncoderTest {
       TweedleEncoderDecoder facade = new TweedleEncoderDecoder();
       AbstractNode node = facade.decode(source);
       assertTrue("Decoded node must be a NamedUserType", node instanceof NamedUserType);
-      return (NamedUserType) node;
+      NamedUserType type = (NamedUserType) node;
+      // The encoder requires a non-null superType (line 458 calls getSuperType().getName()).
+      // Minimal Tweedle like "class Foo {}" produces a null superType, so assign Object
+      // as a safe default for encoder-focused tests.
+      if (type.getSuperType() == null) {
+        type.superType.setValue(JavaType.getInstance(Object.class));
+      }
+      return type;
     } catch (Exception e) {
       throw new RuntimeException("Failed to decode test input: " + source, e);
     }
