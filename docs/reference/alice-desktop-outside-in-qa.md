@@ -188,7 +188,7 @@ Run commands from the repository root.
 | `run-scenario.sh validate` | Validate the active catalog through the runner. | Delegates to `validate-scenarios.sh`. |
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
-| `gadugi-test validate scenarios/` | Validate all 30 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
+| `gadugi-test validate scenarios/` | Validate all 33 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml` | Validate the Gadugi archive fixture evidence scenario. | Confirms the scenario uses the Gadugi CLI schema. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s archive-fixture-evidence --timeout 600000` | Run the Gadugi archive fixture evidence scenario. | Delegates to the outside-in archive-fixture smoke runner and contract test suite. |
@@ -485,6 +485,7 @@ agents:
 | Field | Type | Description |
 | --- | --- | --- |
 | `id` | string | Scenario ID. Must match `alice-desktop-[a-z0-9-]+`. |
+| `name` | string | Human-readable scenario name. Must equal `title`. Enforced by both the repo-owned validator and `gadugi-test validate`. |
 | `title` | string | Human-readable scenario title. |
 | `workflow` | enum | Covered workflow. |
 | `automationMode` | enum | How the runner handles the scenario. |
@@ -499,7 +500,6 @@ agents:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `name` | string | Human-readable scenario name for gadugi-test compatibility. Must equal `title`. Present on every scenario; required by `gadugi-test validate`. |
 | `steps` | string list | Gadugi-test step list. Currently `["validate"]` for all scenarios. |
 | `agents` | string list | Gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios. |
 | `automation.cwd` | string | Repository-relative working directory for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`; absolute paths, `..`, and realpath escapes outside the repository are rejected. |
@@ -854,4 +854,4 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 cd qa/outside-in/alice-desktop && gadugi-test validate scenarios/
 ```
 
-9. Include `name`, `steps`, and `agents` in every new scenario. Set `name` equal to `title`, `steps` to `["validate"]`, and `agents` to `["alice-desktop-qa"]`. These fields satisfy `gadugi-test validate` while the repo-owned validator remains the primary structural check.
+9. Include `name`, `steps`, and `agents` in every new scenario. `name` is a required field and must equal `title`. Set `steps` to `["validate"]` and `agents` to `["alice-desktop-qa"]`. The `name` field is enforced by the schema, the repo-owned validator, and `gadugi-test validate`; omitting it is a validation failure.

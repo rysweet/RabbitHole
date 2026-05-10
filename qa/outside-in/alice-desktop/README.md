@@ -25,6 +25,7 @@ Generated evidence is ignored by Git. Commit only scenario definitions, schema c
 Each scenario uses the same required fields:
 
 - `id`
+- `name` — human-readable scenario name, always equal to `title`. Required by both the repo-owned validator and `gadugi-test validate`.
 - `title`
 - `workflow`
 - `automationMode`
@@ -34,13 +35,12 @@ Each scenario uses the same required fields:
 - `evidence.required`
 - `fallback`
 
-Every scenario also carries three gadugi-test compatibility fields:
+Every scenario also carries two gadugi-test compatibility fields:
 
-- `name` — human-readable scenario name, always equal to `title`. Required by `gadugi-test validate`.
 - `steps` — gadugi-test step list. Currently `["validate"]` for all scenarios.
 - `agents` — gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios.
 
-These fields let `gadugi-test validate scenarios/` pass against the canonical gadugi-test schema while the repo-owned `validate-scenarios.sh` remains the primary structural validator.
+The `name` field is enforced by the JSON schema (`required`), the repo-owned `validate-scenarios.sh` (`required_top`), and a Python contract test suite. If `name` is present but does not equal `title`, the validator rejects the scenario. These fields let `gadugi-test validate scenarios/` pass against the canonical gadugi-test schema while the repo-owned `validate-scenarios.sh` remains the primary structural validator.
 
 The target-specific Select Project scenario uses `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
 

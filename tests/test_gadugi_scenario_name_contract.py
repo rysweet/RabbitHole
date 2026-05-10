@@ -1,12 +1,11 @@
-"""TDD contract tests for gadugi-test scenario name compatibility.
+"""Contract tests for gadugi-test scenario name compatibility.
 
 Every scenario YAML in qa/outside-in/alice-desktop/scenarios/ must carry
 a ``name`` field (matching ``title``), plus ``steps`` and ``agents`` arrays,
 so that ``gadugi-test validate`` reports 0 invalid files.
 
-These tests define the contract BEFORE implementation — they should fail
-if any scenario is missing the required gadugi-test fields, and pass once
-all 30 files are fixed.
+These tests enforce the contract — they fail if any scenario is missing
+the required gadugi-test fields. All 33 scenario files must pass.
 """
 
 import json
