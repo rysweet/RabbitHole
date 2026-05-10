@@ -34,3 +34,7 @@ out/*
 __pycache__/
 outputs/
 logs/
+
+# Test log artifacts
+logs/
+qa/outside-in/alice-desktop/logs/

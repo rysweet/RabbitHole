@@ -29,7 +29,7 @@ required_top = [
     "evidence",
     "fallback",
 ]
-allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter"}
+allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter", "name", "steps", "agents"}
 EXPECTED_TARGET_STARTER = {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p",
@@ -67,6 +67,7 @@ workflow_values = {
     "post-open-runtime-display-accessibility-evidence",
     "procedure-edit-handoff-smoke",
     "procedure-edit-seam-smoke",
+    "silver-thread-launch-build-run",
     "tweedle-decoder-boundary-smoke",
     "tweedle-decoder-this-call-smoke",
     "export",
@@ -217,6 +218,9 @@ allowed_automation = {
             "core/issue-reporting",
             "-am",
             "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest",
+            "core/ide",
+            "-am",
+            "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest",
             "test",
         ),
     ),
@@ -491,6 +495,10 @@ def validate(path, scenario):
     title = scenario.get("title")
     if not isinstance(title, str) or not title.strip():
         errors.append("title must be a non-empty string")
+
+    name = scenario.get("name")
+    if name is not None and name != title:
+        errors.append("name must equal title when present")
 
     workflow = scenario.get("workflow")
     if workflow not in workflow_values:

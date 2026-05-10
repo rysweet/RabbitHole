@@ -1,4 +1,5 @@
 id: alice-desktop-select-project-widget-introspection
+name: Select Project live Swing widget introspection via AT-SPI
 title: Select Project live Swing widget introspection via AT-SPI
 workflow: select-project-widget-introspection-smoke
 automationMode: xvfb-real-alice
@@ -53,3 +54,7 @@ fallback:
     - Do not claim starter selection, project opening, or world execution unless separate evidence observes those actions.
 supportingEvidence:
   - alice-desktop-select-project-inventory
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

@@ -63,6 +63,8 @@ if "first-lesson-live-procedure-target-observation" not in workflow_enum:
     )
 if "exported-project-ant-build-smoke" not in workflow_enum:
     raise AssertionError("schema workflow enum must include exported-project-ant-build-smoke")
+if "silver-thread-launch-build-run" not in workflow_enum:
+    raise AssertionError("schema workflow enum must include silver-thread-launch-build-run")
 if "exported-project-smoke" in workflow_enum:
     raise AssertionError("schema workflow enum must not keep the stale exported-project-smoke workflow")
 
@@ -212,6 +214,9 @@ expected_argv = {
         "core/issue-reporting",
         "-am",
         "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest",
+        "core/ide",
+        "-am",
+        "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest",
         "test",
     ),
     ("qa/outside-in/alice-desktop/runners/netbeans-package-smoke.sh",),

@@ -106,6 +106,20 @@ public class ProjectFileUtilitiesTest {
   }
 
   @Test
+  public void pr426BackupPathContractKeepsNamedBackupDirectoryBesideProjectFile()
+      throws IOException {
+    Path lessonDirectory = temporaryFolder.newFolder("classroom").toPath();
+    File project = lessonDirectory.resolve("lesson.a3p").toFile();
+    Files.writeString(project.toPath(), "project", StandardCharsets.UTF_8);
+
+    Path backupDirectory = utilities.backupDirectory(project, false);
+
+    assertEquals(lessonDirectory.resolve("lesson.bak"), backupDirectory);
+    assertTrue(backupDirectory.startsWith(lessonDirectory));
+    assertTrue(Files.isDirectory(backupDirectory));
+  }
+
+  @Test
   public void copyDefaultBackupDirectoryMovesAutoProjectBackupsToNamedBackupDirectory() throws IOException {
     Path defaultBackupDirectory = temporaryFolder.newFolder(".defaultbak").toPath();
     Path firstBackup = defaultBackupDirectory.resolve("auto20240102_120000.a3p");

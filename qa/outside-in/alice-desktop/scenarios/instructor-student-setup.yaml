@@ -1,4 +1,5 @@
 id: alice-desktop-instructor-student-setup
+name: Instructor and student setup workflow
 title: Instructor and student setup workflow
 workflow: instructor-student-setup
 automationMode: manual-evidence-required
@@ -37,3 +38,7 @@ fallback:
     - Assessment limits are no automated grading, no rubric scoring, no correctness assessment, and no creative assessment.
 supportingEvidence:
   - alice-desktop-launch
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
