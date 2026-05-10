@@ -12,10 +12,35 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+CLAIM_SCOPE = "visible-rendering-world-canvas-pixel-sampling"
+CLAIM_SCOPE_DETAIL = "target-scoped-raw-pixel-observation-only"
+UNSUPPORTED_CLAIMS = [
+    "world-canvas-pixel-correctness",
+    "full-visible-rendering-correctness",
+    "rendered-world-correctness",
+    "world-execution",
+]
+
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def blocker_payload(blocker: str, blocker_detail: str) -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "status": "blocked",
+        "blocker": blocker,
+        "blockerDetail": blocker_detail,
+        "claimScope": CLAIM_SCOPE,
+        "claimScopeDetail": CLAIM_SCOPE_DETAIL,
+        "renderedWorldPixelsObserved": False,
+        "visibleRenderingCorrectnessEstablished": False,
+        "sampleCount": 0,
+        "samples": [],
+        "unsupportedClaims": UNSUPPORTED_CLAIMS,
+    }
 
 
 def is_number(value: Any) -> bool:
@@ -65,7 +90,7 @@ def sample_points(extents: dict[str, int]) -> list[dict[str, int | str]]:
 
 def normalize_channel(value: int) -> int:
     if value <= 255:
-        return value
+        return max(0, value)
     return max(0, min(255, round(value / 257)))
 
 
@@ -76,12 +101,20 @@ def parse_rgba(text: str) -> list[int] | None:
     if not match:
         return None
     channels: list[int] = []
-    for raw_channel in match.group(1).split(","):
+    raw_channels = match.group(1).split(",")
+    for index, raw_channel in enumerate(raw_channels):
         raw_channel = raw_channel.strip()
-        if raw_channel.endswith("%"):
-            channels.append(round(float(raw_channel[:-1]) * 255 / 100))
-        else:
-            channels.append(normalize_channel(round(float(raw_channel))))
+        try:
+            if raw_channel.endswith("%"):
+                channels.append(round(float(raw_channel[:-1]) * 255 / 100))
+            else:
+                channel_value = float(raw_channel)
+                if index == 3 and 0 <= channel_value <= 1:
+                    channels.append(round(channel_value * 255))
+                else:
+                    channels.append(normalize_channel(round(channel_value)))
+        except ValueError:
+            return None
     if len(channels) == 3:
         channels.append(255)
     if len(channels) != 4:
@@ -91,11 +124,11 @@ def parse_rgba(text: str) -> list[int] | None:
     return channels
 
 
-def sample_pixel(point: dict[str, int | str]) -> list[int]:
-    if shutil.which("xwd") is None or shutil.which("convert") is None:
-        raise RuntimeError("xwd and convert are required for target-scoped raw pixel sampling")
-    x = int(point["x"])
-    y = int(point["y"])
+def missing_sampling_tools() -> list[str]:
+    return [tool for tool in ("xwd", "convert") if shutil.which(tool) is None]
+
+
+def capture_root_image() -> bytes:
     xwd = subprocess.run(
         ["xwd", "-root", "-silent"],
         check=False,
@@ -104,20 +137,103 @@ def sample_pixel(point: dict[str, int | str]) -> list[int]:
     )
     if xwd.returncode != 0:
         raise RuntimeError((xwd.stderr or b"xwd capture failed").decode("utf-8", errors="replace").strip())
+    return xwd.stdout
+
+
+def extract_pixels(root_image: bytes, points: list[dict[str, int | str]]) -> list[list[int]]:
+    pixel_format = "".join(
+        f"%[pixel:p{{{int(point['x'])},{int(point['y'])}}}]\n" for point in points
+    )
     convert = subprocess.run(
-        ["convert", "xwd:-", "-crop", f"1x1+{x}+{y}", "txt:-"],
-        input=xwd.stdout,
+        ["convert", "xwd:-", "-format", pixel_format, "info:"],
+        input=root_image,
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
     )
     if convert.returncode != 0:
-        raise RuntimeError((convert.stderr or "convert pixel extraction failed").strip())
-    rgba = parse_rgba(convert.stdout)
-    if rgba is None:
-        raise RuntimeError("convert output did not contain a parseable RGBA pixel")
-    return rgba
+        raise RuntimeError(
+            (convert.stderr or b"convert pixel extraction failed")
+            .decode("utf-8", errors="replace")
+            .strip()
+        )
+    lines = [
+        line.strip()
+        for line in convert.stdout.decode("utf-8", errors="replace").splitlines()
+        if line.strip()
+    ]
+    if len(lines) != len(points):
+        raise RuntimeError(
+            f"convert output contained {len(lines)} pixel line(s) for {len(points)} requested sample point(s)"
+        )
+    rgba_values: list[list[int]] = []
+    for line in lines:
+        rgba = parse_rgba(line)
+        if rgba is None:
+            raise RuntimeError("convert output did not contain parseable RGBA pixels")
+        rgba_values.append(rgba)
+    return rgba_values
+
+
+def read_target(
+    path: Path,
+) -> tuple[dict[str, Any] | None, dict[str, int] | None, dict[str, Any] | None]:
+    try:
+        target = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, None, blocker_payload("target-json-unreadable", str(exc))
+    if not isinstance(target, dict):
+        return None, None, blocker_payload("target-json-invalid", "Target JSON must be an object.")
+    extents = validated_extents(target)
+    if extents is None:
+        return None, None, blocker_payload(
+            "target-geometry-invalid",
+            "Target screenExtents must be positive screen coordinates.",
+        )
+    return target, extents, None
+
+
+def collect_samples(extents: dict[str, int]) -> list[dict[str, Any]]:
+    missing_tools = missing_sampling_tools()
+    if missing_tools:
+        tool_list = " and ".join(missing_tools)
+        verb = "are" if len(missing_tools) > 1 else "is"
+        raise RuntimeError(
+            f"{tool_list} {verb} required for target-scoped raw pixel sampling"
+        )
+
+    root_image = capture_root_image()
+    points = sample_points(extents)
+    rgba_values = extract_pixels(root_image, points)
+    samples: list[dict[str, Any]] = []
+    for point, rgba in zip(points, rgba_values):
+        samples.append(
+            {
+                "name": str(point["name"]),
+                "point": {"x": int(point["x"]), "y": int(point["y"])},
+                "rgba": rgba,
+                "checked": True,
+            }
+        )
+    return samples
+
+
+def observation_payload(target: dict[str, Any], samples: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "status": "observed",
+        "blocker": "none",
+        "blockerDetail": "",
+        "claimScope": CLAIM_SCOPE,
+        "claimScopeDetail": CLAIM_SCOPE_DETAIL,
+        "renderedWorldPixelsObserved": True,
+        "visibleRenderingCorrectnessEstablished": False,
+        "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
+        "sampleCount": len(samples),
+        "samples": samples,
+        "worldCanvasPixelTarget": target,
+        "unsupportedClaims": UNSUPPORTED_CLAIMS,
+    }
 
 
 def main() -> int:
@@ -127,45 +243,21 @@ def main() -> int:
     args = parser.parse_args()
 
     output_path = Path(args.output)
-    try:
-        target = json.loads(Path(args.target_json).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "target-json-unreadable", "blockerDetail": str(exc)})
+    target, extents, blocker = read_target(Path(args.target_json))
+    if blocker is not None:
+        write_json(output_path, blocker)
         return 0
-    if not isinstance(target, dict):
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "target-json-invalid", "blockerDetail": "Target JSON must be an object."})
-        return 0
-    extents = validated_extents(target)
-    if extents is None:
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "target-geometry-invalid", "blockerDetail": "Target screenExtents must be positive screen coordinates."})
+    if target is None or extents is None:
+        write_json(output_path, blocker_payload("target-json-invalid", "Target JSON must be an object."))
         return 0
 
-    samples: list[dict[str, Any]] = []
     try:
-        for point in sample_points(extents):
-            rgba = sample_pixel(point)
-            samples.append(
-                {
-                    "name": str(point["name"]),
-                    "point": {"x": int(point["x"]), "y": int(point["y"])},
-                    "rgba": rgba,
-                    "checked": True,
-                }
-            )
+        samples = collect_samples(extents)
     except RuntimeError as exc:
-        write_json(output_path, {"schemaVersion": 1, "status": "blocked", "blocker": "pixel-sampling-failed", "blockerDetail": str(exc)})
+        write_json(output_path, blocker_payload("pixel-sampling-failed", str(exc)))
         return 0
 
-    write_json(
-        output_path,
-        {
-            "schemaVersion": 1,
-            "status": "observed",
-            "samplingMethod": "xwd-convert-target-scoped-raw-rgba",
-            "sampleCount": len(samples),
-            "samples": samples,
-        },
-    )
+    write_json(output_path, observation_payload(target, samples))
     return 0
 
 

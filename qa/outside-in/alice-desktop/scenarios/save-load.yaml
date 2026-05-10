@@ -1,4 +1,5 @@
 id: alice-desktop-save-load
+name: Save and load an Alice project
 title: Save and load an Alice project
 workflow: save-load
 automationMode: manual-evidence-required
@@ -33,3 +34,7 @@ fallback:
     - Manual evidence remains required until stable full GUI save and open automation exists.
 supportingEvidence:
   - alice-desktop-launch
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
