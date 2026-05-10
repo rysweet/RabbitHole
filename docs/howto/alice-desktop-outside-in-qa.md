@@ -1,6 +1,14 @@
 # Run Alice desktop outside-in QA
 
-Use the Alice desktop outside-in QA lane to validate the scenario catalog and collect reviewable evidence for user-like workflows: launch, Select Project inventory, the first-lesson live procedure target action seam, instructor/student setup, scene creation, run/debug-like behavior, save/load, open/load/save, export, exported Ant project smoke, NetBeans package smoke, package/install smoke, saving, reopening, editing, saving again, reopening again, and exporting Alice projects, failure-path smoke, future UI smoke, menu/action smoke, wizard/palette/completion smoke, and post-open runtime/display accessibility evidence.
+Use the Alice desktop outside-in QA lane to validate the scenario catalog and
+collect reviewable evidence for user-like workflows.
+
+The lane groups scenarios into launch and Select Project inventory, first-lesson
+procedure seams, instructor/student setup, scene creation, bounded
+run/debug-like behavior, save/load and export flows, exported Ant and NetBeans
+package smokes, package/install smoke, failure-path smoke, future UI smoke,
+menu/action smoke, wizard/palette/completion smoke, and post-open
+runtime/display accessibility evidence.
 
 ## Contents
 
@@ -15,6 +23,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
 - [Review the Run-window creation/wiring contract](#review-the-run-window-creationwiring-contract)
 - [Collect post-open runtime/display accessibility evidence](#collect-post-open-runtimedisplay-accessibility-evidence)
+- [Review the desktop Run execution gap report](#review-the-desktop-run-execution-gap-report)
 - [Refresh current-head accessibility evidence](#refresh-current-head-accessibility-evidence)
 - [Validate accessibility target discovery](#validate-accessibility-target-discovery)
 - [Prepare evidence for manual workflows](#prepare-evidence-for-manual-workflows)
@@ -574,6 +583,103 @@ validated target, and raw RGBA values. If the sampling status is blocked, review
 the correct machine-readable gap report when the environment, post-open setup,
 controlled-display pixels, target validation, or sampler is unavailable.
 
+## Review the desktop Run execution gap report
+
+Opt-in desktop Run evidence writes `desktop-run-execution-gap-report.json` after
+the existing bounded Run-window artifact writers complete their non-empty checks.
+Review it after
+`desktop-run-status-summary.json`:
+
+```bash
+run_dir=target/desktop-run-evidence
+
+python3 -m json.tool "$run_dir/desktop-run-status-summary.json"
+python3 -m json.tool "$run_dir/desktop-run-execution-gap-report.json"
+```
+
+Accept the report only as a bounded evidence summary. The executable
+evidence in this lane is the existing Run-window evidence artifacts named in
+`executableToday.evidenceArtifacts`; the blocker to any stronger claim is the
+missing deterministic proof that the Alice world advances through full runtime
+execution rather than merely producing Run-window artifacts.
+
+The report must keep `status=blocked`, include non-empty blocker text, list the
+required Run-window artifact references, and include `doesNotClaim` entries for
+full world execution, visible rendering correctness, grading, Save completion,
+and full UI automation. If any of those fields are missing, validation fails
+closed for the report and the report is not acceptable evidence; normal Run
+behavior is preserved. Review notes must also avoid playback, Sims validation,
+and deployed installer success claims because this evidence lane does not cover
+them.
+
+To prepare the outside-in `run-debug` review checklist, create a manual scenario
+run directory:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-debug \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-debug
+```
+
+Place the bounded Run-window artifacts and supporting manual evidence in the
+timestamped directory before review, or record exact paths to the evidence
+directory that produced them:
+
+```text
+manual-evidence-checklist.txt
+environment.txt
+status.txt
+desktop-run-execution.json
+desktop-run-runtime.log
+desktop-run-render-affordance.json
+desktop-run-pixel-boundary.json
+desktop-run-pixel-observation.json
+desktop-first-lesson-next-action.json
+desktop-save-menu-action-target.json
+desktop-run-status-summary.json
+desktop-run-execution-gap-report.json
+launch.log or run.log
+screenshot or screen capture for workflow context
+saved .a3p project used for the run
+review-notes.txt
+```
+
+`desktop-run-execution.json` and `desktop-run-runtime.log` are supporting
+VM-listener evidence when opt-in desktop Run execution evidence is enabled. The
+gap report's `executableToday.evidenceArtifacts` list remains limited to the
+bounded Run-window artifacts named by the implementation; those referenced files
+should be present for review or precisely linked from `review-notes.txt`.
+
+Use this review note shape for a bounded acceptance decision:
+
+```text
+scenario: alice-desktop-run-debug
+reviewedEvidence:
+  - desktop-run-execution.json
+  - desktop-run-runtime.log
+  - desktop-run-render-affordance.json
+  - desktop-run-pixel-boundary.json
+  - desktop-run-pixel-observation.json
+  - desktop-first-lesson-next-action.json
+  - desktop-save-menu-action-target.json
+  - desktop-run-status-summary.json
+  - desktop-run-execution-gap-report.json
+decision: accept bounded Run-window evidence only
+blocker: deterministic world-advance proof is still missing
+unsupportedClaims:
+  - full world execution
+  - playback
+  - visible rendering correctness
+  - full UI automation
+  - Save completion
+  - grading
+  - Sims validation
+  - deployed installer success
+```
+
+For the complete artifact API, configuration, examples, and review rules, see
+[Desktop Run execution gap report](../reference/desktop-run-execution-gap-report.md).
 ## Refresh current-head accessibility evidence
 
 Use this workflow when a PR branch needs fresh readiness or review evidence after

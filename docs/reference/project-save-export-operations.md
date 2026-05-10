@@ -8,6 +8,8 @@ This reference describes the `core/ide` project Save, Save As, and Export operat
 - [Characterization scope](#characterization-scope)
 - [Operation responsibilities](#operation-responsibilities)
 - [User-visible behavior](#user-visible-behavior)
+- [Archive reopen/edit/export seam](#archive-reopeneditexport-seam)
+- [Headless loaded-project bridge](#headless-loaded-project-bridge)
 - [API reference](#api-reference)
 - [Evidence artifacts](#evidence-artifacts)
 - [Testing notes](#testing-notes)
@@ -32,10 +34,16 @@ Characterization tests for this layer live in the matching test package:
 core/ide/src/test/java/org/alice/ide/croquet/models/projecturi/
 ```
 
+Headless load/save/export bridge tests live in:
+
+```text
+core/ide/src/test/java/org/alice/ide/ProjectOpenSaveExportJourneyTest.java
+```
+
 The operation layer routes Croquet actions to `ProjectApplication` save/export
-behavior. Archive file contents remain owned by lower-level classes that save
-Alice projects, reopen them, edit them, save again, reopen again, and export
-them.
+behavior. Archive file contents remain owned by lower-level classes that write
+Alice project archives, reopen them, edit them, write them again, reopen them
+again, and export them.
 
 ## Characterization scope
 
@@ -49,6 +57,7 @@ The operation coverage plan is organized as:
 | Flow seam tests | `SaveOperationFlowTest` covers observable routing, prompt consultation, backup-save naming, retry behavior, wait cursor wrapping, finish/cancel outcomes, and returned result counts. |
 | Completion result evidence tests | `SaveOperationCompletionEvidenceTest` covers opt-in result and dialog-control artifacts, finished/canceled/incomplete-style result summaries, `wroteFile` claim boundaries, path redaction, missing-active-`StageIDE` proof, and non-interruption when evidence writing fails. |
 | Action-invocation proof tests | `StageIdeSaveActionInvocationProofTest` and `StageIdeSaveMenuItemDispatchProofTest` cover proof-only active-`StageIDE`/document-frame and Swing menu dispatch paths where the environment supports them. The `missing_project_document_frame` status remains part of the artifact contract for the production guard path and should be exercised by any future test seam that can construct that state without unsafe desktop interception. |
+| Headless loaded-project bridge | `ProjectOpenSaveExportJourneyTest` covers `FileProjectLoader` plus `ProjectFileUtilities` save/export helpers with synthetic projects and temporary archive files, without launching Alice desktop or controlling Save dialogs. |
 | Compatibility assertions | Assert the exact behavior currently implemented by `SaveProjectOperation`, `SaveAsProjectOperation`, and `ExportProjectOperation`. |
 | Portable file fixtures | Use real files from JUnit `TemporaryFolder`; use a missing file as the portable "cannot be reused" Save case. |
 
@@ -56,7 +65,7 @@ These areas stay outside direct operation tests:
 
 | Deferred scope | Reason |
 | --- | --- |
-| Archive content verification | Archive bytes and project serialization belong to lower-level tests that save Alice projects, reopen them, edit them, save again, reopen again, and export them, not operation-routing tests. |
+| Archive content verification | Archive bytes and project serialization belong to lower-level tests that write Alice project archives, reopen them, edit them, write them again, reopen them again, and export them, not operation-routing tests. |
 | New mocking framework | Save characterization uses existing JUnit 4 patterns and narrow production seams instead of PowerMock-style interception. |
 | Display-backed Swing/JavaFX testing | Desktop launch evidence belongs to the outside-in QA lane and Xvfb-backed scenarios. |
 
@@ -87,6 +96,74 @@ If the user cancels the save dialog, the Croquet `UserActivity` is canceled and 
 If a save/export call raises `IOException`, Alice shows an error dialog, hides the wait cursor, and prompts again. Current-file Save retries suggest the current project base name. Prompted Save As or Export-style retries also keep the current project base name when one exists; if there is no current file, the retry prompt has no suggested base name. The characterized retry loop continues until the user cancels or a later save/export attempt succeeds.
 
 Completion evidence is developer opt-in and is not user-visible. Evidence writer failures are logged and do not convert a successful save/export into a failed save/export.
+
+## Archive reopen/edit/export seam
+
+The lower-level archive seam proves that Alice project bytes remain editable
+after a save/reopen/edit cycle. It is separate from the desktop operation layer:
+Save, Save As, and Export actions delegate to `ProjectApplication`, while
+archive persistence is characterized in `core/story-api-migration`.
+
+The canonical archive journey is:
+
+```text
+IoUtilities.writeProject(original.a3p, project)
+-> IoUtilities.readProject(original.a3p)
+-> edit reopened Project-owned state
+-> IoUtilities.writeProject(edited.a3p, reopenedProject)
+-> IoUtilities.readProject(edited.a3p)
+-> IoUtilities.exportProject(edited.a3w, editedProject)
+```
+
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+backs this contract — saving, reopening, editing, saving again, reopening again, and exporting through repository-owned archive APIs.
+The required assertion is the edited project-owned state after the second
+`IoUtilities.readProject` call; a non-empty file, a successful first reopen, or
+an export file alone is not enough.
+
+Run the focused archive validation from the repository root:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=IoUtilitiesTest \
+  test
+```
+
+This validation supports only the repository-owned archive read/write/export
+claim. It does not prove desktop Save-menu completion, full Save dialog
+automation, visible rendering correctness, grading, full lesson automation, or
+player runtime behavior. See
+[Project Archive Reopen/Edit Seam](./project-archive-reopen-edit-seam.md) for
+the detailed archive contract, including
+[security hardening](./project-archive-reopen-edit-seam.md#security-and-failure-boundaries)
+(XXE protection, zip-slip guard, entry allowlisting, resource leak prevention,
+and info-leak cleanup).
+
+## Headless loaded-project bridge
+
+`ProjectOpenSaveExportJourneyTest` is the `core/ide` bridge between loaded
+project files and the archive IO layer. The focused edit test:
+
+```text
+IoUtilities.writeProject(original.a3p, project)
+-> FileProjectLoader.load()
+-> edit loaded Project-owned AST state
+-> ProjectFileUtilities.saveCopyOfProjectTo(edited.a3p)
+-> FileProjectLoader.load()
+-> ProjectFileUtilities.exportCopyOfProjectTo(exported.a3w)
+-> inspect exported archive structure
+```
+
+The required persistence checks are the edited program type name and marker
+method after the saved copy is loaded again, plus the exported Tweedle entry
+named for the edited program. This bridge proves the headless
+`FileProjectLoader`/`ProjectFileUtilities` path can preserve edited project
+state through save and export. It does not click the Save menu, drive a
+`JFileChooser`, prove rendered UI behavior, or broaden the archive IO contract
+owned by `core/story-api-migration`.
 
 ## API reference
 
@@ -273,6 +350,17 @@ NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip
   test
 ```
 
+When changing the headless loaded-project bridge, run:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -pl core/ide -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=org.alice.ide.ProjectOpenSaveExportJourneyTest \
+  test
+```
+
 Display-backed proof tests remain intentionally separate and are documented in their proof-specific how-to pages. Coverage claims for this shard should be limited to `SaveOperationFlow` and `SaveOperationCompletionEvidence` behavior backed by these tests; do not infer aggregate target progress from trivial accessor tests or from desktop proof tests that exercise a narrower path.
 
 ## Save menu dialog write proof
@@ -371,6 +459,13 @@ Tests and refactors in this package preserve these rules:
 10. Characterized `IOException` retry paths keep retry loop behavior and surface the error.
 11. Wait cursor show/hide wraps every attempted save/export.
 12. Public operation identities and UUIDs stay unchanged.
+13. Archive reopen/edit claims come only from `core/story-api-migration`
+    `IoUtilities` validation, not from operation routing, menu dispatch, or
+    desktop rendering evidence.
+14. Headless loaded-project bridge claims come only from
+    `ProjectOpenSaveExportJourneyTest`; they cover `FileProjectLoader` and
+    `ProjectFileUtilities` archive handoff behavior, not user-visible Save menu
+    or Save dialog completion.
 
 ## Examples
 
@@ -408,6 +503,24 @@ Current file: /home/dev/alice-projects/RobotDance.a3p
 Prompt: yes
 Extension: IoUtilities.EXPORT_EXTENSION
 Delegation after selection: ProjectApplication.exportProjectTo(selectedFile)
+```
+
+### Validate archive reopen/edit persistence
+
+When reviewing the underlying archive IO behavior, use the focused
+`IoUtilitiesTest` path:
+
+```text
+Fixture: synthetic Project named OriginalProgram
+Archive write: original.a3p through IoUtilities.writeProject
+First reopen: IoUtilities.readProject(original.a3p)
+Edit: rename reopened program type to EditedProgram
+Second write: edited.a3p through IoUtilities.writeProject
+Second reopen: IoUtilities.readProject(edited.a3p)
+Required assertion: reopened edited project program type is EditedProgram
+Export: edited.a3w through IoUtilities.exportProject
+Export assertion: manifest/source entries describe EditedProgram
+Non-claims: desktop Save completion, visible rendering, grading, full lesson automation
 ```
 
 ### Capture save completion evidence

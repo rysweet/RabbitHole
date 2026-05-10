@@ -1,4 +1,5 @@
 id: alice-desktop-issue-reporting-smoke
+name: Issue submission progress worker test seam smoke
 title: Issue submission progress worker test seam smoke
 workflow: issue-reporting-smoke
 automationMode: gated-command-smoke
@@ -43,3 +44,7 @@ tags:
   - issue-reporting
   - command-smoke
   - test-seam
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

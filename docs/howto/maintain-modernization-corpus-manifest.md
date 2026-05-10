@@ -23,7 +23,7 @@ docs/reference/modernization-corpus-manifest.md
 docs/reference/modernization-scorecard-generator.md
 ```
 
-If the branch also changes project IO characterization tests, initialize the
+If the branch also changes project archive characterization tests, initialize the
 Tweedle grammar submodule before broad Maven validation:
 
 ```sh

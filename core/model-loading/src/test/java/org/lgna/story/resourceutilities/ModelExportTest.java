@@ -131,6 +131,31 @@ public class ModelExportTest {
   }
 
   @Test
+  public void modelExporterNamesClassResourceVariantsByTextureOnly() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.setBoundingBox("TestProp", AxisAlignedBox.createAxisAlignedBox(-1.0, 0.0, -2.0, 1.0, 3.0, 2.0));
+    exporter.addResource("TestProp", "Default", "ALICE", null, null);
+    exporter.addResource("TestProp", "BlueStripe", "ALICE", null, null);
+
+    assertEquals("BLUE_STRIPE", exporter.createResourceEnumName("TestProp", "BlueStripe"));
+
+    Document xml = parseXml(exporter.createXMLString());
+    NodeList resources = xml.getDocumentElement().getElementsByTagName("Resource");
+
+    assertEquals(2, resources.getLength());
+    Element defaultResource = (Element) resources.item(0);
+    assertResourceIdentity(defaultResource, "DEFAULT", "TestProp", "DEFAULT");
+    Element blueStripe = (Element) resources.item(1);
+    assertResourceIdentity(blueStripe, "BLUE_STRIPE", "TestProp", "BLUE_STRIPE");
+    assertFalse(defaultResource.getAttribute("resourceName").equals(blueStripe.getAttribute("resourceName")));
+
+    String javaCode = exporter.createJavaCode();
+    assertTrue(javaCode.contains("\tDEFAULT,"));
+    assertTrue(javaCode.contains("\tBLUE_STRIPE;"));
+    assertFalse(javaCode.contains("TEST_PROP_BLUE_STRIPE"));
+  }
+
+  @Test
   public void modelExporterHonorsForcedEnumNamesWithoutTrailingComma() throws Exception {
     ModelResourceExporter exporter = createSyntheticPropExporter();
     exporter.addResource("VariantProp", "Default", "SIMS2", null, null);
@@ -411,6 +436,12 @@ public class ModelExportTest {
   private static void assertResourceWithoutAttribution(Element resource) {
     assertFalse(resource.hasAttribute("creator"));
     assertFalse(resource.hasAttribute("creationYear"));
+  }
+
+  private static void assertResourceIdentity(Element resource, String resourceName, String modelName, String textureName) {
+    assertEquals(resourceName, resource.getAttribute("resourceName"));
+    assertEquals(modelName, resource.getAttribute("modelName"));
+    assertEquals(textureName, resource.getAttribute("textureName"));
   }
 
   private static Element findResourceByModelName(NodeList resources, String modelName) {

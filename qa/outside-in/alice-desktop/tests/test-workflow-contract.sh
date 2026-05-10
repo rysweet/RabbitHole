@@ -110,6 +110,10 @@ gated_scenarios = [
     "alice-desktop-tweedle-decoder-this-call-smoke",
     "alice-desktop-wizard-palette-completion-smoke",
 ]
+no_timeout_workflows = {
+    "project-io-smoke",
+    "save-menu-dialog-write-proof",
+}
 errors = []
 
 scenario_workflows = {scenario["workflow"] for scenario in catalog_list}
@@ -373,12 +377,12 @@ for scenario_id in gated_scenarios:
         errors.append(f"{scenario_id} must use gated-command-smoke to avoid mandatory heavy GUI/build work")
     automation = scenario.get("automation", {})
     required_fields = ("cwd", "argv", "readyWaitSeconds")
-    if scenario["workflow"] != "save-menu-dialog-write-proof":
+    if scenario["workflow"] not in no_timeout_workflows:
         required_fields = required_fields + ("timeoutSeconds",)
     for field in required_fields:
         if field not in automation:
             errors.append(f"{scenario_id} automation must include {field}")
-    if scenario["workflow"] == "save-menu-dialog-write-proof" and "timeoutSeconds" in automation:
+    if scenario["workflow"] in no_timeout_workflows and "timeoutSeconds" in automation:
         errors.append(f"{scenario_id} automation must not include timeoutSeconds")
     if "immediate-qa-backlog" not in scenario.get("tags", []):
         errors.append(f"{scenario_id} must be tagged as immediate-qa-backlog coverage")

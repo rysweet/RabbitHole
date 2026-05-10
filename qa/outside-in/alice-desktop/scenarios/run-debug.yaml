@@ -24,19 +24,33 @@ evidence:
   required:
     - desktop-run-execution.json and desktop-run-runtime.log when opt-in desktop Run execution evidence is enabled.
     - desktop-run-render-affordance.json when opt-in desktop Run render-affordance evidence is enabled.
+    - desktop-run-pixel-boundary.json from the same opt-in desktop Run path, documenting that pixel correctness requires separate evidence.
     - desktop-run-pixel-observation.json from the same opt-in desktop Run path, with status observed when screen capture can sample the Run render area or blocked with exact blocker details when it cannot.
+    - desktop-first-lesson-next-action.json from the same opt-in desktop Run path, documenting which next desktop action evidence remains missing.
+    - desktop-save-menu-action-target.json from the same opt-in desktop Run path, documenting that Save menu readiness or completion is not proven by Run-window evidence.
     - desktop-run-status-summary.json from the same opt-in desktop Run path, naming artifact statuses, the pixel-observation status, the files to inspect next, and the behavior still not proven.
+    - desktop-run-execution-gap-report.json from the same opt-in desktop Run path, naming the bounded executable Run-window evidence and the deterministic world-advance proof blocker.
+    - The executableToday payload is limited to desktop-run-render-affordance.json, desktop-run-pixel-boundary.json, desktop-run-pixel-observation.json, desktop-first-lesson-next-action.json, desktop-save-menu-action-target.json, and desktop-run-status-summary.json.
+    - desktop-run-execution.json and desktop-run-runtime.log remain VM-listener support artifacts only.
     - Screenshot or screen capture for manual workflow context, not pixel-correctness evidence.
     - Notes naming the run and debug-like controls exercised and whether any manual visual evidence was collected.
     - Launch or run log.
     - Saved a3p project used for the run.
-    - review-notes.txt summarizing reviewed artifacts and the acceptance decision.
+    - review-notes.txt summarizing reviewed artifacts, exact evidence directory paths or precise links for every report-referenced artifact, and the acceptance decision.
 fallback:
   mode: manual-evidence-required
   notes:
     - Do not invent a conventional debugger requirement if Alice does not expose one.
     - Treat fast-forward or statement execution as debug-like coverage only when it is visible in the baseline UI.
     - Treat render-affordance evidence as structural Run-view attachment evidence only; use desktop-run-pixel-observation.json for screenshot or pixel sampling status, not for rendering-engine correctness evidence.
+    - Do not claim full world execution from this gap report.
+    - Do not claim playback from this gap report.
+    - Do not claim visible rendering correctness from this gap report.
+    - Do not claim full UI automation from this gap report.
+    - Do not claim Save completion from this gap report.
+    - Do not claim grading from this gap report.
+    - Do not claim Sims validation from this gap report.
+    - Do not claim deployed installer success from this gap report.
 supportingEvidence:
   - alice-desktop-launch
 steps:
