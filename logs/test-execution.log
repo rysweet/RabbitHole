@@ -1,0 +1,11 @@
+{"level":"info","message":"Starting Agentic Testing System","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.893Z"}
+{"level":"info","message":"Starting test session with suite: test-suite","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.915Z"}
+{"level":"warn","message":"Unknown test suite: test-suite, using all scenarios","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.916Z"}
+{"level":"info","message":"Selected 1 scenarios for suite 'test-suite'","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.917Z"}
+{"level":"info","message":"Executing 1 CLI scenario(s)","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.917Z"}
+{"baseUrl":"https://api.github.com","component":"IssueReporter","level":"info","message":"IssueReporter initialized","owner":"","repository":"","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.914Z"}
+{"level":"info","message":"Executing scenario: scenario-run-execution-gap-evidence - run-execution-gap-evidence","service":"agentic-testing","timestamp":"2026-05-09T23:36:40.920Z"}
+{"level":"info","message":"No failures to analyze","service":"agentic-testing","timestamp":"2026-05-09T23:37:47.310Z"}
+{"level":"info","message":"No failures to report","service":"agentic-testing","timestamp":"2026-05-09T23:37:47.310Z"}
+{"level":"info","message":"Session results saved to /data/focused-branch-updates-1778366600/rh-pr404-mergeready/repo/outputs/sessions/session_1212ef4b-5efd-4e3a-8f94-9a08f5043eb2_2026-05-09T23-36-40-916Z.json","service":"agentic-testing","timestamp":"2026-05-09T23:37:47.313Z"}
+{"level":"info","message":"Test session completed: 1212ef4b-5efd-4e3a-8f94-9a08f5043eb2","service":"agentic-testing","timestamp":"2026-05-09T23:37:47.313Z"}

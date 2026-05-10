@@ -200,6 +200,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       if (entry == null) {
         throw new IOException("Resource " + resourceReference.name + " does not specify archive entry");
       }
+      if (!ResourceExportNames.isResourceEntryName(entry)) {
+        throw new IOException("Resource " + resourceReference.name + " references archive entry outside resources directory: " + entry);
+      }
       InputStream is = container.getInputStream(entry);
       if (is == null) {
         throw new IOException("Archive does not contain resource entry " + entry);
@@ -276,6 +279,9 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
       if (typeReference.file == null) {
         throw new IOException("Type " + typeReference.name + " does not specify archive entry");
+      }
+      if (!ResourceExportNames.isSourceEntryName(typeReference.file)) {
+        throw new IOException("Type " + typeReference.name + " references archive entry outside src directory: " + typeReference.file);
       }
       InputStream is = container.getInputStream(typeReference.file);
       if (is == null) {
@@ -676,7 +682,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private void compareResources(Set<Resource> projectResources, Set<Resource> crawledResources) {
       for (Resource crawledResource : crawledResources) {
         if (!projectResources.contains(crawledResource)) {
-          PrintUtilities.println("WARNING: added missing resource", crawledResource);
+          PrintUtilities.println("WARNING: added missing resource reference");
         }
       }
     }
