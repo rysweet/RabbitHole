@@ -23,6 +23,8 @@ WORLD_CANVAS_PIXEL_SAMPLER="$SCRIPT_DIR/world-canvas-pixel-sampler.py"
 FIRST_LESSON_PROCEDURE_TARGET_SCENARIO=alice-desktop-first-lesson-live-procedure-target-observation
 FIRST_LESSON_PROCEDURE_TARGET_ARTIFACT=first-lesson-live-procedure-target-observation.json
 FIRST_LESSON_PROCEDURE_SELECTOR=scene.eatmeFirstLesson
+RUN_WINDOW_CONTRACT_SCENARIO=alice-desktop-run-window-contract
+RUN_WINDOW_CONTRACT_ARTIFACT=run-window-created.json
 LEARNER_WORLD_BOUNDARY_ARTIFACT="$BASE_DIR/contracts/learner-world-assessment-boundary.json"
 
 usage() {
@@ -178,6 +180,21 @@ validate_allowed_automation() {
   fi
 
   if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
+    [ "$7" = core/story-api-migration ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.lgna.project.migration.ProjectMigrationManagerTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
     [ "$#" -eq 9 ] &&
     [ "$1" = mvn ] &&
     [ "$2" = -DincludeSims=false ] &&
@@ -230,6 +247,21 @@ validate_allowed_automation() {
     [ "$7" = core/ide ] &&
     [ "$8" = -am ] &&
     [ "$9" = -Dtest=org.alice.ide.croquet.models.projecturi.RobotSaveMenuDialogWriteReadbackProofTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
+    [ "$7" = core/ide ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.alice.tools.EatmeRunWindowEvidenceTest ] &&
     [ "${10}" = test ]; then
     return 0
   fi
@@ -419,31 +451,6 @@ except ValueError:
 
 print(resolved)
 PY
-}
-
-validate_scenario_automation_cwd() {
-  local scenario_json=$1
-  local cwd
-
-  cwd=$(SCENARIO_JSON="$scenario_json" python3 - <<'PY'
-import json
-import os
-import sys
-
-scenario = json.loads(os.environ["SCENARIO_JSON"])
-automation = scenario.get("automation")
-if not isinstance(automation, dict):
-    sys.exit(0)
-
-cwd = automation.get("cwd")
-if not isinstance(cwd, str) or not cwd.strip():
-    print("automation.cwd must be a non-empty string", file=sys.stderr)
-    sys.exit(2)
-
-print(cwd)
-PY
-  )
-  [ -z "$cwd" ] || resolve_automation_cwd "$cwd" >/dev/null
 }
 
 resolve_scenario_id() {
@@ -895,6 +902,93 @@ actual_size = resolved_output.stat().st_size
 if actual_size != output_size:
     fail(f"inconsistent proven Save proof evidence: outputSizeBytes {output_size} does not match actual size {actual_size}")
 print("Save proof evidence proven")
+PY
+}
+
+validate_run_window_evidence() {
+  local artifact_path=$1
+
+  python3 - "$artifact_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+artifact = Path(sys.argv[1])
+
+SCHEMA_VERSION = "eatme.alice-run-window-created/v1"
+CONTRACT_SCOPE = "run-window-creation-wiring"
+EVIDENCE_SOURCE = "org.alice.stageide.run.RunComposite#handlePreShowWindow"
+REQUIRED_FALSE_FIELDS = {
+    "active_rendering_claimed",
+    "run_program_claimed",
+    "run_execution_claimed",
+    "world_execution_claimed",
+    "rendering_correctness_claimed",
+    "save_claimed",
+    "grading_claimed",
+    "full_ui_automation_claimed",
+}
+REQUIRED_NON_CLAIMS = {
+    "active-rendering",
+    "run-execution",
+    "world-execution-correctness",
+    "rendering-correctness",
+    "save",
+    "grading",
+    "full-ui-automation",
+}
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    sys.exit(1)
+
+
+if artifact.name != "run-window-created.json":
+    fail("Run-window evidence path must use canonical filename run-window-created.json")
+if artifact.is_symlink():
+    fail("Run-window evidence artifact must not be a symlink")
+if not artifact.is_file():
+    fail(f"missing Run-window evidence artifact run-window-created.json: {artifact}")
+
+try:
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+except json.JSONDecodeError as exc:
+    fail(f"invalid Run-window evidence JSON at line {exc.lineno}: {exc.msg}")
+
+if not isinstance(payload, dict):
+    fail("Run-window evidence must be a JSON object")
+
+for key, expected in {
+    "schema_version": SCHEMA_VERSION,
+    "status": "created",
+    "contract_scope": CONTRACT_SCOPE,
+    "evidence_source": EVIDENCE_SOURCE,
+    "artifact": "run-window-created.json",
+}.items():
+    value = payload.get(key)
+    if value != expected:
+        fail(f"Run-window evidence {key} mismatch: expected {expected!r}, got {value!r}")
+
+for field in REQUIRED_FALSE_FIELDS:
+    if payload.get(field) is not False:
+        fail(f"Run-window evidence {field} must be false")
+
+does_not_claim = payload.get("does_not_claim")
+if not isinstance(does_not_claim, list) or not all(isinstance(item, str) for item in does_not_claim):
+    fail("Run-window evidence must include does_not_claim string list")
+missing_non_claims = sorted(REQUIRED_NON_CLAIMS - set(does_not_claim))
+if missing_non_claims:
+    fail("missing Run-window non-claim(s): " + ", ".join(missing_non_claims))
+
+for metadata_field in ("frame_title", "program_type"):
+    if not isinstance(payload.get(metadata_field), str):
+        fail(f"Run-window evidence {metadata_field} must be a string")
+
+if artifact.stat().st_size <= 0:
+    fail("Run-window evidence artifact must be non-empty")
+
+print("Run-window evidence created")
 PY
 }
 
@@ -3670,6 +3764,7 @@ run_gated_command_smoke() {
 
   local automation_fields cwd configured_timeout scenario_id automation_mode run_timeout checklist exit_code outcome resolved_cwd
   local save_proof_artifact save_proof_run_id save_proof_validation_status save_proof_validation_exit command_start_epoch
+  local run_window_evidence_dir run_window_artifact run_window_validation_status run_window_validation_exit
   local -a argv command_argv
   mapfile -t automation_fields < <(SCENARIO_JSON="$scenario_json" python3 - <<'PY'
 import json
@@ -3695,6 +3790,7 @@ PY
   write_environment "$run_dir"
   save_proof_artifact=
   save_proof_run_id=
+  run_window_artifact=
   if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
     if [ -n "$timeout_override" ]; then
       printf 'Save proof workflow does not accept --timeout-seconds\n' >&2
@@ -3706,6 +3802,14 @@ PY
       printf 'generated Save proof runId is not a safe token: %s\n' "$save_proof_run_id" >&2
       return 2
     fi
+  fi
+  if [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+    if [ -n "$timeout_override" ]; then
+      printf 'Run-window contract workflow does not accept --timeout-seconds\n' >&2
+      return 2
+    fi
+    run_window_evidence_dir="$(CDPATH= cd -- "$run_dir" && pwd)"
+    run_window_artifact="$run_window_evidence_dir/$RUN_WINDOW_CONTRACT_ARTIFACT"
   fi
 
   if [ "$prepare_only" = "1" ] || [ "${ALICE_QA_RUN_GATED_SMOKES:-}" != "1" ]; then
@@ -3726,6 +3830,10 @@ PY
       if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
         printf 'timeoutPolicy=none\n'
         printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
+      elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+        printf 'timeoutPolicy=none\n'
+        printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
+        printf 'runWindowEvidenceStatus=not-run\n'
       else
         printf 'timeoutSeconds=%s\n' "$run_timeout"
       fi
@@ -3747,6 +3855,12 @@ PY
       "-Dorg.alice.eatme.saveProof.evidencePath=$save_proof_artifact"
       "${argv[@]:1}"
     )
+  elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+    command_argv=(
+      "${argv[0]}"
+      "-Dorg.alice.eatme.runWindowEvidenceDir=$run_window_evidence_dir"
+      "${argv[@]:1}"
+    )
   fi
 
   command_start_epoch=$(date -u +%s)
@@ -3759,6 +3873,9 @@ PY
       export ALICE_SAVE_PROOF_RUN_ID="$save_proof_run_id"
       export ALICE_SAVE_PROOF_EVIDENCE_PATH="$save_proof_artifact"
       "${command_argv[@]}" < /dev/null
+    elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+      export ALICE_RUN_WINDOW_EVIDENCE_DIR="$run_window_evidence_dir"
+      "${command_argv[@]}" < /dev/null
     else
       timeout --foreground -k 10s "${run_timeout}s" "${command_argv[@]}" < /dev/null
     fi
@@ -3766,6 +3883,7 @@ PY
   exit_code=$?
   set -e
   save_proof_validation_status=not-requested
+  run_window_validation_status=not-requested
   if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
     set +e
     validate_save_proof_evidence "$save_proof_artifact" \
@@ -3785,6 +3903,17 @@ PY
       fi
     fi
   fi
+  if [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+    if validate_run_window_evidence "$run_window_artifact" > "$run_dir/run-window-validation.log" 2>&1; then
+      run_window_validation_status=created
+    else
+      run_window_validation_exit=$?
+      run_window_validation_status=failed
+      if [ "$exit_code" -eq 0 ]; then
+        exit_code=$run_window_validation_exit
+      fi
+    fi
+  fi
 
   outcome=failed
   if [ "$exit_code" -eq 0 ]; then
@@ -3796,17 +3925,22 @@ PY
     printf 'automationMode=%s\n' "$automation_mode"
     printf 'outcome=%s\n' "$outcome"
     printf 'exitCode=%s\n' "$exit_code"
-      printf 'commandLog=command.log\n'
-      printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
-      printf 'cwd=%s\n' "$cwd"
-      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
-        printf 'timeoutPolicy=none\n'
-        printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
-        printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
-        printf 'saveProofValidationLog=%s\n' save-proof-validation.log
-      else
-        printf 'timeoutSeconds=%s\n' "$run_timeout"
-      fi
+    printf 'commandLog=command.log\n'
+    printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
+    printf 'cwd=%s\n' "$cwd"
+    if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+      printf 'timeoutPolicy=none\n'
+      printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
+      printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
+      printf 'saveProofValidationLog=%s\n' save-proof-validation.log
+    elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
+      printf 'timeoutPolicy=none\n'
+      printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
+      printf 'runWindowEvidenceStatus=%s\n' "$run_window_validation_status"
+      printf 'runWindowValidationLog=%s\n' run-window-validation.log
+    else
+      printf 'timeoutSeconds=%s\n' "$run_timeout"
+    fi
   } > "$run_dir/status.txt"
 
   if [ "$exit_code" -ne 0 ]; then
