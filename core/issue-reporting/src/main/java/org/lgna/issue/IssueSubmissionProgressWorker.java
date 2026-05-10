@@ -69,43 +69,52 @@ public class IssueSubmissionProgressWorker extends WorkerWithProgress<Boolean, S
   }
 
   protected Boolean doInternal_onBackgroundThread(Issue.Builder issueBuilder) throws Exception {
-    this.publish("issueBuilder: " + issueBuilder);
-    this.publish("attach project: " + this.isProjectAttachmentDesired);
+    this.publishProgressMessage("issueBuilder: " + issueBuilder);
+    this.publishProgressMessage("attach project: " + this.isProjectAttachmentDesired);
     for (int i = 0; i < 20; i++) {
-      this.publish(Integer.toString(i));
+      this.publishProgressMessage(Integer.toString(i));
       Thread.sleep(200);
     }
-    return true;
+    return Boolean.TRUE;
+  }
+
+  protected void publishProgressMessage(String message) {
+    this.publish(message);
+  }
+
+  Issue.Builder createIssueBuilder() {
+    return this.owner.createIssueBuilder();
   }
 
   @Override
   protected final Boolean do_onBackgroundThread() throws Exception {
-    this.publish(START_MESSAGE);
-    Issue.Builder issueBuilder = this.owner.createIssueBuilder();
-    boolean rv = this.doInternal_onBackgroundThread(issueBuilder);
-    this.publish(END_MESSAGE);
-    return rv;
+    this.publishProgressMessage(START_MESSAGE);
+    Issue.Builder issueBuilder = this.createIssueBuilder();
+    boolean result = this.doInternal_onBackgroundThread(issueBuilder);
+    this.publishProgressMessage(END_MESSAGE);
+    return result;
   }
 
   @Override
   protected final void handleProcess_onEventDispatchThread(List<String> chunks) {
     for (String message : chunks) {
       if (START_MESSAGE.equals(message)) {
+        JProgressPane progressPane = this.getProgressPane();
         JDialog dialog = new JDialogBuilder().owner(this.owner).title("Uploading Bug Report").build();
-        dialog.add(this.progressPane, BorderLayout.CENTER);
+        dialog.add(progressPane, BorderLayout.CENTER);
         dialog.pack();
         dialog.setVisible(true);
       } else if (END_MESSAGE.equals(message)) {
-        SwingUtilities.getRoot(this.progressPane).setVisible(false);
+        SwingUtilities.getRoot(this.getProgressPane()).setVisible(false);
       } else {
-        this.progressPane.addMessage(message);
+        this.getProgressPane().addMessage(message);
       }
     }
   }
 
   @Override
   protected final void handleDone_onEventDispatchThread(Boolean value) {
-    if (this.progressPane.isBackgrounded() || (SwingUtilities.getRoot(this.owner).isVisible() == false)) {
+    if (this.getProgressPane().isBackgrounded() || (SwingUtilities.getRoot(this.owner).isVisible() == false)) {
       Logger.outln("issue submission result:", value);
     } else {
       if (value) {
@@ -121,6 +130,13 @@ public class IssueSubmissionProgressWorker extends WorkerWithProgress<Boolean, S
     SwingUtilities.getRoot(this.owner).setVisible(false);
   }
 
+  private JProgressPane getProgressPane() {
+    if (this.progressPane == null) {
+      this.progressPane = new JProgressPane(this);
+    }
+    return this.progressPane;
+  }
+
   private final JSubmitPane owner;
-  private final JProgressPane progressPane = new JProgressPane(this);
+  private JProgressPane progressPane;
 }

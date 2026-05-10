@@ -1,0 +1,42 @@
+name: archive-fixture-evidence
+description: "Validates PR #433 legacy fixture round-trip characterization through existing QA entry points only; it does not validate full historical archive migration, full Tweedle decode, full player decode, arbitrary user archive support, UI automation, visible rendering, or desktop save/open behavior."
+config:
+  timeout: 180000
+environment:
+  requires: []
+agents:
+  - id: alice-desktop-qa-cli
+    type: cli
+    config:
+      workingDirectory: .
+metadata:
+  priority: medium
+  tags:
+    - cli
+    - gadugi
+    - pr-433
+    - archive-fixture
+    - archive-fixture-evidence
+steps:
+  - name: validate-desktop-outside-in-catalog
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+    timeout: 60000
+  - name: prepare-archive-fixture-evidence
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/run-scenario.sh
+      args:
+        - run
+        - alice-desktop-archive-fixture-smoke
+        - --prepare-only
+        - --evidence-dir
+        - qa/outside-in/alice-desktop/evidence/gadugi-archive-fixture
+    timeout: 60000
+  - name: run-desktop-outside-in-contract-tests
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/tests/run-tests.sh
+    timeout: 120000
+assertions: []

@@ -2,6 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the Gadugi Window menu registration evidence scenario, see [Gadugi Window menu registration evidence](../../../docs/reference/gadugi-window-menu-registration-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the focused launch, run/runtime, and Select Project target-discovery contract, see [Accessibility Target Discovery Silver-Thread Contract](../../../docs/reference/accessibility-target-discovery-silver-thread.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
 ## What belongs here
@@ -11,6 +12,7 @@ For user-facing instructions, see [Run Alice desktop outside-in QA](../../../doc
 | `scenarios/` | User-like workflows, expected outcomes, evidence requirements, automation mode | Java implementation details or brittle internal UI assumptions |
 | `contracts/` | Declarative claim-boundary records, including the learner-world assessment blocker | Runner behavior or assessment implementation |
 | `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence contract checks and Select Project tab-click evidence contract checks (PR #437) | The custom Alice scenario schema or full desktop/rendering claims |
+| `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence and Window menu registration evidence contract checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `schema/` | Scenario structure and allowed field values | Business logic |
 | `runners/` | Thin wrappers around existing Maven/Alice commands | New build systems, hidden dependencies, or product behavior changes |
 | `evidence/` | Local run artifacts produced by the runner | Source-controlled product assets |
@@ -135,6 +137,45 @@ tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
 
+### Menu/action contract smoke
+
+`alice-desktop-menu-action-smoke` is the outside-in entry point for the bounded
+Window menu model contract. It is a gated command smoke that runs
+`AliceMenuBarContractTest`; it does not drive a live Swing menu, inspect rendered
+pixels, complete Save, complete the first lesson, validate a deployed installer,
+or validate Sims.
+
+Prepare the smoke without executing Maven:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/menu-action
+```
+
+Execute the focused command:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/menu-action
+```
+
+With `NODE_OPTIONS` set in the environment, the checked-in scenario argv is
+equivalent to:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+Accepted evidence is limited to `status.txt`, `command.log`, and test output
+naming `AliceMenuBarContractTest`. The claim is only that the Window menu model
+is registered and reachable through menu-bar membership lookup.
 To run the silver thread end-to-end create→build→save→reopen→run smoke:
 
 ```bash

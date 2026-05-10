@@ -1,0 +1,45 @@
+id: alice-desktop-issue-reporting-smoke
+title: Issue submission progress worker test seam smoke
+workflow: issue-reporting-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - IssueSubmissionProgressWorkerTest is available in the checkout.
+userActions:
+  - Run the focused issue-reporting progress worker characterization smoke from the command line.
+  - Exercise the background submission progress publishing test seams.
+  - Confirm the worker publishes expected progress states through the observable interface.
+expectedOutcomes:
+  - The issue-reporting progress worker smoke command exits successfully when the gate is enabled.
+  - Background progress publishing invokes the seam callbacks in order.
+  - No real issue-service submission occurs during the smoke test.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/issue-reporting
+    - -am
+    - -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the issue-reporting progress worker smoke command.
+    - Test output or surefire report naming IssueSubmissionProgressWorkerTest.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the focused Maven smoke is unavailable, attach the nearest issue-reporting characterization evidence.
+tags:
+  - issue-reporting
+  - command-smoke
+  - test-seam

@@ -194,9 +194,12 @@ Save chooser. In headless or rootless tests this is a machine-readable no-go
 artifact; in a real desktop it records owner/root target resolution before the
 bounded Save proof controls the chooser.
 
-Run the outside-in desktop scenario only when a real display is prepared:
+Use the menu/action smoke only when a review needs the bounded Window menu model
+registration contract. It is not Save evidence and does not drive a live Swing
+menu:
 
 ```bash
+export NODE_OPTIONS=--max-old-space-size=32768
 ALICE_QA_RUN_GATED_SMOKES=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
   --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
