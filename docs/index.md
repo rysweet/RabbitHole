@@ -157,6 +157,9 @@ repository.
 - [Decoder Delegate Decomposition](./reference/decoder-delegate-decomposition.md) - internal decomposition of the 1258-line `Decoder` into a thin coordinator plus `ExpressionDecoder`, `StatementDecoder`, and `FieldDecoder` package-private delegates with preserved behavior.
 - [Validate the Decoder Delegate Decomposition](./howto/validate-decoder-delegate-decomposition.md) - step-by-step validation for the Decoder decomposition: core AST tests, story-api-migration tests, silver-thread round-trip, line counts, and visibility checks.
 - [Tutorial: Trace the Decoder Delegate Decomposition](./tutorials/trace-decoder-delegate-decomposition.md) - guided walkthrough of a Tweedle class decode flowing through the coordinator, ExpressionDecoder, StatementDecoder, and FieldDecoder delegates.
+- [TweedleEncoder Rename](./reference/tweedle-encoder-rename.md) - rename of `Encoder` to `TweedleEncoder` for disambiguation from `java.beans.Encoder` and `org.lgna.project.io.Encoder`, aligning with the `TweedleEncoderDecoder` facade naming while preserving all encoding behavior.
+- [Validate the TweedleEncoder Rename](./howto/validate-tweedle-encoder-rename.md) - step-by-step validation for the `Encoder` → `TweedleEncoder` rename: stale reference check, core AST tests, story-api-migration tests, silver-thread round-trip, and git history preservation.
+- [Tutorial: Trace the TweedleEncoder Rename](./tutorials/trace-tweedle-encoder-rename.md) - guided walkthrough of the rename from facade instantiation through visitor-pattern interfaces to Story API implementors.
 
 ## Formal specification lane
 
