@@ -313,7 +313,7 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertIn("legacy player resource-recovery boundary", scenario)
         self.assertIn("manifest-declared image resources", scenario)
         self.assertIn("unsupported manifest-declared program", scenario)
-        self.assertNotIn("XML fallback", scenario)
+        self.assertIn("XML fallback", scenario)
         self.assertNotIn("full historical archive", scenario)
         self.assertNotIn("full player", scenario)
         self.assertNotIn("rendering", scenario.lower())

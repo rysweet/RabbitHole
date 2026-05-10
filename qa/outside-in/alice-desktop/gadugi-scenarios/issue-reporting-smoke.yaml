@@ -1,0 +1,50 @@
+id: alice-desktop-issue-reporting-smoke
+name: Issue submission progress worker test seam smoke
+description: Validates IssueSubmissionProgressWorker test seams via focused Maven characterization smoke
+priority: HIGH
+interface: CLI
+prerequisites:
+  - Java 21 is available
+  - Maven dependencies are available
+  - The tweedle-lang submodule is initialized
+tags:
+  - issue-reporting
+  - command-smoke
+  - test-seam
+agents:
+  - name: maven-test-runner
+    type: cli
+    command: "qa/outside-in/alice-desktop/runners/run-issue-reporting-smoke.sh"
+steps:
+  - action: run
+    name: Run issue-reporting smoke
+    agent: maven-test-runner
+    params:
+      command: "qa/outside-in/alice-desktop/runners/run-issue-reporting-smoke.sh"
+    description: Run focused issue-reporting progress worker characterization smoke
+    timeout: 600000
+  - action: validate_exit_code
+    name: Verify exit code
+    agent: maven-test-runner
+    params:
+      expected: "0"
+    description: Confirm the smoke command exits successfully
+  - action: validate_output
+    name: Verify test class
+    agent: maven-test-runner
+    params:
+      expected: "IssueSubmissionProgressWorkerTest"
+    description: Confirm IssueSubmissionProgressWorkerTest appears in test output
+verifications:
+  - type: output
+    target: stdout
+    expected: "BUILD SUCCESS"
+    operator: contains
+    description: Maven build should succeed
+  - type: output
+    target: stdout
+    expected: "IssueSubmissionProgressWorkerTest"
+    operator: contains
+    description: Test class should appear in output
+estimatedDuration: 600
+enabled: true

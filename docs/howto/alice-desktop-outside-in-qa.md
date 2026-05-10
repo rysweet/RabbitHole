@@ -9,6 +9,7 @@ Use the Alice desktop outside-in QA lane to validate the scenario catalog and co
 - [Validate a custom scenario catalog](#validate-a-custom-scenario-catalog)
 - [List available scenarios](#list-available-scenarios)
 - [Run branch-installable checks with uvx](#run-branch-installable-checks-with-uvx)
+- [Run the menu/action contract smoke](#run-the-menuaction-contract-smoke)
 - [Run the real Alice launch scenario](#run-the-real-alice-launch-scenario)
 - [Open Africa Full from Select Project](#open-africa-full-from-select-project)
 - [Observe the first-lesson live procedure target](#observe-the-first-lesson-live-procedure-target)
@@ -115,6 +116,47 @@ uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
 
 Run these commands from the root of a checkout of the same branch. The installed wrapper delegates to `qa/outside-in/alice-desktop/runners/` in that checkout so the output and evidence contract match direct runner usage.
 Replace `<branch-or-commit>` with the PR branch or commit you are reviewing.
+
+## Run the menu/action contract smoke
+
+Use `alice-desktop-menu-action-smoke` to collect evidence for the bounded
+Window menu model contract. This smoke is a command contract, not live Swing UI
+automation.
+
+Prepare evidence without executing the gated Maven command:
+
+```bash
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/menu-action
+```
+
+Execute the focused command in a prepared checkout:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+ALICE_QA_RUN_GATED_SMOKES=1 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/menu-action
+```
+
+The scenario runs the same focused Maven selector. With `NODE_OPTIONS` set in
+the environment, the checked-in scenario argv starts at `mvn`:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl core/ide -am \
+  -Dtest=org.alice.ide.croquet.models.AliceMenuBarContractTest \
+  test
+```
+
+Review `status.txt`, `command.log`, and Maven/Surefire output naming
+`AliceMenuBarContractTest`. Accept the run only as evidence that the Window menu
+model is registered and reachable through menu-bar membership lookup. Do not use
+this smoke as evidence of full UI automation, rendered menu correctness, Save
+completion, first-lesson completion, deployed installer success, or Sims
+validation.
 
 ## Run the real Alice launch scenario
 

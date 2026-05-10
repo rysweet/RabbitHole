@@ -32,6 +32,8 @@ out/*
 .copilot/
 .claude/runtime/
 __pycache__/
+outputs/
+logs/
 
 # Test log artifacts
 logs/
