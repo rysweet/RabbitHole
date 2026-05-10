@@ -16,7 +16,7 @@ SCHEMA="$BASE_DIR/schema/scenario.schema.json"
 tmp_root=$(create_scratch_root "$SCRIPT_DIR") || exit 1
 trap 'rm -rf "$tmp_root"' EXIT
 
-# ── 1-4. YAML field checks (single Python process for all 30 files) ──────
+# ── 1-4. YAML field checks (single Python process for all 33 files) ──────
 
 python3 - "$SCENARIOS_DIR" >"$tmp_root/yaml-checks.out" 2>"$tmp_root/yaml-checks.err" <<'PY'
 from pathlib import Path
@@ -138,8 +138,8 @@ fi
 "$VALIDATOR" >"$tmp_root/validate-all.out" 2>"$tmp_root/validate-all.err"
 assert_success "$?" "validate-scenarios.sh passes with gadugi-compatible scenario files"
 
-# ── 9. validate-scenarios.sh still accepts scenarios without name ─────────
-# (name is optional in the custom validator — gadugi-test uses title fallback)
+# ── 9. validate-scenarios.sh rejects scenarios without name ───────────────
+# (name is now required in the custom validator)
 
 no_name_custom_dir="$tmp_root/no-name-custom"
 mkdir -p "$no_name_custom_dir"
@@ -153,6 +153,6 @@ lines = [l for l in path.read_text(encoding="utf-8").splitlines() if not l.start
 path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 ALICE_QA_SCENARIO_DIR="$no_name_custom_dir" "$VALIDATOR" >"$tmp_root/no-name-custom.out" 2>"$tmp_root/no-name-custom.err"
-assert_success "$?" "validate-scenarios.sh accepts scenarios without name (name is optional in custom validator)"
+assert_failure "$?" "validate-scenarios.sh rejects scenarios without name (name is required in custom validator)"
 
 finish

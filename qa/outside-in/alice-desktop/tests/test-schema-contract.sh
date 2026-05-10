@@ -23,6 +23,7 @@ required_top = set(schema.get("required", []))
 expected_top = {
     "id",
     "title",
+    "name",
     "workflow",
     "automationMode",
     "preconditions",
@@ -241,6 +242,15 @@ expected_argv = {
         "core/issue-reporting",
         "-am",
         "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest",
+        "test",
+    ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
         "core/ide",
         "-am",
         "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest",

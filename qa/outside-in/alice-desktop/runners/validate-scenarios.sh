@@ -21,6 +21,7 @@ args = sys.argv[4:]
 required_top = [
     "id",
     "title",
+    "name",
     "workflow",
     "automationMode",
     "preconditions",
@@ -29,7 +30,7 @@ required_top = [
     "evidence",
     "fallback",
 ]
-allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter", "name", "steps", "agents"}
+allowed_top = set(required_top) | {"automation", "supportingEvidence", "tags", "targetStarter", "steps", "agents"}
 EXPECTED_TARGET_STARTER = {
     "displayName": "Africa Full",
     "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p",
@@ -250,6 +251,18 @@ allowed_automation = {
             "core/issue-reporting",
             "-am",
             "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest",
+            "test",
+        ),
+    ),
+    (
+        ".",
+        (
+            "mvn",
+            "-DincludeSims=false",
+            "-Dinstall4j.skip",
+            "-DfailIfNoTests=false",
+            "-Dsurefire.failIfNoSpecifiedTests=false",
+            "-pl",
             "core/ide",
             "-am",
             "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest",
