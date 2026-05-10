@@ -250,6 +250,21 @@ validate_allowed_automation() {
   fi
 
   if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
+    [ "$7" = core/ide ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
     [ "$#" -eq 1 ] &&
     [ "$1" = qa/outside-in/alice-desktop/runners/netbeans-package-smoke.sh ]; then
     return 0
@@ -3853,12 +3868,17 @@ main() {
 
       scenario_id=$(resolve_scenario_id "$scenario_request")
       scenario_json=$("$VALIDATOR" --dump-json "$scenario_id")
-      validate_scenario_automation_cwd "$scenario_json"
+      automation_mode=$(json_fields "$scenario_json" "automationMode")
+      # xvfb-real-alice and gated-command-smoke validate cwd internally via
+      # resolve_automation_cwd; skip the redundant early validation for them.
+      case "$automation_mode" in
+        xvfb-real-alice|gated-command-smoke) ;;
+        *) validate_scenario_automation_cwd "$scenario_json" ;;
+      esac
       timestamp=$(date -u +%Y%m%dT%H%M%SZ)
       run_dir="$evidence_base/$scenario_id/$timestamp"
       mkdir -p "$run_dir"
 
-      automation_mode=$(json_fields "$scenario_json" "automationMode")
       case "$automation_mode" in
         xvfb-real-alice)
           run_xvfb_real_alice "$scenario_json" "$run_dir" "$timeout_override"

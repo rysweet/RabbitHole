@@ -1,4 +1,5 @@
 id: alice-desktop-select-project-atk-exec
+name: Select Project live Swing widget introspection via AT-SPI with exec:exec ATK remediation
 title: Select Project live Swing widget introspection via AT-SPI with exec:exec ATK remediation
 workflow: select-project-atk-exec-smoke
 automationMode: xvfb-real-alice
@@ -55,3 +56,7 @@ fallback:
 supportingEvidence:
   - alice-desktop-select-project-inventory
   - alice-desktop-select-project-widget-introspection
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

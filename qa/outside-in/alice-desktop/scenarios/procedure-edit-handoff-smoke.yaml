@@ -1,4 +1,5 @@
 id: alice-desktop-procedure-edit-handoff-smoke
+name: Object placement to procedure edit handoff smoke
 title: Object placement to procedure edit handoff smoke
 workflow: procedure-edit-handoff-smoke
 automationMode: gated-command-smoke
@@ -49,3 +50,7 @@ tags:
   - object-placement
   - procedure-edit
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

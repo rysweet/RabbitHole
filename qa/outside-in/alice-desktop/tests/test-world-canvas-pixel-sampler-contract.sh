@@ -313,6 +313,122 @@ PY
 
 assert_file_exists "$SAMPLER" "world-canvas pixel sampler script is checked in at the documented path"
 
+python3 - "$SAMPLER" >"$tmp_root/channel-normalization.out" 2>"$tmp_root/channel-normalization.err" <<'PY'
+import importlib.util
+import sys
+
+sys.dont_write_bytecode = True
+sampler_path = sys.argv[1]
+spec = importlib.util.spec_from_file_location("world_canvas_pixel_sampler", sampler_path)
+if spec is None or spec.loader is None:
+    raise AssertionError("sampler module could not be loaded")
+sampler = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(sampler)
+
+cases = {
+    -1: 0,
+    0: 0,
+    255: 255,
+    65535: 255,
+}
+for value, expected in cases.items():
+    actual = sampler.normalize_channel(value)
+    if actual != expected:
+        raise AssertionError(f"normalize_channel({value}) returned {actual}, expected {expected}")
+
+parsed = sampler.parse_rgba("srgba(-1,65535,32,1)")
+if parsed != [0, 255, 32, 255]:
+    raise AssertionError(f"parse_rgba did not normalize channels into 0..255: {parsed!r}")
+PY
+status=$?
+assert_success "$status" "standalone sampler normalizes RGBA channels into the 0..255 range"
+
+unreadable_target_out="$tmp_root/unreadable-target-sampler.json"
+python3 "$SAMPLER" \
+  --target-json "$tmp_root/missing-target.json" \
+  --output "$unreadable_target_out" \
+  >"$tmp_root/unreadable-target-sampler.out" \
+  2>"$tmp_root/unreadable-target-sampler.err"
+status=$?
+assert_success "$status" "standalone sampler exits 0 with structured blocker for unreadable target JSON"
+assert_file_exists "$unreadable_target_out" "standalone sampler writes blocker JSON for unreadable target JSON"
+assert_contains "$unreadable_target_out" '"status": "blocked"' "standalone sampler records blocked status for unreadable target JSON"
+assert_contains "$unreadable_target_out" '"blocker": "target-json-unreadable"' "standalone sampler names unreadable target blocker"
+assert_contains "$unreadable_target_out" '"claimScope": "visible-rendering-world-canvas-pixel-sampling"' "standalone sampler keeps bounded pixel-sampling claim scope on blockers"
+assert_contains "$unreadable_target_out" '"claimScopeDetail": "target-scoped-raw-pixel-observation-only"' "standalone sampler keeps raw-observation-only scope detail on blockers"
+assert_contains "$unreadable_target_out" '"renderedWorldPixelsObserved": false' "standalone sampler blocker does not claim sampled rendered-world pixels"
+assert_contains "$unreadable_target_out" '"visibleRenderingCorrectnessEstablished": false' "standalone sampler blocker does not claim visible rendering correctness"
+assert_contains "$unreadable_target_out" '"unsupportedClaims":' "standalone sampler blocker lists unsupported claim classes"
+assert_contains "$unreadable_target_out" '"full-visible-rendering-correctness"' "standalone sampler blocker explicitly excludes full visible rendering correctness"
+assert_contains "$unreadable_target_out" '"rendered-world-correctness"' "standalone sampler blocker explicitly excludes rendered-world correctness"
+assert_contains "$unreadable_target_out" '"world-execution"' "standalone sampler blocker explicitly excludes world execution"
+
+standalone_dir="$tmp_root/standalone-sampler"
+mkdir -p "$standalone_dir/fake-bin"
+cat >"$standalone_dir/target.json" <<'JSON'
+{
+  "screenExtents": {
+    "coordinateType": "screen",
+    "height": 20,
+    "width": 20,
+    "x": 10,
+    "y": 20
+  },
+  "status": "target-ready"
+}
+JSON
+cat >"$standalone_dir/fake-bin/xwd" <<'SH'
+#!/usr/bin/env bash
+set -u
+printf 'xwd\n' >>"$SAMPLER_XWD_LOG"
+printf 'fake-root-window-image'
+SH
+cat >"$standalone_dir/fake-bin/convert" <<'SH'
+#!/usr/bin/env bash
+set -u
+printf 'convert %s\n' "$*" >>"$SAMPLER_CONVERT_LOG"
+while IFS= read -r _sampler_input; do
+  :
+done
+printf 'srgba(16,32,48,1)\n'
+printf 'srgb(64,96,128)\n'
+printf '(0,0,0,255)\n'
+SH
+chmod +x "$standalone_dir/fake-bin/xwd" "$standalone_dir/fake-bin/convert"
+standalone_out="$standalone_dir/pixel-observation.json"
+SAMPLER_XWD_LOG="$standalone_dir/xwd.log" \
+SAMPLER_CONVERT_LOG="$standalone_dir/convert.log" \
+PATH="$standalone_dir/fake-bin:$PATH" \
+  python3 "$SAMPLER" \
+    --target-json "$standalone_dir/target.json" \
+    --output "$standalone_out" \
+    >"$standalone_dir/sampler.out" \
+    2>"$standalone_dir/sampler.err"
+status=$?
+assert_success "$status" "standalone sampler observes target pixels with fake capture tools"
+assert_file_exists "$standalone_out" "standalone sampler writes bounded pixel observation"
+assert_contains "$standalone_out" '"status": "observed"' "standalone sampler records observed status"
+assert_contains "$standalone_out" '"sampleCount": 3' "standalone sampler records the three checked sample points"
+assert_contains "$standalone_out" '"samplingMethod": "xwd-convert-target-scoped-raw-rgba"' "standalone sampler records the raw RGBA sampling method"
+xwd_count=0
+convert_count=0
+if [ -f "$standalone_dir/xwd.log" ]; then
+  xwd_count=$(grep -c '^xwd$' "$standalone_dir/xwd.log")
+fi
+if [ -f "$standalone_dir/convert.log" ]; then
+  convert_count=$(grep -c '^convert ' "$standalone_dir/convert.log")
+fi
+if [ "$xwd_count" -eq 1 ]; then
+  pass "standalone sampler captures the root window once per target"
+else
+  fail "standalone sampler should capture once per target (got $xwd_count captures)"
+fi
+if [ "$convert_count" -eq 1 ]; then
+  pass "standalone sampler extracts all checked sample points with one convert invocation"
+else
+  fail "standalone sampler should extract checked pixels with one convert invocation (got $convert_count extracts)"
+fi
+
 success_dir="$tmp_root/success"
 mkdir -p "$success_dir"
 write_runtime_display_artifact "$success_dir" ready

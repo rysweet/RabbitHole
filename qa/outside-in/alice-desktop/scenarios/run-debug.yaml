@@ -1,4 +1,5 @@
 id: alice-desktop-run-debug
+name: Run and debug-like execution behavior
 title: Run and debug-like execution behavior
 workflow: run-debug
 automationMode: manual-evidence-required
@@ -38,3 +39,7 @@ fallback:
     - Treat render-affordance evidence as structural Run-view attachment evidence only; use desktop-run-pixel-observation.json for screenshot or pixel sampling status, not for rendering-engine correctness evidence.
 supportingEvidence:
   - alice-desktop-launch
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

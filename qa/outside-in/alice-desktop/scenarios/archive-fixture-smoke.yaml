@@ -1,5 +1,7 @@
 id: alice-desktop-archive-fixture-smoke
 title: Archive/player fixture boundary smoke
+name: Legacy player resource-recovery boundary smoke
+title: Legacy player resource-recovery boundary smoke
 workflow: archive-fixture-smoke
 automationMode: gated-command-smoke
 preconditions:
@@ -50,3 +52,7 @@ tags:
   - command-smoke
   - archive-player-boundary
   - archive-io
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
