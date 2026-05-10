@@ -2,6 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the Run-window creation/wiring evidence contract and artifact API, see [Run-Window Creation/Wiring Contract](../../../docs/reference/run-window-creation-wiring-contract.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the Gadugi Run-window contract evidence scenario, see [Gadugi run-window contract evidence](../../../docs/reference/gadugi-run-window-contract-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the Gadugi Window menu registration evidence scenario, see [Gadugi Window menu registration evidence](../../../docs/reference/gadugi-window-menu-registration-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the focused launch, run/runtime, and Select Project target-discovery contract, see [Accessibility Target Discovery Silver-Thread Contract](../../../docs/reference/accessibility-target-discovery-silver-thread.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 
@@ -11,6 +12,7 @@ For user-facing instructions, see [Run Alice desktop outside-in QA](../../../doc
 | --- | --- | --- |
 | `scenarios/` | User-like workflows, expected outcomes, evidence requirements, automation mode | Java implementation details or brittle internal UI assumptions |
 | `contracts/` | Declarative claim-boundary records, including the learner-world assessment blocker | Runner behavior or assessment implementation |
+| `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher, run-render-affordance, and Run-window contract evidence checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence and Window menu registration evidence contract checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `schema/` | Scenario structure and allowed field values | Business logic |
 | `runners/` | Thin wrappers around existing Maven/Alice commands | New build systems, hidden dependencies, or product behavior changes |
@@ -125,6 +127,7 @@ procedure-edit-seam-smoke
 project-io-smoke
 runtime-event-dispatch-smoke
 run-debug
+run-window-contract
 save-load
 save-menu-dialog-write-proof
 scene-creation
@@ -138,6 +141,27 @@ tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
 ```
 
+The Run-window creation/wiring contract is a supported bounded workflow.
+Reviewers prepare it with:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-window-contract \
+  --prepare-only \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-window-contract
+```
+
+The default Run-window contract path is a `gated-command-smoke` preflight. It
+writes `status.txt` with `outcome=gated-not-run` and a
+`manual-evidence-checklist.txt` that names the fixed `run-window-created.json`
+artifact. When `ALICE_QA_RUN_GATED_SMOKES=1` is set, the same scenario runs the
+focused `EatmeRunWindowEvidenceTest` Maven command through the exact allowlisted
+argv, injects the scenario evidence directory, and validates the resulting
+`run-window-created.json`. That command verifies only the creation and wiring
+metadata seam. It does not claim active rendering, run execution, world
+execution correctness, rendering correctness, Save behavior, grading, creative
+assessment, lesson completion, or full UI automation.
 ### Menu/action contract smoke
 
 `alice-desktop-menu-action-smoke` is the outside-in entry point for the bounded
@@ -347,6 +371,30 @@ wiring and JavaFX handoff/no-go checks only; it does not prove visible
 rendering, save behavior, grading, creative assessment, or full lesson
 completion.
 
+The Gadugi Run-window contract evidence scenario is also under `gadugi/`.
+Validate and run it with `gadugi-test` installed on `PATH`:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/run-window-contract-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s run-window-contract-evidence \
+  --timeout 300000
+```
+
+That Gadugi scenario delegates to the `alice-desktop-run-window-contract` runner
+in prepare-only mode by default and writes evidence under
+`qa/outside-in/alice-desktop/evidence/gadugi-run-window-contract`.
+`ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
+invoked without `--prepare-only`. The Gadugi lane validates Run-window
+creation/wiring evidence only; it does not prove active rendering, run
+execution, world execution correctness, rendering correctness, Save behavior,
+grading, creative assessment, lesson completion, or full UI automation. For the
+full reference, see
+[Gadugi run-window contract evidence scenario](../../../docs/reference/gadugi-run-window-contract-evidence.md).
+
 For branch-installable outside-in checks, run the thin `amplihack` wrapper from a checkout of the branch:
 
 ```bash
@@ -501,6 +549,7 @@ procedure-edit-seam-smoke
 project-io-smoke
 runtime-event-dispatch-smoke
 run-debug
+run-window-contract
 save-load
 save-menu-dialog-write-proof
 scene-creation
