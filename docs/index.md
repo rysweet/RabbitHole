@@ -154,6 +154,9 @@ repository.
 - [PR #463 Recovery Gate](./reference/pr463-recovery-gate.md) - evidence shape, verifiers, blocker codes, and readiness result contract for the focused archive/player PR #463 recovery gate.
 - [Run the PR #463 Recovery Gate](./howto/run-pr463-recovery-gate.md) - how to collect evidence, run the gate, and interpret merge-readiness results.
 - [Tutorial: Assemble PR #463 Recovery Evidence](./tutorials/pr463-recovery-gate-evidence.md) - guided walkthrough for building the structured evidence JSON and running the gate.
+- [Decoder Delegate Decomposition](./reference/decoder-delegate-decomposition.md) - internal decomposition of the 1258-line `Decoder` into a thin coordinator plus `ExpressionDecoder`, `StatementDecoder`, and `FieldDecoder` package-private delegates with preserved behavior.
+- [Validate the Decoder Delegate Decomposition](./howto/validate-decoder-delegate-decomposition.md) - step-by-step validation for the Decoder decomposition: core AST tests, story-api-migration tests, silver-thread round-trip, line counts, and visibility checks.
+- [Tutorial: Trace the Decoder Delegate Decomposition](./tutorials/trace-decoder-delegate-decomposition.md) - guided walkthrough of a Tweedle class decode flowing through the coordinator, ExpressionDecoder, StatementDecoder, and FieldDecoder delegates.
 
 ## Formal specification lane
 
