@@ -139,7 +139,7 @@ Decoder (coordinator)
   ├─ resolveType()          ← called by all three delegates
   ├─ findLocal()            ← called by ExpressionDecoder, StatementDecoder
   ├─ findParameter()        ← called by ExpressionDecoder
-  ├─ findField()            ← called by all three delegates
+  ├─ findField()            ← called by ExpressionDecoder, StatementDecoder
   │
   ├─ fieldDecoder.decodeField()
   │   └─ expressionDecoder.primitiveLiteral()

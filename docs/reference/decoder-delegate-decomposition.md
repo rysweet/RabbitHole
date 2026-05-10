@@ -69,6 +69,7 @@ package-private with no public constructors. They are instantiated only by
 | Scope finders | `findLocal(...)`, `findParameter(...)`, `findField(...)` |
 | Zero-argument method index | `zeroArgumentMethodsByName(...)` |
 | Type creation | `userTypeNamed(String)` |
+| Diagnostic helpers | `describeMemberAccess(...)` (used by error factories in both ExpressionDecoder and StatementDecoder) |
 | Delegate wiring | Creates `ExpressionDecoder`, `StatementDecoder`, `FieldDecoder` |
 
 The coordinator owns type resolution and scope finders because they are shared
@@ -105,7 +106,7 @@ reference.
 | Local declarations | `decodeLocalDeclarationStatement(...)` |
 | Return statements | `decodeReturnStatement(...)` |
 | Method calls | `decodeZeroArgumentSameClassMethodCallStatement(...)` |
-| Description helpers | `describeMemberAccess(...)`, `describeMethodCall(...)` |
+| Description helpers | `describeMethodCall(...)` (calls `decoder.describeMemberAccess(...)`) |
 
 `StatementDecoder` calls back to `Decoder` for type resolution and scope
 finders, and to `ExpressionDecoder` for value expressions within statements.
@@ -163,6 +164,7 @@ support delegate access:
 | `findField(List<UserField>, String)` | ExpressionDecoder, StatementDecoder |
 | `userTypeNamed(String)` | (remains coordinator-only) |
 | `allowLiteralArithmeticFieldInitializers` field | FieldDecoder |
+| `describeMemberAccess(FieldAccess)` | ExpressionDecoder, StatementDecoder |
 
 No interfaces or inheritance are introduced. All collaboration uses direct
 method calls within the same package.
