@@ -372,6 +372,9 @@ validate_allowed_automation() {
     [ "$7" = core/model-loading ] &&
     [ "$8" = -am ] &&
     [ "$9" = -Dtest=org.lgna.story.resourceutilities.ModelExportTest ] &&
+    [ "$7" = core/issue-reporting ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest ] &&
     [ "${10}" = test ]; then
     return 0
   fi
