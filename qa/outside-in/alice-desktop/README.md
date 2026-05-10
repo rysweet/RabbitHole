@@ -19,7 +19,7 @@ Generated evidence is ignored by Git. Commit only scenario definitions, schema c
 
 ## Scenario model
 
-Each scenario uses the same fields:
+Each scenario uses the same required fields:
 
 - `id`
 - `title`
@@ -30,6 +30,14 @@ Each scenario uses the same fields:
 - `expectedOutcomes`
 - `evidence.required`
 - `fallback`
+
+Every scenario also carries three gadugi-test compatibility fields:
+
+- `name` — human-readable scenario name, always equal to `title`. Required by `gadugi-test validate`.
+- `steps` — gadugi-test step list. Currently `["validate"]` for all scenarios.
+- `agents` — gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios.
+
+These fields let `gadugi-test validate scenarios/` pass against the canonical gadugi-test schema while the repo-owned `validate-scenarios.sh` remains the primary structural validator.
 
 The target-specific Select Project scenario uses `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
 
@@ -89,6 +97,7 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh --dump-json
 qa/outside-in/alice-desktop/runners/run-scenario.sh list
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desktop/scenarios/launch.yaml
+cd qa/outside-in/alice-desktop && gadugi-test validate scenarios/
 ```
 
 Use one of the supported workflows:
