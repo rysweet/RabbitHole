@@ -1,4 +1,5 @@
 id: alice-desktop-tweedle-decoder-this-call-smoke
+name: Tweedle decoder zero-argument this-call smoke
 title: Tweedle decoder zero-argument this-call smoke
 workflow: tweedle-decoder-this-call-smoke
 automationMode: gated-command-smoke
@@ -46,3 +47,7 @@ tags:
   - immediate-qa-backlog
   - tweedle-decoder
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

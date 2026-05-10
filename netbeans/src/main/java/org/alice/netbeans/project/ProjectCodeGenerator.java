@@ -44,7 +44,6 @@
 package org.alice.netbeans.project;
 
 import edu.cmu.cs.dennisc.java.io.TextFileUtilities;
-import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.lgna.project.Project;
 import org.lgna.project.VersionNotSupportedException;
@@ -107,17 +106,19 @@ public class ProjectCodeGenerator {
     JavaCodeGenerator.Builder javaCodeGeneratorBuilder = JavaCodeUtilities.createJavaCodeGeneratorBuilder();
     //JavaCodeGenerator.Builder javaCodeGeneratorBuilder = new JavaCodeGenerator.Builder().isLambdaSupported(true);
 
-    List<FileObject> filesToOpen = Lists.newLinkedList();
-    List<FileObject> fileObjectsToFormat = Lists.newLinkedList();
     Set<NamedUserType> namedUserTypes = aliceProject.getNamedUserTypes();
     final Set<org.lgna.common.Resource> resources = aliceProject.getResources();
+    File sourceRootDirectory = javaSrcDirectory.getCanonicalFile();
+    Path sourceRoot = sourceRootDirectory.toPath();
     ResourcesTypeWrapper resourcesTypeWrapper = null;
     if (!resources.isEmpty()) {
-      resourcesTypeWrapper = new ResourcesTypeWrapper(aliceProject.getResources());
+      resourcesTypeWrapper = new ResourcesTypeWrapper(resources);
       namedUserTypes.add(resourcesTypeWrapper.getType());
     }
+    List<FileObject> filesToOpen = new ArrayList<>(namedUserTypes.size() + 1);
+    List<FileObject> fileObjectsToFormat = new ArrayList<>(namedUserTypes.size());
 
-    ensureGeneratedDestinationFilesAreAvailable(javaSrcDirectory, namedUserTypes, resources, resourcesTypeWrapper);
+    ensureGeneratedDestinationFilesAreAvailable(sourceRootDirectory, sourceRoot, namedUserTypes, resources, resourcesTypeWrapper);
 
     if (!resources.isEmpty()) {
       FileObject javaSrcDirectoryFileObject = FileUtil.toFileObject(javaSrcDirectory);
@@ -147,7 +148,7 @@ public class ProjectCodeGenerator {
     }
     int createWorkUnit = 0;
     for (NamedUserType type : namedUserTypes) {
-      File file = getJavaSourceFileForType(javaSrcDirectory, type);
+      File file = getJavaSourceFileForType(sourceRootDirectory, sourceRoot, type);
       final NetbeansJavaCodeGenerator generator = new NetbeansJavaCodeGenerator(javaCodeGeneratorBuilder);
       type.process(generator);
       String code = generator.getText();
@@ -187,29 +188,28 @@ public class ProjectCodeGenerator {
   }
 
   private static void ensureGeneratedDestinationFilesAreAvailable(
-      File javaSrcDirectory,
+      File sourceRootDirectory,
+      Path sourceRoot,
       Set<NamedUserType> namedUserTypes,
       Set<org.lgna.common.Resource> resources,
       ResourcesTypeWrapper resourcesTypeWrapper) throws IOException {
-    Path sourceRoot = javaSrcDirectory.getCanonicalFile().toPath();
     Set<String> generatedSourceNames = new HashSet<>();
     Set<Path> generatedOutputPaths = new HashSet<>();
-    List<Path> existingPaths = new ArrayList<>();
 
     generatedSourceNames.add(LAUNCHER_FILE_NAME);
-    addGeneratedOutputPath(generatedOutputPaths, new File(javaSrcDirectory, LAUNCHER_FILE_NAME), sourceRoot);
+    addGeneratedOutputPath(generatedOutputPaths, new File(sourceRootDirectory, LAUNCHER_FILE_NAME), sourceRoot);
 
     if (resourcesTypeWrapper != null) {
       for (org.lgna.common.Resource resource : resources) {
         addGeneratedOutputPath(
             generatedOutputPaths,
-            new File(javaSrcDirectory, resourcesTypeWrapper.getResourcePathForResource(resource)),
+            new File(sourceRootDirectory, resourcesTypeWrapper.getResourcePathForResource(resource)),
             sourceRoot);
       }
     }
 
     for (NamedUserType type : namedUserTypes) {
-      File file = getJavaSourceFileForType(javaSrcDirectory, type);
+      File file = getJavaSourceFileForType(sourceRootDirectory, sourceRoot, type);
       if (!generatedSourceNames.add(file.getName())) {
         throw new IOException("Duplicate generated Java source file: " + file.getName());
       }
@@ -219,11 +219,8 @@ public class ProjectCodeGenerator {
 
     for (Path generatedOutputPath : generatedOutputPaths) {
       if (generatedOutputPath.toFile().exists()) {
-        existingPaths.add(generatedOutputPath);
+        throw new IOException("Generated destination already exists: " + generatedOutputPath);
       }
-    }
-    if (!existingPaths.isEmpty()) {
-      throw new IOException("Generated destination already exists: " + existingPaths.get(0));
     }
   }
 
@@ -250,13 +247,12 @@ public class ProjectCodeGenerator {
     }
   }
 
-  private static File getJavaSourceFileForType(File javaSrcDirectory, NamedUserType type) throws IOException {
+  private static File getJavaSourceFileForType(File sourceRootDirectory, Path sourceRoot, NamedUserType type) throws IOException {
     String typeName = type.getName();
     validateJavaIdentifier(typeName, "Unsafe Alice type name for Java source generation");
 
-    File sourceRoot = javaSrcDirectory.getCanonicalFile();
-    File file = new File(sourceRoot, typeName + ".java").getCanonicalFile();
-    if (!file.toPath().startsWith(sourceRoot.toPath())) {
+    File file = new File(sourceRootDirectory, typeName + ".java").getCanonicalFile();
+    if (!file.toPath().startsWith(sourceRoot)) {
       throw new IOException("Generated Java source path escapes source directory: " + file);
     }
     return file;
@@ -546,24 +542,54 @@ public class AliceJavaFXLauncher extends Application {
     }
 
     private static String escapeJson(String value) {
-        StringBuilder builder = new StringBuilder(value.length());
+        StringBuilder builder = null;
         for (int i = 0; i < value.length(); i++) {
             char ch = value.charAt(i);
-            if ((ch == (char) 34) || (ch == (char) 92)) {
-                builder.append((char) 92).append(ch);
+            if ((ch != (char) 34) && (ch != (char) 92) && (ch >= (char) 32)) {
+                if (builder != null) {
+                    builder.append(ch);
+                }
             } else {
-                builder.append(ch);
+                if (builder == null) {
+                    builder = new StringBuilder(value.length() + 8);
+                    builder.append(value, 0, i);
+                }
+                appendEscapedJsonCharacter(builder, ch);
             }
         }
-        return builder.toString();
+        return builder == null ? value : builder.toString();
+    }
+
+    private static void appendEscapedJsonCharacter(StringBuilder builder, char ch) {
+        if ((ch == (char) 34) || (ch == (char) 92)) {
+            builder.append((char) 92).append(ch);
+        } else if (ch == (char) 8) {
+            builder.append((char) 92).append('b');
+        } else if (ch == (char) 9) {
+            builder.append((char) 92).append('t');
+        } else if (ch == (char) 10) {
+            builder.append((char) 92).append('n');
+        } else if (ch == (char) 12) {
+            builder.append((char) 92).append('f');
+        } else if (ch == (char) 13) {
+            builder.append((char) 92).append('r');
+        } else {
+            builder.append((char) 92).append('u');
+            String hex = Integer.toHexString(ch);
+            for (int padding = hex.length(); padding < 4; padding++) {
+                builder.append('0');
+            }
+            builder.append(hex);
+        }
     }
 
     private static boolean isPixelObservationUnsupportedFailure(Throwable throwable) {
         for (Throwable current = throwable; current != null; current = current.getCause()) {
+            String className = current.getClass().getName();
             if ((current instanceof UnsupportedOperationException)
-                    || "java.awt.HeadlessException".equals(current.getClass().getName())
-                    || "java.lang.NoClassDefFoundError".equals(current.getClass().getName())
-                    || "java.lang.NoSuchMethodError".equals(current.getClass().getName())) {
+                    || "java.awt.HeadlessException".equals(className)
+                    || "java.lang.NoClassDefFoundError".equals(className)
+                    || "java.lang.NoSuchMethodError".equals(className)) {
                 return true;
             }
             String message = current.getMessage();
@@ -571,9 +597,7 @@ public class AliceJavaFXLauncher extends Application {
                 String normalized = message.toLowerCase(java.util.Locale.ROOT);
                 if (normalized.contains("robot")
                         || normalized.contains("screen capture")
-                        || normalized.contains("unable to open display")
-                        || normalized.contains("no display")
-                        || normalized.contains("headless")) {
+                        || isDisplayUnavailableNormalizedMessage(normalized)) {
                     return true;
                 }
             }
@@ -595,7 +619,8 @@ public class AliceJavaFXLauncher extends Application {
                     && isDisplayUnavailableMessage(current.getMessage())) {
                 return true;
             }
-            if ("java.awt.HeadlessException".equals(current.getClass().getName())) {
+            String className = current.getClass().getName();
+            if ("java.awt.HeadlessException".equals(className)) {
                 return true;
             }
         }
@@ -608,7 +633,8 @@ public class AliceJavaFXLauncher extends Application {
                     && isRenderTargetUnavailableMessage(current.getMessage())) {
                 return true;
             }
-            if ("java.awt.HeadlessException".equals(current.getClass().getName())) {
+            String className = current.getClass().getName();
+            if ("java.awt.HeadlessException".equals(className)) {
                 return true;
             }
         }
@@ -621,14 +647,17 @@ public class AliceJavaFXLauncher extends Application {
         }
         String normalized = message.toLowerCase(java.util.Locale.ROOT);
         return normalized.contains("render target")
-            || isDisplayUnavailableMessage(message);
+            || isDisplayUnavailableNormalizedMessage(normalized);
     }
 
     private static boolean isDisplayUnavailableMessage(String message) {
         if (message == null) {
             return false;
         }
-        String normalized = message.toLowerCase(java.util.Locale.ROOT);
+        return isDisplayUnavailableNormalizedMessage(message.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static boolean isDisplayUnavailableNormalizedMessage(String normalized) {
         return normalized.contains("unable to open display")
             || normalized.contains("no display")
             || normalized.contains("headless");

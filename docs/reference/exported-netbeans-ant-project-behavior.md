@@ -5,14 +5,15 @@ covers generated-project launcher evidence, the bounded no-Sims Ant build proof
 for generated NetBeans projects, the Ant `run` metadata used by exported
 projects, and the generated
 `AliceJavaFXLauncher` evidence boundary used to prove JavaFX launcher handoff,
-stage validation and minimal scene setup, and deterministic display-unavailable
-no-go behavior.
+stage validation, launcher-owned marker observation, and deterministic no-go
+behavior.
 
 The launcher evidence proves only what the exported project can observe
 deterministically: JavaFX launch handoff, `Application.start(...)` entry, primary
-stage receipt, minimal scene configuration, and `Program.main(...)` delegation.
-It is not rendering evidence, window visibility evidence, media-loading
-evidence, or proof of a completed user workflow.
+stage receipt, launcher marker-scene setup, marker-pixel observation when
+available, and `Program.main(...)` delegation. It is not Alice-world rendering
+evidence, window visibility evidence, media-loading evidence, or proof of a
+completed user workflow.
 
 Implementation status: the wired outside-in scenario
 `alice-desktop-exported-project-smoke` uses workflow
@@ -26,12 +27,15 @@ pixels, or visible window behavior.
 - [Scope](#scope)
 - [User-visible behavior](#user-visible-behavior)
 - [Launcher evidence contract](#launcher-evidence-contract)
-- [Headless and display-unavailable contract](#headless-and-display-unavailable-contract)
+- [Render-observation contract](#render-observation-contract)
+- [Headless and no-go contract](#headless-and-no-go-contract)
 - [Configuration](#configuration)
 - [Executable characterization](#executable-characterization)
 - [Exported Ant build proof contract](#exported-ant-build-proof-contract)
 - [API reference](#api-reference)
 - [Validation commands](#validation-commands)
+- [Review checklist: exported launcher evidence](#review-checklist-exported-launcher-evidence)
+- [Review checklist: exported Ant runtime metadata](#review-checklist-exported-ant-runtime-metadata)
 - [Tutorial: verify exported launcher evidence](#tutorial-verify-exported-launcher-evidence)
 - [Tutorial: verify target exported Ant build evidence](#tutorial-verify-target-exported-ant-build-evidence)
 - [Recovery finalization](#recovery-finalization)
@@ -40,18 +44,20 @@ pixels, or visible window behavior.
 
 ## Scope
 
-The exported project behavior is generated from two NetBeans-owned surfaces:
+The exported project behavior is generated from these NetBeans-owned surfaces:
 
 ```text
 netbeans/src/main/java/org/alice/netbeans/project/ProjectCodeGenerator.java
 netbeans/src/main/resources/ProjectTemplate/
 ```
 
-The focused characterization coverage belongs beside the NetBeans export tests:
+The focused characterization coverage lives beside the NetBeans export tests:
 
 ```text
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorTest.java
+netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorGeneratedSourceTest.java
 netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandaloneProjectTest.java
+netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStoryApiGeneratedSourceTest.java
 netbeans/src/test/java/org/alice/netbeans/project/Alice3ProjectTemplateAntSmokeTest.java
 ```
 
@@ -67,151 +73,173 @@ the exported project:
 3. Uses JavaFX `Application.launch(args)` as the launcher handoff point.
 4. Enters `Application.start(Stage)` when the JavaFX runtime can create a stage.
 5. Rejects a missing stage with a deterministic no-go marker.
-6. Configures a minimal JavaFX scene before delegating to
+6. Configures a launcher-owned 64-by-64 marker scene before delegating to
    `Program.main(startingArgs)` using the existing background-thread pattern.
-7. Emits stable evidence markers that do not expose project paths, command-line
+7. Attempts `Stage.show()` and records whether a render target and marker pixel
+   could be observed.
+8. Emits stable evidence markers that do not expose project paths, command-line
    arguments, environment variables, user names, or exception details.
-8. Converts only known JavaFX display-unavailable failures from the
+9. Converts only known JavaFX display-unavailable failures from the
    `Application.launch(args)` handoff into deterministic no-go markers while
    rethrowing unexpected failures.
-9. Preserves exported Ant runtime metadata such as assertions, Alice runtime
+10. Preserves exported Ant runtime metadata such as assertions, Alice runtime
    system properties, library interpolation, and nonzero Java failure handling.
-10. Executes the real generated NetBeans Ant `jar`, `run`, `run-test-with-main`,
+11. Executes the real generated NetBeans Ant `jar`, `run`, `run-test-with-main`,
     and `clean` targets against a synthetic exported project.
-11. Produces concrete build output under the exported project, including compiled
+12. Produces concrete build output under the exported project, including compiled
     classes and a distributable jar with the expected generated entries and
     manifest main class.
-12. Packages generated project resources into the jar and proves the Ant `run`
+13. Packages generated project resources into the jar and proves the Ant `run`
     classpath can load them.
 
-This is a behavior-level exported-project contract. It intentionally goes beyond
-generated source text, classpath presence, or merely reaching `Program.main(...)`,
-but it still stops at the scene/setup boundary unless separate display-backed
-evidence is collected.
+This is a behavior-level exported-project contract. Marker-pixel observation is
+launcher-owned evidence that a tiny synthetic JavaFX scene was shown and sampled.
+It is not proof that an Alice world rendered correctly, that media loaded, or
+that a complete desktop workflow ran.
 
 ## User-visible behavior
 
-An exported Alice project is a standard NetBeans Ant Java project. The project
-template supplies `build.xml`, `nbproject/build-impl.xml`,
-`nbproject/project.xml`, `nbproject/project.properties`, and `manifest.mf`.
+An exported Alice project is a standard NetBeans Ant Java project. The template
+supplies:
 
-For normal exported projects, the default entry point is:
+```text
+build.xml
+manifest.mf
+nbproject/build-impl.xml
+nbproject/project.properties
+nbproject/project.xml
+```
+
+For exported projects, the default entry point is:
 
 ```properties
 main.class = AliceJavaFXLauncher
 ```
 
-Running the exported project launches `AliceJavaFXLauncher`. The launcher first
-hands control to the JavaFX runtime. When the runtime provides a non-null primary
-stage, the launcher configures a minimal scene and delegates the exported Alice
-program entry point to `Program.main(startingArgs)` using the existing
-background-thread delegation pattern. The handoff thread is named
-`AliceJavaFXLauncher-ProgramMain` so launcher/runtime smoke tests can
-distinguish clean launcher delegation from direct `Program.main(...)` execution
-without claiming rendering or window visibility.
-
-In a headless or display-unavailable environment, the launcher reports a
-deterministic no-go result instead of reporting success merely because the
-launcher process started. A no-go result means the exported launcher reached a
-known boundary where UI display evidence cannot be proven in the current
-environment.
-
-## Launcher evidence contract
-
-`AliceJavaFXLauncher` writes stable markers to standard output. These markers are
-for tests, exported-project smoke logs, and PR review artifacts. They are not a
-public application protocol and should not be localized.
-
-All successful evidence lines start with:
-
-```text
-ALICE_LAUNCHER_EVIDENCE
-```
-
-All deterministic no-go lines start with:
-
-```text
-ALICE_LAUNCHER_NO_GO
-```
-
-The generated launcher emits the following evidence in order when JavaFX can
-enter `Application.start(...)`:
-
-| Evidence marker | Meaning |
-| --- | --- |
-| `ALICE_LAUNCHER_EVIDENCE main-entered` | The generated launcher `main(String[] args)` was invoked. |
-| `ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted` | The launcher called `Application.launch(args)` and handed control to JavaFX startup. |
-| `ALICE_LAUNCHER_EVIDENCE javafx-application-started` | JavaFX invoked `Application.start(Stage)`. |
-| `ALICE_LAUNCHER_EVIDENCE stage-received` | `Application.start(...)` received a non-null primary stage. |
-| `ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted` | The launcher configured a minimal `Scene` on the primary stage. This is scene/setup evidence only. |
-| `ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted` | The launcher delegated to `Program.main(startingArgs)` using the existing background-thread pattern. This is delegation evidence only. |
-
-The generated launcher must not emit a success marker that says or implies a
-window was shown, the UI was visible, graphics were rendered, media loaded, or a
-desktop workflow completed. Those claims require separate observable evidence.
-
-### Minimal scene setup
-
-The generated launcher creates only the minimal JavaFX objects needed to prove
-the scene/setup boundary:
-
-```java
-primaryStage.setScene(new Scene(new Group()));
-```
-
-This setup is intentionally local and resource-free. It does not load project
-media, read files, open URLs, parse command-line arguments, or show a stage as
-part of the required evidence path.
-
-### Program delegation
-
-The generated launcher preserves the exported project entry-point behavior:
+Running the exported project invokes `AliceJavaFXLauncher`. The launcher stores
+the starting arguments, emits deterministic evidence markers, hands control to
+JavaFX startup, validates the primary stage, installs the launcher-owned
+observation scene, attempts to show the stage, samples the marker pixel when
+screen capture is available, and only then delegates to:
 
 ```java
 Program.main(startingArgs);
 ```
 
-The launcher stores the original command-line arguments for delegation, but it
-never prints them. Evidence output must remain constant so logs do not leak
-workspace paths, user names, launch arguments, or environment-specific details.
-
-The delegation must preserve the current exported Alice runtime pattern: after
-stage validation and minimal scene setup succeed, `Program.main(startingArgs)`
-runs on the existing background thread rather than synchronously inside
-`Application.start(...)`.
-
-Reaching `Program.main(...)` is not enough to prove scene setup. Scene/setup
-evidence and Program delegation evidence are separate markers and should be
-reviewed separately.
-
-## Headless and display-unavailable contract
-
-Headless or display-unavailable execution must produce a deterministic no-go
-result. A no-go result is not launcher success; it is a classified boundary that
-explains why UI display evidence cannot be proven in the current environment.
-
-Known JavaFX initialization failures from the `Application.launch(args)` handoff
-caused by a missing or unusable display are reported with:
+Program delegation runs on a background thread named:
 
 ```text
-ALICE_LAUNCHER_NO_GO display-unavailable
+AliceJavaFXLauncher-ProgramMain
 ```
 
-If JavaFX calls `Application.start(...)` with a null stage, the launcher reports:
+The launcher never prints the starting arguments. Evidence output must remain
+constant across local worktrees and CI environments.
+
+## Launcher evidence contract
+
+`AliceJavaFXLauncher` writes stable markers to standard output. These markers are
+for tests, exported-project smoke logs, and PR review artifacts. They are not a
+localized end-user protocol.
+
+| Prefix | Meaning |
+| --- | --- |
+| `ALICE_LAUNCHER_EVIDENCE` | Positive launcher evidence for a bounded handoff or setup step. |
+| `ALICE_LAUNCHER_NO_GO` | Deterministic boundary where the launcher cannot safely proceed. |
+| `ALICE_LAUNCHER_RENDER_OBSERVATION` | JSON record describing launcher-owned render-target and marker-pixel observation. |
+
+When JavaFX can start, a stage is available, the observation scene is shown, and
+the marker pixel is sampled successfully, evidence appears in this order:
 
 ```text
-ALICE_LAUNCHER_NO_GO primary-stage-unavailable
+ALICE_LAUNCHER_EVIDENCE main-entered
+ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted
+ALICE_LAUNCHER_EVIDENCE javafx-application-started
+ALICE_LAUNCHER_EVIDENCE stage-received
+ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker
+ALICE_LAUNCHER_EVIDENCE stage-show-attempted
+ALICE_LAUNCHER_RENDER_OBSERVATION {"schema_version":"alice.launcher.render-observation/v1",...}
+ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker
+ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted
 ```
+
+The final delegation marker intentionally says `rendering-not-asserted`. The
+launcher has proven only its own marker observation and delegation gate. It has
+not asserted Alice world rendering correctness.
+
+The generated launcher must not emit success text that says or implies the Alice
+world was rendered correctly, a user-visible workflow completed, Save completed,
+grading ran, or a lesson was completed.
+
+## Render-observation contract
+
+The generated launcher creates a small JavaFX scene owned entirely by the
+launcher:
+
+```java
+Group root = new Group(new Rectangle(64.0, 64.0, OBSERVATION_MARKER_COLOR));
+return new Scene(root, 64.0, 64.0, OBSERVATION_MARKER_COLOR);
+```
+
+The marker color is `Color.rgb(32, 96, 160)`. The launcher samples a fixed point
+inside the shown scene using `javafx.scene.robot.Robot`. The render-observation
+record uses schema:
+
+```text
+alice.launcher.render-observation/v1
+```
+
+The JSON fields are:
+
+| Field | Meaning |
+| --- | --- |
+| `schema_version` | Stable schema string: `alice.launcher.render-observation/v1`. |
+| `status` | Observation status such as `shown-target-pixel-observed`, `render-target-absent`, `pixel-observation-unavailable`, `pixel-observation-unsupported`, or `pixel-observation-mismatch`. |
+| `renderTargetShowing` | Whether the launcher observed a shown render target before pixel sampling. |
+| `pixelsObserved` | Whether the sampled pixel matched the launcher marker color. |
+| `missingObservationMechanism` | Stable reason code when observation cannot be completed. |
+| `detail` | Human-readable detail without host paths, arguments, user names, or stack traces. |
+
+String fields in the render-observation JSON, including `detail`, must escape
+quotes, backslashes, and JSON control characters. For example, a JavaFX Robot
+failure detail that contains `"`, `\`, or a newline is emitted with `\"`, `\\`,
+and `\n` escapes inside the JSON string, not as raw control characters.
+
+Accepted marker observation is:
+
+```text
+"status":"shown-target-pixel-observed"
+"renderTargetShowing":true
+"pixelsObserved":true
+"missingObservationMechanism":"none"
+```
+
+That result proves the launcher showed and sampled its synthetic marker scene. It
+does not prove that Alice world content rendered, that project media loaded, or
+that any desktop workflow was visible to a user.
+
+## Headless and no-go contract
+
+A no-go result is not success. It is a classified boundary that prevents the
+launcher from reporting a stronger claim than the environment can support.
+
+| No-go marker or status | Meaning |
+| --- | --- |
+| `ALICE_LAUNCHER_NO_GO display-unavailable` | JavaFX launch failed before a stage or render target was available because the display was missing or unusable. |
+| `ALICE_LAUNCHER_NO_GO primary-stage-unavailable` | JavaFX invoked `start(...)` with a null primary stage. |
+| `ALICE_LAUNCHER_NO_GO render-target-unavailable` | The stage could not be shown or did not report `isShowing()`. |
+| `ALICE_LAUNCHER_NO_GO pixel-observation-unavailable` | A shown scene existed, but the launcher lacked enough window, scene, coordinate, or pixel data to sample the marker. |
+| `ALICE_LAUNCHER_NO_GO pixel-observation-unsupported` | `Robot` or screen capture was unavailable in the current runtime. |
+| `ALICE_LAUNCHER_NO_GO pixel-observation-mismatch` | A pixel was sampled, but it did not match the launcher marker color. |
 
 After a no-go marker, the launcher must not delegate to `Program.main(...)`.
-Tests should assert that no Program delegation marker is present in no-go cases.
+Tests should assert that no Program marker or Program delegation evidence appears
+in no-go cases.
 
-The display-unavailable classifier wraps only the `Application.launch(args)`
-handoff. It may convert known JavaFX display/headless initialization failures
-from that handoff into `ALICE_LAUNCHER_NO_GO display-unavailable`. It must not
-convert unexpected failures from `Application.start(...)`, minimal scene setup,
-or `Program.main(...)` into no-go results; those failures are rethrown so real
-launcher bugs do not get hidden behind a success-shaped fallback.
+The display-unavailable classifier wraps only `Application.launch(args)` startup
+failures known to represent headless or missing-display conditions. Unexpected
+failures from `Application.start(...)`, scene setup, marker observation,
+`Program.main(...)`, or unrelated launch errors are rethrown so real launcher
+bugs do not become success-shaped fallbacks.
 
 ## Configuration
 
@@ -226,69 +254,81 @@ run.jvmargs = -ea -Djogamp.gluegen.UseTempJarCache=false -Dorg.alice.ide.rootDir
 ```
 
 The exported template does not vendor Alice runtime jars into each project.
-NetBeans or Ant user properties must provide the Alice library bindings:
+NetBeans or Ant user properties must provide Alice library bindings:
 
 ```properties
 libs.Alice3Library.classpath=/path/to/alice/runtime/jars
 libs.Alice3Library.src=/path/to/aliceSource.jar
 ```
 
-The launcher evidence contract does not require any new project property or user
-configuration. It is generated into `AliceJavaFXLauncher` for exported projects.
-
-Display-backed checks are optional. If a developer or CI job provides a usable
-display or Xvfb server, that job may add separate assertions or artifacts for
-display-backed behavior. Such checks must remain explicitly gated and must not
-replace the deterministic headless no-go contract.
+The launcher evidence contract does not require new project properties. It is
+generated into `AliceJavaFXLauncher` for exported projects.
 
 ## Executable characterization
 
-The launcher characterization is split across source-shape tests and compiled
-standalone exported-project tests.
-
 ### Source-shape characterization
 
-`ProjectCodeGeneratorTest` verifies the generated `AliceJavaFXLauncher` source
-contract. It asserts that the generated source contains:
+`ProjectCodeGeneratorTest` verifies the generated launcher source contains:
 
 | Source requirement | Why it matters |
 | --- | --- |
-| Stable `ALICE_LAUNCHER_EVIDENCE` helpers | Keeps evidence markers deterministic and reviewable. |
-| Stable `ALICE_LAUNCHER_NO_GO` helpers | Keeps headless/display-unavailable results distinct from success. |
-| `Application.launch(args)` | Proves the generated launcher hands off to the JavaFX runtime. |
-| `Application.start(Stage)` evidence | Proves the launcher documents JavaFX runtime entry separately from Program delegation. |
-| Null-stage validation | Prevents a missing stage from looking like launcher success. |
-| `primaryStage.setScene(...)` | Proves scene/setup boundary evidence exists before Program delegation. |
-| `Program.main(startingArgs)` | Preserves the exported Alice program entry-point behavior and existing background-thread delegation pattern. |
-| No success wording for visible UI or rendering | Prevents generated logs from overclaiming what the launcher proves. |
+| `AliceJavaFXLauncher` extending `Application` | Preserves the exported default launcher shape. |
+| `Application.launch(args)` | Proves JavaFX startup is the handoff point. |
+| `Program.main(startingArgs)` | Preserves exported Alice program delegation. |
+| `ALICE_LAUNCHER_EVIDENCE` and `ALICE_LAUNCHER_NO_GO` helpers | Keeps success and no-go markers distinct. |
+| `ALICE_LAUNCHER_RENDER_OBSERVATION` JSON helper | Gives reviewable marker-observation evidence. |
+| Observation marker scene and `Robot` sampling code | Protects the launcher-owned marker-pixel gate. |
+| No success wording for world rendering correctness | Prevents overclaiming from generated logs. |
 
-These tests also preserve the current characterization that the old proof level
-was only JavaFX `Application.start(...)` entry followed by
-`Program.main(...)` delegation. That historical characterization prevents future
-reviews from treating previous `Program.main(...)` reachability as rendering or
-visibility proof.
+The same class also compiles and executes generated launcher source with
+test-owned JavaFX stubs so marker-observation success, unsupported pixel
+observation, render-observation JSON escaping, pixel mismatch, and
+starting-argument delegation remain characterized.
+
+### Generated source compileability
+
+`ProjectCodeGeneratorGeneratedSourceTest` and
+`ProjectCodeGeneratorStoryApiGeneratedSourceTest` generate temporary Alice
+project source, assert selected generated snippets, and compile generated Java.
+They protect project source shape for user methods, control flow, Story API
+calls, listener registrations, and generated listener payload seams.
 
 ### Standalone exported-project characterization
 
-`ProjectCodeGeneratorStandaloneProjectTest` compiles and runs generated exported
-project source with test-owned JavaFX stubs and minimal Alice program fixtures.
-It verifies:
+`ProjectCodeGeneratorStandaloneProjectTest` compiles generated exported-project
+source with test-owned JavaFX stubs and minimal Alice program fixtures. It
+verifies:
 
 1. JavaFX launch handoff evidence is printed before JavaFX startup.
 2. The JavaFX stub can invoke `Application.start(...)`.
-3. A non-null stub stage receives minimal scene setup.
-4. Program delegation evidence appears only after scene setup evidence.
-5. The generated launcher still calls `Program.main(startingArgs)` using the
-   existing background-thread delegation pattern.
-6. A null-stage stub produces `ALICE_LAUNCHER_NO_GO primary-stage-unavailable`.
-7. Null-stage no-go execution does not delegate to `Program.main(...)`.
+3. A non-null stub stage receives the launcher observation scene.
+4. `Stage.show()` is attempted before marker-pixel observation.
+5. Program delegation evidence appears only after marker observation succeeds.
+6. Program delegation uses the `AliceJavaFXLauncher-ProgramMain` thread.
+7. Display-unavailable, null-stage, render-target-unavailable, unsupported
+   pixel-observation, and mismatch paths do not run `Program.main(...)`.
+8. Template-packaged launcher jars keep `AliceJavaFXLauncher` as the manifest
+   main class.
 
-The standalone test may also execute the generated launcher against real JavaFX
-in the local environment. When JavaFX cannot initialize a display, the expected
-result is the deterministic display-unavailable no-go marker. When a usable
-display is present, the test may assert JavaFX handoff and scene/setup evidence;
-it must not claim rendered output unless it captures a display-backed observable
-artifact.
+The standalone test may run against real JavaFX modules. In a headless
+environment, accepted evidence is a deterministic display-unavailable boundary.
+When `xvfb-run` is available, a gated path can prove the launcher-owned marker
+observation and Program delegation under Xvfb. Neither path proves Alice world
+rendering correctness.
+
+### Exported Ant runtime metadata characterization
+
+`Alice3ProjectTemplateAntSmokeTest` exercises the packaged NetBeans Ant template
+with synthetic Alice projects and local library bindings. It verifies exported
+project compile, jar, run, resource packaging, test-main, clean, wizard export,
+and runtime metadata behavior without requiring Sims or LFS payloads.
+
+For the runtime configuration boundary, the focused smoke overrides
+`main.class` with a probe and verifies that the exported Ant `run` target passes
+assertions, Alice system properties, interpolated Alice library paths, and the
+expected classpath to the launched JVM. That smoke stops at Ant/JVM metadata; it
+does not prove JavaFX `Application.start(...)`, launcher marker observation,
+Program delegation, or Alice world rendering.
 
 ## Exported Ant build proof contract
 
@@ -353,9 +393,10 @@ exported NetBeans/Ant project contract and generated launcher behavior:
 
 | Surface | Contract |
 | --- | --- |
-| `AliceJavaFXLauncher` | Generated default exported-project main class. Emits evidence/no-go markers, hands off to JavaFX, validates the stage, configures a minimal scene, and delegates to `Program.main(...)` on the existing background thread only after scene setup succeeds. |
+| `AliceJavaFXLauncher` | Generated default exported-project main class. Emits evidence, render-observation, and no-go markers; hands off to JavaFX; validates the stage; configures a launcher-owned marker scene; samples the marker pixel; and delegates to `Program.main(...)` only after the marker gate succeeds. |
 | `ALICE_LAUNCHER_EVIDENCE` | Stable prefix for positive launcher evidence. |
 | `ALICE_LAUNCHER_NO_GO` | Stable prefix for deterministic no-go boundaries. |
+| `ALICE_LAUNCHER_RENDER_OBSERVATION` | Stable prefix for launcher-owned marker observation JSON. |
 | `ProjectTemplate.zip` | Contains the NetBeans Ant project files used for exported Alice Java projects. |
 | `nbproject/project.properties` | Owns `main.class`, `javac.classpath`, `run.classpath`, `run.jvmargs`, and Java release settings. |
 | `libs.Alice3Library.classpath` | External Ant/NetBeans library binding for Alice runtime jars. |
@@ -379,21 +420,22 @@ git submodule update --init tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-Run the focused launcher generation and standalone exported-project checks:
+Run the focused NetBeans generator characterization:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
-  -pl netbeans -am \
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -pl netbeans -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
-  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest,org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest \
+  -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorTest,org.alice.netbeans.project.ProjectCodeGeneratorGeneratedSourceTest,org.alice.netbeans.project.ProjectCodeGeneratorStandaloneProjectTest,org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest \
   test
 ```
 
 Command for the exported-project Ant build proof:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -pl netbeans -am \
@@ -435,17 +477,14 @@ git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
 ```
 
-The `alice-ide` focused tests are required only when `EntryPoint` or desktop
-headless guard behavior changes.
+## Review checklist: exported launcher evidence
 
-## Tutorial: verify exported launcher evidence
+Use this checklist when reviewing a change to `ProjectCodeGenerator.java` or to
+the generated `AliceJavaFXLauncher` contract.
 
-Use this flow when reviewing a change to `ProjectCodeGenerator.java` or to the
-generated `AliceJavaFXLauncher` contract.
+### 1. Inspect the generated launcher
 
-### Step 1: Generate or inspect an exported project
-
-Open the generated source for the exported project and find:
+Open the generated source for an exported project and find:
 
 ```text
 AliceJavaFXLauncher.java
@@ -454,54 +493,63 @@ AliceJavaFXLauncher.java
 Confirm the launcher uses `Application.launch(args)` in `main(String[] args)`.
 Do not accept a launcher that calls `Program.main(...)` directly from `main`.
 
-### Step 2: Check the evidence markers
+### 2. Check stable markers
 
-The generated launcher should contain the stable prefixes:
+The generated launcher should contain:
 
 ```text
 ALICE_LAUNCHER_EVIDENCE
 ALICE_LAUNCHER_NO_GO
+ALICE_LAUNCHER_RENDER_OBSERVATION
 ```
 
-The success path should distinguish JavaFX startup, stage receipt, scene setup,
-and Program delegation. The no-go path should be clearly separate from success.
+The success path should distinguish JavaFX startup, stage receipt, marker scene
+configuration, stage show attempt, marker-pixel observation, and Program
+delegation. The no-go path should be clearly separate from success.
 
-### Step 3: Interpret a headless run
+### 3. Interpret a display-unavailable run
 
 In an environment without a usable display, a launcher run can produce:
 
 ```text
 ALICE_LAUNCHER_EVIDENCE main-entered
 ALICE_LAUNCHER_EVIDENCE javafx-launch-attempted
+ALICE_LAUNCHER_RENDER_OBSERVATION {"schema_version":"alice.launcher.render-observation/v1","status":"render-target-absent",...}
 ALICE_LAUNCHER_NO_GO display-unavailable
 ```
 
-This is the expected deterministic no-go result for a display-unavailable
-environment. It proves that the launcher attempted JavaFX handoff and that UI
-display evidence cannot be proven there. It does not prove scene setup or Program
-delegation.
+This proves only that the launcher attempted JavaFX handoff and stopped at a
+classified missing-display boundary. It does not prove marker-pixel observation,
+scene setup, Program delegation, or Alice world rendering.
 
-### Step 4: Interpret a JavaFX-started run
+### 4. Interpret a marker-observed run
 
-When JavaFX invokes `Application.start(...)` with a primary stage, the evidence
-should include:
+When JavaFX starts, a stage is shown, and the marker pixel is sampled, the
+evidence includes:
 
 ```text
 ALICE_LAUNCHER_EVIDENCE javafx-application-started
 ALICE_LAUNCHER_EVIDENCE stage-received
-ALICE_LAUNCHER_EVIDENCE scene-configured rendering-not-asserted
+ALICE_LAUNCHER_EVIDENCE scene-configured observation-marker
+ALICE_LAUNCHER_EVIDENCE stage-show-attempted
+ALICE_LAUNCHER_RENDER_OBSERVATION {"schema_version":"alice.launcher.render-observation/v1","status":"shown-target-pixel-observed",...}
+ALICE_LAUNCHER_EVIDENCE pixels-observed shown-stage-marker
 ALICE_LAUNCHER_EVIDENCE program-main-delegated rendering-not-asserted
 ```
 
-This proves the JavaFX runtime called into the application, the launcher received
-a stage, the launcher configured a minimal scene, and the launcher delegated to
-the generated Alice program. It does not prove the scene was drawn to a display.
+This proves launcher-owned marker observation and Program delegation. It does
+not prove the generated Alice world rendered correctly.
 
-### Step 5: Keep display-backed evidence separate
+### 5. Keep stronger evidence separate
 
-If a review requires display-backed evidence, collect it in a separately gated
-Xvfb or real-display path and attach the observable artifact to the review. Do
-not rename the default launcher evidence to imply display-backed behavior.
+If a review requires UI automation, full world execution, visible rendering
+correctness, Save completion, grading, or lesson-completion evidence, collect it
+in a separate explicitly gated lane with its own observable artifacts. Do not
+rename the default launcher evidence to imply those broader behaviors.
+
+## Review checklist: exported Ant runtime metadata
+
+Use this checklist when reviewing or extending exported-project Ant behavior.
 
 ## Tutorial: verify target exported Ant build evidence
 
@@ -509,7 +557,7 @@ Use this flow when reviewing the wired exported-project Ant behavior. The
 current outside-in smoke runs `Alice3ProjectTemplateAntSmokeTest` when the gated
 command is intentionally enabled.
 
-### Step 1: Start from a no-Sims checkout
+### 1. Start from a no-Sims checkout
 
 From the repository root:
 
@@ -519,14 +567,15 @@ test -d tweedle-lang/Grammar
 ```
 
 Do not pull Git LFS files or Sims/nonfree payloads for this smoke. The
-characterization generates a synthetic Alice project and local Ant fixtures.
+characterization generates synthetic Alice projects and local fixtures.
 
 ### Step 2: Run the target focused Ant build smoke
 
 Run:
 
 ```bash
-NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn -DincludeSims=false -Dinstall4j.skip \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -pl netbeans -am \
@@ -558,6 +607,10 @@ A passing Ant smoke is evidence that the generated NetBeans Ant project can
 compile generated Alice source, package a jar, run headless probes through the
 exported runtime classpath, load generated resources, and clean generated Ant
 outputs.
+
+Do not treat this smoke as evidence that the generated launcher reached JavaFX
+`Application.start(...)`, sampled its marker pixel, delegated to
+`Program.main(...)`, or rendered an Alice world.
 
 Treat a failed run as an executable blocker, not as partial success. The blocker
 must include the exact Maven command, the Ant target or prerequisite that failed,
@@ -601,28 +654,33 @@ gate is missing, stale, pending, failed, or SHA-mismatched, the handoff remains
 3. Prefer synthetic `.a3p` inputs and generated local fixtures.
 4. Keep `AliceJavaFXLauncher` as the exported default `main.class`.
 5. Preserve `Application.launch(args)` as the JavaFX runtime handoff.
-6. Preserve the `Program.main(startingArgs)` background-thread delegation
-   behavior after stage validation and minimal scene setup succeed.
-7. Validate the primary stage before scene setup or Program delegation.
-8. Keep no-go markers distinct from evidence markers.
-9. Classify only known JavaFX display/headless failures thrown by the
-   `Application.launch(args)` handoff as display-unavailable no-go.
-10. Rethrow unexpected failures from `Application.start(...)`, scene setup,
-    `Program.main(...)`, or the launch handoff.
-11. Preserve `run.jvmargs` behavior unless the replacement proves equivalent
+6. Validate the primary stage before scene setup, marker observation, or Program
+   delegation.
+7. Preserve the launcher-owned marker scene and marker-observation gate unless a
+   replacement proves at least the same bounded evidence.
+8. Preserve `Program.main(startingArgs)` background-thread delegation after the
+   marker gate succeeds.
+9. Keep no-go markers distinct from evidence markers.
+10. Classify only known JavaFX display/headless failures thrown by
+    `Application.launch(args)` as display-unavailable no-go.
+11. Rethrow unexpected failures from `Application.start(...)`, scene setup,
+    marker observation, `Program.main(...)`, or unrelated launch handoff errors.
+12. Preserve `run.jvmargs` behavior unless the replacement proves equivalent
     exported-project runtime behavior.
-12. Do not accept a nonzero Java launch as a passing Ant smoke.
-13. Document display and rendering limits honestly.
+13. Do not accept a nonzero Java launch as a passing Ant smoke.
+14. Document display, rendering, Save, grading, and lesson-completion limits
+    honestly.
 
 ## Limits
 
 The default exported launcher evidence targets the strongest behavior that is
-deterministic in local no-Sims validation: JavaFX runtime handoff, JavaFX
-`Application.start(...)` entry when available, primary stage receipt, minimal
-scene setup, Program delegation, and deterministic no-go classification when a
-display is unavailable.
+deterministic in focused no-Sims validation: JavaFX runtime handoff, JavaFX
+`Application.start(...)` entry when available, primary stage receipt,
+launcher-owned marker scene setup, stage-show attempt, marker-pixel observation
+or deterministic no-go classification, and Program delegation only after marker
+observation succeeds.
 
-The default evidence does not prove pixels were drawn, a window was shown to a
-user, media-heavy content loaded, or a desktop workflow completed. Those claims
-require outside-in desktop QA evidence, Xvfb or display-backed assertions,
-captured observable artifacts, or an explicit manual observation record.
+The default evidence does not prove Alice world pixels were correct, a full
+window workflow was automated, project media loaded, Save completed, grading ran,
+a broad Tweedle/player corpus decoded, or a first lesson completed. Those claims
+require separate outside-in evidence and explicit artifacts.

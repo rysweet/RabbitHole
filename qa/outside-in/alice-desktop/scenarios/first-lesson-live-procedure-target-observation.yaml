@@ -1,4 +1,5 @@
 id: alice-desktop-first-lesson-live-procedure-target-observation
+name: First-lesson live procedure target observation
 title: First-lesson live procedure target observation
 workflow: first-lesson-live-procedure-target-observation
 automationMode: xvfb-real-alice
@@ -70,3 +71,7 @@ tags:
   - first-lesson
   - procedure-target
   - observation-only
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

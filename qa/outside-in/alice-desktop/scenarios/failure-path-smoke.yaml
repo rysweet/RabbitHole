@@ -1,4 +1,5 @@
 id: alice-desktop-failure-path-smoke
+name: Project load failure path smoke
 title: Project load failure path smoke
 workflow: failure-path-smoke
 automationMode: gated-command-smoke
@@ -44,3 +45,7 @@ tags:
   - immediate-qa-backlog
   - failure-path
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
