@@ -32,3 +32,7 @@ out/*
 .copilot/
 .claude/runtime/
 __pycache__/
+
+# Test log artifacts
+logs/
+qa/outside-in/alice-desktop/logs/

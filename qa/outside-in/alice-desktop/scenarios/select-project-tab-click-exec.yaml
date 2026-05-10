@@ -1,4 +1,5 @@
 id: alice-desktop-select-project-tab-click-exec
+name: Select and open Africa Full through Select Project with AT-SPI via exec:exec
 title: Select and open Africa Full through Select Project with AT-SPI via exec:exec
 workflow: select-project-tab-click-smoke
 automationMode: xvfb-real-alice
@@ -66,3 +67,7 @@ supportingEvidence:
   - alice-desktop-select-project-atk-exec
   - alice-desktop-select-project-widget-introspection
   - alice-desktop-select-project-inventory
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

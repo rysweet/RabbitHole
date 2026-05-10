@@ -1,4 +1,5 @@
 id: alice-desktop-package-install-smoke
+name: Package and install smoke path
 title: Package and install smoke path
 workflow: package-install-smoke
 automationMode: gated-command-smoke
@@ -41,3 +42,7 @@ tags:
   - immediate-qa-backlog
   - package-install
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
