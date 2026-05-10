@@ -1,4 +1,5 @@
 id: alice-desktop-file-loader-smoke
+name: Direct saved and corrupt project loader smoke
 title: Direct saved and corrupt project loader smoke
 workflow: file-loader-smoke
 automationMode: gated-command-smoke
@@ -48,3 +49,7 @@ tags:
   - project-io
   - file-loader
   - command-smoke
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

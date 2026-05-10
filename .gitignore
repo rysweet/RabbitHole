@@ -33,3 +33,7 @@ out/*
 .claude/runtime/
 __pycache__/
 logs/
+
+# Test log artifacts
+logs/
+qa/outside-in/alice-desktop/logs/

@@ -11,6 +11,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 - [Scenario schema](#scenario-schema)
 - [Automation modes](#automation-modes)
 - [Evidence contract](#evidence-contract)
+- [Current-head evidence refresh](#current-head-evidence-refresh)
 - [Learner-world boundary](#learner-world-boundary)
 - [Workflow evidence requirements](#workflow-evidence-requirements)
 - [Scenario authoring rules](#scenario-authoring-rules)
@@ -29,6 +30,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `qa/outside-in/alice-desktop/runners/run-scenario.sh` | Scenario listing, validation, real launch execution, and manual checklist generation. |
 | `qa/outside-in/alice-desktop/runners/tab-click-probe.py` | AT-SPI Select Project tab and starter selection/opening probe for the target-specific Africa Full evidence path. |
 | `qa/outside-in/alice-desktop/runners/post-project-open-probe.py` | AT-SPI post-open main-window probe gated by prior target-specific Select Project opened evidence. |
+| `qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh` | Focused executable contract that validates bounded launch, run/runtime, and Select Project accessibility target discovery evidence and structured blockers. |
 | `qa/outside-in/alice-desktop/evidence/` | Local generated evidence. Contents are ignored by Git except `.gitignore`. |
 
 ## Scenario catalog
@@ -50,7 +52,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-save-load` | `save-load` | `manual-evidence-required` | Covers saving an `.a3p` project, reopening it, and checking persistence. |
 | `alice-desktop-open-load-save` | `open-load-save` | `manual-evidence-required` | Covers opening an existing `.a3p`, saving a copy, reopening it, and comparing visible state. |
 | `alice-desktop-export` | `export` | `manual-evidence-required` | Covers the current Alice export path and verification of the exported artifact. |
-| `alice-desktop-exported-project-smoke` | `exported-project-smoke` | `gated-command-smoke` | Covers generated Java project compile/launcher handoff evidence without running by default. |
+| `alice-desktop-exported-project-smoke` | `exported-project-ant-build-smoke` | `gated-command-smoke` | Bounded no-Sims exported Ant/NetBeans template build proof through `Alice3ProjectTemplateAntSmokeTest`; it covers Ant target execution and concrete build/JAR output only. |
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
 | `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
@@ -63,6 +65,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-tweedle-decoder-boundary-smoke` | `tweedle-decoder-boundary-smoke` | `gated-command-smoke` | Covers unsupported adjacent Tweedle method-call boundaries for the narrow decoder slice. |
 | `alice-desktop-tweedle-decoder-this-call-smoke` | `tweedle-decoder-this-call-smoke` | `gated-command-smoke` | Covers explicit same-type zero-argument `this.method()` decoder acceptance without claiming broader decode. |
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
+| `alice-desktop-silver-thread-launch-build-run` | `silver-thread-launch-build-run` | `gated-command-smoke` | Proves the core student journey headlessly: create→build→save→reopen→execute→verify round-trip plus real starter project load→inspect→copy→reopen through `SilverThreadLaunchBuildRunTest`. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
 | `alice-desktop-model-export-boundary-smoke` | `model-export-boundary-smoke` | `gated-command-smoke` | Covers model resource export boundary characterization: XML generation, enum naming, generated Java compilation, bounding-box metadata, and thumbnail handling. |
 
@@ -73,6 +76,15 @@ desktop edit action; it does not perform a desktop edit, Save, rendering
 correctness check, learner assessment, creative assessment, or full first-lesson
 completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
+
+The accessibility target discovery silver-thread contract is a focused shell
+contract over existing launch, run/debug, post-open runtime/display, and Select
+Project evidence paths. It validates target discovery signals, structured
+blockers, and bounded scope wording only; it does not launch Alice, add a new
+scenario workflow, or claim full UI automation, visual correctness, rendering
+correctness, world execution correctness, full world execution, or general
+accessibility compliance. See [Accessibility Target Discovery Silver-Thread
+Contract](./accessibility-target-discovery-silver-thread.md).
 
 ## Learner-world boundary
 
@@ -149,6 +161,7 @@ Run commands from the repository root.
 | `run-scenario.sh validate` | Validate the active catalog through the runner. | Delegates to `validate-scenarios.sh`. |
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
+| `gadugi-test validate scenarios/` | Validate all 30 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa list` | Install the QA wrapper from a branch and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa run <scenario-id-or-path>` | Install the QA wrapper from a branch and create evidence in the current checkout. | Delegates to `run-scenario.sh run`. |
@@ -244,6 +257,43 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-netbeans-p
 
 `--prepare-only` is the intentional preflight mode for gated command smokes. It writes `outcome=gated-not-run` evidence and returns success without executing the configured command.
 
+### Run the exported Ant project build smoke
+
+Use the checked-in exported-project smoke for bounded no-Sims exported
+Ant/NetBeans template build evidence. It is a gated Maven smoke, so it runs only
+when `ALICE_QA_RUN_GATED_SMOKES=1` is set:
+
+```bash
+git submodule update --init tweedle-lang
+test -d tweedle-lang/Grammar
+
+ALICE_QA_RUN_GATED_SMOKES=1 \
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-exported-project-smoke \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/exported-project-smoke
+```
+
+The scenario executes this focused Maven command:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn -DincludeSims=false -Dinstall4j.skip \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -pl netbeans -am \
+  -Dtest=org.alice.netbeans.project.Alice3ProjectTemplateAntSmokeTest \
+  test
+```
+
+Accept the scenario only as exported Ant project build evidence: `status.txt`
+must record a passed gated command and `command.log` must show
+`Alice3ProjectTemplateAntSmokeTest` completed with Ant `jar`, `run`,
+`run-test-with-main`, `clean`, generated classes, jar manifest, resource
+packaging, and probe marker evidence. If target execution cannot complete,
+preserve the failed `status.txt` and `command.log` as the blocker record,
+including the exact Maven command, failing Ant target or prerequisite, and
+missing condition.
+
 ### Run the Gadugi exported launcher evidence scenario
 
 The Gadugi scenario is stored outside the custom Alice scenario catalog because
@@ -261,10 +311,12 @@ NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
 ```
 
 The scenario prepares the `alice-desktop-exported-project-smoke` evidence lane
-through the existing outside-in runner. It validates launcher evidence wiring
-and JavaFX handoff/no-go checks only. It does not prove visible rendering, save
-behavior, grading, creative assessment, or full lesson completion. The default
-Gadugi path uses the underlying runner's `--prepare-only` mode;
+through the existing outside-in runner. The default Gadugi path uses
+`--prepare-only` and validates only delegated evidence wiring; it does not
+execute the exported Ant build proof. It does not prove visible rendering,
+installer behavior, save behavior, grading, creative assessment, or full lesson
+completion. The default Gadugi path uses the underlying runner's `--prepare-only`
+mode;
 `ALICE_QA_RUN_GATED_SMOKES=1` only applies when the underlying Alice runner is
 invoked without `--prepare-only`.
 
@@ -306,6 +358,7 @@ Example:
 
 ```yaml
 id: alice-desktop-save-load
+name: Save and load an Alice project
 title: Save and load an Alice project
 workflow: save-load
 automationMode: manual-evidence-required
@@ -338,6 +391,10 @@ fallback:
     - Manual evidence remains required until stable full GUI save and open automation exists.
 supportingEvidence:
   - alice-desktop-launch
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
 ```
 
 ### Required fields
@@ -359,6 +416,9 @@ supportingEvidence:
 
 | Field | Type | Description |
 | --- | --- | --- |
+| `name` | string | Human-readable scenario name for gadugi-test compatibility. Must equal `title`. Present on every scenario; required by `gadugi-test validate`. |
+| `steps` | string list | Gadugi-test step list. Currently `["validate"]` for all scenarios. |
+| `agents` | string list | Gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios. |
 | `automation.cwd` | string | Repository-relative working directory for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`; absolute paths, `..`, and realpath escapes outside the repository are rejected. |
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
 | `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke` except `save-menu-dialog-write-proof`, where workflow-level timeouts are invalid. |
@@ -377,7 +437,7 @@ The `save-menu-dialog-write-proof` workflow is the no-timeout exception. Its sce
 ```text
 archive-fixture-smoke
 export
-exported-project-smoke
+exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
@@ -401,6 +461,7 @@ select-project-atk-exec-smoke
 select-project-interaction-smoke
 select-project-tab-click-smoke
 select-project-widget-introspection-smoke
+silver-thread-launch-build-run
 tweedle-decoder-boundary-smoke
 tweedle-decoder-this-call-smoke
 wizard-palette-completion-smoke
@@ -467,8 +528,7 @@ Successful `xvfb-real-alice` evidence capture can include these common and scena
 | `post-project-open-observation.json` | Supporting project-open setup artifact recording `postOpenWindowObserved` before the runtime/display probe runs. |
 | `post-open-runtime-display-accessibility-evidence.json` | Post-open runtime/display accessibility evidence for `alice-desktop-post-open-runtime-display-accessibility-evidence`, or the exact blocker that prevents collecting that evidence. |
 | `controlled-display-pixel-observation.json` | Controlled-display screenshot-consistency artifact and target-readiness source for bounded world-canvas pixel sampling. |
-| `visible-rendering-pixel-sampling-blocker.json` | Fail-closed target-scoped sampling artifact. It records `renderedWorldPixelsObserved=false` and `visibleRenderingCorrectnessEstablished=false` with an exact target or sampler blocker. |
-| `visible-rendering-pixel-observation.json` | Bounded target-scoped raw pixel samples inside one validated Run-window/world-canvas target. It must keep `visibleRenderingCorrectnessEstablished=false`. |
+| `visible-rendering-pixel-observation.json` or `visible-rendering-pixel-sampling-blocker.json` | Final target-scoped sampling result for post-open runtime/display evidence. Observed runs write bounded raw pixel samples inside one validated Run-window/world-canvas target and keep `visibleRenderingCorrectnessEstablished=false`; blocked runs write the exact target or sampler blocker with `renderedWorldPixelsObserved=false`. |
 | `screenshot.png` or `screenshot.xwd` | Captured desktop image. |
 | `screenshot.log` | Screenshot command output. |
 
@@ -527,6 +587,37 @@ lines for learner-world grading, rubric scoring, correctness assessment, and
 creative assessment. Those capabilities remain manual/unsupported until that
 reviewed assessment contract and evidence mapping exist.
 
+## Current-head evidence refresh
+
+PR readiness and review evidence is current only when it is produced from the PR
+branch or PR ref after reconciliation with `origin/develop`. The reviewer records
+the PR head SHA, reconciled `HEAD`, `origin/develop` SHA, merge base, scenario
+ID, run directory, timestamp, and blocker or observation decision in review
+notes, PR text, or CI artifact metadata. The runner-emitted `environment.txt`
+currently records timestamp/repository/display/Java/Maven/OS details, not Git
+SHAs. Evidence from `develop`, from the pre-merge PR head, or from a different
+worktree is stale for the current review unless it is explicitly marked
+`superseded`.
+
+The current-head refresh workflow is:
+
+1. Fetch `origin/develop` and the PR ref.
+2. Check out the PR branch or PR ref.
+3. Merge `origin/develop` into that branch; do not rebase shared PR history for
+   this lane.
+4. Resolve all conflicts and verify no merge state, unmerged path, or conflict
+   marker remains.
+5. Validate the scenario catalog and focused contract checks.
+6. Run the target scenario when live prerequisites are available, or preserve the
+   exact blocked current-head artifact when they are not.
+7. Review only the final run directory for readiness claims.
+
+Generated current-head evidence remains local and ignored by Git unless a
+separate process publishes it as a CI artifact. Documentation and PR text may
+point to the run directory, contract checks, and blocker IDs, but they must keep
+claims bounded to observed runtime/display, controlled-display, target-ready, or
+raw target-scoped sampling signals.
+
 ## Workflow evidence requirements
 
 | Workflow | Required evidence |
@@ -547,7 +638,7 @@ reviewed assessment contract and evidence mapping exist.
 | Save/load | Save log or notes, saved `.a3p`, screenshot before saving, screenshot after reopening, comparison notes in `review-notes.txt`. |
 | Open/load/save | Open log or notes identifying the source `.a3p`, screenshot after first open, saved copy `.a3p`, screenshot after reopening the copy, comparison decision in `review-notes.txt`. |
 | Export | Export log or notes, screenshot before export, screenshot after export completion, exported artifact, file listing or checksum, `review-notes.txt`. |
-| Exported project smoke | `status.txt`, `command.log`, generated source or exported project listing, launcher handoff, compile evidence, or [exported Ant runtime metadata evidence](./exported-netbeans-ant-project-behavior.md) such as `ANT_RUNTIME_CONFIGURATION_PROBE_OK`. |
+| Exported project smoke | `status.txt`, `command.log`, and the focused no-Sims Maven command targeting `Alice3ProjectTemplateAntSmokeTest`; required evidence covers Ant `jar`, `run`, `run-test-with-main`, `clean`, generated classes, jar manifest and contents, resource packaging, probe markers, and no `Java Result:` line. It is not installer validation or full GUI export journey evidence. See [Exported NetBeans Ant Project Behavior](./exported-netbeans-ant-project-behavior.md). |
 | NetBeans package smoke | `status.txt`, `command.log`, NetBeans target artifact listing or CI artifact link, representative jar/zip content listing. |
 | Package/install smoke | `status.txt`, `command.log`, package or installer artifact listing, disposable install log or explicit not-produced note. |
 | Archive fixture smoke | `status.txt`, `command.log`, archive fixture path or generated fixture notes, and focused test output proving the fixture seam. |
@@ -575,6 +666,7 @@ Scenario files are the public acceptance contract for this lane. A valid scenari
 11. Avoids implementation details such as Java class names, internal package names, or assumptions about private UI objects.
 12. Keeps post-open runtime/display evidence narrow: do not use that scenario to claim full rendering correctness, full world execution, grading, lesson completion, deployed installer success, Save behavior, active Select Project behavior, or decoder behavior.
 13. Keeps learner-world setup narrow: do not use instructor/student setup evidence to claim learner-world grading, rubric scoring, correctness assessment, or creative assessment.
+14. Keeps accessibility target discovery evidence narrow: do not use launch, run/runtime, or Select Project target discovery markers to claim full UI automation, visual correctness, rendering correctness, world execution correctness, full world execution, or general accessibility compliance.
 
 ## Extension rules
 
@@ -591,4 +683,7 @@ When adding or changing scenarios:
 
 ```bash
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+cd qa/outside-in/alice-desktop && gadugi-test validate scenarios/
 ```
+
+9. Include `name`, `steps`, and `agents` in every new scenario. Set `name` equal to `title`, `steps` to `["validate"]`, and `agents` to `["alice-desktop-qa"]`. These fields satisfy `gadugi-test validate` while the repo-owned validator remains the primary structural check.

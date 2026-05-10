@@ -105,6 +105,45 @@ assert_status_file_blocked() {
   assert_contains "$path" "^runtimeDisplayAccessibilityBlocker=$blocker$" "status records exact runtime/display blocker $blocker"
 }
 
+assert_no_runtime_probe_overclaims() {
+  local artifact=$1
+  python3 - "$artifact" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+errors = []
+forbidden = (
+    "rendering correctness",
+    "world execution",
+    "lesson completion",
+    "grading",
+    "installer success",
+)
+
+
+def walk(value, key_path=()):
+    if key_path and key_path[-1] == "unsupportedClaims":
+        return
+    if isinstance(value, dict):
+        for key, child in value.items():
+            walk(child, key_path + (str(key),))
+    elif isinstance(value, list):
+        for child in value:
+            walk(child, key_path)
+    elif isinstance(value, str):
+        lowered = value.lower()
+        for phrase in forbidden:
+            if phrase in lowered:
+                errors.append(f"forbidden overclaim phrase outside unsupportedClaims: {phrase}")
+
+
+walk(payload)
+if errors:
+    raise AssertionError("\n".join(errors))
+PY
+}
+
 write_fake_pyatspi() {
   local fake_dir=$1
   mkdir -p "$fake_dir"
@@ -225,6 +264,16 @@ assert_file_exists "$missing_out" "probe writes JSON artifact when inventory is 
 assert_contains "$missing_out" '"status": "blocked"' "missing inventory records blocked status"
 assert_contains "$missing_out" '"blocker": "input-unreadable"' "missing inventory names input-unreadable blocker"
 assert_contains "$missing_out" '"claim": "post-open-runtime-display-accessibility-evidence"' "missing inventory keeps narrow claim token"
+assert_contains "$missing_out" '"targetDiscoveryScope": "accessibility-runtime-display-targets-only"' "missing inventory records target-discovery-only scope"
+assert_contains "$missing_out" '"unsupportedClaims":' "missing inventory lists unsupported claim classes"
+assert_contains "$missing_out" '"full-ui-automation"' "missing inventory explicitly excludes full UI automation"
+assert_contains "$missing_out" '"visible-rendering-correctness"' "missing inventory explicitly excludes rendering correctness"
+assert_contains "$missing_out" '"full-world-execution"' "missing inventory explicitly excludes full world execution"
+assert_contains "$missing_out" '"grading"' "missing inventory explicitly excludes grading"
+assert_contains "$missing_out" '"save-completion"' "missing inventory explicitly excludes Save completion"
+assert_contains "$missing_out" '"sims-validation"' "missing inventory explicitly excludes Sims validation"
+assert_contains "$missing_out" '"installer-deployment-success"' "missing inventory explicitly excludes installer/deployment success"
+assert_contains "$missing_out" '"broad-accessibility-compliance"' "missing inventory explicitly excludes broad accessibility compliance"
 assert_contains "$missing_out" '"postOpenRuntimeDisplayAccessibilityObserved": false' "missing inventory does not claim runtime/display evidence"
 assert_contains "$missing_out" '"runtimeDisplayCandidateCount": 0' "missing inventory does not invent candidates"
 assert_status_file_blocked "$missing_status" input-unreadable
@@ -270,6 +319,16 @@ assert_success "$status" "probe exits 0 when runtime/display accessibility evide
 assert_contains "$observed_out" '"status": "observed"' "observed artifact records observed status"
 assert_contains "$observed_out" '"blocker": "none"' "observed artifact has no blocker"
 assert_contains "$observed_out" '"claim": "post-open-runtime-display-accessibility-evidence"' "observed artifact uses narrow claim token"
+assert_contains "$observed_out" '"targetDiscoveryScope": "accessibility-runtime-display-targets-only"' "observed artifact records target-discovery-only scope"
+assert_contains "$observed_out" '"unsupportedClaims":' "observed artifact lists unsupported claim classes"
+assert_contains "$observed_out" '"full-ui-automation"' "observed artifact explicitly excludes full UI automation"
+assert_contains "$observed_out" '"visible-rendering-correctness"' "observed artifact explicitly excludes rendering correctness"
+assert_contains "$observed_out" '"full-world-execution"' "observed artifact explicitly excludes full world execution"
+assert_contains "$observed_out" '"grading"' "observed artifact explicitly excludes grading"
+assert_contains "$observed_out" '"save-completion"' "observed artifact explicitly excludes Save completion"
+assert_contains "$observed_out" '"sims-validation"' "observed artifact explicitly excludes Sims validation"
+assert_contains "$observed_out" '"installer-deployment-success"' "observed artifact explicitly excludes installer/deployment success"
+assert_contains "$observed_out" '"broad-accessibility-compliance"' "observed artifact explicitly excludes broad accessibility compliance"
 assert_contains "$observed_out" '"postOpenRuntimeDisplayAccessibilityObserved": true' "observed artifact records runtime/display evidence"
 assert_contains "$observed_out" '"runtimeDisplayCandidateCount": 1' "observed artifact counts one runtime/display candidate"
 assert_contains "$observed_out" '"name": "Scene display"' "observed artifact names the accessible display candidate"
@@ -280,7 +339,9 @@ assert_contains "$observed_out" '"geometryStatus": "available"' "observed artifa
 assert_contains "$observed_out" '"coordinateType": "screen"' "observed artifact records screen-coordinate candidate extents"
 assert_contains "$observed_out" '"width": 320' "observed artifact records positive candidate extent width"
 assert_contains "$observed_out" '"height": 240' "observed artifact records positive candidate extent height"
-assert_not_contains "$observed_out" 'rendering correctness|world execution|lesson completion|grading|installer success' "observed artifact avoids overclaiming"
+assert_no_runtime_probe_overclaims "$observed_out" >"$tmp_root/observed-no-overclaims.out" 2>"$tmp_root/observed-no-overclaims.err"
+status=$?
+assert_success "$status" "observed artifact avoids overclaiming outside unsupportedClaims"
 assert_file_exists "$observed_status" "observed probe writes status.txt"
 assert_contains "$observed_status" '^outcome=passed$' "observed status records passed outcome"
 assert_contains "$observed_status" '^runtimeDisplayAccessibilityStatus=observed$' "observed status records runtime/display observed status"

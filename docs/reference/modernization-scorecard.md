@@ -199,7 +199,7 @@ Gated command smoke gaps:
 | Scenario | Workflow |
 | --- | --- |
 | `alice-desktop-archive-fixture-smoke` | `archive-fixture-smoke` |
-| `alice-desktop-exported-project-smoke` | `exported-project-smoke` |
+| `alice-desktop-exported-project-smoke` | `exported-project-ant-build-smoke` |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` |
