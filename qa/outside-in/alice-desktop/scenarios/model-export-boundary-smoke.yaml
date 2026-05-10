@@ -1,0 +1,48 @@
+id: alice-desktop-model-export-boundary-smoke
+title: Model resource export boundary characterization smoke
+workflow: model-export-boundary-smoke
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - Focused model resource export characterization tests are available in the checkout.
+userActions:
+  - Enable gated smokes in a workspace prepared for core model-loading module tests.
+  - Run the focused model resource export boundary command smoke.
+  - Review the command output for XML generation, thumbnail writing, bounding-box, and round-trip fidelity evidence.
+expectedOutcomes:
+  - Without the gate the scenario records a gated-not-run status and exits non-success unless --prepare-only is requested.
+  - When the gate is enabled, focused model resource export boundary checks exit successfully.
+  - Command evidence confirms the export boundary covers XML serialization, thumbnail image generation, bounding-box metadata, and multi-resource round-trip fidelity.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/model-loading
+    - -am
+    - -Dtest=org.lgna.story.resourceutilities.ModelExportTest
+    - test
+  timeoutSeconds: 600
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the focused model resource export boundary smoke command.
+    - Test output or surefire report naming ModelExportTest characterization checks.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If focused core model-loading tests are unavailable, attach the nearest model export characterization evidence and record the missing boundary.
+    - Do not substitute desktop Save or Select Project proof for this model-export-specific smoke.
+supportingEvidence:
+  - alice-desktop-exported-project-smoke
+tags:
+  - immediate-qa-backlog
+  - model-export
+  - command-smoke

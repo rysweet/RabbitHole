@@ -52,6 +52,56 @@ final class ResourceExportNames {
     return entryFileName(resource) + " (" + resource.getId() + ")";
   }
 
+  static boolean isResourceEntryName(String entryName) {
+    if (!isSafeRelativeEntryName(entryName)) {
+      return false;
+    }
+    int slash = entryName.indexOf('/');
+    if (slash <= 0) {
+      return false;
+    }
+    String directory = entryName.substring(0, slash);
+    if ("resources".equals(directory)) {
+      return true;
+    }
+    if (!directory.startsWith("resources")) {
+      return false;
+    }
+    for (int i = "resources".length(); i < directory.length(); i++) {
+      if (!Character.isDigit(directory.charAt(i))) {
+        return false;
+      }
+    }
+    return directory.length() > "resources".length();
+  }
+
+  static boolean isSourceEntryName(String entryName) {
+    return isSafeRelativeEntryName(entryName) && entryName.startsWith("src/");
+  }
+
+  private static boolean isSafeRelativeEntryName(String entryName) {
+    if ((entryName == null) || entryName.isEmpty() || isAbsolutePath(entryName) || (entryName.indexOf('\\') >= 0)) {
+      return false;
+    }
+
+    int segmentStart = 0;
+    while (segmentStart <= entryName.length()) {
+      int segmentEnd = entryName.indexOf('/', segmentStart);
+      if (segmentEnd < 0) {
+        segmentEnd = entryName.length();
+      }
+      String segment = entryName.substring(segmentStart, segmentEnd);
+      if (segment.isEmpty() || segment.equals(".") || segment.equals("..") || hasWindowsDrivePrefix(segment)) {
+        return false;
+      }
+      if (segmentEnd == entryName.length()) {
+        return true;
+      }
+      segmentStart = segmentEnd + 1;
+    }
+    return false;
+  }
+
   private static String sanitizeFileName(String fileName) {
     if (fileName == null) {
       return "";

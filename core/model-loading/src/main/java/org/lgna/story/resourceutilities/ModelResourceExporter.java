@@ -701,10 +701,12 @@ public class ModelResourceExporter {
   private static String createResourceEnumName(ModelResourceExporter parentExporter, String modelName, String textureName) {
     if (modelName.equalsIgnoreCase(parentExporter.getClassName())) {
       return AliceResourceUtilities.makeEnumName(textureName);
-    } else if (modelName.equalsIgnoreCase(textureName) || textureName.equalsIgnoreCase(AliceResourceUtilities.getDefaultTextureEnumName(modelName)) || textureName.equalsIgnoreCase(AliceResourceUtilities.makeEnumName(modelName))) {
-      return AliceResourceUtilities.makeEnumName(modelName);
+    }
+    String modelEnumName = AliceResourceUtilities.makeEnumName(modelName);
+    if (modelName.equalsIgnoreCase(textureName) || textureName.equalsIgnoreCase(AliceResourceUtilities.getDefaultTextureEnumName(modelName)) || textureName.equalsIgnoreCase(modelEnumName)) {
+      return modelEnumName;
     } else {
-      return AliceResourceUtilities.makeEnumName(modelName) + "_" + AliceResourceUtilities.makeEnumName(textureName);
+      return modelEnumName + "_" + AliceResourceUtilities.makeEnumName(textureName);
     }
   }
 
