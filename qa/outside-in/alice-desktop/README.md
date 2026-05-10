@@ -2,6 +2,7 @@
 
 This lane defines executable acceptance coverage for Alice desktop workflows without changing product modules. It keeps scenario intent, execution wrappers, and evidence requirements in one repo-owned QA area.
 
+For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the desktop Run execution gap report, see [Desktop Run execution gap report](../../../docs/reference/desktop-run-execution-gap-report.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For the Run-window creation/wiring evidence contract and artifact API, see [Run-Window Creation/Wiring Contract](../../../docs/reference/run-window-creation-wiring-contract.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the Gadugi Run-window contract evidence scenario, see [Gadugi run-window contract evidence](../../../docs/reference/gadugi-run-window-contract-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the Gadugi Window menu registration evidence scenario, see [Gadugi Window menu registration evidence](../../../docs/reference/gadugi-window-menu-registration-evidence.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
 For user-facing instructions, see [Run Alice desktop outside-in QA](../../../docs/howto/alice-desktop-outside-in-qa.md). For current exported-project smoke behavior and the target exported Ant/NetBeans project build proof, see [Exported NetBeans Ant Project Behavior](../../../docs/reference/exported-netbeans-ant-project-behavior.md). For the post-open runtime/display evidence contract, see [Post-open runtime/display accessibility evidence](../../../docs/reference/post-open-runtime-display-accessibility-evidence.md). For the focused launch, run/runtime, and Select Project target-discovery contract, see [Accessibility Target Discovery Silver-Thread Contract](../../../docs/reference/accessibility-target-discovery-silver-thread.md). For the target-specific Select Project starter path, see [Open Africa Full through Select Project with AT-SPI](../../../docs/howto/open-africa-full-through-select-project-atspi.md) and the [Select Project Africa Full AT-SPI evidence reference](../../../docs/reference/select-project-africa-full-atspi-evidence.md). For the live first-lesson procedure/code-editor target seam, see [First-Lesson Live Procedure Target Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md). For the learner-world setup/open/save assessment boundary, see [Learner-world assessment boundary](../../../docs/reference/learner-world-assessment-boundary.md). For the complete scenario schema and runner interface, see the [Alice desktop outside-in QA reference](../../../docs/reference/alice-desktop-outside-in-qa.md).
@@ -25,6 +26,7 @@ Generated evidence is ignored by Git. Commit only scenario definitions, schema c
 Each scenario uses the same required fields:
 
 - `id`
+- `name` — human-readable scenario name, always equal to `title`. Required by both the repo-owned validator and `gadugi-test validate`.
 - `title`
 - `workflow`
 - `automationMode`
@@ -34,13 +36,12 @@ Each scenario uses the same required fields:
 - `evidence.required`
 - `fallback`
 
-Every scenario also carries three gadugi-test compatibility fields:
+Every scenario also carries two gadugi-test compatibility fields:
 
-- `name` — human-readable scenario name, always equal to `title`. Required by `gadugi-test validate`.
 - `steps` — gadugi-test step list. Currently `["validate"]` for all scenarios.
 - `agents` — gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios.
 
-These fields let `gadugi-test validate scenarios/` pass against the canonical gadugi-test schema while the repo-owned `validate-scenarios.sh` remains the primary structural validator.
+The `name` field is enforced by the JSON schema (`required`), the repo-owned `validate-scenarios.sh` (`required_top`), and a Python contract test suite. If `name` is present but does not equal `title`, the validator rejects the scenario. These fields let `gadugi-test validate scenarios/` pass against the canonical gadugi-test schema while the repo-owned `validate-scenarios.sh` remains the primary structural validator.
 
 The target-specific Select Project scenario uses `targetStarter.displayName` and `targetStarter.repositoryPath` to bind AT-SPI evidence to a committed starter project instead of a generic chooser dismissal.
 
@@ -100,6 +101,8 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh --dump-json
 qa/outside-in/alice-desktop/runners/run-scenario.sh list
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-launch
 qa/outside-in/alice-desktop/runners/run-scenario.sh run qa/outside-in/alice-desktop/scenarios/launch.yaml
+bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
 cd qa/outside-in/alice-desktop && gadugi-test validate scenarios/
 ```
 
@@ -113,6 +116,7 @@ failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
 future-ui-smoke
+generated-listener-runtime-dispatch-smoke
 instructor-student-setup
 launch
 menu-action-smoke
@@ -124,10 +128,12 @@ post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
+runtime-event-dispatch-smoke
 run-debug
 run-window-contract
 save-load
 save-menu-dialog-write-proof
+save-negative-artifact-contract
 scene-creation
 select-project-atk-exec-smoke
 select-project-interaction-smoke
@@ -369,6 +375,7 @@ wiring and JavaFX handoff/no-go checks only; it does not prove visible
 rendering, save behavior, grading, creative assessment, or full lesson
 completion.
 
+For branch- or commit-installable outside-in checks, run the thin `amplihack` wrapper from the checkout under review:
 The Gadugi Run-window contract evidence scenario is also under `gadugi/`.
 Validate and run it with `gadugi-test` installed on `PATH`:
 
@@ -396,11 +403,12 @@ full reference, see
 For branch-installable outside-in checks, run the thin `amplihack` wrapper from a checkout of the branch:
 
 ```bash
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa list
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa list
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-Replace `<branch>` with the PR branch or commit you are reviewing. The wrapper
+Replace `<branch-or-commit>` with the PR branch or commit you are reviewing. The wrapper
 delegates to the same repo-owned runners and intentionally requires an Alice
 checkout as the current working tree.
 
@@ -505,6 +513,48 @@ artifact API, configuration, examples, and review rules are
 documented in [First-Lesson Live Procedure Target
 Observation](../../../docs/reference/first-lesson-live-procedure-target-observation.md).
 
+The opt-in desktop Run evidence hook writes
+`desktop-run-execution-gap-report.json` after the existing Run-window artifact
+writers complete their non-empty checks, including
+`desktop-run-status-summary.json`. The report states that the executable
+evidence in this lane is bounded Run-window evidence and names the blocker to a
+stronger execution claim: missing deterministic proof that the Alice world
+advances through full runtime execution rather than merely producing Run-window
+artifacts. Missing required artifact references, missing blocker text, or
+missing non-claim categories fail validation for the report while preserving
+normal Run behavior. The report does not prove full world execution, playback,
+visible rendering correctness, full UI automation, Save completion, grading,
+Sims validation, or deployed installer success. The report payload enforces the
+implementation-backed `doesNotClaim` tokens documented in the reference; the
+playback, Sims, and installer limits are review-language boundaries. See
+[Desktop Run execution gap
+report](../../../docs/reference/desktop-run-execution-gap-report.md).
+
+To prepare the outside-in review container for this evidence family, generate
+the manual `run-debug` checklist:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+qa/outside-in/alice-desktop/runners/run-scenario.sh run \
+  alice-desktop-run-debug \
+  --evidence-dir qa/outside-in/alice-desktop/evidence/run-debug
+```
+
+The generated checklist is not a pass result. Reviewers place or reference the
+supporting VM-listener artifacts (`desktop-run-execution.json` and
+`desktop-run-runtime.log`) when opt-in desktop Run execution evidence is enabled,
+the bounded Run-window artifacts named by the gap report
+(`desktop-run-render-affordance.json`, `desktop-run-pixel-boundary.json`,
+`desktop-run-pixel-observation.json`,
+`desktop-first-lesson-next-action.json`,
+`desktop-save-menu-action-target.json`, and
+`desktop-run-status-summary.json`), the gap report, the run log,
+workflow-context screenshots or screen captures, the saved `.a3p` used for the
+run, and `review-notes.txt` in the timestamped directory. If artifacts are not
+copied into the manual run directory, `review-notes.txt` must identify their
+exact evidence location. Acceptance language must stay limited to bounded
+Run-window evidence and the deterministic world-advance proof blocker.
+
 Early Xvfb fallback directories may contain only the diagnostics available before launch plus a manual fallback checklist. For manual scenarios, the runner creates a status file and structured checklist so the workflow is repeatable and reviewable; the scenario is complete only after a human performs the workflow and adds the required evidence artifacts plus `review-notes.txt`. For gated command smokes, an unset gate records `outcome=gated-not-run` and exits non-zero; pass `--prepare-only` for intentional preflight/checklist preparation, or set `ALICE_QA_RUN_GATED_SMOKES=1` only in a worktree prepared for the configured Maven or display-backed argv.
 
 ## Configuration
@@ -533,6 +583,7 @@ exported-project-ant-build-smoke
 failure-path-smoke
 file-loader-smoke
 future-ui-smoke
+generated-listener-runtime-dispatch-smoke
 instructor-student-setup
 launch
 menu-action-smoke
@@ -544,10 +595,12 @@ post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
+runtime-event-dispatch-smoke
 run-debug
 run-window-contract
 save-load
 save-menu-dialog-write-proof
+save-negative-artifact-contract
 scene-creation
 select-project-atk-exec-smoke
 select-project-interaction-smoke
@@ -584,3 +637,32 @@ If Maven reports missing generated Tweedle parser classes, first check:
 git submodule status tweedle-lang
 test -d tweedle-lang/Grammar
 ```
+
+## Save negative artifact contract
+
+The Save negative artifact contract is not a scenario and does not add a
+workflow. It calls `run-scenario.sh validate-save-proof-evidence` directly to
+prove missing validator context and missing, wrong-name, symlinked, malformed
+JSON, non-object JSON, stale, future-dated, identity-mismatched, blocked,
+partial, unknown-blocker, and internally inconsistent Save proof artifacts fail
+closed with explicit diagnostics. It does not run the desktop Save path or
+claim full desktop Save completion. It also does not claim Save As behavior,
+visible rendering correctness, grading, lesson completion, learner assessment,
+broad UI automation, or native dialog automation.
+
+For runnable reviewer steps, see [Run the Save Menu Dialog Negative Artifact
+Contract](../../../docs/howto/run-save-menu-dialog-negative-artifact-contract.md).
+For the complete rejection matrix, validator API, wrapper behavior, and review
+rules, see [Save Menu Dialog Negative Artifact
+Contract](../../../docs/reference/save-menu-dialog-negative-artifact-contract.md).
+
+Run the focused contract directly or through the branch-installable wrapper:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack alice-qa save-negative-contract
+```
+
+Run the `uvx ... amplihack alice-qa save-negative-contract` command from the
+root, or a child directory, of the checkout under review so the installed
+wrapper delegates to that checkout's contract script.

@@ -31,8 +31,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,11 +43,14 @@ final class ModelResourceThumbnailWriter {
   }
 
   static String getThumbnailPath(String rootPath, String packageString, String className, String thumbnailName) {
+    return getThumbnailDirectory(rootPath, packageString, className) + thumbnailName;
+  }
+
+  private static String getThumbnailDirectory(String rootPath, String packageString, String className) {
     if (!rootPath.endsWith("/") && !rootPath.endsWith("\\")) {
       rootPath += "/";
     }
-    String resourceDirectory = rootPath + JavaCodeUtilities.getDirectoryStringForPackage(packageString) + ModelResourceIoUtilities.getResourceSubDirWithSeparator(className);
-    return resourceDirectory + thumbnailName;
+    return rootPath + JavaCodeUtilities.getDirectoryStringForPackage(packageString) + ModelResourceIoUtilities.getResourceSubDirWithSeparator(className);
   }
 
   static BufferedImage createClassThumb(BufferedImage imgSrc) {
@@ -62,8 +65,10 @@ final class ModelResourceThumbnailWriter {
       Map<String, File> existingThumbnails,
       Map<ModelSubResourceExporter, Image> thumbnails,
       List<ModelSubResourceExporter> subResources) throws IOException {
-    List<File> thumbnailFiles = new LinkedList<File>();
-    Set<String> thumbnailsCreated = new HashSet<String>();
+    int expectedThumbnailCount = ((existingThumbnails != null) ? existingThumbnails.size() : 0) + thumbnails.size() + 1;
+    List<File> thumbnailFiles = new ArrayList<>(expectedThumbnailCount);
+    Set<String> thumbnailsCreated = HashSet.newHashSet(expectedThumbnailCount);
+    String thumbnailDirectory = getThumbnailDirectory(root, packageString, className);
     if ((existingThumbnails != null) && !existingThumbnails.isEmpty()) {
       for (Entry<String, File> entry : existingThumbnails.entrySet()) {
         if (entry.getValue().exists()) {
@@ -77,7 +82,7 @@ final class ModelResourceThumbnailWriter {
     for (Entry<ModelSubResourceExporter, Image> entry : thumbnails.entrySet()) {
       String thumbnailName = AliceResourceUtilities.getThumbnailResourceFileName(entry.getKey().getModelName(), entry.getKey().getTextureName());
       if (thumbnailsCreated.add(thumbnailName)) {
-        File f = saveImageToFile(getThumbnailPath(root, packageString, className, thumbnailName), entry.getValue());
+        File f = saveImageToFile(thumbnailDirectory + thumbnailName, entry.getValue());
         thumbnailFiles.add(f);
       }
     }
@@ -87,8 +92,8 @@ final class ModelResourceThumbnailWriter {
     ModelSubResourceExporter firstSubResource = subResources.getFirst();
     String firstThumbName = AliceResourceUtilities.getThumbnailResourceFileName(firstSubResource.getModelName(), firstSubResource.getTextureName());
     String classThumbName = AliceResourceUtilities.getThumbnailResourceFileName(className, null);
-    File firstThumbFile = new File(getThumbnailPath(root, packageString, className, firstThumbName));
-    File classThumbFile = new File(getThumbnailPath(root, packageString, className, classThumbName));
+    File firstThumbFile = new File(thumbnailDirectory + firstThumbName);
+    File classThumbFile = new File(thumbnailDirectory + classThumbName);
 
     try {
       BufferedImage classThumb = createClassThumb(ImageUtilities.read(firstThumbFile));

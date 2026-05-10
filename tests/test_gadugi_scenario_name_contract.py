@@ -1,12 +1,11 @@
-"""TDD contract tests for gadugi-test scenario name compatibility.
+"""Contract tests for gadugi-test scenario name compatibility.
 
 Every scenario YAML in qa/outside-in/alice-desktop/scenarios/ must carry
 a ``name`` field (matching ``title``), plus ``steps`` and ``agents`` arrays,
 so that ``gadugi-test validate`` reports 0 invalid files.
 
-These tests define the contract BEFORE implementation — they should fail
-if any scenario is missing the required gadugi-test fields, and pass once
-all 30 files are fixed.
+These tests enforce the contract — they fail if any scenario is missing
+the required gadugi-test fields. All 33 scenario files must pass.
 """
 
 import json
@@ -113,11 +112,11 @@ class TestGadugiRequiredFields(unittest.TestCase):
 
 @unittest.skipIf(yaml is None, "PyYAML not installed")
 class TestScenarioCount(unittest.TestCase):
-    """Guard: we expect exactly 30 scenario files."""
+    """Guard: we expect exactly 33 scenario files."""
 
     def test_scenario_count(self) -> None:
         count = len(scenario_files())
-        self.assertEqual(count, 30, f"Expected 30 scenarios, found {count}")
+        self.assertEqual(count, 33, f"Expected 33 scenarios, found {count}")
 
 
 class TestSchemaAcceptsGadugiFields(unittest.TestCase):
@@ -146,10 +145,10 @@ class TestSchemaAcceptsGadugiFields(unittest.TestCase):
     def test_schema_agents_is_array(self) -> None:
         self.assertEqual(self.schema["properties"]["agents"]["type"], "array")
 
-    def test_name_is_not_required(self) -> None:
-        """name is optional in the JSON schema — only gadugi-test requires it."""
+    def test_name_is_required(self) -> None:
+        """name is required in the JSON schema."""
         required = self.schema.get("required", [])
-        self.assertNotIn("name", required)
+        self.assertIn("name", required)
 
     def test_steps_is_not_required(self) -> None:
         required = self.schema.get("required", [])
@@ -227,7 +226,7 @@ class TestGadugiTestValidate(unittest.TestCase):
     def test_gadugi_reports_30_valid(self) -> None:
         assert self._result is not None
         combined = self._result.stdout + self._result.stderr
-        self.assertIn("Valid files: 30", combined)
+        self.assertIn("Valid files: 33", combined)
 
 
 @unittest.skipIf(yaml is None, "PyYAML not installed")

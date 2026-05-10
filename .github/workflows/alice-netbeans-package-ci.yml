@@ -59,6 +59,9 @@ jobs:
               docs/*|LICENSE|LICENSE.md|NOTICE|NOTICE.md)
                 return 0
                 ;;
+              qa/*|tests/*|scripts/*)
+                return 0
+                ;;
               *.md)
                 [[ "${path}" != */* ]]
                 return
@@ -133,9 +136,9 @@ jobs:
 
           {
             printf 'maven-required=false\n'
-            printf 'reason=docs/license-only pull request changes\n'
+            printf 'reason=non-Java pull request changes (docs, QA, tests, scripts, or license only)\n'
           } >> "${GITHUB_OUTPUT}"
-          printf 'Maven validation no-op allowed: docs/license-only pull request changes\n'
+          printf 'Maven validation no-op allowed: non-Java pull request changes\n'
           printf 'Changed files:\n'
           sed 's/^/- /' "${changed_files}"
 

@@ -1,3 +1,42 @@
+# PR #403 Merge-Update Evidence — 2026-05-09T23:18:22Z
+
+## Branch State
+- Branch: wave6-runtime-event-dispatch-1778302300
+- Merge base: origin/develop is ancestor of HEAD ✓
+- No conflict markers remaining ✓
+
+## Test Results (post-merge)
+
+### Python maintenance tests
+- 140 tests ran; 138 passed, 2 pre-existing failures (PR #87 + PR #389 scope tests, unrelated)
+
+### PR #403 merge integrity contract
+- 22/22 tests passed ✓
+
+### QA outside-in scenario validation
+- 31 scenarios validated ✓
+
+### QA outside-in integration tests
+- All shell test suites passed ✓
+
+### Maven — core/story-api-migration
+- All tests passed (exit 0) ✓
+
+### Maven — core/ide Save tests
+- All tests passed (exit 0) ✓
+
+### Maven — core/ast SourceCodeGeneratorTest
+- All tests passed (exit 0) ✓
+
+## Conflict Resolution Summary
+3 documentation/evidence conflicts resolved during merge of origin/develop:
+1. .copilot-evidence/default-workflow-attempt.log — kept both entries
+2. docs/index.md — deduplicated reference links
+3. docs/reference/generated-story-api-listener-source-characterization.md — merged headings, deduplicated API reference and compatibility sections
+
+## Pre-existing Failures (not caused by this PR)
+- test_pr87_review_blockers: checks PR #87 squash state (unrelated branch)
+- test_pr389_recovery_gate: checks PR #389 diff scope allowlist (unrelated branch)
 Default-workflow recovery evidence for PR #419
 Recorded at: 2026-05-09T13:23:51Z
 PR: https://github.com/rysweet/RabbitHole/pull/419

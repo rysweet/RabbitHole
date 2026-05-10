@@ -1,6 +1,6 @@
-# Project IO Corpus Characterization
+# Project Archive Corpus Characterization
 
-Project IO corpus characterization is the compatibility safety net for Alice
+Project archive corpus characterization is the compatibility safety net for Alice
 archive reader and writer behavior in `core/story-api-migration`. It documents
 the current generated-archive shape for project, player, and type files without
 committing binary corpus fixtures.
@@ -15,7 +15,9 @@ of the contract.
 - [Usage](#usage)
 - [Coverage scope](#coverage-scope)
 - [Archive contracts](#archive-contracts)
+- [Canonical save/reopen/edit chain](#canonical-savereopenedit-chain)
 - [API reference](#api-reference)
+- [Archive security protections](#archive-security-protections)
 - [Configuration](#configuration)
 - [Validation commands](#validation-commands)
 - [Examples](#examples)
@@ -34,12 +36,12 @@ The canonical tests live in:
 core/story-api-migration/src/test/java/org/lgna/project/io/
 ```
 
-The project IO corpus feature is centered on these existing suites:
+The project archive corpus feature is centered on these existing suites:
 
 | Test suite | Purpose |
 | --- | --- |
 | `HistoricalArchiveRoundTripCharacterizationTest` | Generated historical archive coverage for `.a3p`, `.a3w`, and `.a3c` files, including XML fallback and round-trip behavior. |
-| `IoUtilitiesTest` | Focused reader/writer edge coverage for JSON manifests, Tweedle decode boundaries, resource failures, version checks, and safe archive entries. |
+| `IoUtilitiesTest` | Focused reader/writer edge coverage for JSON manifests, Tweedle decode boundaries, resource failures, version checks, safe archive entries, and the canonical save -> reopen -> edit -> save/reopen archive seam chain. |
 
 Prefer extending one of these suites over adding a new synthetic test class. A
 new test belongs here only when it exercises a real Alice archive boundary
@@ -47,7 +49,7 @@ through `IoUtilities`, `JsonProjectIo`, or `XmlProjectIo` selection.
 
 ## Coverage scope
 
-Project IO corpus characterization covers observable archive behavior:
+Project archive corpus characterization covers observable archive behavior:
 
 | File shape | Primary behavior protected |
 | --- | --- |
@@ -56,12 +58,19 @@ Project IO corpus characterization covers observable archive behavior:
 | `.a3c` type archive | Generated type archives preserve XML type payloads, include resource payloads when resource expressions exist, and use XML fallback readback. |
 
 This project archive reading coverage also protects current limitations. For
-example, a `.a3w` program whose Tweedle source contains resource-expression
-constructs remains at the currently documented decode boundary, while the binary
-resource data still reads back.
+example, `.a3w` programs whose Tweedle source contains unsupported
+resource-expression constructs remain at the currently documented decode
+boundary. Non-legacy generated player archives fail fast there; resource payloads
+are still archive-shape evidence, and only the legacy `Program` resource-recovery
+path can return a resource-only project.
 
 This is not a migration-manager refactor effort. `ProjectMigrationManager`
 refactors require characterization at the relevant IO seam first.
+
+The save/reopen/edit chain is intentionally scoped to repository-owned archive IO
+APIs. It does not launch Alice desktop, click the Save menu, control a save
+dialog, automate Swing/AWT, or prove full desktop Save completion. Desktop Save
+menu proof artifacts remain separate from this archive seam.
 
 ## Archive contracts
 
@@ -115,6 +124,36 @@ Readback through `IoUtilities.readProject(File)` preserves:
 Round-trip characterization writes the read project to a second `.a3p` archive
 and repeats the same archive-entry and readback assertions.
 
+## Canonical save/reopen/edit chain
+
+`IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`
+is the single canonical characterization for editable project archives that are
+saved, reopened, edited, saved again, reopened again, and exported through
+repository-owned IO seams.
+
+The chain uses only production archive APIs:
+
+| Step | API or object | Required behavior |
+| --- | --- | --- |
+| Create fixture | `new Project(programType("OriginalProgram"), Project.SceneCameraType.WindowCamera)` | Builds a synthetic, in-memory Alice project with no checked-in binary fixture. |
+| Save original archive | `IoUtilities.writeProject(originalProjectFile, project)` | Writes an editable `.a3p` project archive under the test temporary directory. |
+| Reopen original archive | `IoUtilities.readProject(originalProjectFile)` | Returns a `Project` whose program type is present and still named `OriginalProgram`. |
+| Edit reopened project | `NamedUserType.name.setValue("EditedProgram")` | Mutates project-owned AST data after the first reopen. |
+| Save edited archive | `IoUtilities.writeProject(editedProjectFile, reopenedProject)` | Writes a second editable `.a3p` archive from the reopened, edited project. |
+| Reopen edited archive | `IoUtilities.readProject(editedProjectFile)` | Returns a `Project` whose program type is present and named `EditedProgram`. |
+| Inspect edited archive | `ZipFile` plus `manifest.json` | Confirms the edited archive manifest names `EditedProgram`, uses `a3p`, and still contains `programType.xml`. |
+| Export edited project | `IoUtilities.exportProject(exportFile, editedProject)` | Writes a `.a3w` player archive from the edited project without using desktop UI. |
+| Inspect export archive | `ZipFile` plus `manifest.json` | Confirms the export manifest names `EditedProgram`, uses `a3w`, and references `src/EditedProgram.twe`. |
+
+The edit assertion must happen after the second `IoUtilities.readProject` call.
+A file-exists or non-empty archive assertion is not sufficient because it would
+miss stale-save regressions where Alice writes the pre-edit project state.
+
+Keep exactly one canonical test for this chain in `IoUtilitiesTest`. Related
+tests may cover neighboring archive shapes, resources, corrupt manifests, or
+decoder boundaries, but they should not duplicate the save -> reopen -> edit ->
+save/reopen journey under a different name unless the production seam changes.
+
 ### Player `.a3w` manifest archive
 
 `IoUtilities.exportProject(File, Project, DataSource...)` writes player archives
@@ -154,10 +193,11 @@ entry path, and 1.0-by-1.0 generated dimensions for the deterministic one-pixel
 fixture image.
 
 Resource-bearing `.a3w` characterization is intentionally narrower than the
-simple player archive round trip. Simple generated Tweedle source decodes back
-to a program type, but generated source containing the current resource
-expression shape remains undecoded; the archive still preserves and reads back
-the referenced binary resource.
+simple player archive round trip. Supported generated Tweedle source decodes
+back to a program type and can read manifest-backed resources. Unsupported
+generated source fails at the JSON/player read boundary for non-legacy archive
+names; the raw manifest and zip entries still prove the referenced binary
+resource was written, but they do not prove successful project readback.
 
 #### Manifest-declared Tweedle boundary with resources
 
@@ -251,8 +291,8 @@ repeats the same archive-entry and readback assertions.
 
 ### File extensions
 
-`IoUtilities` owns the public extension constants used by project IO tests and
-desktop save/export operations:
+`IoUtilities` owns the public extension constants used by project archive tests
+and desktop save/export operations:
 
 ```java
 IoUtilities.PROJECT_EXTENSION // "a3p"
@@ -329,9 +369,49 @@ This routing is an observable compatibility contract. A change that routes
 `.a3p` archives through JSON must update the archive contract, reader behavior,
 and characterization tests together.
 
+## Archive security protections
+
+All archive readers and writers enforce defense-in-depth protections. These are
+part of the characterization contract and must not be relaxed when adding new
+corpus coverage.
+
+### XXE protection
+
+`XmlProjectIo.readArchiveXml()` disables DOCTYPE declarations and external
+entity resolution via `DocumentBuilderFactory` feature flags before parsing any
+XML entry. This prevents XXE injection through crafted `.a3p` or `.a3c` archives.
+`IoUtilitiesTest` includes a negative characterization (`externalEntityResourcesXml`)
+that constructs an archive with an external-entity payload and asserts that the
+reader rejects it.
+
+### Entry safety
+
+`ResourceExportNames.isSafeRelativeEntryName(String)` validates every archive
+entry name before read or write processing. It rejects absolute paths, backslash
+separators, `..` parent traversal, `.` self-reference, and Windows drive
+prefixes. `assertZipEntryNamesDoNotLeakLocalPaths` in `IoUtilitiesTest` asserts
+that no generated archive entry leaks local file system paths.
+
+`ResourceExportNames.isResourceEntryName(String)` allowlists resource entries to
+`resources/` and `resourcesN/` prefixes. `isSourceEntryName(String)` allowlists
+source entries to `src/` prefixes. Both guards are applied in `XmlProjectIo` and
+`JsonProjectIo` read paths to skip unexpected entries.
+
+### Resource leak prevention
+
+Manifest, version, resource, and type stream reads in both `XmlProjectIo` and
+`JsonProjectIo` use try-with-resources to prevent file descriptor exhaustion.
+Archive read failures release resources cleanly at the IO boundary.
+
+### Info-leak limits
+
+Error messages use contextual summaries (file path, entry name, failure reason)
+without dumping full manifest payloads, archive contents, or resource bytes.
+`JsonProjectIo` truncates unsupported Tweedle decode reasons to 512 characters.
+
 ## Configuration
 
-There is no Alice runtime configuration for project IO corpus characterization.
+There is no Alice runtime configuration for project archive corpus characterization.
 The feature uses the repository's existing Maven, JUnit 4, and temporary-folder
 test setup.
 
@@ -347,7 +427,7 @@ test -d tweedle-lang/Grammar
 
 Run commands from the repository root.
 
-Focused project IO corpus characterization:
+Focused project archive corpus characterization:
 
 ```bash
 mvn -pl core/story-api-migration -am \
@@ -360,7 +440,7 @@ mvn -pl core/story-api-migration -am \
 Focused `IoUtilities` reader/writer edge coverage:
 
 ```bash
-mvn -pl core/story-api-migration -am \
+NODE_OPTIONS=--max-old-space-size=32768 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
   -Dtest=org.lgna.project.io.IoUtilitiesTest \
@@ -392,6 +472,27 @@ Then the program type, scene-camera type, resource bytes, and ResourceExpression
 When the read project is written again
 Then the second archive preserves the same observable contract
 ```
+
+### Characterize the canonical save/reopen/edit chain
+
+```text
+Given a synthetic project whose program type is named OriginalProgram
+When IoUtilities.writeProject writes original-program.a3p
+And IoUtilities.readProject reopens original-program.a3p
+And the reopened NamedUserType is renamed to EditedProgram
+And IoUtilities.writeProject writes edited-program.a3p from the reopened project
+And IoUtilities.readProject reopens edited-program.a3p
+Then the reopened edited project has program type EditedProgram
+And edited-program.a3p still has coherent project manifest metadata and
+    programType.xml structure
+When IoUtilities.exportProject writes edited-program.a3w
+Then the export manifest names EditedProgram
+And the export archive contains src/EditedProgram.twe
+```
+
+This example is archive IO seam coverage only. It is not evidence that the
+desktop Save menu, Save dialog, Croquet action path, or full UI automation path
+completed.
 
 ### Characterize generated `.a3w` player behavior
 
@@ -482,6 +583,9 @@ Then the second archive preserves the same observable contract
 10. Missing or mismatched manifest-named JSON player program types fail fast with
     `IOException`; `IoUtilitiesTest` covers both the missing type-reference and
     mismatched program-name cases.
-11. Manifest-declared JSON player resources remain readable when an unsupported
-    Tweedle `TypeReference` leaves the program type undecoded; this is not a full
-    player-to-editor decode contract.
+11. The legacy JSON/player resource-recovery path is limited to the compatibility
+    archive named `Program` whose unsupported `Program` Tweedle source has exactly
+    one recovered image resource; it may return a resource-only project with no
+    program type. Non-legacy generated named player archives with unsupported
+    Tweedle fail fast with `IOException` instead of returning readable resources
+    with a null program type.

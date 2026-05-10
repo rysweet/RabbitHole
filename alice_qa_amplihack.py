@@ -14,6 +14,7 @@ USAGE = """usage:
   amplihack alice-scorecard [--root <dir>] [--output <path>]
   amplihack alice-qa validate
   amplihack alice-qa list
+  amplihack alice-qa save-negative-contract
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
   amplihack archive-player-boundary verify
   amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
@@ -203,6 +204,17 @@ def run_alice_qa(root: Path, args: Sequence[str]) -> int:
             print("alice-qa list does not accept extra arguments", file=sys.stderr)
             return 2
         return run_from_repo(root, [str(runners / "run-scenario.sh"), "list"])
+    if subcommand == "save-negative-contract":
+        if len(args) != 2:
+            print("alice-qa save-negative-contract does not accept extra arguments", file=sys.stderr)
+            return 2
+        return run_from_repo(
+            root,
+            [
+                "bash",
+                str(root / "qa" / "outside-in" / "alice-desktop" / "tests" / "test-save-menu-dialog-negative-artifact-contract.sh"),
+            ],
+        )
     if subcommand == "run":
         if len(args) < 3:
             print("alice-qa run requires a scenario id or path", file=sys.stderr)

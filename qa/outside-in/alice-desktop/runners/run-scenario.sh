@@ -172,6 +172,36 @@ validate_allowed_automation() {
     [ "$4" = -DfailIfNoTests=false ] &&
     [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
     [ "$6" = -pl ] &&
+    [ "$7" = core/ast ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
+    [ "$7" = netbeans ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest ] &&
+    [ "${10}" = test ]; then
+    return 0
+  fi
+
+  if [ "$cwd" = . ] &&
+    [ "$#" -eq 10 ] &&
+    [ "$1" = mvn ] &&
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -DfailIfNoTests=false ] &&
+    [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$6" = -pl ] &&
     [ "$7" = core/story-api-migration ] &&
     [ "$8" = -am ] &&
     [ "$9" = -Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest ] &&
@@ -180,6 +210,7 @@ validate_allowed_automation() {
   fi
 
   if [ "$cwd" = . ] &&
+    [ "$#" -eq 8 ] &&
     [ "$#" -eq 10 ] &&
     [ "$1" = mvn ] &&
     [ "$2" = -DincludeSims=false ] &&
@@ -197,14 +228,13 @@ validate_allowed_automation() {
   if [ "$cwd" = . ] &&
     [ "$#" -eq 9 ] &&
     [ "$1" = mvn ] &&
-    [ "$2" = -DincludeSims=false ] &&
-    [ "$3" = -Dinstall4j.skip ] &&
-    [ "$4" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
-    [ "$5" = -pl ] &&
-    [ "$6" = core/story-api-migration ] &&
-    [ "$7" = -am ] &&
-    [ "$8" = -Dtest=org.lgna.project.io.IoUtilitiesTest ] &&
-    [ "$9" = test ]; then
+    [ "$2" = -DfailIfNoTests=false ] &&
+    [ "$3" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$4" = -pl ] &&
+    [ "$5" = core/story-api-migration ] &&
+    [ "$6" = -am ] &&
+    [ "$7" = -Dtest=org.lgna.project.io.IoUtilitiesTest ] &&
+    [ "$8" = test ]; then
     return 0
   fi
 
@@ -401,6 +431,9 @@ validate_allowed_automation() {
     [ "$4" = -DfailIfNoTests=false ] &&
     [ "$5" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
     [ "$6" = -pl ] &&
+    [ "$7" = core/model-loading ] &&
+    [ "$8" = -am ] &&
+    [ "$9" = -Dtest=org.lgna.story.resourceutilities.ModelExportTest ] &&
     [ "$7" = core/issue-reporting ] &&
     [ "$8" = -am ] &&
     [ "$9" = -Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest ] &&
@@ -705,18 +738,34 @@ validate_save_proof_evidence() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --scenario)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         scenario=${2:-}
         shift 2
         ;;
       --workflow)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         workflow=${2:-}
         shift 2
         ;;
       --run-id)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         run_id=${2:-}
         shift 2
         ;;
       --started-at-epoch)
+        if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+          printf 'validate-save-proof-evidence option %s requires a value\n' "$1" >&2
+          return 2
+        fi
         started_at_epoch=${2:-}
         shift 2
         ;;
@@ -726,6 +775,23 @@ validate_save_proof_evidence() {
         ;;
     esac
   done
+
+  if [ -z "$scenario" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --scenario' >&2
+    return 2
+  fi
+  if [ -z "$workflow" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --workflow' >&2
+    return 2
+  fi
+  if [ -z "$run_id" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --run-id' >&2
+    return 2
+  fi
+  if [ -z "$started_at_epoch" ]; then
+    printf '%s\n' 'validate-save-proof-evidence requires --started-at-epoch' >&2
+    return 2
+  fi
 
   python3 - "$artifact_path" "$scenario" "$workflow" "$run_id" "$started_at_epoch" <<'PY'
 import json
@@ -738,7 +804,7 @@ artifact = Path(sys.argv[1])
 expected_scenario = sys.argv[2]
 expected_workflow = sys.argv[3]
 expected_run_id = sys.argv[4]
-started_at_epoch = int(sys.argv[5] or "0")
+started_at_epoch_value = sys.argv[5] or "0"
 
 SCHEMA_VERSION = "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1"
 MARKER = "robotSaveMenuRoundTripMarker"
@@ -757,6 +823,7 @@ REQUIRED_NON_CLAIMS = {
     "broad UI automation coverage",
     "native dialog coverage",
 }
+MAX_FUTURE_SKEW_SECONDS = 300
 KNOWN_BLOCKERS = {
     "headless_awt",
     "robot_unavailable",
@@ -774,6 +841,13 @@ KNOWN_BLOCKERS = {
 def fail(message):
     print(message, file=sys.stderr)
     sys.exit(1)
+
+try:
+    started_at_epoch = int(started_at_epoch_value)
+except ValueError:
+    fail("Save proof started-at-epoch must be an integer")
+if started_at_epoch < 0:
+    fail("Save proof started-at-epoch must be non-negative")
 
 if artifact.name != "robot-save-menu-dialog-write-readback-proof.json":
     fail("Save proof evidence path must use canonical filename robot-save-menu-dialog-write-readback-proof.json")
@@ -876,9 +950,12 @@ try:
     generated_epoch = datetime.fromisoformat(generated_at.replace("Z", "+00:00")).timestamp()
 except ValueError:
     fail("Save proof evidence generatedAtUtc is not an ISO timestamp")
+now_epoch = datetime.now(timezone.utc).timestamp()
 mtime_epoch = artifact.stat().st_mtime
 if started_at_epoch and (generated_epoch + 1 < started_at_epoch or mtime_epoch + 1 < started_at_epoch):
     fail("stale Save proof evidence: generatedAtUtc/mtime predates command start")
+if generated_epoch > now_epoch + MAX_FUTURE_SKEW_SECONDS or mtime_epoch > now_epoch + MAX_FUTURE_SKEW_SECONDS:
+    fail("future Save proof evidence: generatedAtUtc/mtime exceeds validator clock skew")
 
 output_size = write.get("outputSizeBytes")
 if not isinstance(output_size, int) or output_size <= 0:
@@ -3790,12 +3867,16 @@ PY
   write_environment "$run_dir"
   save_proof_artifact=
   save_proof_run_id=
+  if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ] ||
+    [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
   run_window_artifact=
   if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
     if [ -n "$timeout_override" ]; then
-      printf 'Save proof workflow does not accept --timeout-seconds\n' >&2
+      printf '%s workflow does not accept --timeout-seconds\n' "$scenario_id" >&2
       return 2
     fi
+  fi
+  if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
     save_proof_artifact="$(CDPATH= cd -- "$run_dir" && pwd)/robot-save-menu-dialog-write-readback-proof.json"
     save_proof_run_id=$(basename "$run_dir")
     if [[ ! "$save_proof_run_id" =~ ^[A-Za-z0-9._-]+$ ]]; then
@@ -3827,9 +3908,13 @@ PY
       printf 'checklist=%s\n' "$(basename "$checklist")"
       printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
       printf 'cwd=%s\n' "$cwd"
-      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ] ||
+        [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
         printf 'timeoutPolicy=none\n'
+      fi
+      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
         printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
+      elif [ "$scenario_id" != alice-desktop-project-io-smoke ]; then
       elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
         printf 'timeoutPolicy=none\n'
         printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
@@ -3872,6 +3957,9 @@ PY
       export ALICE_SAVE_PROOF_SCENARIO="$scenario_id"
       export ALICE_SAVE_PROOF_RUN_ID="$save_proof_run_id"
       export ALICE_SAVE_PROOF_EVIDENCE_PATH="$save_proof_artifact"
+    fi
+    if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ] ||
+      [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
       "${command_argv[@]}" < /dev/null
     elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
       export ALICE_RUN_WINDOW_EVIDENCE_DIR="$run_window_evidence_dir"
@@ -3925,6 +4013,20 @@ PY
     printf 'automationMode=%s\n' "$automation_mode"
     printf 'outcome=%s\n' "$outcome"
     printf 'exitCode=%s\n' "$exit_code"
+      printf 'commandLog=command.log\n'
+      printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
+      printf 'cwd=%s\n' "$cwd"
+      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ] ||
+        [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
+        printf 'timeoutPolicy=none\n'
+      fi
+      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
+        printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
+        printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
+        printf 'saveProofValidationLog=%s\n' save-proof-validation.log
+      elif [ "$scenario_id" != alice-desktop-project-io-smoke ]; then
+        printf 'timeoutSeconds=%s\n' "$run_timeout"
+      fi
     printf 'commandLog=command.log\n'
     printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
     printf 'cwd=%s\n' "$cwd"

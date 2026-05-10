@@ -1,4 +1,5 @@
 id: alice-desktop-migration-hotspot-characterization-smoke
+name: Migration hotspot characterization smoke
 title: Migration hotspot characterization smoke
 workflow: migration-hotspot-characterization-smoke
 automationMode: gated-command-smoke
@@ -46,3 +47,7 @@ tags:
   - migration-hotspot
   - command-smoke
   - characterization
+steps:
+  - validate
+agents:
+  - alice-desktop-qa

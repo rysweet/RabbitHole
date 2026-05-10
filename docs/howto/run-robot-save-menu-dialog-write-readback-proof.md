@@ -68,7 +68,7 @@ Example blocked artifact:
   "scenario": "alice-desktop-save-menu-dialog-write-proof",
   "workflow": "save-menu-dialog-write-proof",
   "runId": "example-run-1",
-  "generatedAtUtc": "2099-01-01T00:00:00Z",
+  "generatedAtUtc": "2026-05-09T05:39:23Z",
   "status": "blocked",
   "proofTarget": "single rendered desktop Save path: menu, dialog, control, write, readback",
   "reportingSummary": "Robot File menu Save dialog/write/readback path was not proven; blocker.kind identifies the first missing or unsafe step.",

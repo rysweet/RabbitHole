@@ -1,0 +1,254 @@
+{
+  "id": "a9a9f3be-e256-4fca-9e84-8554dae45c6f",
+  "startTime": "2026-05-09T23:36:30.082Z",
+  "status": "FAILED",
+  "results": [
+    {
+      "scenarioId": "scenario-run-execution-gap-evidence",
+      "status": "FAILED",
+      "duration": 3023,
+      "startTime": "2026-05-09T23:36:30.086Z",
+      "endTime": "2026-05-09T23:36:32.107Z",
+      "error": "Command failed with exit code 127: /bin/sh: 1: qa/outside-in/alice-desktop/runners/validate-scenarios.sh: not found\n",
+      "stepResults": [
+        {
+          "stepIndex": 0,
+          "status": "FAILED",
+          "duration": 2021,
+          "error": "Command failed with exit code 127: /bin/sh: 1: qa/outside-in/alice-desktop/runners/validate-scenarios.sh: not found\n"
+        }
+      ],
+      "logs": [],
+      "commandHistory": [
+        {
+          "command": "qa/outside-in/alice-desktop/runners/validate-scenarios.sh",
+          "exitCode": -1,
+          "stdout": "",
+          "stderr": "Command failed with exit code 127: /bin/sh: 1: qa/outside-in/alice-desktop/runners/validate-scenarios.sh: not found\n",
+          "duration": 2020,
+          "workingDirectory": ".",
+          "environment": {
+            "SHELL": "/bin/bash",
+            "AMPLIHACK_MAX_SESSIONS": "10",
+            "TERM_PROGRAM_VERSION": "3.5a",
+            "AMPLIHACK_SESSION_DEPTH": "1",
+            "TMUX": "/tmp/tmux-1000/default,1838245,1",
+            "AMPLIHACK_TREE_ID": "0ce3a1f0",
+            "NODE_OPTIONS": "--max-old-space-size=32768",
+            "AMPLIHACK_DEPTH": "1",
+            "PWD": "/data/focused-branch-updates-1778366600/rh-pr404-mergeready/repo/qa/outside-in/alice-desktop",
+            "LOGNAME": "azureuser",
+            "XDG_SESSION_TYPE": "tty",
+            "AMPLIHACK_NONINTERACTIVE": "1",
+            "AMPLIHACK_STEP_TIMEOUT": "0",
+            "SKWAQ_ROOT": "/home/azureuser/src/skwaq",
+            "COPILOT_RUN_APP": "1",
+            "HOME": "/home/azureuser",
+            "LANG": "C.UTF-8",
+            "LS_COLORS": "rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.swp=00;90:*.tmp=00;90:*.dpkg-dist=00;90:*.dpkg-old=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:",
+            "AMPLIHACK_SESSION_ID": "rs-1777864766-1842069",
+            "AMPLIHACK_AGENT_BINARY": "copilot",
+            "SSH_CONNECTION": "10.0.1.4 38138 10.0.0.4 22",
+            "AMPLIHACK_GRAPH_DB_PATH": "/data/focused-branch-updates-1778366600/rh-pr404-mergeready/repo/.amplihack/graph_db",
+            "SGX_AESM_ADDR": "1",
+            "AMPLIHACK_MAX_DEPTH": "6",
+            "LESSCLOSE": "/usr/bin/lesspipe %s %s",
+            "XDG_SESSION_CLASS": "user",
+            "COPILOT_LOADER_PID": "1842198",
+            "TERM": "xterm-color",
+            "AMPLIHACK_VERSION": "0.10.0",
+            "LESSOPEN": "| /usr/bin/lesspipe %s",
+            "USER": "azureuser",
+            "TMUX_PANE": "%1",
+            "GIT_CONFIG_VALUE_0": "explicit",
+            "AMPLIHACK_ASSET_RESOLVER": "/home/azureuser/.local/bin/amplihack-asset-resolver",
+            "AMPLIHACK_RUST_RUNTIME": "1",
+            "SHLVL": "2",
+            "COPILOT_AGENT_SESSION_ID": "28038da6-102b-4a55-9733-6a8edb5a2e89",
+            "GIT_CONFIG_COUNT": "1",
+            "COPILOT_CLI_BINARY_VERSION": "1.0.44",
+            "XDG_SESSION_ID": "3274",
+            "XDG_RUNTIME_DIR": "/run/user/1000",
+            "SSH_CLIENT": "10.0.1.5 49794 22",
+            "AMPLIHACK_HOME": "/home/azureuser/.amplihack",
+            "DEBUGINFOD_URLS": "https://debuginfod.ubuntu.com ",
+            "COPILOT_CLI": "1",
+            "XDG_DATA_DIRS": "/usr/local/share:/usr/share:/var/lib/snapd/desktop",
+            "PATH": "/home/azureuser/.local/bin:/home/azureuser/.local/bin:/home/azureuser/.local/bin:/home/azureuser/.npm-global/bin:/home/azureuser/.cargo/bin:/home/azureuser/.npm-packages/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/local/go/bin",
+            "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1000/bus",
+            "SSH_TTY": "/dev/pts/5",
+            "GIT_CONFIG_KEY_0": "safe.bareRepository",
+            "AZLIN_TEST_COV": "true",
+            "OLDPWD": "/data/focused-branch-updates-1778366600/rh-pr404-mergeready/repo",
+            "TERM_PROGRAM": "tmux",
+            "_": "/home/azureuser/.npm-packages/bin/gadugi-test",
+            "NODE_ENV": "test"
+          }
+        }
+      ],
+      "outputBuffer": []
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0
+  },
+  "config": {
+    "execution": {
+      "maxParallel": 3,
+      "defaultTimeout": 300000,
+      "continueOnFailure": true,
+      "maxRetries": 2,
+      "retryDelay": 1000,
+      "randomizeOrder": false,
+      "resourceLimits": {
+        "maxMemory": 1073741824,
+        "maxCpuUsage": 80,
+        "maxDiskUsage": 1073741824,
+        "maxExecutionTime": 300000,
+        "maxOpenFiles": 100
+      },
+      "cleanup": {
+        "cleanupAfterEach": true,
+        "cleanupAfterAll": true,
+        "cleanupDirectories": [
+          "./temp",
+          "./screenshots"
+        ],
+        "cleanupFiles": [
+          "*.tmp",
+          "*.log"
+        ],
+        "terminateProcesses": [],
+        "stopServices": [],
+        "customCleanupScripts": []
+      }
+    },
+    "cli": {
+      "executablePath": "uv run atg",
+      "workingDirectory": "/data/focused-branch-updates-1778366600/rh-pr404-mergeready/repo/qa/outside-in/alice-desktop",
+      "defaultTimeout": 300000,
+      "environment": {
+        "NODE_ENV": "test"
+      },
+      "captureOutput": true,
+      "shell": "/bin/bash",
+      "maxRetries": 2,
+      "retryDelay": 1000
+    },
+    "ui": {
+      "browser": "chromium",
+      "headless": true,
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "baseUrl": "http://localhost:3000",
+      "defaultTimeout": 300000,
+      "screenshotDir": "./outputs/screenshots",
+      "recordVideo": false,
+      "slowMo": 100
+    },
+    "tui": {
+      "terminal": "xterm",
+      "defaultDimensions": {
+        "width": 80,
+        "height": 24
+      },
+      "encoding": "utf8",
+      "defaultTimeout": 300000,
+      "pollingInterval": 100,
+      "captureScreenshots": true,
+      "recordSessions": false,
+      "colorMode": "24bit",
+      "interpretAnsi": true,
+      "shell": "/bin/bash",
+      "shellArgs": [],
+      "environment": {},
+      "workingDirectory": "/data/focused-branch-updates-1778366600/rh-pr404-mergeready/repo/qa/outside-in/alice-desktop",
+      "accessibility": {
+        "highContrast": false,
+        "largeText": false,
+        "screenReader": false
+      },
+      "performance": {
+        "refreshRate": 60,
+        "maxBufferSize": 1048576,
+        "hardwareAcceleration": false
+      }
+    },
+    "github": {
+      "token": "",
+      "owner": "",
+      "repository": "",
+      "baseBranch": "main",
+      "createIssuesOnFailure": false,
+      "issueLabels": [
+        "bug",
+        "automated-test"
+      ],
+      "issueTitleTemplate": "Test Failure: {{scenario.name}}",
+      "issueBodyTemplate": "# Test Failure Report\n\n**Scenario:** {{scenario.name}}\n**Test ID:** {{scenario.id}}\n**Failure Time:** {{failure.timestamp}}\n\n## Error Details\n{{failure.message}}\n\n## Stack Trace\n```\n{{failure.stackTrace}}\n```\n\n## Reproduction Steps\n{{scenario.steps}}\n\n---\n*This issue was automatically generated by the Agentic Testing System*",
+      "createPullRequestsForFixes": false,
+      "autoAssignUsers": []
+    },
+    "priority": {
+      "enabled": true,
+      "executionOrder": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "failFastOnCritical": true,
+      "maxParallelByPriority": {
+        "critical": 1,
+        "high": 2,
+        "medium": 3,
+        "low": 5
+      },
+      "timeoutMultipliers": {
+        "critical": 2,
+        "high": 1.5,
+        "medium": 1,
+        "low": 0.8
+      },
+      "retryCountsByPriority": {
+        "critical": 3,
+        "high": 2,
+        "medium": 1,
+        "low": 0
+      }
+    },
+    "logging": {
+      "level": "info",
+      "console": true,
+      "format": "structured",
+      "includeTimestamp": true,
+      "maxFileSize": 10485760,
+      "maxFiles": 5,
+      "compress": true
+    },
+    "reporting": {
+      "outputDir": "./outputs/reports",
+      "formats": [
+        "html",
+        "json"
+      ],
+      "includeScreenshots": true,
+      "includeLogs": true,
+      "customTemplates": {},
+      "generationTimeout": 30000
+    },
+    "notifications": {
+      "enabled": false,
+      "channels": [],
+      "triggers": [],
+      "templates": {}
+    },
+    "plugins": {}
+  },
+  "endTime": "2026-05-09T23:36:33.113Z"
+}
