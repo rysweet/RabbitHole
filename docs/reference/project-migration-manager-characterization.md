@@ -3,6 +3,13 @@
 This reference describes the `core/story-api-migration` characterization layer
 for `ProjectMigrationManager` text migration behavior.
 
+For background on why this layer exists and how it fits the modernization
+approach, see the [Migration Hotspot Characterization concepts](../concepts/migration-hotspot-characterization.md).
+For a task-oriented guide, use the
+[how-to](../howto/characterize-project-migration-manager.md).
+For a guided example, use the
+[tutorial](../tutorials/project-migration-manager-characterization.md).
+
 ## Contents
 
 - [Package](#package)
@@ -38,6 +45,20 @@ The characterization feature protects existing migration behavior before
 `ProjectMigrationManager` is extracted or refactored. It does not rewrite the
 large migration table and does not add external archive fixtures.
 
+Production code is intentionally unchanged; this documents existing protected
+migration hotspots through characterization coverage.
+
+The repository-owned feature surface is:
+
+| Surface | Role |
+| --- | --- |
+| `ProjectMigrationManagerTest` | Executable characterization for table invariants, version gates, selected rewrite cascades, selected field/accessor rewrites, the BonePile boundary, and current-version pending-migration guards (18 tests). |
+| `migration-hotspot-characterization-smoke` scenario | Gadugi QA gated-command-smoke that runs the focused Maven test through the 4-layer argv allowlist. |
+| Reference documentation | Durable contract for the protected behavior and compatibility rules. |
+| Tutorial documentation | Guided example for adding generated XML-string migration characterization. |
+| How-to documentation | Task checklist for adding or reviewing migration characterization. |
+| Documentation index | Discoverability link for the reference, tutorial, and how-to. |
+
 The covered surface is deliberately narrow:
 
 | Scope | Contract |
@@ -47,10 +68,12 @@ The covered surface is deliberately narrow:
 | Version gates | A migration applies only when the saved project version is older than that migration's result version. |
 | Test fixture shape | Characterization uses generated Java strings that look like Alice project XML fragments. |
 | Fixture storage | No `.a3p`, `.a3w`, `.a3c`, media, or Git LFS payload is required. |
-| Protected behavior | Known legacy story/resource names rewrite through all applicable text migrations to the current Alice class/resource names. |
+| Protected behavior | Selected legacy story/resource names rewrite through the existing text migrations that apply to their saved source versions. |
 | Refactor boundary | Extraction is safe only when the same source version produces the same final migrated text. |
+| Current version guard | `ProjectMigrationManager` reports no pending text or AST migrations for its compiled current version. |
 
-This feature is a compatibility guard, not a new migration framework.
+This feature is a compatibility guard, not a new migration framework or a
+complete characterization of every migration entry.
 
 ## Protected behavior
 
@@ -58,14 +81,21 @@ Alice project files can contain serialized class names in XML attributes such as
 `type` and `declaringClass`. Historical projects may refer to old resource
 packages and old resource class names.
 
-The characterization layer protects three kinds of behavior:
+The characterization layer protects six kinds of behavior:
 
 1. The migration tables remain sorted by increasing result version, and each
    result version can round-trip through `Version`.
 2. Text migrations remain version-gated; a migration with result version
    `3.1.20.0.0` applies to `3.1.19.0.0`, but not to `3.1.20.0.0` or later.
-3. Real legacy text rewrites still compose across migration versions in one
+3. Selected legacy text rewrites still compose across migration versions in one
    `migrate(String, Version)` call.
+4. One selected boundary rewrite remains source-version gated at
+   `3.2.111.0.0`: `BONE_PILE` on `BonesResource` migrates to `DEFAULT` on
+   `BonePileResource` only when the saved project version predates that
+   boundary.
+5. Selected field, resource, and accessor rewrites preserve the same exact final
+   names that current Alice projects expect.
+6. The compiled current version has no pending text or AST migrations.
 
 The focused dresser seam starts from Alice version `3.1.19.0.0` and protects
 this migration chain:
@@ -97,6 +127,20 @@ Both entries migrate to:
 <declaringClass name="org.lgna.story.resources.prop.DresserResource"/>
 ```
 
+The focused BonePile boundary starts from Alice version `3.2.110.0.0` and
+protects one existing rewrite in the `3.2.111.0.0` text migration:
+
+| Source version | Input | Output |
+| --- | --- | --- |
+| `3.2.110.0.0` | `name="BONE_PILE"` with `org.lgna.story.resources.prop.BonesResource` | `name="DEFAULT"` with `org.lgna.story.resources.prop.BonePileResource` |
+| `3.2.111.0.0` | Same source text | Unchanged for this selected rewrite |
+| `3.2.112.0.0` | Same source text | Unchanged for this selected rewrite |
+
+This boundary test verifies that one existing rewrite is gated by source
+version at the boundary or later. It does not claim that every migration is
+idempotent or that every boundary-later source is unchanged for unrelated
+rewrites.
+
 ## Usage
 
 Use this characterization when changing migration ordering, splitting the
@@ -110,12 +154,19 @@ The safe workflow is:
 3. Start from the version that makes all required migrations applicable.
 4. Assert the exact final migrated text.
 5. Assert the legacy and intermediate names are absent.
-6. Run the focused migration tests before making production extraction changes.
+6. Run the focused migration tests after characterization changes and before
+   relying on production refactors.
 
 For the dresser seam, the fixture starts at `3.1.19.0.0` because that version is
 before the package move to `org.lgna.story.resources.prop.DresserCentralAsian`.
 Starting at `3.1.20.0.0` deliberately does not back-apply that package move;
 Alice migration behavior is version-gated by the saved project version.
+
+For the BonePile boundary, the fixture starts at `3.2.110.0.0` to make the
+`3.2.111.0.0` rewrite applicable. Starting at `3.2.111.0.0` leaves the selected
+`BONE_PILE`/`BonesResource` source text unchanged because the project is already
+at the rewrite result version. Starting at `3.2.112.0.0` protects the same
+selected rewrite from being back-applied after the boundary.
 
 ## Characterized contracts
 
@@ -126,9 +177,16 @@ The `ProjectMigrationManagerTest` suite covers these contracts:
 | Text migration result versions are valid, round-trippable, and increasing. | Refactors cannot reorder, duplicate, or corrupt text migration version boundaries. |
 | AST migration result versions are valid, round-trippable, and increasing. | The same ordering invariant is preserved for AST migration entries. |
 | Text migration applicability is strictly before the result version. | A saved project at the threshold version does not receive that threshold migration again. |
+| `textMigrationDoesNotRewriteWhenVersionIsAlreadyAtThreshold` keeps `3.1.20.0.0` source text unchanged. | The dresser package-move threshold is protected separately from the later BonePile boundary; a project already at the result version does not receive that threshold migration again. |
 | Known legacy story and resource names rewrite from `3.1.19.0.0`. | Representative existing mappings such as `Program`, `INDIA_BRICK_D`, mouse-click event classes, `STurnable`, and dresser resources still migrate. |
 | Legacy dresser XML fragments cascade to `DresserResource`. | The old package name moves through both intermediate prop names and reaches the current resource type. |
-| Already-at-threshold text is unchanged. | Version-gated behavior remains observable and prevents accidental back-application. |
+| Legacy dresser field fragments cascade to `DresserResource`. | `DRESSER_CENTRAL_ASIAN_GREEN` migrates to `CENTRAL_ASIAN_GREEN` on `DresserResource` without leaving package or generic resource intermediates behind. |
+| Starting after the dresser package move still applies later consolidations. | A project at `3.1.20.0.0` that already contains `org.lgna.story.resources.prop.DresserCentralAsian` still reaches `DresserResource`. |
+| Legacy joint fields and accessors rewrite from `3.1.33.0.0`. | Representative biped and flyer names such as `LEFT_THUMB_1` and `getRightClavicle` reach their current resource/accessor forms. |
+| Version `3.2.110.0.0` resource fields rewrite in place through a direct `TextMigration` seam. | The test selects the `3.2.110.0.0` `TextMigration` entry and verifies selected `SandDunesResource`, `AncientTempleArchResource`, and `WaterTankResource` fields migrate to their current names; it does not exercise the full manager pipeline. |
+| Version `3.2.111.0.0` BonePile rewrite is source-version gated. | `BONE_PILE` on `BonesResource` rewrites to `DEFAULT` on `BonePileResource` from `3.2.110.0.0`, but the selected source text remains unchanged from `3.2.111.0.0`. |
+| At-threshold or later selected text is unchanged. | Version-gated behavior remains observable and prevents accidental back-application of the selected rewrite at `3.2.111.0.0` or `3.2.112.0.0`. |
+| Current version has no pending migrations. | `getCurrentVersion()` is already at or beyond every text and AST migration result version. |
 
 These contracts describe the feature boundary. They do not require a broad
 fixture corpus, binary project archives, or a rewrite of the migration manager.
@@ -150,6 +208,22 @@ in a `TextMigrationRegistry` class hierarchy — see the
 for the split strategy and file inventory. The ordering is part of the
 compatibility contract because each applied migration advances the working
 version.
+
+The characterization tests inspect these protected, package-visible, and public
+seams from the same package:
+
+```java
+Version currentVersion = manager.getCurrentVersion();
+TextMigration[] textMigrations = manager.getTextMigrations();
+AstMigration[] astMigrations = manager.getAstMigrations();
+
+boolean hasTextMigrations = manager.hasTextMigrationsFor(currentVersion);
+boolean hasAstMigrations = manager.hasAstMigrationsFor(currentVersion);
+```
+
+`hasTextMigrationsFor(currentVersion)` and
+`hasAstMigrationsFor(currentVersion)` both return `false` for the compiled
+current version.
 
 ### `MigrationManager.migrate(String, Version)`
 
@@ -202,6 +276,7 @@ test -d tweedle-lang/Grammar
 Focused migration characterization:
 
 ```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false \
@@ -209,19 +284,100 @@ mvn -pl core/story-api-migration -am \
   test
 ```
 
+Do not substitute CI no-op mode, no-op justification, or branch-policy shortcuts
+for this focused validation when reviewing migration-characterization changes.
+
 Full story API migration module validation:
 
 ```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
 mvn -pl core/story-api-migration -am \
   -DfailIfNoTests=false \
   test
 ```
 
-Repository Python contract validation:
+Repository-level Python contract validation:
+
+This suite is useful for whole-repository policy checks. It is not
+migration-characterization evidence because it also covers branch, PR, and
+documentation contracts outside `ProjectMigrationManager`.
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 python3 -m unittest discover -s tests
 ```
+
+## QA automation
+
+The characterization has a gadugi QA scenario that gates the focused Maven test
+through the repository's allowlist infrastructure. The scenario file is:
+
+```text
+qa/outside-in/alice-desktop/scenarios/migration-hotspot-characterization-smoke.yaml
+```
+
+### Scenario properties
+
+| Property | Value |
+| --- | --- |
+| ID | `alice-desktop-migration-hotspot-characterization-smoke` |
+| Workflow | `migration-hotspot-characterization-smoke` |
+| Automation mode | `gated-command-smoke` |
+| Timeout | 600 seconds |
+| Argv tuple | 10 elements (see below) |
+| Fallback | `manual-evidence-required` |
+
+### Argv allowlist entry
+
+The 10-element argv tuple is validated identically across 4 enforcement points:
+
+1. `qa/outside-in/alice-desktop/schema/scenario.schema.json` — JSON Schema
+   `prefixItems` with `const` per element, `minItems: 10`, `maxItems: 10`,
+   `items: false`.
+2. `qa/outside-in/alice-desktop/runners/validate-scenarios.sh` — Python set
+   equality check.
+3. `qa/outside-in/alice-desktop/runners/run-scenario.sh` — Bash exact-match
+   argument validation with `$# -eq 10`.
+4. `qa/outside-in/alice-desktop/tests/test-schema-contract.sh` — Python
+   `expected_argv` set equality.
+
+The tuple:
+
+```text
+("mvn", "-DincludeSims=false", "-Dinstall4j.skip", "-DfailIfNoTests=false",
+ "-Dsurefire.failIfNoSpecifiedTests=false", "-pl", "core/story-api-migration",
+ "-am", "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest", "test")
+```
+
+### Running the scenario
+
+Validate all scenarios including the migration hotspot smoke:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+```
+
+Run the gated command directly:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+qa/outside-in/alice-desktop/runners/run-scenario.sh \
+  qa/outside-in/alice-desktop/scenarios/migration-hotspot-characterization-smoke.yaml
+```
+
+### Evidence artifacts
+
+The scenario collects three required evidence items:
+
+- `status.txt` — gated command exit status.
+- `command.log` — full Maven output from the characterization smoke.
+- Surefire report naming `ProjectMigrationManagerTest`.
+
+### Supporting evidence
+
+The scenario references `alice-desktop-archive-fixture-smoke` because the
+archive fixture smoke exercises the broader `core/story-api-migration` module
+that includes `ProjectMigrationManager`.
 
 ## Compatibility rules
 
@@ -233,10 +389,12 @@ Tests and refactors around `ProjectMigrationManager` preserve these rules:
 4. Legacy names can migrate through intermediate names in a single `migrate(String, Version)` call.
 5. A fixture that starts before the dresser package move reaches `org.lgna.story.resources.prop.DresserResource`.
 6. A fixture that starts at the package-move threshold does not back-apply older migrations.
-7. Characterization fixtures stay generated, lightweight, deterministic, and LFS-free.
-8. Refactors do not broaden regex replacements beyond known Alice legacy class and resource names.
-9. Tests assert both the expected final names and the absence of obsolete or intermediate names.
-10. Production migration behavior stays compatible with the current Alice 3 baseline unless a behavior change is explicitly documented and covered.
+7. The `3.2.111.0.0` BonePile rewrite applies to `3.2.110.0.0` source text and is not back-applied to the selected source text at `3.2.111.0.0` or `3.2.112.0.0`.
+8. Characterization fixtures stay generated, lightweight, deterministic, and LFS-free.
+9. Refactors do not broaden regex replacements beyond known Alice legacy class and resource names.
+10. Tests assert both the expected final names and the absence of obsolete or intermediate names when the selected seam has intermediate names.
+11. Production migration behavior stays compatible with the current Alice 3 baseline unless a behavior change is explicitly documented and covered.
+12. `getCurrentVersion()` remains at a version with no pending text or AST migrations.
 
 ## Examples
 
@@ -297,3 +455,36 @@ org.lgna.story.resources.dresser.DresserCentralAsian
 
 This preserves the current version-gated behavior: the `3.1.20.0.0` package move
 is not applied to a project that already claims version `3.1.20.0.0`.
+
+### BonePile `3.2.111.0.0` boundary
+
+Input:
+
+```text
+name="BONE_PILE">
+<declaringClass name="org.lgna.story.resources.prop.BonesResource"
+```
+
+Call before the boundary:
+
+```java
+String migrated = ProjectMigrationManager.getInstance()
+    .migrate(source, new Version("3.2.110.0.0"));
+```
+
+Expected output:
+
+```text
+name="DEFAULT"> <declaringClass name="org.lgna.story.resources.prop.BonePileResource"
+```
+
+Call at the boundary:
+
+```java
+String migrated = ProjectMigrationManager.getInstance()
+    .migrate(source, new Version("3.2.111.0.0"));
+```
+
+Expected output is the original source text for this selected rewrite. This
+documents only the `BONE_PILE`/`BonesResource` rewrite boundary, not every
+migration that may exist before or after `3.2.111.0.0`.
