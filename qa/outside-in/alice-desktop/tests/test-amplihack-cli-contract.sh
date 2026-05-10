@@ -25,6 +25,14 @@ assert_contains "$tmp_root/list.out" 'alice-desktop-save-load[[:space:]]+manual-
 
 (
   cd "$REPO_ROOT" &&
+    PYTHONDONTWRITEBYTECODE=1 python3 -m alice_qa_amplihack alice-qa save-negative-contract unexpected
+) >"$tmp_root/save-negative-contract.out" 2>"$tmp_root/save-negative-contract.err"
+status=$?
+assert_exit_code "$status" 2 "amplihack wrapper rejects invalid Save negative contract arguments"
+assert_contains "$tmp_root/save-negative-contract.err" 'does not accept extra arguments' "amplihack Save negative contract explains invalid arguments"
+
+(
+  cd "$REPO_ROOT" &&
     PYTHONDONTWRITEBYTECODE=1 python3 -m alice_qa_amplihack alice-qa run alice-desktop-save-load --evidence-dir "$tmp_root/evidence"
 ) >"$tmp_root/run.out" 2>"$tmp_root/run.err"
 status=$?

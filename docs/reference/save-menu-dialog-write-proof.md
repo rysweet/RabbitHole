@@ -69,11 +69,13 @@ The runner passes the scenario ID, a unique safe run ID, and the canonical evide
 
 ## Evidence contract
 
-The proof-owned JSON artifact is:
+The proof-owned JSON artifact name is:
 
 ```text
-core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json
+robot-save-menu-dialog-write-readback-proof.json
 ```
+
+The QA scenario wrapper writes and validates that artifact inside the scenario run directory. Direct Maven debugging uses the evidence path supplied through `-Dorg.alice.eatme.saveProof.evidencePath`; if none is supplied, the proof defaults to `core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json`.
 
 The artifact must use:
 
@@ -84,6 +86,13 @@ eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1
 A passing scenario requires `status: "proven"` and all required menu, dialog, control, write, readback, and marker fields to be true and internally consistent. A missing artifact, stale artifact, blocked artifact, partial artifact, output-file mismatch, run mismatch, marker mismatch, or unknown blocker kind fails the scenario.
 
 For the complete machine-readable field contract, see [Save Proof Evidence](./save-proof-evidence.md).
+
+The companion negative artifact contract is separate from this positive
+write/readback proof. It exercises
+`run-scenario.sh validate-save-proof-evidence` with intentionally bad artifacts
+and requires explicit non-zero failures for missing, malformed, stale, blocked,
+partial, unknown-blocker, and inconsistent evidence. See [Save Menu Dialog Negative Artifact
+Contract](./save-menu-dialog-negative-artifact-contract.md).
 
 ## Executable blocker behavior
 
@@ -110,12 +119,11 @@ The old `save-menu-dialog-write-proof.json` artifact name is historical only. It
 ```text
 qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof/
   alice-desktop-save-menu-dialog-write-proof/
-    <timestamp>/
+    <run-id>/
       status.txt
       command.log
-
-core/ide/target/save-menu-proofs/
-  robot-save-menu-dialog-write-readback-proof.json
+      save-proof-validation.log
+      robot-save-menu-dialog-write-readback-proof.json
 ```
 
 Reviewers first check `status.txt` and `command.log` to confirm that `RobotSaveMenuDialogWriteReadbackProofTest` ran through the Save proof workflow. They then treat the canonical JSON artifact as the source of truth for `status: "proven"` or the exact executable blocker.

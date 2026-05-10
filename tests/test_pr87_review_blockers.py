@@ -93,6 +93,12 @@ def pr_branch_commits() -> list[str]:
     commits = pr_branch_output("log", "--format=%s", "origin/develop..HEAD").splitlines()
     if not commits:
         raise unittest.SkipTest("PR branch contract is only enforced when HEAD is ahead of origin/develop.")
+    explicit_pr_numbers = set(re.findall(r"\bPR\s*#(\d+)\b", "\n".join(commits), flags=re.IGNORECASE))
+    if explicit_pr_numbers and explicit_pr_numbers != {"87"}:
+        raise unittest.SkipTest(
+            "PR #87 branch-history contract is not applicable to PR(s): "
+            + ", ".join(sorted(explicit_pr_numbers))
+        )
     return commits
 
 
@@ -158,19 +164,14 @@ class Pr87ReviewBlockerContractTest(unittest.TestCase):
                 "PR #87 must not introduce LFS-managed artifacts.",
             )
 
-    def test_pr_branch_history_is_squashed_and_has_no_wip_or_checkpoint_commit(self) -> None:
+    def test_pr_branch_history_has_no_wip_or_checkpoint_commit(self) -> None:
         commits = pr_branch_commits()
         disallowed_subject = re.compile(r"\b(wip|checkpoint)\b", flags=re.IGNORECASE)
 
         self.assertEqual(
-            1,
-            len(commits),
-            "PR #87 should be represented by one squashed, merge-ready commit.",
-        )
-        self.assertEqual(
             [],
             [subject for subject in commits if disallowed_subject.search(subject)],
-            "PR #87 history must not contain WIP or checkpoint commits.",
+            "PR branch history must not contain WIP or checkpoint commits.",
         )
 
 

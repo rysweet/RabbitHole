@@ -1,0 +1,36 @@
+id: alice-desktop-save-negative-artifact-contract
+title: Save proof evidence negative artifact validation contract
+workflow: save-negative-artifact-contract
+automationMode: manual-evidence-required
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - The save-proof-evidence fixture set is present under qa/outside-in/alice-desktop/tests/fixtures/save-proof-evidence/.
+  - The run-scenario.sh runner and validate-save-proof-evidence subcommand are available.
+userActions:
+  - Run test-save-menu-dialog-negative-artifact-contract.sh from the QA tests directory.
+  - Review the output to confirm every negative path rejects with an explicit diagnostic.
+  - Confirm that missing context, missing artifact, wrong-name, symlink, malformed, non-object, stale, future-dated, identity-mismatch, blocked, unknown-blocker, partial, and inconsistent artifacts all fail closed.
+expectedOutcomes:
+  - The validate-save-proof-evidence seam rejects every negative fixture with an explicit diagnostic message.
+  - Missing required context flags (scenario, workflow, run-id, started-at-epoch) are each rejected before artifact validation.
+  - Artifacts with wrong canonical filename or symlink indirection are rejected.
+  - Malformed, non-object, stale, future-dated, identity-mismatched, blocked, unknown-blocker, and inconsistent proven artifacts are all rejected with fail-closed diagnostics.
+  - No negative fixture silently passes validation.
+evidence:
+  required:
+    - status.txt recording the negative artifact contract test outcome.
+    - command.log from test-save-menu-dialog-negative-artifact-contract.sh execution.
+    - Shell test output confirming every negative path rejected with explicit diagnostics.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the save-proof-evidence fixtures are not present, clone and initialize the full QA test tree before running.
+    - Do not claim Save completion, Save readback proof, or positive write evidence from this negative-only contract.
+supportingEvidence:
+  - alice-desktop-save-menu-dialog-write-proof
+tags:
+  - immediate-qa-backlog
+  - save-menu
+  - negative-contract

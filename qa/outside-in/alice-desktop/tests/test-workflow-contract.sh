@@ -62,6 +62,7 @@ required_workflows = [
     "file-loader-smoke",
     "first-lesson-live-procedure-target-observation",
     "future-ui-smoke",
+    "generated-listener-runtime-dispatch-smoke",
     "instructor-student-setup",
     "launch",
     "menu-action-smoke",
@@ -73,10 +74,12 @@ required_workflows = [
     "procedure-edit-handoff-smoke",
     "procedure-edit-seam-smoke",
     "project-io-smoke",
+    "runtime-event-dispatch-smoke",
     "scene-creation",
     "run-debug",
     "save-load",
     "save-menu-dialog-write-proof",
+    "save-negative-artifact-contract",
     "select-project-atk-exec-smoke",
     "select-project-interaction-smoke",
     "select-project-tab-click-smoke",
@@ -95,6 +98,7 @@ manual_scenarios = [
 ]
 manual_command_scenarios = [
     "alice-desktop-procedure-edit-seam-smoke",
+    "alice-desktop-save-negative-artifact-contract",
 ]
 gated_scenarios = [
     "alice-desktop-exported-project-smoke",
@@ -103,9 +107,11 @@ gated_scenarios = [
     "alice-desktop-project-io-smoke",
     "alice-desktop-failure-path-smoke",
     "alice-desktop-future-ui-smoke",
+    "alice-desktop-generated-listener-runtime-dispatch-smoke",
     "alice-desktop-menu-action-smoke",
     "alice-desktop-procedure-edit-handoff-smoke",
     "alice-desktop-save-menu-dialog-write-proof",
+    "alice-desktop-runtime-event-dispatch-smoke",
     "alice-desktop-tweedle-decoder-boundary-smoke",
     "alice-desktop-tweedle-decoder-this-call-smoke",
     "alice-desktop-wizard-palette-completion-smoke",

@@ -61,11 +61,25 @@ The direct command is for local debugging. Review evidence should come from the 
 
 ## Read the result
 
-The target proof writes one canonical artifact:
+The target proof writes one canonical artifact name:
 
 ```text
-core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json
+robot-save-menu-dialog-write-readback-proof.json
 ```
+
+When you run through the QA scenario wrapper, the runner writes and validates that artifact inside the scenario run directory under the supplied evidence directory. With the command above, review the matching run under:
+
+```text
+qa/outside-in/alice-desktop/evidence/save-menu-dialog-write-proof/
+  alice-desktop-save-menu-dialog-write-proof/
+    <run-id>/
+      robot-save-menu-dialog-write-readback-proof.json
+      save-proof-validation.log
+      status.txt
+      command.log
+```
+
+When you run the focused Maven target directly, the artifact path is whatever you pass as `-Dorg.alice.eatme.saveProof.evidencePath`. The debugging command above writes to `core/ide/target/save-menu-proofs/robot-save-menu-dialog-write-readback-proof.json`.
 
 Treat the JSON artifact as the source of truth. A successful scenario run means the artifact passed fail-closed validation and reported `status: "proven"` for the same `scenario` and `runId` that the runner passed to Maven.
 
@@ -97,3 +111,18 @@ Before citing the result, confirm the canonical artifact:
 9. Keeps `doesNotClaim` boundaries for Save variants and non-Save desktop behavior.
 
 The complete artifact contract is documented in [Save Proof Evidence](../reference/save-proof-evidence.md). The scenario-level contract is documented in [Save Menu Dialog Write/Readback Proof](../reference/save-menu-dialog-write-proof.md).
+
+## Validate fail-closed artifact rejection
+
+Run the independent negative artifact contract beside this positive proof when
+reviewing the Save proof lane:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+bash qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh
+```
+
+That contract proves only that bad Save proof artifacts are rejected with
+explicit diagnostics. It does not run the rendered Save path and does not expand
+the positive proof into full desktop Save completion. For details, see [Run the
+Save Menu Dialog Negative Artifact Contract](./run-save-menu-dialog-negative-artifact-contract.md).

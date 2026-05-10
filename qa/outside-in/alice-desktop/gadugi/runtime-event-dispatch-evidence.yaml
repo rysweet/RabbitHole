@@ -1,0 +1,42 @@
+name: runtime-event-dispatch-evidence
+description: "Validates PR #403 runtime event dispatch characterization workflow wiring and headless listener dispatch evidence contract only; it does not validate visible rendering, desktop runtime execution, full world playback, visible correctness, grading, Save completion, or full UI automation."
+config:
+  timeout: 180000
+environment:
+  requires: []
+agents:
+  - id: alice-desktop-qa-cli
+    type: cli
+    config:
+      workingDirectory: .
+metadata:
+  priority: medium
+  tags:
+    - cli
+    - gadugi
+    - pr-403
+    - runtime-event-dispatch
+    - event-dispatch-evidence
+steps:
+  - name: validate-desktop-outside-in-catalog
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+    timeout: 60000
+  - name: prepare-runtime-event-dispatch-evidence
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/run-scenario.sh
+      args:
+        - run
+        - alice-desktop-runtime-event-dispatch-smoke
+        - --prepare-only
+        - --evidence-dir
+        - qa/outside-in/alice-desktop/evidence/gadugi-runtime-event-dispatch
+    timeout: 60000
+  - name: run-desktop-outside-in-contract-tests
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/tests/run-tests.sh
+    timeout: 120000
+assertions: []
