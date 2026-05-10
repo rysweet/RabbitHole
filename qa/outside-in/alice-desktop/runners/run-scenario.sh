@@ -3868,12 +3868,17 @@ main() {
 
       scenario_id=$(resolve_scenario_id "$scenario_request")
       scenario_json=$("$VALIDATOR" --dump-json "$scenario_id")
-      validate_scenario_automation_cwd "$scenario_json"
+      automation_mode=$(json_fields "$scenario_json" "automationMode")
+      # xvfb-real-alice and gated-command-smoke validate cwd internally via
+      # resolve_automation_cwd; skip the redundant early validation for them.
+      case "$automation_mode" in
+        xvfb-real-alice|gated-command-smoke) ;;
+        *) validate_scenario_automation_cwd "$scenario_json" ;;
+      esac
       timestamp=$(date -u +%Y%m%dT%H%M%SZ)
       run_dir="$evidence_base/$scenario_id/$timestamp"
       mkdir -p "$run_dir"
 
-      automation_mode=$(json_fields "$scenario_json" "automationMode")
       case "$automation_mode" in
         xvfb-real-alice)
           run_xvfb_real_alice "$scenario_json" "$run_dir" "$timeout_override"

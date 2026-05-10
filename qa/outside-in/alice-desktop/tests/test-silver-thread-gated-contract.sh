@@ -11,7 +11,6 @@ set -u
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-REPO_ROOT=$(CDPATH= cd -- "$BASE_DIR/../../.." && pwd)
 RUNNER="$BASE_DIR/runners/run-scenario.sh"
 SCENARIO_ID=alice-desktop-silver-thread-launch-build-run
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
