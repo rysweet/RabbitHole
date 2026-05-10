@@ -1,0 +1,50 @@
+id: alice-desktop-run-window-contract
+title: Run-window creation/wiring contract evidence
+workflow: run-window-contract
+automationMode: gated-command-smoke
+preconditions:
+  - Java 21 is available.
+  - Maven dependencies are available.
+  - The tweedle-lang submodule is initialized.
+  - EatmeRunWindowEvidenceTest is available in the checkout.
+userActions:
+  - Enable gated smokes in a workspace prepared for focused core IDE module tests.
+  - Execute the focused EatmeRunWindowEvidenceTest seam command.
+  - Review run-window-created.json for creation/wiring metadata and explicit non-claim boundaries.
+expectedOutcomes:
+  - The focused seam records run-window-created.json with status=created and contract_scope=run-window-creation-wiring.
+  - The artifact keeps artifact=run-window-created.json, evidence_source=org.alice.stageide.run.RunComposite#handlePreShowWindow, and JSON-escaped frame/program metadata.
+  - The artifact records explicit non-claim fields active_rendering_claimed=false, run_program_claimed=false, run_execution_claimed=false, world_execution_claimed=false, rendering_correctness_claimed=false, save_claimed=false, grading_claimed=false, and full_ui_automation_claimed=false.
+  - The artifact includes non-claim does_not_claim entries for active-rendering, run-execution, world-execution-correctness, rendering-correctness, Save, grading, and full-ui-automation.
+automation:
+  cwd: .
+  argv:
+    - mvn
+    - -DincludeSims=false
+    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
+    - -Dsurefire.failIfNoSpecifiedTests=false
+    - -pl
+    - core/ide
+    - -am
+    - -Dtest=org.alice.tools.EatmeRunWindowEvidenceTest
+    - test
+  readyWaitSeconds: 1
+evidence:
+  required:
+    - status.txt recording the gated command outcome.
+    - command.log from the focused Run-window creation/wiring seam command.
+    - Surefire output naming EatmeRunWindowEvidenceTest.
+    - run-window-created.json with schema_version=eatme.alice-run-window-created/v1, status=created, contract_scope=run-window-creation-wiring, evidence_source=org.alice.stageide.run.RunComposite#handlePreShowWindow, and artifact=run-window-created.json.
+    - run-window-created.json non-claim capability fields active_rendering_claimed=false, run_program_claimed=false, run_execution_claimed=false, world_execution_claimed=false, rendering_correctness_claimed=false, save_claimed=false, grading_claimed=false, and full_ui_automation_claimed=false.
+    - run-window-created.json non-claim does_not_claim entries for active-rendering, run-execution, world-execution-correctness, rendering-correctness, Save, grading, and full-ui-automation.
+fallback:
+  mode: manual-evidence-required
+  notes:
+    - If the focused seam is unavailable, attach the nearest creation/wiring-only artifact and record the missing contract assertion.
+    - Do not use active rendering, render-affordance, run-execution, Save, grading, or full UI automation evidence to satisfy this lane.
+    - Do not claim program behavior, world execution correctness, rendering correctness, Save coverage, grading, or full UI automation from this bounded artifact.
+tags:
+  - immediate-qa-backlog
+  - run-window-contract
+  - command-smoke
