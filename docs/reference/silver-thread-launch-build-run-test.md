@@ -54,13 +54,11 @@ The test covers exactly these two journeys:
 
 ## Implementation status
 
-Both test methods are implemented and passing.
-
-| Surface | Current state |
+| Surface | Location |
 | --- | --- |
-| `SilverThreadLaunchBuildRunTest` | **Implemented.** `core/ide/src/test/java/org/alice/ide/SilverThreadLaunchBuildRunTest.java`. |
-| `indiaMinimum.a3p` test resource | **Copied.** `core/ide/src/test/resources/starters/indiaMinimum.a3p`. |
-| Maven validation | `mvn -pl core/ide -am -Dtest=SilverThreadLaunchBuildRunTest test` — 2 tests, 0 failures. |
+| `SilverThreadLaunchBuildRunTest` | `core/ide/src/test/java/org/alice/ide/SilverThreadLaunchBuildRunTest.java` |
+| `indiaMinimum.a3p` test resource | `core/ide/src/test/resources/starters/indiaMinimum.a3p` |
+| Maven validation | `mvn -pl core/ide -am -Dtest=SilverThreadLaunchBuildRunTest test` |
 
 ## Design decisions
 
