@@ -47,6 +47,7 @@
         "first-lesson-live-procedure-target-observation",
         "future-ui-smoke",
         "instructor-student-setup",
+        "issue-reporting-smoke",
         "launch",
         "menu-action-smoke",
         "migration-hotspot-characterization-smoke",
@@ -437,6 +438,7 @@
                 },
                 {
                   "const": "core/story-api-migration"
+                  "const": "core/issue-reporting"
                   "const": "core/ide"
                 },
                 {
@@ -444,6 +446,7 @@
                 },
                 {
                   "const": "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest"
+                  "const": "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest"
                   "const": "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest"
                 },
                 {
