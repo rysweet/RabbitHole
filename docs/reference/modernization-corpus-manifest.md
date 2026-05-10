@@ -268,6 +268,6 @@ binary.
 
 - [Modernization scorecard generator reference](./modernization-scorecard-generator.md)
 - [Alice modernization scorecard](./modernization-scorecard.md)
-- [Project IO corpus characterization](./project-io-corpus-characterization.md)
-- [Characterize Project IO Corpus Behavior](../howto/characterize-project-io-corpus.md)
-- [Tutorial: Add a Project IO Corpus Characterization](../tutorials/project-io-corpus-characterization.md)
+- [Project archive corpus characterization](./project-io-corpus-characterization.md)
+- [Characterize Project Archive Corpus Behavior](../howto/characterize-project-io-corpus.md)
+- [Tutorial: Add a Project Archive Corpus Characterization](../tutorials/project-io-corpus-characterization.md)

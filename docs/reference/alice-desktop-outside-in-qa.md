@@ -34,6 +34,12 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `qa/outside-in/alice-desktop/tests/test-accessibility-target-discovery-silver-thread.sh` | Focused executable contract that validates bounded launch, run/runtime, and Select Project accessibility target discovery evidence and structured blockers. |
 | `qa/outside-in/alice-desktop/evidence/` | Local generated evidence. Contents are ignored by Git except `.gitignore`. |
 
+The opt-in Java-side desktop Run evidence hook writes
+`desktop-run-execution-gap-report.json` after the existing Run-window evidence
+artifact writers complete their non-empty checks. It is documented separately
+because it is a bounded evidence report, not a scenario schema change. See [Desktop Run execution gap
+report](./desktop-run-execution-gap-report.md).
+
 ## Scenario catalog
 
 | Scenario ID | Workflow | Automation mode | Purpose |
@@ -57,10 +63,11 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-exported-project-smoke` | `exported-project-ant-build-smoke` | `gated-command-smoke` | Bounded no-Sims exported Ant/NetBeans template build proof through `Alice3ProjectTemplateAntSmokeTest`; it covers Ant target execution and concrete build/JAR output only. |
 | `alice-desktop-netbeans-package-smoke` | `netbeans-package-smoke` | `gated-command-smoke` | Covers NetBeans package command and representative NBM/support artifact checks. |
 | `alice-desktop-package-install-smoke` | `package-install-smoke` | `gated-command-smoke` | Covers package build artifact inspection plus disposable install/launch evidence when artifacts are available. |
-| `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers saving, reopening, editing, saving again, reopening again, and exporting a synthetic Alice project at the command seam. |
+| `alice-desktop-project-io-smoke` | `project-io-smoke` | `gated-command-smoke` | Covers archive-level behavior for saving, reopening, editing, saving again, reopening again, and exporting Alice projects through `IoUtilitiesTest`, without desktop Save-menu or rendering claims. |
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
 | `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Action-seam contract for observing the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and recording either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
+| `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Covers controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Reserved controlled-display UI startup evidence lane; runs only when gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Placeholder for controlled-display UI startup evidence; no-op unless gated on. |
@@ -71,6 +78,7 @@ This reference describes the Alice desktop outside-in QA lane: file layout, runn
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-silver-thread-launch-build-run` | `silver-thread-launch-build-run` | `gated-command-smoke` | Proves the core student journey headlessly: create→build→save→reopen→execute→verify round-trip plus real starter project load→inspect→copy→reopen through `SilverThreadLaunchBuildRunTest`. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
+| `alice-desktop-model-export-boundary-smoke` | `model-export-boundary-smoke` | `gated-command-smoke` | Covers model resource export boundary characterization: XML generation, enum naming, generated Java compilation, bounding-box metadata, and thumbnail handling. |
 
 The first-lesson live procedure target action seam is a read-only contract. It
 records only whether the live desktop exposes a stable `scene.eatmeFirstLesson`
@@ -80,6 +88,21 @@ correctness check, learner assessment, creative assessment, or full first-lesson
 completion proof. See [First-Lesson Live Procedure Target Action
 Seam](./first-lesson-live-procedure-target-observation.md).
 
+The desktop Run execution gap report is emitted only after existing Run-window
+artifact writers complete their non-empty checks for evidence such as
+`desktop-run-render-affordance.json` and
+`desktop-run-status-summary.json`. It names the executable evidence in this lane
+as bounded Run-window evidence and records the exact blocker to a stronger
+claim: missing deterministic proof that the world advances through full runtime
+execution rather than artifact presence alone. The report must not be used to
+claim full world execution, playback, visible rendering correctness, full UI
+automation, Save completion, grading, Sims validation, or deployed installer
+success. Its v1 `doesNotClaim` payload enforces only the implementation-backed
+tokens documented in the [Desktop Run execution gap report](./desktop-run-execution-gap-report.md).
+The `alice-desktop-run-debug` manual checklist also asks reviewers to collect or
+link `desktop-run-execution.json` and `desktop-run-runtime.log` when opt-in
+desktop Run execution evidence is enabled; those VM-listener artifacts support
+the manual handoff but are not v1 gap-report `executableToday` entries.
 The Run-window contract scenario is a non-executing creation/wiring lane: its
 default `--prepare-only` path records scenario wiring and checklist evidence, and
 its gated command runs only the focused `EatmeRunWindowEvidenceTest` seam test.
@@ -188,7 +211,7 @@ Run commands from the repository root.
 | `run-scenario.sh validate` | Validate the active catalog through the runner. | Delegates to `validate-scenarios.sh`. |
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
-| `gadugi-test validate scenarios/` | Validate all 30 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
+| `gadugi-test validate scenarios/` | Validate all 33 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml` | Validate the Gadugi archive fixture evidence scenario. | Confirms the scenario uses the Gadugi CLI schema. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s archive-fixture-evidence --timeout 600000` | Run the Gadugi archive fixture evidence scenario. | Delegates to the outside-in archive-fixture smoke runner and contract test suite. |
@@ -231,6 +254,44 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 This path form resolves the top-level `id` in the YAML file, validates that ID through the active catalog, and then runs the normalized scenario.
+
+### Run the project archive reopen/edit smoke
+
+`alice-desktop-project-io-smoke` is a gated command smoke for the repository-owned
+archive seam. It validates the same behavior as
+[Project Archive Reopen/Edit Seam](./project-archive-reopen-edit-seam.md):
+write an editable `.a3p`, reopen it, edit project-owned state, write it again,
+reopen the edited archive, and export a structural `.a3w`.
+
+Enable gated command execution explicitly:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+export ALICE_QA_RUN_GATED_SMOKES=1
+qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-project-io-smoke
+```
+
+The scenario runner uses an allowlisted equivalent argv for catalog safety:
+it runs the same `IoUtilitiesTest` class, but keeps the runner allowlist's
+fully qualified test name plus `-DincludeSims=false` and `-Dinstall4j.skip`.
+Treat that scenario as a gated wrapper over the archive seam, not as a broader
+desktop workflow proof.
+
+The canonical direct validation command for the same archive seam is:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 mvn \
+  -pl core/story-api-migration -am \
+  -DfailIfNoTests=false \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=IoUtilitiesTest \
+  test
+```
+
+Passing this smoke evidence supports only archive-level reopen/edit/export
+readiness. It does not support desktop Save-menu completion, full Save dialog
+automation, visible rendering correctness, grading, full lesson automation, or
+player runtime behavior.
 
 ### Run through the branch-installable wrapper
 
@@ -485,6 +546,7 @@ agents:
 | Field | Type | Description |
 | --- | --- | --- |
 | `id` | string | Scenario ID. Must match `alice-desktop-[a-z0-9-]+`. |
+| `name` | string | Human-readable scenario name. Must equal `title`. Enforced by both the repo-owned validator and `gadugi-test validate`. |
 | `title` | string | Human-readable scenario title. |
 | `workflow` | enum | Covered workflow. |
 | `automationMode` | enum | How the runner handles the scenario. |
@@ -499,11 +561,11 @@ agents:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `name` | string | Human-readable scenario name for gadugi-test compatibility. Must equal `title`. Present on every scenario; required by `gadugi-test validate`. |
 | `steps` | string list | Gadugi-test step list. Currently `["validate"]` for all scenarios. |
 | `agents` | string list | Gadugi-test agent list. Currently `["alice-desktop-qa"]` for all scenarios. |
 | `automation.cwd` | string | Repository-relative working directory for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke`; absolute paths, `..`, and realpath escapes outside the repository are rejected. |
 | `automation.argv` | string list | Argument vector executed directly by the runner without shell interpretation. Required for `xvfb-real-alice` and `gated-command-smoke`; only the checked-in Alice QA argv allowlist is accepted. |
+| `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and for timeout-managed `gated-command-smoke` workflows. Invalid for no-timeout workflows such as `save-menu-dialog-write-proof` and `project-io-smoke`. |
 | `automation.timeoutSeconds` | positive integer | Default timeout for argv-backed automation. Required for `xvfb-real-alice` and `gated-command-smoke` except `save-menu-dialog-write-proof` and `run-window-contract`, where workflow-level timeouts are invalid. |
 | `automation.readyWaitSeconds` | positive integer | Wait before screenshot capture for UI automation; use `1` for command smokes. Required for `xvfb-real-alice` and `gated-command-smoke`. |
 | `targetStarter.displayName` | string | Display name of the committed starter project targeted by Select Project AT-SPI automation. Required for `alice-desktop-select-project-tab-click-exec`. |
@@ -513,6 +575,7 @@ agents:
 
 `automation` is required when `automationMode` is `xvfb-real-alice` or `gated-command-smoke`. Manual scenarios do not need an `automation` block because the runner generates a checklist instead of driving Swing interactions. Automation must be represented as `argv`; shell command strings are not accepted, including in custom catalogs selected with `ALICE_QA_SCENARIO_DIR`.
 
+The `save-menu-dialog-write-proof` and `project-io-smoke` workflows are no-timeout command smokes. Their scenarios omit `automation.timeoutSeconds`, and the runner does not wrap their Maven argv in shell `timeout`. Validator and runner contract tests reject timeout wiring for those workflows while preserving timeout requirements for timeout-managed argv-backed scenarios.
 The `save-menu-dialog-write-proof` and `run-window-contract` workflows are no-timeout exceptions. Their scenarios omit `automation.timeoutSeconds`, and the runner does not wrap their Maven argv in shell `timeout`. Validator and runner contract tests reject timeout wiring for those workflows while preserving timeout requirements for the other argv-backed scenarios.
 
 ### Workflow values
@@ -559,7 +622,7 @@ wizard-palette-completion-smoke
 | --- | --- |
 | `xvfb-real-alice` | Starts Xvfb, launches Alice through the allowed scenario argv, waits for readiness, and captures environment data, logs, status, and screenshot when the launch reaches evidence capture. This is a launch evidence check, not a full semantic oracle for every startup log condition. |
 | `manual-evidence-required` | Writes a structured checklist for human execution and evidence collection. Checklist generation does not complete the scenario. |
-| `gated-command-smoke` | Writes environment, status, and checklist evidence by default without running heavy commands. When `ALICE_QA_RUN_GATED_SMOKES=1`, runs the configured command under `timeout`, captures `command.log`, and records pass/fail status. |
+| `gated-command-smoke` | Writes environment, status, and checklist evidence by default without running heavy commands. When `ALICE_QA_RUN_GATED_SMOKES=1`, runs the configured command, captures `command.log`, and records pass/fail status. Most gated command smokes run under `timeout`; no-timeout smokes such as `save-menu-dialog-write-proof` and `project-io-smoke` run the configured command directly and record `timeoutPolicy=none`. |
 
 ## Evidence contract
 
@@ -590,7 +653,7 @@ Gated command smoke preparation includes:
 | Artifact | Description |
 | --- | --- |
 | `environment.txt` | UTC timestamp, repository root, display, Java version, Maven version, and OS details. |
-| `status.txt` | Scenario ID, automation mode, `outcome=gated-not-run`, gate name, skip mode, command, working directory, timeout, and generated checklist name. |
+| `status.txt` | Scenario ID, automation mode, `outcome=gated-not-run`, gate name, skip mode, command, working directory, timeout or no-timeout policy, and generated checklist name. |
 | `manual-evidence-checklist.txt` | Review checklist describing what evidence is required when the gate is enabled or fulfilled elsewhere. |
 
 Enabled gated command smoke execution also includes:
@@ -598,7 +661,7 @@ Enabled gated command smoke execution also includes:
 | Artifact | Description |
 | --- | --- |
 | `command.log` | Captured stdout/stderr for the configured command. |
-| `status.txt` | Scenario ID, automation mode, command, working directory, timeout, command log name, exit code, and `outcome=passed` or `outcome=failed`. |
+| `status.txt` | Scenario ID, automation mode, command, working directory, timeout or no-timeout policy, command log name, exit code, and `outcome=passed` or `outcome=failed`. |
 
 ### Run-window creation/wiring contract
 
@@ -811,7 +874,7 @@ raw target-scoped sampling signals.
 | Package/install smoke | `status.txt`, `command.log`, package or installer artifact listing, disposable install log or explicit not-produced note. |
 | Archive fixture smoke | `status.txt`, `command.log`, archive fixture path or generated fixture notes, and focused test output proving the fixture seam. |
 | File loader smoke | `status.txt`, `command.log`, focused file-loader/recovery test output, and review notes for any generated fixture or failure-path metadata. |
-| Project save, reopen, edit, save again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for metadata and export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. |
+| Project archive write, reopen, edit, write again, reopen again, and export smoke | `status.txt`, `command.log`, test output or surefire report naming `IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported`, and review notes for edited-state persistence, `.a3p` metadata, and `.a3w` export archive structure assertions. No durable saved-project artifact is required because the smoke uses test-local temporary files. Do not use this evidence as desktop Save completion, visible rendering, grading, full lesson automation, or player runtime proof. |
 | Failure path smoke | `status.txt`, `command.log`, failure classification or dispatch-plan output, corrupt input fixture name or generated fixture notes. |
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
 | Run-window creation/wiring contract | Evidence contract: `status.txt`, `command.log`, focused seam test output naming `EatmeRunWindowEvidenceTest`, and canonical `run-window-created.json` evidence with `schema_version=eatme.alice-run-window-created/v1`, `status=created`, `contract_scope=run-window-creation-wiring`, `evidence_source=org.alice.stageide.run.RunComposite#handlePreShowWindow`, false capability booleans, and `does_not_claim` boundaries. This workflow proves creation/wiring only and does not claim active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, creative assessment, lesson completion, or full UI automation. |
@@ -856,4 +919,4 @@ qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 cd qa/outside-in/alice-desktop && gadugi-test validate scenarios/
 ```
 
-9. Include `name`, `steps`, and `agents` in every new scenario. Set `name` equal to `title`, `steps` to `["validate"]`, and `agents` to `["alice-desktop-qa"]`. These fields satisfy `gadugi-test validate` while the repo-owned validator remains the primary structural check.
+9. Include `name`, `steps`, and `agents` in every new scenario. `name` is a required field and must equal `title`. Set `steps` to `["validate"]` and `agents` to `["alice-desktop-qa"]`. The `name` field is enforced by the schema, the repo-owned validator, and `gadugi-test validate`; omitting it is a validation failure.

@@ -1,4 +1,5 @@
 id: alice-desktop-project-io-smoke
+title: Archive-level project saving, reopening, editing, saving again, reopening again, and exporting smoke
 name: Project save, reopen, edit, save again, reopen again, and export smoke
 title: Project save, reopen, edit, save again, reopen again, and export smoke
 workflow: project-io-smoke
@@ -7,42 +8,42 @@ preconditions:
   - Java 21 is available.
   - Maven dependencies are available.
   - The tweedle-lang submodule is initialized.
-  - Project archive round-trip characterization tests are available in the checkout.
+  - NODE_OPTIONS=--max-old-space-size=32768 is set for validation runs.
+  - Project archive seam characterization tests are available in the checkout.
 userActions:
-  - Run the focused project archive round-trip characterization smoke from the command line.
+  - Run the gated, allowlisted project archive seam command from the command line.
   - Create or use a synthetic Alice project fixture.
-  - Save, reopen, edit metadata, save again, reopen again, and export a synthetic Alice project.
+  - Write, reopen, edit project-owned data, write again, reopen again, and export through IoUtilities.
 expectedOutcomes:
-  - The project archive round-trip smoke command exits successfully when the gate is enabled.
+  - The allowlisted archive seam command exits successfully when the gate is enabled.
+  - The scenario runner command is an allowlisted equivalent of the canonical direct archive seam validation command and runs the same IoUtilitiesTest class.
   - Saved project artifacts can be reopened by the current Alice project reader.
-  - Observable project metadata and export entries survive saving, reopening, editing, saving again, reopening again, and exporting.
+  - The reopened edited archive preserves the edited project data and readable manifest/export structure.
+  - Coverage is limited to repository-owned archive read/write/export APIs, not desktop Save-menu behavior, Save dialog completion, visible rendering correctness, grading, full lesson automation, or full UI automation.
 automation:
   cwd: .
   argv:
     - mvn
-    - -DincludeSims=false
-    - -Dinstall4j.skip
+    - -DfailIfNoTests=false
     - -Dsurefire.failIfNoSpecifiedTests=false
     - -pl
     - core/story-api-migration
     - -am
     - -Dtest=org.lgna.project.io.IoUtilitiesTest
     - test
-  timeoutSeconds: 600
   readyWaitSeconds: 1
 evidence:
   required:
     - status.txt recording the gated command outcome.
-    - command.log from the project archive round-trip smoke command.
+    - command.log from the allowlisted archive seam command.
     - Test output or surefire report naming IoUtilitiesTest.savedProjectCanBeReopenedEditedSavedAgainReopenedAndExported.
-    - Notes identifying the save, reopen, edit, save again, reopen again, export, metadata, and export archive structure assertions reviewed.
+    - Notes identifying the archive-seam write, reopen, edit, write again, reopen again, export, manifest, and export archive structure assertions reviewed.
+    - Notes stating this smoke does not cover active desktop Save-menu behavior, desktop Save dialog completion, visible rendering correctness, grading, full lesson automation, or full UI automation.
 fallback:
   mode: manual-evidence-required
   notes:
-    - If the focused Maven smoke is unavailable, attach the nearest characterization evidence for the project archive round-trip smoke.
-    - Manual GUI save/load evidence remains covered separately by alice-desktop-save-load.
-supportingEvidence:
-  - alice-desktop-save-load
+    - If the focused Maven smoke is unavailable, attach the nearest characterization evidence for the repository-owned project archive IO seam.
+    - Desktop Save-menu, Save dialog, visible rendering, grading, full lesson automation, and full UI automation evidence remain out of scope for this smoke.
 tags:
   - immediate-qa-backlog
   - project-io

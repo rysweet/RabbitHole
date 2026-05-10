@@ -27,8 +27,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import javax.imageio.ImageIO;
 
 public final class EatmeDesktopRunExecutionEvidence {
@@ -41,10 +43,37 @@ public final class EatmeDesktopRunExecutionEvidence {
   public static final String DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT = "desktop-first-lesson-next-action.json";
   public static final String DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT = "desktop-save-menu-action-target.json";
   public static final String DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT = "desktop-run-status-summary.json";
+  public static final String DESKTOP_RUN_EXECUTION_GAP_REPORT_ARTIFACT =
+      "desktop-run-execution-gap-report.json";
+  private static final String DESKTOP_RUN_EXECUTION_GAP_REPORT_SCHEMA =
+      "eatme.alice-desktop-run-execution-gap-report/v1";
   private static final String DESKTOP_RUN_RENDER_TARGET_SCREENSHOT = "desktop-run-render-target.png";
   private static final int MAX_RECORDED_EVENTS = 200;
   private static final String RENDER_AFFORDANCE_CLAIM =
       "A Run view attachment signal was observed.";
+  private static final String FULL_WORLD_EXECUTION_BLOCKER_REASON =
+      "Missing deterministic proof that the Alice world actually advances through full runtime execution, "
+          + "not merely that Run-window evidence artifacts exist.";
+  private static final List<String> REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS = List.of(
+      DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT,
+      DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT,
+      DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT,
+      DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT,
+      DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT,
+      DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT);
+  private static final Set<String> REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACT_SET =
+      Set.copyOf(REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS);
+  private static final List<String> SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS = List.of(
+      DESKTOP_RUN_EXECUTION_ARTIFACT,
+      DESKTOP_RUN_RUNTIME_LOG);
+  private static final Set<String> SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACT_SET =
+      Set.copyOf(SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACTS);
+  private static final List<String> EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES = List.of(
+      "full world execution",
+      "visible rendering correctness",
+      "grading",
+      "Save completion",
+      "full UI automation");
 
   private EatmeDesktopRunExecutionEvidence() {
   }
@@ -338,6 +367,10 @@ public final class EatmeDesktopRunExecutionEvidence {
     requireNonEmptyArtifact(saveMenuActionTargetArtifact, "desktop Save menu action-target artifact");
     writeRunStatusSummary(statusSummaryArtifact, pixelObservation);
     requireNonEmptyArtifact(statusSummaryArtifact, "desktop Run status summary artifact");
+    writeDesktopRunExecutionGapReport(
+        evidenceDir,
+        REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS,
+        FULL_WORLD_EXECUTION_BLOCKER_REASON);
     return artifact;
   }
 
@@ -519,6 +552,147 @@ public final class EatmeDesktopRunExecutionEvidence {
             + "    \"creative assessment\"\n"
             + "  ]\n"
             + "}\n");
+  }
+
+  static Path writeDesktopRunExecutionGapReport(
+      Path evidenceDir,
+      List<String> evidenceArtifacts,
+      String blockerReason) throws IOException {
+    validateDesktopRunExecutionGapReport(
+        evidenceArtifacts,
+        blockerReason,
+        EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES);
+    Files.createDirectories(evidenceDir);
+    Path artifact = EatmeRunWindowEvidence.artifactPath(
+        evidenceDir,
+        DESKTOP_RUN_EXECUTION_GAP_REPORT_ARTIFACT);
+    writeStringAtomically(artifact, desktopRunExecutionGapReportJson(evidenceArtifacts, blockerReason));
+    requireNonEmptyArtifact(artifact, "desktop Run execution gap report artifact");
+    return artifact;
+  }
+
+  static void validateDesktopRunExecutionGapReport(
+      List<String> evidenceArtifacts,
+      String blockerReason,
+      List<String> doesNotClaim) {
+    if (evidenceArtifacts == null || evidenceArtifacts.isEmpty()) {
+      throw new IllegalArgumentException("execution gap report requires bounded Run-window evidence artifacts");
+    }
+    Set<String> evidenceArtifactSet = new HashSet<>(evidenceArtifacts);
+    for (String requiredArtifact : REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACTS) {
+      if (!evidenceArtifactSet.contains(requiredArtifact)) {
+        throw new IllegalArgumentException(
+            "execution gap report missing required evidence artifact: " + requiredArtifact);
+      }
+    }
+    for (String evidenceArtifact : evidenceArtifacts) {
+      EatmeRunWindowEvidence.artifactPath(Path.of("evidence"), evidenceArtifact);
+      if (SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACT_SET.contains(evidenceArtifact)) {
+        throw new IllegalArgumentException(
+            "execution gap report executableToday payload must not include VM-listener support artifact: "
+                + evidenceArtifact);
+      }
+      if (!REQUIRED_EXECUTION_GAP_EVIDENCE_ARTIFACT_SET.contains(evidenceArtifact)) {
+        throw new IllegalArgumentException(
+            "execution gap report executableToday payload has unexpected evidence artifact: "
+                + evidenceArtifact);
+      }
+    }
+    if (blockerReason == null || blockerReason.isBlank()) {
+      throw new IllegalArgumentException("execution gap report requires blockerToFullWorldExecution.reason");
+    }
+    if (doesNotClaim == null) {
+      throw new IllegalArgumentException("execution gap report requires doesNotClaim categories");
+    }
+    Set<String> doesNotClaimSet = new HashSet<>(doesNotClaim);
+    for (String prohibitedClaimCategory : EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES) {
+      if (!doesNotClaimSet.contains(prohibitedClaimCategory)) {
+        throw new IllegalArgumentException(
+            "execution gap report missing doesNotClaim category: " + prohibitedClaimCategory);
+      }
+    }
+  }
+
+  private static String desktopRunExecutionGapReportJson(
+      List<String> evidenceArtifacts,
+      String blockerReason) {
+    return "{\n"
+        + "  \"schema_version\": \"" + DESKTOP_RUN_EXECUTION_GAP_REPORT_SCHEMA + "\",\n"
+        + "  \"report_kind\": \"desktop_run_execution_gap\",\n"
+        + "  \"status\": \"blocked\",\n"
+        + "  \"source\": \"desktop_run_render_target_attachment\",\n"
+        + "  \"emitted_after\": \"" + DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT + "\",\n"
+        + "  \"executableToday\": {\n"
+        + "    \"summary\": \"Existing tooling produces bounded Run-window evidence artifacts.\",\n"
+        + "    \"evidenceArtifacts\": " + executionGapEvidenceArtifactsJson(evidenceArtifacts) + "\n"
+        + "  },\n"
+        + "  \"blockerToFullWorldExecution\": {\n"
+        + "    \"reason\": \"" + EatmeRunWindowEvidence.escapeJson(blockerReason) + "\",\n"
+        + "    \"missingProof\": \"deterministic_world_advance_through_full_runtime_execution\",\n"
+        + "    \"requiredNextEvidence\": [\n"
+        + "      \"stable runtime advancement oracle tied to the launched world\",\n"
+        + "      \"deterministic evidence that expected world state changes occurred during Run\",\n"
+        + "      \"reviewed criteria that distinguish artifact presence from actual world advancement\"\n"
+        + "    ]\n"
+        + "  },\n"
+        + "  \"failClosedRequirements\": [\n"
+        + "    \"required Run-window evidence artifact names must be present\",\n"
+        + "    \"executableToday evidence list must be non-empty\",\n"
+        + "    \"blockerToFullWorldExecution.reason must be non-empty\",\n"
+        + "    \"doesNotClaim must include every prohibited claim category\"\n"
+        + "  ],\n"
+        + "  \"doesNotClaim\": " + jsonArray(EXECUTION_GAP_PROHIBITED_CLAIM_CATEGORIES) + "\n"
+        + "}\n";
+  }
+
+  private static String executionGapEvidenceArtifactsJson(List<String> evidenceArtifacts) {
+    StringBuilder builder = new StringBuilder("[\n");
+    for (int i = 0; i < evidenceArtifacts.size(); i++) {
+      String evidenceArtifact = evidenceArtifacts.get(i);
+      if (i > 0) {
+        builder.append(",\n");
+      }
+      builder.append("      {\n")
+          .append("        \"artifact\": \"")
+          .append(EatmeRunWindowEvidence.escapeJson(evidenceArtifact))
+          .append("\",\n")
+          .append("        \"evidence\": \"")
+          .append(EatmeRunWindowEvidence.escapeJson(executionGapEvidenceDescription(evidenceArtifact)))
+          .append("\",\n")
+          .append("        \"claimLimit\": \"")
+          .append(EatmeRunWindowEvidence.escapeJson(executionGapClaimLimit(evidenceArtifact)))
+          .append("\"\n")
+          .append("      }");
+    }
+    builder.append("\n    ]");
+    return builder.toString();
+  }
+
+  private static String executionGapEvidenceDescription(String evidenceArtifact) {
+    return switch (evidenceArtifact) {
+      case DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT -> "Run view attachment signal";
+      case DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT -> "Pixel validation boundary";
+      case DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT -> "desktop pixel sample status or exact blocker";
+      case DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT -> "next desktop action no-go contract";
+      case DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT -> "Save menu target no-go contract";
+      case DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT -> "summary of bounded Run-window artifact statuses";
+      default -> "bounded Run-window evidence artifact";
+    };
+  }
+
+  private static String executionGapClaimLimit(String evidenceArtifact) {
+    return switch (evidenceArtifact) {
+      case DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT -> "Run view attachment evidence only";
+      case DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT ->
+          "pixel validation is not part of Run view attachment evidence";
+      case DESKTOP_RUN_PIXEL_OBSERVATION_ARTIFACT ->
+          "pixel sampling status is not visible rendering correctness";
+      case DESKTOP_FIRST_LESSON_NEXT_ACTION_ARTIFACT -> "desktop action evidence remains missing";
+      case DESKTOP_SAVE_MENU_ACTION_TARGET_ARTIFACT ->
+          "Save menu readiness or invocation is not observed here";
+      case DESKTOP_RUN_STATUS_SUMMARY_ARTIFACT -> "summary of partial evidence, not a completion proof";
+      default -> "not a full world execution proof";
+    };
   }
 
   private static String pixelObservationSummary(PixelObservation pixelObservation) {
@@ -708,23 +882,26 @@ public final class EatmeDesktopRunExecutionEvidence {
       String blockerPrefix,
       String statePrefix) {
     List<BlockerDetail> blockers = new ArrayList<>();
-    if (!component.isDisplayable()) {
+    boolean displayable = component.isDisplayable();
+    boolean showing = component.isShowing();
+    int width = component.getWidth();
+    int height = component.getHeight();
+    if (!displayable) {
       blockers.add(new BlockerDetail(
           blockerPrefix + "_not_displayable",
           statePrefix + "Displayable=false",
           statePrefix + "Displayable=true"));
     }
-    if (!component.isShowing()) {
+    if (!showing) {
       blockers.add(new BlockerDetail(
           blockerPrefix + "_not_showing",
           statePrefix + "Showing=false",
           statePrefix + "Showing=true"));
     }
-    if (component.getWidth() <= 0 || component.getHeight() <= 0) {
+    if (width <= 0 || height <= 0) {
       blockers.add(new BlockerDetail(
           blockerPrefix + "_has_no_positive_size",
-          statePrefix + "Width=" + component.getWidth()
-              + ", " + statePrefix + "Height=" + component.getHeight(),
+          statePrefix + "Width=" + width + ", " + statePrefix + "Height=" + height,
           statePrefix + "Width>0 and " + statePrefix + "Height>0"));
     }
     return blockers;
@@ -769,7 +946,8 @@ public final class EatmeDesktopRunExecutionEvidence {
   }
 
   private static String runtimeLog(String programTypeName, List<String> events) {
-    StringBuilder builder = new StringBuilder();
+    int programTypeNameLength = programTypeName != null ? programTypeName.length() : 4;
+    StringBuilder builder = new StringBuilder(96 + programTypeNameLength + (events.size() * 32));
     builder.append("schema_version=eatme.alice-desktop-run-execution-log/v1\n");
     builder.append("program_type=").append(programTypeName).append('\n');
     builder.append("recorded_at=").append(Instant.now()).append('\n');

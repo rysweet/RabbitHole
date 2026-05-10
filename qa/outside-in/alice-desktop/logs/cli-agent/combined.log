@@ -1,0 +1,7 @@
+{"command":"qa/outside-in/alice-desktop/runners/validate-scenarios.sh","event":"command_execution","level":"debug","message":"Executing command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh","service":"agentic-testing","timestamp":"2026-05-09T23:36:30.087Z","workingDir":"."}
+{"attempt":1,"error":"Command failed with exit code 127: /bin/sh: 1: qa/outside-in/alice-desktop/runners/validate-scenarios.sh: not found\n","level":"warn","maxAttempts":3,"message":"Command attempt 1 failed, retrying in 1000ms","service":"agentic-testing","timestamp":"2026-05-09T23:36:30.096Z"}
+{"attempt":2,"error":"Command failed with exit code 127: /bin/sh: 1: qa/outside-in/alice-desktop/runners/validate-scenarios.sh: not found\n","level":"warn","maxAttempts":3,"message":"Command attempt 2 failed, retrying in 1000ms","service":"agentic-testing","timestamp":"2026-05-09T23:36:31.103Z"}
+{"level":"info","message":"Killing 3 running processes","service":"agentic-testing","timestamp":"2026-05-09T23:36:32.107Z"}
+{"level":"info","message":"Killing process: qa/outside-in/alice-desktop/runners/validate-scenarios.sh (PID: 2028599)","service":"agentic-testing","timestamp":"2026-05-09T23:36:32.108Z"}
+{"level":"info","message":"Killing process: qa/outside-in/alice-desktop/runners/validate-scenarios.sh (PID: 2029068)","service":"agentic-testing","timestamp":"2026-05-09T23:36:32.108Z"}
+{"level":"info","message":"Killing process: qa/outside-in/alice-desktop/runners/validate-scenarios.sh (PID: 2029496)","service":"agentic-testing","timestamp":"2026-05-09T23:36:32.108Z"}

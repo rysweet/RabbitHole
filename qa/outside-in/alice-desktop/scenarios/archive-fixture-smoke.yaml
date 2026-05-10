@@ -1,5 +1,4 @@
 id: alice-desktop-archive-fixture-smoke
-title: Generated legacy fixture and player resource-recovery boundary smoke
 name: Legacy player resource-recovery boundary smoke
 title: Legacy player resource-recovery boundary smoke
 workflow: archive-fixture-smoke

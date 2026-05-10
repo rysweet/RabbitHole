@@ -7,6 +7,7 @@
   "required": [
     "id",
     "title",
+    "name",
     "workflow",
     "automationMode",
     "preconditions",
@@ -51,6 +52,7 @@
         "issue-reporting-smoke",
         "launch",
         "menu-action-smoke",
+        "model-export-boundary-smoke",
         "migration-hotspot-characterization-smoke",
         "netbeans-package-smoke",
         "open-load-save",
@@ -249,10 +251,7 @@
                   "const": "mvn"
                 },
                 {
-                  "const": "-DincludeSims=false"
-                },
-                {
-                  "const": "-Dinstall4j.skip"
+                  "const": "-DfailIfNoTests=false"
                 },
                 {
                   "const": "-DfailIfNoTests=false"
@@ -311,8 +310,8 @@
                 }
               ],
               "items": false,
-              "minItems": 9,
-              "maxItems": 9
+              "minItems": 8,
+              "maxItems": 8
             },
             {
               "prefixItems": [
@@ -478,15 +477,85 @@
                 },
                 {
                   "const": "core/story-api-migration"
-                  "const": "core/issue-reporting"
-                  "const": "core/ide"
                 },
                 {
                   "const": "-am"
                 },
                 {
                   "const": "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/issue-reporting"
+                },
+                {
+                  "const": "-am"
+                },
+                {
                   "const": "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ide"
+                },
+                {
+                  "const": "-am"
+                },
+                {
                   "const": "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest"
                 },
                 {
@@ -797,6 +866,43 @@
               "items": false,
               "minItems": 10,
               "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/model-loading"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.lgna.story.resourceutilities.ModelExportTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
             }
           ]
         },
@@ -895,6 +1001,8 @@
         "properties": {
           "workflow": {
             "enum": [
+              "project-io-smoke",
+              "save-menu-dialog-write-proof"
               "save-menu-dialog-write-proof",
               "run-window-contract"
             ]
