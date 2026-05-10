@@ -1,0 +1,42 @@
+name: run-window-contract-evidence
+description: "Validates PR #434 run-window creation/wiring contract evidence through existing QA entry points only; it does not validate active rendering, run execution, world execution correctness, rendering correctness, save behavior, grading, or full UI automation."
+config:
+  timeout: 180000
+environment:
+  requires: []
+agents:
+  - id: alice-desktop-qa-cli
+    type: cli
+    config:
+      workingDirectory: .
+metadata:
+  priority: medium
+  tags:
+    - cli
+    - gadugi
+    - pr-434
+    - run-window-contract
+    - run-window-evidence
+steps:
+  - name: validate-desktop-outside-in-catalog
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/validate-scenarios.sh
+    timeout: 60000
+  - name: prepare-run-window-contract-evidence
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/runners/run-scenario.sh
+      args:
+        - run
+        - alice-desktop-run-window-contract
+        - --prepare-only
+        - --evidence-dir
+        - qa/outside-in/alice-desktop/evidence/gadugi-run-window-contract
+    timeout: 60000
+  - name: run-desktop-outside-in-contract-tests
+    action: run
+    params:
+      command: qa/outside-in/alice-desktop/tests/run-tests.sh
+    timeout: 120000
+assertions: []
