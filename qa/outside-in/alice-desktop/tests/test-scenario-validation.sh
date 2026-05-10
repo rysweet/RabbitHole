@@ -12,6 +12,7 @@ RUNNER="$BASE_DIR/runners/run-scenario.sh"
 TARGET_SCENARIO_ID=alice-desktop-select-project-tab-click-exec
 POST_OPEN_SCENARIO_ID=alice-desktop-post-project-open-window-state
 SAVE_MENU_SCENARIO_ID=alice-desktop-save-menu-dialog-write-proof
+ARCHIVE_FIXTURE_SCENARIO_ID=alice-desktop-archive-fixture-smoke
 TARGET_DISPLAY_NAME="Africa Full"
 TARGET_REPOSITORY_PATH="core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
 
@@ -25,7 +26,8 @@ python3 - "$tmp_root/target-scenario.json" "$TARGET_DISPLAY_NAME" "$TARGET_REPOS
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 expected_display_name = sys.argv[2]
 expected_repository_path = sys.argv[3]
 target = scenario.get("targetStarter")
@@ -52,7 +54,8 @@ python3 - "$tmp_root/post-open-scenario.json" "$TARGET_DISPLAY_NAME" "$TARGET_RE
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 expected_display_name = sys.argv[2]
 expected_repository_path = sys.argv[3]
 target = scenario.get("targetStarter")
@@ -77,7 +80,8 @@ python3 - "$tmp_root/save-menu-scenario.json" <<'PY'
 import json
 import sys
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 expected_argv = [
     "mvn",
     "-DincludeSims=false",
@@ -123,12 +127,79 @@ for non_claim in (
 PY
 assert_success "$?" "Save menu scenario targets the Robot proof and drops stale Stage evidence"
 
+"$VALIDATOR" --dump-json "$ARCHIVE_FIXTURE_SCENARIO_ID" >"$tmp_root/archive-fixture-scenario.json" 2>"$tmp_root/archive-fixture-scenario.err"
+status=$?
+assert_success "$status" "validator dumps the archive fixture smoke scenario"
+python3 - "$tmp_root/archive-fixture-scenario.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
+if scenario["workflow"] != "archive-fixture-smoke":
+    raise AssertionError("archive fixture scenario workflow must remain archive-fixture-smoke")
+if scenario["automationMode"] != "gated-command-smoke":
+    raise AssertionError("archive fixture scenario must remain a gated command smoke")
+expected_argv = [
+    "mvn",
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-DfailIfNoTests=false",
+    "-Dsurefire.failIfNoSpecifiedTests=false",
+    "-pl",
+    "core/story-api-migration",
+    "-am",
+    "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest",
+    "test",
+]
+if scenario["automation"]["argv"] != expected_argv:
+    raise AssertionError("archive fixture scenario must run the focused characterization suite")
+user_actions = "\n".join(scenario["userActions"])
+expected_outcomes = "\n".join(scenario["expectedOutcomes"])
+scenario_text = json.dumps(scenario, sort_keys=True)
+for required in (
+    "generated LFS-independent .a3p, .a3c, and .a3w archive boundaries",
+    "manifest-declared image resources",
+    "unsupported method calls, complex or mixed initializers, resource initializer binding gaps",
+    "unresolved parent cases",
+    "unsupported manifest-declared program and sibling Tweedle types fail explicitly",
+):
+    if required not in user_actions:
+        raise AssertionError(f"archive fixture scenario must document bounded user action: {required}")
+for required in (
+    "Generated XML fallback .a3p fixtures write, read, and preserve resources through IoUtilities archive I/O.",
+    "Generated XML fallback .a3c fixtures write, read, and preserve type resources through IoUtilities archive I/O.",
+    "Simple supported .a3w fixtures export, read, re-export, and reread through IoUtilities with manifest-routed Tweedle source.",
+    "Generated JSON .a3w fixtures with unsupported resource initializers report explicit archive readback failures.",
+    "Supported generated JSON .a3w neighbors remain covered by the same focused characterization suite.",
+):
+    if required not in expected_outcomes:
+        raise AssertionError(f"archive fixture scenario must document executable expected outcome: {required}")
+for forbidden in (
+    "unsupported Tweedle method, constructor, complex value",
+    "project I/O",
+    "full UI automation",
+    "rendering validation",
+    "grading validation",
+):
+    if forbidden in scenario_text:
+        raise AssertionError(f"archive fixture scenario must not overclaim or keep stale wording: {forbidden}")
+if "archive-io" not in scenario.get("tags", []):
+    raise AssertionError("archive fixture scenario must use the archive-io tag instead of project-io shorthand")
+if "archive-player-boundary" not in scenario.get("tags", []):
+    raise AssertionError("archive fixture scenario must preserve the player boundary tag")
+if "alice-desktop-tweedle-decoder-boundary-smoke" not in scenario.get("supportingEvidence", []):
+    raise AssertionError("archive fixture scenario must preserve decoder boundary supporting evidence")
+PY
+assert_success "$?" "Archive fixture scenario keeps bounded archive round-trip evidence wording"
+
 python3 - "$tmp_root/target-scenario.json" "$TARGET_REPOSITORY_PATH" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+with open(sys.argv[1], encoding="utf-8") as scenario_file:
+    scenario = json.load(scenario_file)
 repository_path = Path(sys.argv[2])
 required = "\n".join(scenario["evidence"]["required"])
 expected_outcomes = "\n".join(scenario["expectedOutcomes"])

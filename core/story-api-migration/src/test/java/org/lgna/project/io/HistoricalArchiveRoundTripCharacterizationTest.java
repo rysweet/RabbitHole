@@ -15,6 +15,7 @@ import org.lgna.common.Resource;
 import org.lgna.common.resources.ImageResource;
 import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
+import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.ArithmeticInfixExpression;
 import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BlockStatement;
@@ -1134,6 +1135,34 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
         imageResource);
   }
 
+  @Test
+  public void generatedXmlArchiveBeforeSupportedMigrationFloorFailsClosed() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-xml-before-migration-floor.a3p");
+
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(projectArchive))) {
+      writeEntry(
+          zipOutputStream,
+          ProjectIo.VERSION_ENTRY_NAME,
+          "3.0.0.0".getBytes(StandardCharsets.UTF_8));
+      writeEntry(
+          zipOutputStream,
+          "programType.xml",
+          "<node version=\"3.0\" type=\"org.lgna.project.ast.NamedUserType\"/>"
+              .getBytes(StandardCharsets.UTF_8));
+    }
+    try (ZipFile zipFile = new ZipFile(projectArchive)) {
+      assertNotNull(zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
+      assertNotNull(zipFile.getEntry("programType.xml"));
+      assertNull(zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
+    }
+
+    VersionNotSupportedException thrown =
+        assertThrows(VersionNotSupportedException.class, () -> IoUtilities.readProject(projectArchive));
+
+    assertEquals("XML decoder floor should be explicit", 3.1, thrown.getMinimumSupportedVersion(), 0.0);
+    assertEquals("Synthetic archive should fail on its declared XML version", 3.0, thrown.getVersion(), 0.0);
+  }
+
   private static void assertXmlTypeArchiveFacts(File archive) throws Exception {
     try (ZipFile zipFile = new ZipFile(archive)) {
       ZipEntry versionEntry = zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME);
@@ -1220,22 +1249,30 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       String expectedProgramName,
       Project.SceneCameraType expectedSceneCameraType) throws Exception {
     try (ZipFile zipFile = new ZipFile(archive)) {
-      assertNotNull("Generated .a3w archives should declare a version",
-          zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
-      assertNotNull("Generated .a3w archives should contain a manifest",
-          zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
-      assertNotNull("Generated .a3w archives should contain Tweedle source for the program",
-          zipFile.getEntry("src/" + expectedProgramName + ".twe"));
-
-      ProjectManifest manifest = readProjectManifest(zipFile);
-      assertEquals(expectedProgramName, manifest.description.name);
-      assertEquals(IoUtilities.EXPORT_EXTENSION, manifest.metadata.fileType);
-      assertEquals(Manifest.ProjectType.World, manifest.metadata.identifier.type);
-      assertEquals(expectedSceneCameraType, manifest.projectStructure.sceneCameraType);
-      assertTrue("Generated .a3w archives should include the standard library prerequisite",
-          manifest.prerequisites.stream().anyMatch(identifier -> "SceneGraphLibrary".equals(identifier.name)));
-      assertTypeReference(manifest, expectedProgramName, "src/" + expectedProgramName + ".twe");
+      assertWorldManifestFacts(zipFile, expectedProgramName, expectedSceneCameraType);
     }
+  }
+
+  private static ProjectManifest assertWorldManifestFacts(
+      ZipFile zipFile,
+      String expectedProgramName,
+      Project.SceneCameraType expectedSceneCameraType) throws Exception {
+    assertNotNull("Generated .a3w archives should declare a version",
+        zipFile.getEntry(ProjectIo.VERSION_ENTRY_NAME));
+    assertNotNull("Generated .a3w archives should contain a manifest",
+        zipFile.getEntry(ProjectIo.MANIFEST_ENTRY_NAME));
+    assertNotNull("Generated .a3w archives should contain Tweedle source for the program",
+        zipFile.getEntry("src/" + expectedProgramName + ".twe"));
+
+    ProjectManifest manifest = readProjectManifest(zipFile);
+    assertEquals(expectedProgramName, manifest.description.name);
+    assertEquals(IoUtilities.EXPORT_EXTENSION, manifest.metadata.fileType);
+    assertEquals(Manifest.ProjectType.World, manifest.metadata.identifier.type);
+    assertEquals(expectedSceneCameraType, manifest.projectStructure.sceneCameraType);
+    assertTrue("Generated .a3w archives should include the standard library prerequisite",
+        manifest.prerequisites.stream().anyMatch(identifier -> "SceneGraphLibrary".equals(identifier.name)));
+    assertTypeReference(manifest, expectedProgramName, "src/" + expectedProgramName + ".twe");
+    return manifest;
   }
 
   private static void assertWorldResourceManifestFacts(
@@ -1243,11 +1280,11 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
       String expectedProgramName,
       ImageResource expectedResource) throws Exception {
     try (ZipFile zipFile = new ZipFile(archive)) {
-      assertWorldManifestFacts(archive, expectedProgramName, Project.SceneCameraType.WindowCamera);
+      ProjectManifest manifest =
+          assertWorldManifestFacts(zipFile, expectedProgramName, Project.SceneCameraType.WindowCamera);
       assertNotNull("Generated .a3w archives should contain exported image data",
           zipFile.getEntry("resources/" + expectedResource.getName()));
 
-      ProjectManifest manifest = readProjectManifest(zipFile);
       assertImageReference(
           manifest,
           expectedResource.getId(),

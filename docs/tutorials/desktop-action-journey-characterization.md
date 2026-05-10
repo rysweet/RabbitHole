@@ -2,15 +2,18 @@
 
 This tutorial walks through the Alice desktop action characterization lane by tracing current menu/action smoke evidence to the headless-safe Save action flow, then checking the headless launch guard contract.
 
+For a menu/action-only review, stop after Step 4. Steps 5 and 6 are separate action-flow and startup-guard checks; do not cite them as menu/action readiness evidence.
+
 ## What you will do
 
 You will:
 
 1. Validate the Alice desktop QA scenario catalog.
-2. Prepare menu/action smoke evidence.
-3. Run the focused menu/action contract test.
-4. Run the Save operation journey tests.
-5. Check the headless launch guard contract.
+2. Locate the menu/action smoke scenario.
+3. Prepare menu/action smoke evidence.
+4. Run the focused menu/action contract test.
+5. Run the Save operation journey tests.
+6. Check the headless launch guard contract.
 
 ## Before you start
 
@@ -80,12 +83,14 @@ manual-evidence-checklist.txt
 Enable gated smokes in a prepared checkout:
 
 ```bash
+export NODE_OPTIONS=--max-old-space-size=32768
 ALICE_QA_RUN_GATED_SMOKES=1 \
 qa/outside-in/alice-desktop/runners/run-scenario.sh run alice-desktop-menu-action-smoke \
   --evidence-dir qa/outside-in/alice-desktop/evidence/tutorial-runs
 ```
 
-The enabled scenario runs the focused menu/action contract:
+The enabled scenario runs the focused menu/action contract. With `NODE_OPTIONS`
+set in the environment, the checked-in scenario argv starts at `mvn`:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip \
@@ -95,7 +100,7 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-Review the generated `command.log` and `status.txt`. The action smoke is accepted when the command exits successfully and the evidence names `AliceMenuBarContractTest`.
+Review the generated `command.log` and `status.txt`. The action smoke is accepted when the command exits successfully and the evidence names `AliceMenuBarContractTest`. The accepted claim is only Window menu model registration and menu-bar membership lookup; it is not full UI automation, rendered menu verification, Save completion, first-lesson completion, deployed installer success, or Sims validation.
 
 ## Step 5: Run the Save action journey tests
 
