@@ -61,6 +61,8 @@ if "first-lesson-live-procedure-target-observation" not in workflow_enum:
     raise AssertionError(
         "schema workflow enum must include first-lesson-live-procedure-target-observation"
     )
+if "run-window-contract" not in workflow_enum:
+    raise AssertionError("schema workflow enum must include run-window-contract")
 if "exported-project-ant-build-smoke" not in workflow_enum:
     raise AssertionError("schema workflow enum must include exported-project-ant-build-smoke")
 if "silver-thread-launch-build-run" not in workflow_enum:
@@ -114,6 +116,18 @@ stale_stage_save_menu_argv = (
     "-Dtest=org.alice.ide.croquet.models.projecturi.StageIdeSaveMenuDoClickToWriteProofTest",
     "test",
 )
+run_window_contract_argv = (
+    "mvn",
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-DfailIfNoTests=false",
+    "-Dsurefire.failIfNoSpecifiedTests=false",
+    "-pl",
+    "core/ide",
+    "-am",
+    "-Dtest=org.alice.tools.EatmeRunWindowEvidenceTest",
+    "test",
+)
 expected_argv = {
     (
         "mvn",
@@ -162,6 +176,18 @@ expected_argv = {
         "mvn",
         "-DincludeSims=false",
         "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/story-api-migration",
+        "-am",
+        "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest",
+        "test",
+    ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
         "-Dsurefire.failIfNoSpecifiedTests=false",
         "-pl",
         "core/story-api-migration",
@@ -192,6 +218,7 @@ expected_argv = {
         "test",
     ),
     robot_save_menu_argv,
+    run_window_contract_argv,
     (
         "mvn",
         "-DincludeSims=false",
@@ -305,6 +332,8 @@ if allowed_argv != expected_argv:
     raise AssertionError("automation.argv must be restricted to the allowed Alice QA argv set")
 if robot_save_menu_argv not in allowed_argv:
     raise AssertionError("schema must allow the Robot Save menu dialog write/readback proof argv")
+if run_window_contract_argv not in allowed_argv:
+    raise AssertionError("schema must allow the Run-window creation/wiring contract proof argv")
 if stale_stage_save_menu_argv in allowed_argv:
     raise AssertionError("schema must not keep the stale Stage doClick proof argv for the QA scenario")
 for option in argv_schema.get("oneOf", []):

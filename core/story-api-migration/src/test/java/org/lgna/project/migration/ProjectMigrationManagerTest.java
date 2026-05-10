@@ -3,7 +3,7 @@ package org.lgna.project.migration;
 import org.lgna.project.Version;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 
 import static org.junit.Assert.*;
@@ -172,11 +172,85 @@ public class ProjectMigrationManagerTest {
   }
 
   @Test
+  public void textMigrationCharacterizesVersion3_2_111BonePileBoundary() {
+    String source = "name=\"BONE_PILE\">\n<declaringClass name=\"org.lgna.story.resources.prop.BonesResource\"";
+    String expected = "name=\"DEFAULT\"> <declaringClass name=\"org.lgna.story.resources.prop.BonePileResource\"";
+
+    assertEquals(expected, migrateWithoutTestLogNoise(source, "3.2.110.0.0"));
+    assertEquals(source, migrateWithoutTestLogNoise(source, "3.2.111.0.0"));
+    assertEquals(source, migrateWithoutTestLogNoise(source, "3.2.112.0.0"));
+  }
+
+  @Test
   public void managerReportsNoPendingMigrationsAtCurrentVersion() {
     Version currentVersion = manager.getCurrentVersion();
 
     assertFalse(manager.hasTextMigrationsFor(currentVersion));
     assertFalse(manager.hasAstMigrationsFor(currentVersion));
+  }
+
+  @Test
+  public void textMigrationOfEmptyStringIsNoOp() {
+    String result = migrateWithoutTestLogNoise("", "3.1.7.0.0");
+
+    assertEquals("", result);
+  }
+
+  @Test
+  public void textMigrationAtCurrentVersionReturnsInputUnchanged() {
+    String source = "org.lgna.story.resources.dresser.DresserCentralAsian INDIA_BRICK_D";
+    Version currentVersion = manager.getCurrentVersion();
+
+    String result = migrateWithoutTestLogNoise(source, currentVersion.toString());
+
+    assertEquals(source, result);
+  }
+
+  @Test
+  public void migrationListsAreNonEmpty() {
+    assertTrue(manager.getTextMigrations().length > 0);
+    assertTrue(manager.getAstMigrations().length > 0);
+  }
+
+  @Test
+  public void textMigrationIsStableWhenReappliedFromResultVersion() {
+    String source = String.join("\n",
+        "org.lgna.story.resources.dresser.DresserCentralAsian",
+        "INDIA_BRICK_D",
+        "org.lgna.story.Program"
+    );
+
+    String firstPass = migrateWithoutTestLogNoise(source, "3.1.7.0.0");
+    Version currentVersion = manager.getCurrentVersion();
+    String secondPass = migrateWithoutTestLogNoise(firstPass, currentVersion.toString());
+
+    assertEquals(firstPass, secondPass);
+  }
+
+  @Test
+  public void textMigrationResultVersionNeverExceedsCurrentVersion() {
+    Version currentVersion = manager.getCurrentVersion();
+
+    for (TextMigration migration : manager.getTextMigrations()) {
+      assertTrue(
+          migration.getResultVersion() + " should not exceed current " + currentVersion,
+          migration.getResultVersion().compareTo(currentVersion) <= 0
+      );
+    }
+  }
+
+  @Test
+  public void astMigrationResultVersionNeverExceedsCurrentVersion() {
+    Version currentVersion = manager.getCurrentVersion();
+
+    for (AstMigration migration : manager.getAstMigrations()) {
+      if (migration != null) {
+        assertTrue(
+            migration.getResultVersion() + " should not exceed current " + currentVersion,
+            migration.getResultVersion().compareTo(currentVersion) <= 0
+        );
+      }
+    }
   }
 
   private TextMigration textMigrationFor(String versionText) {
@@ -186,17 +260,18 @@ public class ProjectMigrationManagerTest {
         return migration;
       }
     }
-    fail("No text migration found for " + versionText);
-    return null;
+    throw new AssertionError("No text migration found for " + versionText);
   }
 
   private String migrateWithoutTestLogNoise(String source, String versionText) {
     PrintStream previousOut = System.out;
+    PrintStream mutedOut = new PrintStream(OutputStream.nullOutputStream());
     try {
-      System.setOut(new PrintStream(new ByteArrayOutputStream()));
+      System.setOut(mutedOut);
       return manager.migrate(source, new Version(versionText));
     } finally {
       System.setOut(previousOut);
+      mutedOut.close();
     }
   }
 }

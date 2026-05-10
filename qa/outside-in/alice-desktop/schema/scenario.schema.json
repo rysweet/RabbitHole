@@ -51,11 +51,13 @@
         "launch",
         "menu-action-smoke",
         "model-export-boundary-smoke",
+        "migration-hotspot-characterization-smoke",
         "netbeans-package-smoke",
         "open-load-save",
         "package-install-smoke",
         "project-io-smoke",
         "run-debug",
+        "run-window-contract",
         "save-load",
         "save-menu-dialog-write-proof",
         "scene-creation",
@@ -231,6 +233,43 @@
                 },
                 {
                   "const": "-Dtest=org.lgna.project.io.HistoricalArchiveRoundTripCharacterizationTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ide"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.alice.tools.EatmeRunWindowEvidenceTest"
                 },
                 {
                   "const": "test"
@@ -437,6 +476,7 @@
                   "const": "-pl"
                 },
                 {
+                  "const": "core/story-api-migration"
                   "const": "core/issue-reporting"
                   "const": "core/ide"
                 },
@@ -444,6 +484,7 @@
                   "const": "-am"
                 },
                 {
+                  "const": "-Dtest=org.lgna.project.migration.ProjectMigrationManagerTest"
                   "const": "-Dtest=org.lgna.issue.IssueSubmissionProgressWorkerTest"
                   "const": "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest"
                 },
@@ -815,7 +856,10 @@
       "if": {
         "properties": {
           "workflow": {
-            "const": "save-menu-dialog-write-proof"
+            "enum": [
+              "save-menu-dialog-write-proof",
+              "run-window-contract"
+            ]
           }
         },
         "required": [
