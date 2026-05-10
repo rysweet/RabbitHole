@@ -67,6 +67,7 @@ report](./desktop-run-execution-gap-report.md).
 | `alice-desktop-file-loader-smoke` | `file-loader-smoke` | `gated-command-smoke` | Covers file-loader and recovery dispatch behavior at the command/test seam. |
 | `alice-desktop-first-lesson-live-procedure-target-observation` | `first-lesson-live-procedure-target-observation` | `xvfb-real-alice` | Action-seam contract for observing the post-Select-Project live `scene.eatmeFirstLesson` procedure/code-editor target and recording either edit-ready evidence or the named missing CodeEditor/CodeComposite edit-action contract blocker. |
 | `alice-desktop-failure-path-smoke` | `failure-path-smoke` | `gated-command-smoke` | Covers corrupt project input failure handling evidence. |
+| `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Gated controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Covers controlled-display UI startup evidence; no-op unless gated on. |
 | `alice-desktop-future-ui-smoke` | `future-ui-smoke` | `gated-command-smoke` | Reserved controlled-display UI startup evidence lane; runs only when gated on. |
 | `alice-desktop-menu-action-smoke` | `menu-action-smoke` | `gated-command-smoke` | Covers launch-adjacent Alice desktop menu registration and controller lookup seams without display assumptions. |
@@ -78,6 +79,9 @@ report](./desktop-run-execution-gap-report.md).
 | `alice-desktop-wizard-palette-completion-smoke` | `wizard-palette-completion-smoke` | `gated-command-smoke` | Covers focused wizard, palette, and completion affordance checks where current NetBeans tests can observe them. |
 | `alice-desktop-silver-thread-launch-build-run` | `silver-thread-launch-build-run` | `gated-command-smoke` | Proves the core student journey headlessly: create→build→save→reopen→execute→verify round-trip plus real starter project load→inspect→copy→reopen through `SilverThreadLaunchBuildRunTest`. |
 | `alice-desktop-post-open-runtime-display-accessibility-evidence` | `post-open-runtime-display-accessibility-evidence` | `xvfb-real-alice` | Collects narrow read-only post-open runtime/display accessibility evidence, or a precise structured blocker. |
+| `alice-desktop-procedure-edit-handoff-smoke` | `procedure-edit-handoff-smoke` | `gated-command-smoke` | Covers the object-placement artifact handoff into the deterministic procedure edit seam. |
+| `alice-desktop-procedure-edit-seam-smoke` | `procedure-edit-seam-smoke` | `gated-command-smoke` | Covers deterministic procedure edit artifacts and the exact missing UI edit action target. |
+| `alice-desktop-save-negative-artifact-contract` | `save-negative-artifact-contract` | `manual-evidence-required` | Proves the `validate-save-proof-evidence` seam rejects missing context, missing, wrong-name, symlinked, malformed, non-object, stale, future-dated, identity-mismatched, blocked, unknown-blocker, partial, and inconsistent Save proof artifacts with explicit diagnostics. |
 | `alice-desktop-model-export-boundary-smoke` | `model-export-boundary-smoke` | `gated-command-smoke` | Covers model resource export boundary characterization: XML generation, enum naming, generated Java compilation, bounding-box metadata, and thumbnail handling. |
 
 The first-lesson live procedure target action seam is a read-only contract. It
@@ -207,12 +211,16 @@ Run commands from the repository root.
 | `validate-scenarios.sh --list` | List normalized scenario records. | Prints scenario ID, automation mode, and title. |
 | `validate-scenarios.sh --dump-json` | Dump the full normalized catalog. | Prints a JSON array sorted by scenario file path. |
 | `validate-scenarios.sh --dump-json <scenario-id>` | Dump one normalized scenario. | Prints a JSON object for the requested scenario ID. |
+| `run-scenario.sh validate-save-proof-evidence <artifact> --scenario <id> --workflow <workflow> --run-id <run-id> --started-at-epoch <epoch>` | Validate one Save proof artifact at the existing evidence-validation seam. | Exits zero only for a fresh, canonical, internally consistent `status: "proven"` Save proof artifact; all missing, malformed, stale, blocked, partial, or inconsistent artifacts exit non-zero with explicit diagnostics. |
 | `run-scenario.sh list` | List runnable scenarios. | Prints the same user-facing list as the validator. |
 | `run-scenario.sh validate` | Validate the active catalog through the runner. | Delegates to `validate-scenarios.sh`. |
 | `run-scenario.sh run <scenario-id-or-path>` | Create evidence for one scenario. | Prints the created run directory and writes artifacts under the evidence directory. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/exported-launcher-evidence.yaml` | Validate the Gadugi exported launcher evidence scenario. | Confirms the scenario uses the Gadugi CLI schema, not the custom Alice scenario schema. |
 | `gadugi-test validate scenarios/` | Validate all 33 Alice scenario YAML files against the gadugi-test canonical schema. | Reports valid/invalid counts; expects 0 invalid files. Run from `qa/outside-in/alice-desktop/`. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s exported-launcher-evidence --timeout 300000` | Run the Gadugi exported launcher evidence scenario. | Delegates to the outside-in exported-project smoke runner in prepare-only mode by default. |
+| `uvx --from git+<repo>@<branch-or-commit> amplihack alice-qa list` | Install the QA wrapper from a branch or commit and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
+| `uvx --from git+<repo>@<branch-or-commit> amplihack alice-qa save-negative-contract` | Install the QA wrapper from a branch or commit and run the Save negative artifact contract in the current checkout. | Proves invalid Save proof artifacts fail closed with explicit diagnostics; it is not desktop Save completion evidence. |
+| `uvx --from git+<repo>@<branch-or-commit> amplihack alice-qa run <scenario-id-or-path>` | Install the QA wrapper from a branch or commit and create evidence in the current checkout. | Delegates to `run-scenario.sh run`. |
 | `gadugi-test validate -f qa/outside-in/alice-desktop/gadugi/archive-fixture-evidence.yaml` | Validate the Gadugi archive fixture evidence scenario. | Confirms the scenario uses the Gadugi CLI schema. |
 | `gadugi-test run -d qa/outside-in/alice-desktop/gadugi -s archive-fixture-evidence --timeout 600000` | Run the Gadugi archive fixture evidence scenario. | Delegates to the outside-in archive-fixture smoke runner and contract test suite. |
 | `uvx --from git+<repo>@<branch> amplihack alice-qa list` | Install the QA wrapper from a branch and list scenarios in the current checkout. | Prints the same user-facing list as the runner. |
@@ -296,14 +304,17 @@ player runtime behavior.
 ### Run through the branch-installable wrapper
 
 ```bash
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
   amplihack alice-qa list
 
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
+  amplihack alice-qa save-negative-contract
+
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
   amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
-Replace `<branch>` with the PR branch or commit you are reviewing. The
+Replace `<branch-or-commit>` with the PR branch or commit you are reviewing. The
 `amplihack alice-qa` wrapper is intentionally thin. It must be run from an Alice
 checkout, locates the repository root from the current working directory, and
 delegates to the checked-out shell runners.
@@ -588,6 +599,7 @@ failure-path-smoke
 file-loader-smoke
 first-lesson-live-procedure-target-observation
 future-ui-smoke
+generated-listener-runtime-dispatch-smoke
 instructor-student-setup
 launch
 menu-action-smoke
@@ -599,10 +611,12 @@ post-project-open-window-state-smoke
 procedure-edit-handoff-smoke
 procedure-edit-seam-smoke
 project-io-smoke
+runtime-event-dispatch-smoke
 run-debug
 run-window-contract
 save-load
 save-menu-dialog-write-proof
+save-negative-artifact-contract
 scene-creation
 select-project-atk-exec-smoke
 select-project-interaction-smoke
@@ -877,6 +891,7 @@ raw target-scoped sampling signals.
 | Future UI smoke | `status.txt`, `command.log` when gated, startup screenshot or first-window signal when collected, manual fallback notes otherwise. |
 | Run-window creation/wiring contract | Evidence contract: `status.txt`, `command.log`, focused seam test output naming `EatmeRunWindowEvidenceTest`, and canonical `run-window-created.json` evidence with `schema_version=eatme.alice-run-window-created/v1`, `status=created`, `contract_scope=run-window-creation-wiring`, `evidence_source=org.alice.stageide.run.RunComposite#handlePreShowWindow`, false capability booleans, and `does_not_claim` boundaries. This workflow proves creation/wiring only and does not claim active rendering, run execution, world execution correctness, rendering correctness, Save behavior, grading, creative assessment, lesson completion, or full UI automation. |
 | Save menu dialog write/readback proof | Evidence contract: `status.txt`, `command.log`, focused Robot Save menu/dialog/write/readback proof test output naming `RobotSaveMenuDialogWriteReadbackProofTest`, and fresh canonical `robot-save-menu-dialog-write-readback-proof.json` evidence with `schemaVersion=eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1`, matching `scenario` and `runId`, `status=proven`, all required menu/dialog/control/write/readback marker flags true, an existing `.a3p` output with matching size, and marker readback verified. Missing, stale, blocked, partial, internally inconsistent, or unknown-blocker artifacts fail closed. Stale `StageIdeSaveMenuDoClickToWriteProofTest` output or `save-menu-dialog-write-proof.json` artifacts do not satisfy this scenario. See [Save Proof Evidence](./save-proof-evidence.md). |
+| Save menu dialog negative artifact contract | `status.txt`, `command.log`, and `test-save-menu-dialog-negative-artifact-contract.sh` output proving the `validate-save-proof-evidence` seam rejects missing context, missing, wrong-name, symlinked, malformed, non-object, stale, future-dated, identity-mismatched, blocked, unknown-blocker, partial, and inconsistent Save proof artifacts with explicit diagnostics. This is not Save completion evidence. See [Save Menu Dialog Negative Artifact Contract](./save-menu-dialog-negative-artifact-contract.md). |
 | Wizard/palette/completion smoke | `status.txt`, `command.log`, focused test output for wizard validation, palette wiring, and completion resources; manual screenshot notes when desktop evidence is added. |
 
 ## Scenario authoring rules

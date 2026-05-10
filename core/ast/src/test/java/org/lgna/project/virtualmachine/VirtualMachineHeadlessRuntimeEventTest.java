@@ -23,6 +23,11 @@ import static org.junit.Assert.assertEquals;
  * it does not start JavaFX, load gallery assets, or render a scene.
  */
 public class VirtualMachineHeadlessRuntimeEventTest {
+  private static final List<String> EXPECTED_STATEMENT_EVENTS = Arrays.asList(
+      "executing:BlockStatement",
+      "executing:Comment",
+      "executed:Comment",
+      "executed:BlockStatement");
 
   @Test
   public void headlessStaticStoryMethodNotifiesListenerAroundBlockAndCommentStatements() {
@@ -41,22 +46,14 @@ public class VirtualMachineHeadlessRuntimeEventTest {
     virtualMachine.ENTRY_POINT_invoke(null, storyMethod);
 
     assertEquals(
-        Arrays.asList(
-            "executing:BlockStatement",
-            "executing:Comment",
-            "executed:Comment",
-            "executed:BlockStatement"),
+        EXPECTED_STATEMENT_EVENTS,
         listener.statementEvents);
 
     virtualMachine.removeVirtualMachineListener(listener);
     virtualMachine.ENTRY_POINT_invoke(null, storyMethod);
 
     assertEquals(
-        Arrays.asList(
-            "executing:BlockStatement",
-            "executing:Comment",
-            "executed:Comment",
-            "executed:BlockStatement"),
+        EXPECTED_STATEMENT_EVENTS,
         listener.statementEvents);
   }
 

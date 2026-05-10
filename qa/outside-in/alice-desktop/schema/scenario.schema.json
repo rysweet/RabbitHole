@@ -47,6 +47,7 @@
         "file-loader-smoke",
         "first-lesson-live-procedure-target-observation",
         "future-ui-smoke",
+        "generated-listener-runtime-dispatch-smoke",
         "instructor-student-setup",
         "issue-reporting-smoke",
         "launch",
@@ -57,10 +58,12 @@
         "open-load-save",
         "package-install-smoke",
         "project-io-smoke",
+        "runtime-event-dispatch-smoke",
         "run-debug",
         "run-window-contract",
         "save-load",
         "save-menu-dialog-write-proof",
+        "save-negative-artifact-contract",
         "scene-creation",
         "select-project-interaction-smoke",
         "select-project-widget-introspection-smoke",
@@ -611,6 +614,80 @@
               "items": false,
               "minItems": 1,
               "maxItems": 1
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ast"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.lgna.project.virtualmachine.VirtualMachineHeadlessRuntimeEventTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "netbeans"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.alice.netbeans.project.ProjectCodeGeneratorStoryApiGeneratedSourceTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
             },
             {
               "prefixItems": [

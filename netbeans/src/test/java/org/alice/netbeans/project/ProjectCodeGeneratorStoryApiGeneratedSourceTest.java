@@ -53,6 +53,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -171,77 +172,53 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
   }
 
   @Test
-  public void generatedSyntheticSceneActivationListenerDispatchesHeadless() throws Exception {
+  public void generatedSceneActivationListenerParticipatesInHeadlessRuntimeDispatch() throws Exception {
     Path sourceDirectory = generateProgramSource(
-        "synthetic-scene-activation-listener-runtime.a3p",
-        programTypeWithExecutableSceneActivationListenerRegistration(),
-        "generated-scene-activation-listener-runtime-src");
+        "synthetic-scene-activation-listener-runtime-dispatch.a3p",
+        programTypeWithExecutableSceneActivationRuntimeDispatchProbe(),
+        "generated-scene-activation-listener-runtime-dispatch-src");
 
     Path scenePath = sourceDirectory.resolve("Scene.java");
     String sceneSource = Files.readString(scenePath);
     assertTrue(sceneSource, sceneSource.contains("public void handleActiveChanged(Boolean isActive,Integer activationCount)"));
     assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener((SceneActivationEvent p0) ->"));
-    assertTrue(sceneSource, sceneSource.contains("ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationEvent();"));
-
-    Path classesDirectory = compileAllGeneratedSources(
-        "generated-scene-activation-listener-runtime-classes",
-        sourceDirectory);
-    sceneActivationEventLatch = new CountDownLatch(1);
-    try (URLClassLoader classLoader = new URLClassLoader(
-        new URL[] {classesDirectory.toUri().toURL()},
-        Thread.currentThread().getContextClassLoader())) {
-      Class<?> sceneClass = Class.forName("Scene", true, classLoader);
-      var constructor = sceneClass.getDeclaredConstructor();
-      constructor.setAccessible(true);
-      Object scene = constructor.newInstance();
-      var handleActiveChanged = sceneClass.getDeclaredMethod("handleActiveChanged", Boolean.class, Integer.class);
-      handleActiveChanged.setAccessible(true);
-      handleActiveChanged.invoke(scene, Boolean.TRUE, 1);
-      Object sceneImplementation = sceneClass.getMethod("getImplementation").invoke(scene);
-      Object eventManager = sceneImplementation.getClass().getMethod("getEventManager").invoke(sceneImplementation);
-      eventManager.getClass().getMethod("sceneActivated").invoke(eventManager);
-      assertTrue("Generated scene activation listener should run when the runtime event fires",
-          sceneActivationEventLatch.await(5, TimeUnit.SECONDS));
-    }
-  }
-
-  @Test
-  public void generatedSceneActivationListenerReceivesEventArgumentHeadless() throws Exception {
-    Path sourceDirectory = generateProgramSource(
-        "synthetic-scene-activation-listener-payload-runtime.a3p",
-        programTypeWithExecutableSceneActivationListenerPayloadProbe(),
-        "generated-scene-activation-listener-payload-runtime-src");
-
-    Path scenePath = sourceDirectory.resolve("Scene.java");
-    String sceneSource = Files.readString(scenePath);
-    assertTrue(sceneSource, sceneSource.contains("this.addSceneActivationListener((SceneActivationEvent p0) ->"));
     assertTrue(sceneSource, sceneSource.contains(
-        "ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationEventPayload(p0);"));
+        "ProjectCodeGeneratorStoryApiGeneratedSourceTest.recordSceneActivationRuntimeDispatch(p0);"));
 
     Path classesDirectory = compileAllGeneratedSources(
-        "generated-scene-activation-listener-payload-runtime-classes",
+        "generated-scene-activation-listener-runtime-dispatch-classes",
         sourceDirectory);
-    sceneActivationEventPayloadLatch = new CountDownLatch(1);
-    recordedSceneActivationEvent = null;
+    sceneActivationRuntimeDispatchLatch = new CountDownLatch(1);
+    sceneActivationRuntimeDispatchCount = new AtomicInteger();
+    recordedRuntimeSceneActivationEvent = null;
     try (URLClassLoader classLoader = new URLClassLoader(
         new URL[] {classesDirectory.toUri().toURL()},
         Thread.currentThread().getContextClassLoader())) {
       Object scene = instantiateGeneratedScene(classLoader);
-      Object sceneActivationHandler = sceneActivationHandlerFor(scene);
-      assertNotNull("Generated listener registration should install a runtime scene activation handler",
-          sceneActivationHandler);
-      SceneActivationEvent firedEvent = new SceneActivationEvent();
-      sceneActivationHandler.getClass()
-          .getMethod("handleEventFire", SceneActivationEvent.class)
-          .invoke(sceneActivationHandler, firedEvent);
-      assertTrue("Generated scene activation listener should receive the fired runtime event argument",
-          sceneActivationEventPayloadLatch.await(5, TimeUnit.SECONDS));
-      assertSame("Generated listener should receive the same SceneActivationEvent payload fired by the handler",
-          firedEvent,
-          recordedSceneActivationEvent);
+      assertEquals("Generated listener registration should not fire before runtime scene activation",
+          0,
+          sceneActivationRuntimeDispatchCount.get());
+      assertNull("Generated listener registration should not synthesize a runtime event payload",
+          recordedRuntimeSceneActivationEvent);
+      assertEquals("Generated listener should still be waiting for the runtime dispatch",
+          1,
+          sceneActivationRuntimeDispatchLatch.getCount());
+      Object eventManager = eventManagerFor(scene);
+      eventManager.getClass().getMethod("sceneActivated").invoke(eventManager);
+      assertTrue("Generated scene activation listener should run when the runtime event fires",
+          sceneActivationRuntimeDispatchLatch.await(5, TimeUnit.SECONDS));
+      assertEquals("Generated scene activation listener should fire once for one runtime scene activation",
+          1,
+          sceneActivationRuntimeDispatchCount.get());
+      assertNotNull("Generated listener should receive a SceneActivationEvent payload from runtime dispatch",
+          recordedRuntimeSceneActivationEvent);
+      assertSame("Generated listener should receive the runtime scene activation event payload type",
+          SceneActivationEvent.class,
+          recordedRuntimeSceneActivationEvent.getClass());
     } finally {
-      recordedSceneActivationEvent = null;
-      sceneActivationEventPayloadLatch = null;
+      recordedRuntimeSceneActivationEvent = null;
+      sceneActivationRuntimeDispatchCount = null;
+      sceneActivationRuntimeDispatchLatch = null;
     }
   }
 
@@ -323,19 +300,15 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
   }
 
   private static Object timerFor(Object scene) throws Exception {
-    Object sceneImplementation = scene.getClass().getMethod("getImplementation").invoke(scene);
-    Object eventManager = sceneImplementation.getClass().getMethod("getEventManager").invoke(sceneImplementation);
+    Object eventManager = eventManagerFor(scene);
     var timerField = eventManager.getClass().getDeclaredField("timer");
     timerField.setAccessible(true);
     return timerField.get(eventManager);
   }
 
-  private static Object sceneActivationHandlerFor(Object scene) throws Exception {
+  private static Object eventManagerFor(Object scene) throws Exception {
     Object sceneImplementation = scene.getClass().getMethod("getImplementation").invoke(scene);
-    Object eventManager = sceneImplementation.getClass().getMethod("getEventManager").invoke(sceneImplementation);
-    var handlerField = eventManager.getClass().getDeclaredField("sceneActivationHandler");
-    handlerField.setAccessible(true);
-    return handlerField.get(eventManager);
+    return sceneImplementation.getClass().getMethod("getEventManager").invoke(sceneImplementation);
   }
 
   private static void activateAndUpdateTimer(Object timer, double currentTime) throws Exception {
@@ -354,13 +327,10 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     }
   }
 
-  public static void recordSceneActivationEvent() {
-    sceneActivationEventLatch.countDown();
-  }
-
-  public static void recordSceneActivationEventPayload(SceneActivationEvent event) {
-    recordedSceneActivationEvent = event;
-    sceneActivationEventPayloadLatch.countDown();
+  public static void recordSceneActivationRuntimeDispatch(SceneActivationEvent event) {
+    recordedRuntimeSceneActivationEvent = event;
+    sceneActivationRuntimeDispatchCount.incrementAndGet();
+    sceneActivationRuntimeDispatchLatch.countDown();
   }
 
   public static void recordTimeEvent() {
@@ -372,11 +342,11 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     timeEventElapsedLatch.countDown();
   }
 
-  private static CountDownLatch sceneActivationEventLatch;
-  private static CountDownLatch sceneActivationEventPayloadLatch;
+  private static CountDownLatch sceneActivationRuntimeDispatchLatch;
   private static CountDownLatch timeEventLatch;
   private static CountDownLatch timeEventElapsedLatch;
-  private static volatile SceneActivationEvent recordedSceneActivationEvent;
+  private static volatile SceneActivationEvent recordedRuntimeSceneActivationEvent;
+  private static AtomicInteger sceneActivationRuntimeDispatchCount;
   private static volatile Double recordedTimeSinceLastFire;
 
   private Path generateProgramSource(String projectFileName, NamedUserType programType, String sourceDirectoryName)
@@ -479,16 +449,9 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return type;
   }
 
-  private static NamedUserType programTypeWithExecutableSceneActivationListenerRegistration() {
+  private static NamedUserType programTypeWithExecutableSceneActivationRuntimeDispatchProbe() {
     NamedUserType type = programType("Program");
-    NamedUserType sceneType = sceneTypeWithExecutableSceneActivationListenerRegistration();
-    type.fields.add(new UserField("scene", sceneType));
-    return type;
-  }
-
-  private static NamedUserType programTypeWithExecutableSceneActivationListenerPayloadProbe() {
-    NamedUserType type = programType("Program");
-    NamedUserType sceneType = sceneTypeWithExecutableSceneActivationListenerPayloadProbe();
+    NamedUserType sceneType = sceneTypeWithExecutableSceneActivationRuntimeDispatchProbe();
     type.fields.add(new UserField("scene", sceneType));
     return type;
   }
@@ -540,7 +503,7 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return type;
   }
 
-  private static NamedUserType sceneTypeWithExecutableSceneActivationListenerRegistration() {
+  private static NamedUserType sceneTypeWithExecutableSceneActivationRuntimeDispatchProbe() {
     NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
     JavaMethod addSceneActivationListener = AstUtilities.lookupMethod(
         SScene.class,
@@ -556,31 +519,7 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
         new BlockStatement(AstUtilities.createMethodInvocationStatement(
             new ThisExpression(),
             addSceneActivationListener,
-            listenerLambda(
-                SceneActivationListener.class,
-                "recordSceneActivationEvent",
-                "scene activation listener registered"))));
-    type.methods.add(handleActiveChanged);
-    return type;
-  }
-
-  private static NamedUserType sceneTypeWithExecutableSceneActivationListenerPayloadProbe() {
-    NamedUserType type = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
-    JavaMethod addSceneActivationListener = AstUtilities.lookupMethod(
-        SScene.class,
-        "addSceneActivationListener",
-        SceneActivationListener.class);
-    UserMethod handleActiveChanged = new UserMethod(
-        "handleActiveChanged",
-        Void.TYPE,
-        new UserParameter[] {
-            new UserParameter("isActive", Boolean.class),
-            new UserParameter("activationCount", Integer.class)
-        },
-        new BlockStatement(AstUtilities.createMethodInvocationStatement(
-            new ThisExpression(),
-            addSceneActivationListener,
-            sceneActivationEventPayloadListenerLambda())));
+            sceneActivationRuntimeDispatchListenerLambda())));
     type.methods.add(handleActiveChanged);
     return type;
   }
@@ -649,13 +588,13 @@ public class ProjectCodeGeneratorStoryApiGeneratedSourceTest {
     return expression;
   }
 
-  private static LambdaExpression sceneActivationEventPayloadListenerLambda() {
+  private static LambdaExpression sceneActivationRuntimeDispatchListenerLambda() {
     LambdaExpression expression = AstUtilities.createLambdaExpression(SceneActivationListener.class);
     UserLambda lambda = (UserLambda) expression.value.getValue();
     UserParameter eventParameter = lambda.requiredParameters.get(0);
     JavaMethod recordEvent = AstUtilities.lookupMethod(
         ProjectCodeGeneratorStoryApiGeneratedSourceTest.class,
-        "recordSceneActivationEventPayload",
+        "recordSceneActivationRuntimeDispatch",
         SceneActivationEvent.class);
     lambda.body.getValue().statements.add(AstUtilities.createMethodInvocationStatement(
         new TypeExpression(recordEvent.getDeclaringType()),

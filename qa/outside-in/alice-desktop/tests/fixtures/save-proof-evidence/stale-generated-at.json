@@ -1,0 +1,49 @@
+{
+  "blocker": null,
+  "claim": "AWT Robot opened File, clicked the production Save menu item, controlled the rendered Swing Save chooser, wrote a non-empty .a3p file, read it back, and verified robotSaveMenuRoundTripMarker",
+  "control": {
+    "approvedSelection": true,
+    "selectedPathMatchesExpected": true,
+    "selectedPathSet": true,
+    "targetInsideProofRoot": true
+  },
+  "dialog": {
+    "ambiguousChooserDiscovery": false,
+    "dialogShowing": true,
+    "dialogType": "Swing JFileChooser",
+    "saveDialogObserved": true
+  },
+  "doesNotClaim": [
+    "Save As coverage",
+    "all Save variants",
+    "full lesson completion",
+    "visible rendering correctness",
+    "grading correctness",
+    "physical user click",
+    "broad UI automation coverage",
+    "native dialog coverage"
+  ],
+  "generatedAtUtc": "2000-01-01T00:00:00Z",
+  "menu": {
+    "fileMenuOpened": true,
+    "saveActionIdentityMatched": true,
+    "saveMenuItemInvoked": true
+  },
+  "readback": {
+    "marker": "robotSaveMenuRoundTripMarker",
+    "markerPresent": true,
+    "projectReadable": true
+  },
+  "runId": "contract-run-1",
+  "scenario": "alice-desktop-save-menu-dialog-write-proof",
+  "schemaVersion": "eatme.alice-desktop-save-menu-dialog-write-readback-proof/v1",
+  "status": "proven",
+  "workflow": "save-menu-dialog-write-proof",
+  "write": {
+    "fileHasExpectedExtension": true,
+    "fileNonempty": true,
+    "fileWritten": true,
+    "outputPath": "projects/robot-save-menu-proof.a3p",
+    "outputSizeBytes": 999999
+  }
+}

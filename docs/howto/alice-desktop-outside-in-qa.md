@@ -111,18 +111,21 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 
 ## Run branch-installable checks with uvx
 
-The repository exposes a small `amplihack alice-qa` command so reviewers can install the command wrapper from a PR branch and execute the checked-out QA lane:
+The repository exposes a small `amplihack alice-qa` command so reviewers can install the command wrapper from a PR branch or commit and execute the checked-out QA lane:
 
 ```bash
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
   amplihack alice-qa list
 
-uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch> \
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
+  amplihack alice-qa save-negative-contract
+
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> \
   amplihack alice-qa run alice-desktop-save-load --evidence-dir qa/outside-in/alice-desktop/evidence/manual-runs
 ```
 
 Run these commands from the root of a checkout of the same branch. The installed wrapper delegates to `qa/outside-in/alice-desktop/runners/` in that checkout so the output and evidence contract match direct runner usage.
-Replace `<branch>` with the PR branch or commit you are reviewing.
+Replace `<branch-or-commit>` with the PR branch or commit you are reviewing.
 
 ## Run the menu/action contract smoke
 

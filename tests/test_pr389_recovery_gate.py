@@ -294,6 +294,16 @@ class Pr389RecoveryGateUnitTest(unittest.TestCase):
         )
 
     def test_diff_scope_allowlist_matches_actual_pr_diff(self) -> None:
+        current_branch = subprocess.check_output(
+            ["git", "branch", "--show-current"],
+            cwd=REPO_ROOT,
+            text=True,
+        ).strip()
+        if current_branch != EXPECTED_BRANCH:
+            self.skipTest(
+                "PR #389 actual-diff assertion only applies on the PR #389 recovery branch."
+            )
+
         actual_changed_files = subprocess.check_output(
             ["git", "--no-pager", "diff", "--name-only", "origin/develop...HEAD"],
             cwd=REPO_ROOT,
