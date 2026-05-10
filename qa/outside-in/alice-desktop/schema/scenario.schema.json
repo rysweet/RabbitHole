@@ -24,6 +24,18 @@
       "type": "string",
       "minLength": 1
     },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "agents": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "workflow": {
       "type": "string",
       "enum": [
@@ -54,6 +66,7 @@
         "post-open-runtime-display-accessibility-evidence",
         "procedure-edit-handoff-smoke",
         "procedure-edit-seam-smoke",
+        "silver-thread-launch-build-run",
         "tweedle-decoder-boundary-smoke",
         "tweedle-decoder-this-call-smoke",
         "wizard-palette-completion-smoke"
@@ -430,6 +443,43 @@
                 },
                 {
                   "const": "-Dtest=org.alice.ide.uricontent.FileProjectLoaderTest"
+                },
+                {
+                  "const": "test"
+                }
+              ],
+              "items": false,
+              "minItems": 10,
+              "maxItems": 10
+            },
+            {
+              "prefixItems": [
+                {
+                  "const": "mvn"
+                },
+                {
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
+                },
+                {
+                  "const": "-DfailIfNoTests=false"
+                },
+                {
+                  "const": "-Dsurefire.failIfNoSpecifiedTests=false"
+                },
+                {
+                  "const": "-pl"
+                },
+                {
+                  "const": "core/ide"
+                },
+                {
+                  "const": "-am"
+                },
+                {
+                  "const": "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest"
                 },
                 {
                   "const": "test"

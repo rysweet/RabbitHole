@@ -65,6 +65,8 @@ if "run-window-contract" not in workflow_enum:
     raise AssertionError("schema workflow enum must include run-window-contract")
 if "exported-project-ant-build-smoke" not in workflow_enum:
     raise AssertionError("schema workflow enum must include exported-project-ant-build-smoke")
+if "silver-thread-launch-build-run" not in workflow_enum:
+    raise AssertionError("schema workflow enum must include silver-thread-launch-build-run")
 if "exported-project-smoke" in workflow_enum:
     raise AssertionError("schema workflow enum must not keep the stale exported-project-smoke workflow")
 
@@ -215,6 +217,18 @@ expected_argv = {
         "core/ide",
         "-am",
         "-Dtest=org.alice.ide.uricontent.FileProjectLoaderTest",
+        "test",
+    ),
+    (
+        "mvn",
+        "-DincludeSims=false",
+        "-Dinstall4j.skip",
+        "-DfailIfNoTests=false",
+        "-Dsurefire.failIfNoSpecifiedTests=false",
+        "-pl",
+        "core/ide",
+        "-am",
+        "-Dtest=org.alice.ide.SilverThreadLaunchBuildRunTest",
         "test",
     ),
     ("qa/outside-in/alice-desktop/runners/netbeans-package-smoke.sh",),

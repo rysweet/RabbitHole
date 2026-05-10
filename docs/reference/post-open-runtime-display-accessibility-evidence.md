@@ -24,6 +24,7 @@ The executable nonclaim boundary is documented in
 
 - [Scope](#scope)
 - [Usage](#usage)
+- [Current-head evidence refresh contract](#current-head-evidence-refresh-contract)
 - [Configuration](#configuration)
 - [Scenario interface](#scenario-interface)
 - [Evidence API](#evidence-api)
@@ -123,6 +124,44 @@ that target or `visible-rendering-pixel-sampling-blocker.json` for the precise
 sampling blocker. Both paths keep
 `visibleRenderingCorrectnessEstablished=false` to make clear that no visible
 rendering correctness claim was made.
+
+## Current-head evidence refresh contract
+
+A current-head refresh is the only evidence shape used for PR readiness and
+review. The branch under review must be the PR branch or PR ref, not `develop`.
+Before collecting evidence, reconcile that branch with `origin/develop`, finish
+the merge or rebase, and verify there is no merge state, rebase state, unmerged
+path, or unresolved conflict marker.
+
+The run directory is tied by review metadata to the final reconciled `HEAD`.
+Evidence collected from an earlier commit, from pre-merge PR head, or from
+`develop` is stale for current review and must not be reused as the current
+result. If older artifacts are retained for comparison, the review notes mark
+them `superseded` and identify the new run directory that replaces them.
+
+Each accepted current-head run pairs runner-emitted artifacts with external review
+metadata:
+
+| Item | Source | Required meaning |
+| --- | --- | --- |
+| PR branch/ref | Review notes, PR text, or CI metadata | The checked-out branch or fetched PR ref that produced the run. |
+| Reconciled `HEAD` | Review notes, PR text, or CI metadata | The exact reconciled commit SHA at evidence collection time. |
+| `origin/develop` SHA | Review notes, PR text, or CI metadata | The base SHA merged or rebased into the PR branch before the run. |
+| Merge base | Review notes, PR text, or CI metadata | The merge base used for review context. |
+| `scenario` | Runner artifact and review notes | `alice-desktop-post-open-runtime-display-accessibility-evidence`. |
+| Run timestamp | Run directory name, `environment.txt`, and review notes | UTC timestamp for the local run directory. |
+| Environment | Runner-emitted `environment.txt` and supporting logs | Java, Maven, OS, display, Xvfb, AT-SPI, ATK wrapper, `xwd`, ImageMagick, and relevant runner environment details when available. The current runner does not emit Git SHAs in `environment.txt`; reviewers record those externally. |
+| Decision artifacts | Runner artifacts | Final `status.txt`, runtime/display JSON, controlled-display JSON, target blocker JSON when target readiness is blocked, and either pixel observation JSON or the precise pixel-sampling blocker JSON. |
+| Limitations | Runner artifacts and review notes | Explicit nonclaims for accessibility compliance, visual/rendering correctness, world execution, grading, Save behavior, Select Project behavior, installer behavior, and decoder behavior. |
+
+If the live environment cannot run the scenario, the current-head artifact set is
+still bounded evidence when paired with external Git review metadata: runner
+artifacts record the scenario, attempted command, and exact blocker, such as
+missing Xvfb, AT-SPI registry, ATK wrapper, `python3-pyatspi`, `xwd`, ImageMagick,
+Java, Maven, or root-directory preparation. A blocked current-head run is
+reviewable as a blocker report only; it does not establish runtime/display
+accessibility observation, target readiness, sampled pixels, accessibility
+compliance, or rendering correctness.
 
 ## Configuration
 
@@ -724,11 +763,11 @@ correctness claim.
 
 ## World-canvas pixel sampling API
 
-The sampling seam has one success artifact and one blocker artifact:
+The sampling seam has one success artifact and one blocker artifact. A single run
+writes one of these as the final sampling result:
 
 ```text
-visible-rendering-pixel-observation.json
-visible-rendering-pixel-sampling-blocker.json
+visible-rendering-pixel-observation.json OR visible-rendering-pixel-sampling-blocker.json
 ```
 
 The source artifact is always `controlled-display-pixel-observation.json`.

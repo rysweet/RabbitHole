@@ -94,6 +94,57 @@ assert_not_contains() {
   fi
 }
 
+assert_literal_in_file() {
+  local path=$1
+  local token=$2
+  local label=$3
+  if [ -f "$path" ] && grep -Fq -- "$token" "$path"; then
+    pass "$label"
+  else
+    fail "$label (missing literal: $token)"
+  fi
+}
+
+assert_literal_absent_from_file() {
+  local path=$1
+  local token=$2
+  local label=$3
+  if [ -f "$path" ] && ! grep -Fq -- "$token" "$path"; then
+    pass "$label"
+  else
+    fail "$label (unexpected literal: $token)"
+  fi
+}
+
+assert_pattern_absent_from_file() {
+  local path=$1
+  local pattern=$2
+  local label=$3
+  if [ -f "$path" ] && ! grep -Eq -- "$pattern" "$path"; then
+    pass "$label"
+  else
+    fail "$label (unexpected pattern: $pattern)"
+  fi
+}
+
+assert_exact_count_in_file() {
+  local path=$1
+  local token=$2
+  local expected=$3
+  local label=$4
+  local actual
+  if [ ! -f "$path" ]; then
+    fail "$label (missing $path)"
+    return
+  fi
+  actual=$(grep -Fc -- "$token" "$path")
+  if [ "$actual" -eq "$expected" ]; then
+    pass "$label"
+  else
+    fail "$label (expected $expected, got $actual)"
+  fi
+}
+
 single_child_dir() {
   local parent=$1
   local found=

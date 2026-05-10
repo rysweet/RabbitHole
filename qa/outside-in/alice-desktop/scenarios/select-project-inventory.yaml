@@ -1,4 +1,5 @@
 id: alice-desktop-select-project-inventory
+name: Select Project window inventory proof
 title: Select Project window inventory proof
 workflow: select-project-interaction-smoke
 automationMode: xvfb-real-alice
@@ -49,3 +50,7 @@ fallback:
     - Do not claim starter selection, project opening, or world execution unless separate evidence observes those actions.
 supportingEvidence:
   - alice-desktop-launch
+steps:
+  - validate
+agents:
+  - alice-desktop-qa
