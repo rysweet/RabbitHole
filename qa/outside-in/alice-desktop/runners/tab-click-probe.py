@@ -226,6 +226,8 @@ def add_target_metadata(
             "targetStarterObserved": None,
             "targetStarterSelected": False,
             "targetStarterOpenAttempted": False,
+            "targetSelectionObserved": False,
+            "openAttempted": False,
             "openedStarter": None,
             "evidenceStatus": evidence_status,
             "nextBlocker": blocker,
@@ -657,7 +659,7 @@ def find_alice_app(desktop: Any, java_pid: int) -> tuple[Any | None, int]:
                     continue
         except Exception:
             app_count = 0
-        if alice_app is not None and alice_app.childCount > 0:
+        if alice_app is not None and safe_child_count(alice_app) > 0:
             break
         time.sleep(2)
     return alice_app, app_count
@@ -836,6 +838,10 @@ def add_target_observed_metadata(
             "targetStarterOpenAttempted": project_open_result.get(
                 "targetStarterOpenAttempted", False
             ),
+            "targetSelectionObserved": project_open_result.get(
+                "targetSelectionObserved", False
+            ),
+            "openAttempted": project_open_result.get("openAttempted", False),
             "openedStarter": project_open_result.get("openedStarter"),
             "evidenceStatus": project_open_result.get("evidenceStatus", "blocked"),
             "nextBlocker": project_open_result.get("nextBlocker"),
@@ -1335,6 +1341,8 @@ def target_project_open_record(target_starter: dict[str, str]) -> dict[str, Any]
         "targetStarterObserved": None,
         "targetStarterSelected": False,
         "targetStarterOpenAttempted": False,
+        "targetSelectionObserved": False,
+        "openAttempted": False,
         "openedStarter": None,
         "targetSelectionAttempt": {},
         "okButtonClick": {"attempted": False, "success": False, "detail": ""},
@@ -1413,6 +1421,7 @@ def select_target_starter_for_open(
     selected, selection_attempt = attempt_target_selection(target_match)
     record["targetSelectionAttempt"] = selection_attempt
     record["targetStarterSelected"] = selected
+    record["targetSelectionObserved"] = selected
     if selected:
         return record
 
@@ -1450,6 +1459,7 @@ def click_ok_for_target_open(
 
     ok, detail = do_action(ok_node, "click")
     record["targetStarterOpenAttempted"] = True
+    record["openAttempted"] = True
     record["okButtonClick"] = {"attempted": True, "success": ok, "detail": detail}
     if ok:
         return record
@@ -1575,7 +1585,8 @@ def not_observed_payload(inventory_path: Path) -> dict[str, Any]:
 
 def blocked_payload(inventory_path: Path, exc: Exception) -> dict[str, Any]:
     target_starter = configured_target_starter()
-    blocker_detail = f"Could not read {inventory_path}: {exc}"
+    reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else str(exc)
+    blocker_detail = f"Could not read {inventory_path.name}: {reason}"
     return add_target_metadata(
         {
             "status": "blocked",
@@ -1593,7 +1604,7 @@ def blocked_payload(inventory_path: Path, exc: Exception) -> dict[str, Any]:
         target_starter,
         evidence_status="blocked",
         blocker=next_blocker(
-            f"{inventory_path} could not be read, so no AT-SPI state was observed.",
+            f"{inventory_path.name} could not be read, so no AT-SPI state was observed.",
             "Read x-window-inventory.json before AT-SPI probing.",
             "Identify the Select Project Java PID, then inspect and select the target starter.",
             blocker_detail,

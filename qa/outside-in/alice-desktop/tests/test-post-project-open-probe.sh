@@ -5,6 +5,9 @@ set -u
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 PROBE="$BASE_DIR/runners/post-project-open-probe.py"
+export ALICE_QA_POST_OPEN_PROBE_FIND_ATTEMPTS=1
+export ALICE_QA_POST_OPEN_PROBE_FIND_INTERVAL_SECONDS=0
+export ALICE_QA_POST_OPEN_PROBE_WAIT_SECONDS=0
 # shellcheck source=qa/outside-in/alice-desktop/tests/lib/assertions.sh
 . "$SCRIPT_DIR/lib/assertions.sh"
 
@@ -97,6 +100,8 @@ write_target_selected_not_opened() {
   },
   "targetStarterSelected": true,
   "targetStarterOpenAttempted": true,
+  "targetSelectionObserved": true,
+  "openAttempted": true,
   "openedStarter": null,
   "evidenceStatus": "selected",
   "nextBlocker": {
@@ -111,6 +116,205 @@ JSON
 
 # --- Helper: target-starter opening proof from tab-click probe ---
 write_target_opened() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetStarterSelected": true,
+  "targetStarterOpenAttempted": true,
+  "targetSelectionObserved": true,
+  "openAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "startersTabSafety": {
+    "tabName": "Starters",
+    "activationAttempted": true,
+    "activatedBeforeTargetSearch": true,
+    "activationDetail": "Starters tab activated before target search",
+    "targetSearchScope": "active-starters-tab"
+  },
+  "nextBlocker": null
+}
+JSON
+}
+
+write_canonical_target_opened() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetSelectionObserved": true,
+  "openAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "startersTabSafety": {
+    "tabName": "Starters",
+    "activationAttempted": true,
+    "activatedBeforeTargetSearch": true,
+    "activationDetail": "Starters tab activated before target search",
+    "targetSearchScope": "active-starters-tab"
+  },
+  "nextBlocker": null
+}
+JSON
+}
+
+write_canonical_target_opened_without_starters_safety() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetSelectionObserved": true,
+  "openAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "nextBlocker": null
+}
+JSON
+}
+
+write_canonical_target_opened_with_false_starters_activation() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetSelectionObserved": true,
+  "openAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "startersTabSafety": {
+    "tabName": "Starters",
+    "activationAttempted": true,
+    "activatedBeforeTargetSearch": false,
+    "activationDetail": "Starters tab activation was not confirmed before target search",
+    "targetSearchScope": "active-starters-tab"
+  },
+  "nextBlocker": null
+}
+JSON
+}
+
+write_canonical_target_opened_with_malformed_starters_safety() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetSelectionObserved": true,
+  "openAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "startersTabSafety": "Starters tab activated before target search",
+  "nextBlocker": null
+}
+JSON
+}
+
+write_canonical_target_opened_with_wrong_starters_scope() {
+  local path=$1
+  cat > "$path" <<'JSON'
+{
+  "status": "observed",
+  "blocker": "none",
+  "projectOpenObserved": true,
+  "projectOpenDetail": "Select Project frame is no longer present in the AT-SPI tree; target starter project opening is observed.",
+  "targetStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "targetStarterObserved": {
+    "name": "Africa Full",
+    "role": "panel"
+  },
+  "targetSelectionObserved": true,
+  "openAttempted": true,
+  "openedStarter": {
+    "displayName": "Africa Full",
+    "repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull.a3p"
+  },
+  "evidenceStatus": "opened",
+  "startersTabSafety": {
+    "tabName": "Starters",
+    "activationAttempted": true,
+    "activatedBeforeTargetSearch": true,
+    "activationDetail": "Starters tab activated before target search",
+    "targetSearchScope": "not-started"
+  },
+  "nextBlocker": null
+}
+JSON
+}
+
+write_legacy_only_target_opened() {
   local path=$1
   cat > "$path" <<'JSON'
 {
@@ -348,7 +552,7 @@ cat > "$no_java_inv" <<'JSON'
 }
 JSON
 opened_tab6="$tmp_root/opened-tab6.json"
-write_tab_click_opened "$opened_tab6"
+write_target_opened "$opened_tab6"
 no_java_out="$tmp_root/no-java-out.json"
 python3 "$PROBE" "$no_java_inv" "$opened_tab6" "$no_java_out"
 status=$?
@@ -364,7 +568,7 @@ assert_contains "$no_java_out" '"mainWindowObservationBlocker": "alice-window-ja
 non_alice_java_inv="$tmp_root/non-alice-java-inv.json"
 write_non_alice_java_inventory "$non_alice_java_inv"
 opened_tab7="$tmp_root/opened-tab7.json"
-write_tab_click_opened "$opened_tab7"
+write_target_opened "$opened_tab7"
 non_alice_java_out="$tmp_root/non-alice-java-out.json"
 python3 "$PROBE" "$non_alice_java_inv" "$opened_tab7" "$non_alice_java_out"
 status=$?
@@ -386,7 +590,7 @@ assert_not_contains "$non_alice_java_out" '"javaPid": 1357' "non-Alice Java PID 
 inventory8="$tmp_root/inventory8.json"
 write_alice_inventory "$inventory8"
 opened_tab8="$tmp_root/opened-tab8.json"
-write_tab_click_opened "$opened_tab8"
+write_target_opened "$opened_tab8"
 atk_out="$tmp_root/atk-out.json"
 python3 "$PROBE" "$inventory8" "$opened_tab8" "$atk_out"
 status=$?
@@ -398,7 +602,20 @@ assert_contains "$atk_out" '"postOpenWindowObserved": false' "no-AT-SPI does not
 assert_contains "$atk_out" '"blocker": "(pyatspi-not-installed|at-spi-registry-unavailable|atk-wrapper-not-loaded)"' \
   "no-AT-SPI names a precise AT-SPI-related blocker"
 
-# ---- 9. Generic main-window observation does not imply Africa Full proof ----
+# ---- 9. Missing target metadata cannot promote generic project-open proof ----
+inventory8b="$tmp_root/inventory8b.json"
+write_alice_inventory "$inventory8b"
+generic_opened_tab="$tmp_root/generic-opened-tab.json"
+write_tab_click_opened "$generic_opened_tab"
+generic_opened_out="$tmp_root/generic-opened-out.json"
+python3 "$PROBE" "$inventory8b" "$generic_opened_tab" "$generic_opened_out"
+status=$?
+assert_success "$status" "probe exits 0 when generic opened evidence omits targetStarter"
+assert_contains "$generic_opened_out" '"status": "blocked"' "generic opened evidence records blocked status"
+assert_contains "$generic_opened_out" '"blocker": "target-starter-metadata-missing"' "generic opened evidence requires target metadata"
+assert_contains "$generic_opened_out" '"postOpenWindowObserved": false' "generic opened evidence does not claim post-open observation"
+
+# ---- 10. Generic main-window observation does not imply Africa Full proof ----
 inventory9="$tmp_root/inventory9.json"
 write_alice_inventory "$inventory9"
 target_selected_tab="$tmp_root/target-selected-tab.json"
@@ -412,7 +629,7 @@ assert_contains "$target_selected_out" '"blocker": "target-starter-open-not-prov
 assert_contains "$target_selected_out" '"postOpenWindowObserved": false' "target-selected-not-opened does not claim post-open window observation"
 assert_contains "$target_selected_out" '"mainWindowObservationBlocker": "target-starter-open-not-proven"' "target-selected-not-opened names exact mainWindowObservationBlocker"
 
-# ---- 10. Opened status without target observation proof is not enough ----
+# ---- 11. Opened status without target observation proof is not enough ----
 inventory10c="$tmp_root/inventory10c.json"
 write_alice_inventory "$inventory10c"
 missing_observed_tab="$tmp_root/missing-observed-tab.json"
@@ -427,7 +644,7 @@ assert_contains "$missing_observed_out" '"targetStarterSelected": true' "missing
 assert_contains "$missing_observed_out" '"targetStarterOpenAttempted": true' "missing targetStarterObserved preserves target open-attempt proof"
 assert_contains "$missing_observed_out" '"postOpenWindowObserved": false' "missing targetStarterObserved does not claim post-open observation"
 
-# ---- 11. Opened status with mismatched target observation proof is not enough ----
+# ---- 12. Opened status with mismatched target observation proof is not enough ----
 inventory10d="$tmp_root/inventory10d.json"
 write_alice_inventory "$inventory10d"
 mismatched_observed_tab="$tmp_root/mismatched-observed-tab.json"
@@ -442,7 +659,7 @@ assert_contains "$mismatched_observed_out" '"targetStarterSelected": true' "mism
 assert_contains "$mismatched_observed_out" '"targetStarterOpenAttempted": true' "mismatched targetStarterObserved preserves target open-attempt proof"
 assert_contains "$mismatched_observed_out" '"postOpenWindowObserved": false' "mismatched targetStarterObserved does not claim post-open observation"
 
-# ---- 12. Opened status without target selection proof is not enough ----
+# ---- 13. Opened status without target selection proof is not enough ----
 inventory10a="$tmp_root/inventory10a.json"
 write_alice_inventory "$inventory10a"
 missing_selection_tab="$tmp_root/missing-selection-tab.json"
@@ -456,7 +673,7 @@ assert_contains "$missing_selection_out" '"blocker": "target-starter-open-not-pr
 assert_contains "$missing_selection_out" '"targetStarterOpenAttempted": true' "missing targetStarterSelected preserves the open-attempt flag"
 assert_contains "$missing_selection_out" '"postOpenWindowObserved": false' "missing targetStarterSelected does not claim post-open observation"
 
-# ---- 13. Opened status without target open-attempt proof is not enough ----
+# ---- 14. Opened status without target open-attempt proof is not enough ----
 inventory10b="$tmp_root/inventory10b.json"
 write_alice_inventory "$inventory10b"
 missing_open_attempt_tab="$tmp_root/missing-open-attempt-tab.json"
@@ -471,7 +688,7 @@ assert_contains "$missing_open_attempt_out" '"targetStarterSelected": true' "fal
 assert_contains "$missing_open_attempt_out" '"targetStarterOpenAttempted": false' "false targetStarterOpenAttempted is preserved"
 assert_contains "$missing_open_attempt_out" '"postOpenWindowObserved": false' "false targetStarterOpenAttempted does not claim post-open observation"
 
-# ---- 14. Target opened evidence survives post-open AT-SPI blockers ----
+# ---- 15. Target opened evidence survives post-open AT-SPI blockers ----
 inventory10="$tmp_root/inventory10.json"
 write_alice_inventory "$inventory10"
 target_opened_tab="$tmp_root/target-opened-tab.json"
@@ -488,10 +705,103 @@ assert_contains "$target_opened_out" '"evidenceStatus": "opened"' "target-opened
 assert_contains "$target_opened_out" '"targetStarterObserved": \{' "target-opened post-open evidence preserves target observation proof"
 assert_contains "$target_opened_out" '"targetStarterSelected": true' "target-opened post-open evidence preserves target selection proof"
 assert_contains "$target_opened_out" '"targetStarterOpenAttempted": true' "target-opened post-open evidence preserves target open-attempt proof"
+assert_contains "$target_opened_out" '"targetSelectionObserved": true' "target-opened post-open evidence preserves canonical target selection proof"
+assert_contains "$target_opened_out" '"openAttempted": true' "target-opened post-open evidence preserves canonical open-attempt proof"
 assert_contains "$target_opened_out" '"targetProjectOpenObserved": true' "target-opened post-open evidence preserves the Select Project project-open observation"
+assert_contains "$target_opened_out" '"startersTabSafety": \{' "target-opened post-open evidence preserves Starters-tab safety proof"
+assert_contains "$target_opened_out" '"activatedBeforeTargetSearch": true' "target-opened post-open evidence proves Starters activation before target search"
+assert_contains "$target_opened_out" '"targetSearchScope": "active-starters-tab"' "target-opened post-open evidence scopes target search to the active Starters tab"
 assert_contains "$target_opened_out" '"javaPid": 2468' "target-opened post-open evidence preserves the Alice Java/window PID"
 
-# ---- 15. Wrong target metadata is not accepted as Africa Full proof ----
+# ---- 16. Canonical target proof gates post-open observation with Starters-tab safety ----
+inventory10e="$tmp_root/inventory10e.json"
+write_alice_inventory "$inventory10e"
+canonical_target_opened_tab="$tmp_root/canonical-target-opened-tab.json"
+write_canonical_target_opened "$canonical_target_opened_tab"
+canonical_target_opened_out="$tmp_root/canonical-target-opened-out.json"
+python3 "$PROBE" "$inventory10e" "$canonical_target_opened_tab" "$canonical_target_opened_out"
+status=$?
+assert_success "$status" "probe exits 0 with canonical target-specific opened Select Project evidence"
+assert_not_contains "$canonical_target_opened_out" '"blocker": "target-starter-open-not-proven"' "canonical target proof is sufficient for post-open observation"
+assert_contains "$canonical_target_opened_out" '"targetSelectionObserved": true' "canonical target proof preserves targetSelectionObserved"
+assert_contains "$canonical_target_opened_out" '"openAttempted": true' "canonical target proof preserves openAttempted"
+assert_contains "$canonical_target_opened_out" '"startersTabSafety": \{' "canonical target proof preserves Starters-tab safety"
+assert_contains "$canonical_target_opened_out" '"activatedBeforeTargetSearch": true' "canonical target proof requires Starters activation before target search"
+assert_contains "$canonical_target_opened_out" '"targetSearchScope": "active-starters-tab"' "canonical target proof requires active Starters-tab target search scope"
+assert_contains "$canonical_target_opened_out" '"targetProjectOpenObserved": true' "canonical target proof preserves the Select Project project-open observation"
+
+# ---- 17. Missing Starters-tab safety does not prove Africa Full opening ----
+inventory10g="$tmp_root/inventory10g.json"
+write_alice_inventory "$inventory10g"
+missing_safety_tab="$tmp_root/missing-starters-safety-tab.json"
+write_canonical_target_opened_without_starters_safety "$missing_safety_tab"
+missing_safety_out="$tmp_root/missing-starters-safety-out.json"
+python3 "$PROBE" "$inventory10g" "$missing_safety_tab" "$missing_safety_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence omits startersTabSafety"
+assert_contains "$missing_safety_out" '"status": "blocked"' "missing startersTabSafety records blocked status"
+assert_contains "$missing_safety_out" '"blocker": "target-starter-open-not-proven"' "missing startersTabSafety refuses post-open proof"
+assert_contains "$missing_safety_out" '"startersTabSafety": null' "missing startersTabSafety is preserved as null"
+assert_contains "$missing_safety_out" '"postOpenWindowObserved": false' "missing startersTabSafety does not claim post-open observation"
+
+# ---- 18. False Starters-tab activation does not prove Africa Full opening ----
+inventory10h="$tmp_root/inventory10h.json"
+write_alice_inventory "$inventory10h"
+false_safety_tab="$tmp_root/false-starters-activation-tab.json"
+write_canonical_target_opened_with_false_starters_activation "$false_safety_tab"
+false_safety_out="$tmp_root/false-starters-activation-out.json"
+python3 "$PROBE" "$inventory10h" "$false_safety_tab" "$false_safety_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence has false Starters-tab activation"
+assert_contains "$false_safety_out" '"status": "blocked"' "false Starters-tab activation records blocked status"
+assert_contains "$false_safety_out" '"blocker": "target-starter-open-not-proven"' "false Starters-tab activation refuses post-open proof"
+assert_contains "$false_safety_out" '"activatedBeforeTargetSearch": false' "false Starters-tab activation preserves activation failure"
+assert_contains "$false_safety_out" '"targetSearchScope": "active-starters-tab"' "false Starters-tab activation preserves active scope"
+assert_contains "$false_safety_out" '"postOpenWindowObserved": false' "false Starters-tab activation does not claim post-open observation"
+
+# ---- 19. Malformed Starters-tab metadata does not prove Africa Full opening ----
+inventory10i="$tmp_root/inventory10i.json"
+write_alice_inventory "$inventory10i"
+malformed_safety_tab="$tmp_root/malformed-starters-safety-tab.json"
+write_canonical_target_opened_with_malformed_starters_safety "$malformed_safety_tab"
+malformed_safety_out="$tmp_root/malformed-starters-safety-out.json"
+python3 "$PROBE" "$inventory10i" "$malformed_safety_tab" "$malformed_safety_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence has malformed startersTabSafety"
+assert_contains "$malformed_safety_out" '"status": "blocked"' "malformed startersTabSafety records blocked status"
+assert_contains "$malformed_safety_out" '"blocker": "target-starter-open-not-proven"' "malformed startersTabSafety refuses post-open proof"
+assert_contains "$malformed_safety_out" '"startersTabSafety": "Starters tab activated before target search"' "malformed startersTabSafety is preserved"
+assert_contains "$malformed_safety_out" '"postOpenWindowObserved": false' "malformed startersTabSafety does not claim post-open observation"
+
+# ---- 20. Wrong Starters-tab search scope does not prove Africa Full opening ----
+inventory10j="$tmp_root/inventory10j.json"
+write_alice_inventory "$inventory10j"
+wrong_scope_tab="$tmp_root/wrong-starters-scope-tab.json"
+write_canonical_target_opened_with_wrong_starters_scope "$wrong_scope_tab"
+wrong_scope_out="$tmp_root/wrong-starters-scope-out.json"
+python3 "$PROBE" "$inventory10j" "$wrong_scope_tab" "$wrong_scope_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence has wrong targetSearchScope"
+assert_contains "$wrong_scope_out" '"status": "blocked"' "wrong targetSearchScope records blocked status"
+assert_contains "$wrong_scope_out" '"blocker": "target-starter-open-not-proven"' "wrong targetSearchScope refuses post-open proof"
+assert_contains "$wrong_scope_out" '"activatedBeforeTargetSearch": true' "wrong targetSearchScope preserves activation proof"
+assert_contains "$wrong_scope_out" '"targetSearchScope": "not-started"' "wrong targetSearchScope preserves unsafe search scope"
+assert_contains "$wrong_scope_out" '"postOpenWindowObserved": false' "wrong targetSearchScope does not claim post-open observation"
+
+# ---- 21. Legacy-only target flags do not prove Africa Full opening ----
+inventory10f="$tmp_root/inventory10f.json"
+write_alice_inventory "$inventory10f"
+legacy_only_target_opened_tab="$tmp_root/legacy-only-target-opened-tab.json"
+write_legacy_only_target_opened "$legacy_only_target_opened_tab"
+legacy_only_target_opened_out="$tmp_root/legacy-only-target-opened-out.json"
+python3 "$PROBE" "$inventory10f" "$legacy_only_target_opened_tab" "$legacy_only_target_opened_out"
+status=$?
+assert_success "$status" "probe exits 0 when opened evidence only has legacy target flags"
+assert_contains "$legacy_only_target_opened_out" '"status": "blocked"' "legacy-only target flags are blocked"
+assert_contains "$legacy_only_target_opened_out" '"blocker": "target-starter-open-not-proven"' "legacy-only target flags do not prove Africa Full opening"
+assert_contains "$legacy_only_target_opened_out" '"postOpenWindowObserved": false' "legacy-only target flags do not claim post-open observation"
+
+# ---- 22. Wrong target metadata is not accepted as Africa Full proof ----
 inventory11="$tmp_root/inventory11.json"
 write_alice_inventory "$inventory11"
 wrong_target_tab="$tmp_root/wrong-target-tab.json"
@@ -505,21 +815,26 @@ assert_contains "$wrong_target_out" '"blocker": "target-starter-metadata-invalid
 assert_contains "$wrong_target_out" '"postOpenWindowObserved": false' "wrong target metadata does not claim post-open observation"
 assert_contains "$wrong_target_out" '"displayName": "Africa Full"' "wrong target metadata records the expected Africa Full target"
 
-# ---- 16. Probe output is valid JSON ----
+# ---- 23. Probe output is valid JSON ----
 for out_file in "$missing_out" "$missing_tab_out" "$malformed_inv_out" "$malformed_tab_out" \
                 "$not_opened_out" "$no_java_out" "$non_alice_java_out" "$atk_out" \
-                "$target_selected_out" "$missing_observed_out" "$missing_selection_out" \
+                "$generic_opened_out" "$target_selected_out" "$missing_observed_out" "$missing_selection_out" \
                 "$mismatched_observed_out" "$missing_open_attempt_out" "$target_opened_out" \
-                "$wrong_target_out"; do
+                "$canonical_target_opened_out" "$missing_safety_out" "$false_safety_out" \
+                "$malformed_safety_out" "$wrong_scope_out" \
+                "$legacy_only_target_opened_out" "$wrong_target_out"; do
   python3 - "$out_file" <<'PY'
 import json, sys
 try:
-    json.load(open(sys.argv[1]))
-except Exception as e:
+    with open(sys.argv[1], encoding="utf-8") as payload:
+        json.load(payload)
+except (OSError, json.JSONDecodeError) as e:
     print(f"invalid JSON in {sys.argv[1]}: {e}", file=sys.stderr)
     sys.exit(1)
 PY
   assert_success "$?" "probe output is valid JSON: $(basename "$out_file")"
+  assert_not_contains "$out_file" 'visibleRenderingCorrectness|grading|lessonExecution|fullUiAutomation|fullLessonExecution' \
+    "post-open evidence avoids out-of-scope rendering, grading, lesson, and full automation claims: $(basename "$out_file")"
 done
 
 finish

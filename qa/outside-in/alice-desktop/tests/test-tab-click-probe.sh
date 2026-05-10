@@ -71,6 +71,7 @@ class FakeNode:
         states=None,
         selection_supported=False,
         process_id=None,
+        child_count_error=False,
     ):
         self.name = name
         self._role = role
@@ -81,12 +82,15 @@ class FakeNode:
         self.selection_supported = selection_supported
         self.selected_child_index = None
         self.process_id = process_id
+        self.child_count_error = child_count_error
         self.parent = None
         for child in self.children:
             child.parent = self
 
     @property
     def childCount(self):
+        if self.child_count_error:
+            raise RuntimeError(f"{self.name or self._role} childCount unavailable")
         return len(self.children)
 
     def getChildAtIndex(self, index):
@@ -279,6 +283,10 @@ if success.get("targetStarterSelected") is not True:
     raise AssertionError("targetStarterSelected must be true after selecting Africa Full")
 if success.get("targetStarterOpenAttempted") is not True:
     raise AssertionError("targetStarterOpenAttempted must be true when OK/Open is clicked for Africa Full")
+if success.get("targetSelectionObserved") is not True:
+    raise AssertionError("targetSelectionObserved must be true after target-specific Africa Full selection")
+if success.get("openAttempted") is not True:
+    raise AssertionError("openAttempted must be true only after target-specific Africa Full selection")
 if success.get("openedStarter") != {
     "displayName": TARGET_DISPLAY_NAME,
     "repositoryPath": TARGET_REPOSITORY_PATH,
@@ -331,6 +339,10 @@ if absent.get("targetStarterSelected") is not False:
     raise AssertionError("targetStarterSelected must be false when the active Starters context lacks Africa Full")
 if absent.get("targetStarterOpenAttempted") is not False:
     raise AssertionError("OK/Open must not be attempted when Africa Full was not observed in active Starters")
+if absent.get("targetSelectionObserved") is not False:
+    raise AssertionError("targetSelectionObserved must be false when active Starters lacks Africa Full")
+if absent.get("openAttempted") is not False:
+    raise AssertionError("openAttempted must be false when Africa Full was not observed in active Starters")
 if absent_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open when only a non-active/hidden Africa Full node was observed")
 assert_blocker_shape(absent)
@@ -351,6 +363,10 @@ if tab_blocked.get("targetStarterSelected") is not False:
     raise AssertionError("targetStarterSelected must be false when Starters tab activation fails")
 if tab_blocked.get("targetStarterOpenAttempted") is not False:
     raise AssertionError("OK/Open must not be attempted when Starters tab activation fails")
+if tab_blocked.get("targetSelectionObserved") is not False:
+    raise AssertionError("targetSelectionObserved must be false when Starters tab activation fails")
+if tab_blocked.get("openAttempted") is not False:
+    raise AssertionError("openAttempted must be false when Starters tab activation fails")
 if tab_blocked_counters["africa"] != 0:
     raise AssertionError("probe must not select Africa Full when Starters tab activation fails")
 if tab_blocked_counters["ok"] != 0:
@@ -370,9 +386,24 @@ if blocked.get("targetStarterSelected") is not False:
     raise AssertionError("targetStarterSelected must be false when no target action or parent selection interface works")
 if blocked.get("targetStarterOpenAttempted") is not False:
     raise AssertionError("OK/Open must not be attempted without target-specific selection evidence")
+if blocked.get("targetSelectionObserved") is not False:
+    raise AssertionError("targetSelectionObserved must be false when target-specific selection fails")
+if blocked.get("openAttempted") is not False:
+    raise AssertionError("openAttempted must be false when target-specific selection fails")
 if blocked_counters["ok"] != 0:
     raise AssertionError("probe must not click OK/Open after a target-specific selection capability gap")
 assert_blocker_shape(blocked)
+
+unreadable_app = FakeNode("Alice", "application", process_id=2468, child_count_error=True)
+FakeRegistry.desktop = FakeNode("desktop", "desktop frame", children=[unreadable_app])
+child_count_blocked = probe.probe_tab_click(2468)
+if child_count_blocked.get("status") != "blocked":
+    raise AssertionError(f"expected blocked status for unreadable AT-SPI app childCount, got {child_count_blocked!r}")
+if child_count_blocked.get("blocker") != "select-project-not-accessible":
+    raise AssertionError(
+        "unreadable AT-SPI app childCount must produce a precise blocker instead of crashing, "
+        f"got {child_count_blocked.get('blocker')!r}"
+    )
 PY
 status=$?
 assert_success "$status" "tab-click probe emits target-specific Africa Full opened/blocked evidence"
@@ -388,7 +419,12 @@ assert_contains "$output" '"targetStarter": \{' "blocked probe output preserves 
 assert_contains "$output" '"displayName": "Africa Full"' "blocked probe output records target display name"
 assert_contains "$output" '"repositoryPath": "core/resources/src/application/resources/starter-projects/AfricaFull\.a3p"' "blocked probe output records target repository path"
 assert_contains "$output" '"evidenceStatus": "blocked"' "blocked probe output uses blocked evidenceStatus"
+assert_contains "$output" '"targetSelectionObserved": false' "blocked probe output records targetSelectionObserved=false"
+assert_contains "$output" '"openAttempted": false' "blocked probe output records openAttempted=false"
 assert_contains "$output" '"nextBlocker": \{' "blocked probe output includes structured next blocker"
+assert_contains "$output" '"blockerDetail": "Could not read missing-inventory\.json:' "blocked probe output reports only the inventory basename"
+assert_contains "$output" '"observedAtspiState": "missing-inventory\.json could not be read' "blocked probe nextBlocker reports only the inventory basename"
+assert_not_contains "$output" "$tmp_root" "blocked probe output does not disclose the scratch path"
 
 invalid_target_output="$tmp_root/invalid-target-output.json"
 TARGET_STARTER_DISPLAY_NAME="Wonderland" \

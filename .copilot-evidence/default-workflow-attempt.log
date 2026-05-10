@@ -1,3 +1,26 @@
+# PR #437 Merge-Clean Evidence — 2026-05-09T23:06:22Z
+
+## Merge State
+- merge-tree --write-tree HEAD origin/develop: CLEAN (exit 0, no CONFLICT lines)
+- pyproject.toml conflict resolved: kept branch version 0.11.1 (forward increment over develop 0.11.0)
+- docs/index.md: auto-merged cleanly
+
+## Focused Select Project QA Shell Tests (all exit 0)
+- validate-scenarios.sh: 29 scenarios validated
+- test-schema-contract.sh: PASS
+- test-select-project-completion-contract.sh: PASS (20 assertions)
+- test-select-project-proof.sh: PASS (20 assertions)
+- test-tab-click-probe.sh: PASS (16 assertions)
+- test-post-project-open-probe.sh: PASS (20 assertions)
+
+## Python Contract Tests (all 23 pass)
+- test_pr437_select_project_recovery_contract: 17 tests OK
+- test_pr437_noop_recovery_report_contract: 6 tests OK
+
+## Scope
+- Select Project starter evidence lane only (Africa Full target, AT-SPI tab-click probe, post-open probe)
+- No Maven build, no UI rendering, no lesson execution, no grading claims
+- PR left OPEN for review — not merged manually
 # PR #403 Merge-Update Evidence — 2026-05-09T23:18:22Z
 
 ## Branch State

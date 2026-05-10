@@ -277,7 +277,7 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
   --evidence-dir qa/outside-in/alice-desktop/evidence/select-project-africa-full
 ```
 
-Review `status.txt`, `x-window-inventory.json`, `select-project-window.json`, and `tab-click-observation.json`. Success requires `evidenceStatus=opened`, `targetStarter.displayName=Africa Full`, `targetStarter.repositoryPath=core/resources/src/application/resources/starter-projects/AfricaFull.a3p`, `targetStarterObserved.name=Africa Full`, `targetStarterSelected=true`, `targetStarterOpenAttempted=true`, `openedStarter` matching the same target metadata, `projectOpenObserved=true`, and Alice Java/window PID context from the same run.
+Review `status.txt`, `x-window-inventory.json`, `select-project-window.json`, and `tab-click-observation.json`. The target contract for this feature requires `evidenceStatus=opened`, exact `Africa Full` `targetStarter` metadata, safe `startersTabSafety` with `activatedBeforeTargetSearch=true` and `targetSearchScope=active-starters-tab`, `targetSelectionObserved=true`, `openAttempted=true`, `projectOpenObserved=true`, and Alice Java/window PID context from the same run.
 
 If the probe cannot safely prove target-specific selection/opening, it must preserve the existing string `blocker` and `blockerDetail` fields, then add structured target-specific detail in `nextBlocker`, including the observed AT-SPI state, action attempted, `expectedNextAction`, and reason progress stopped. A blocked result is the correct output when continuing would turn generic Select Project dismissal or main-window state into an unsupported Africa Full claim.
 

@@ -67,10 +67,12 @@ repository.
 
 - [Run Alice desktop outside-in QA](./howto/alice-desktop-outside-in-qa.md) - validate, list, and collect reviewable evidence for user-like desktop acceptance scenarios.
 - [Open Africa Full through Select Project with AT-SPI](./howto/open-africa-full-through-select-project-atspi.md) - run and review the target-specific Select Project evidence path for the committed starter project.
+- [Recover PR #437 after DIRTY merge state](./howto/recover-pr437-dirty-select-project.md) - dirty-repair operator flow for focused Select Project recovery, validation, edit-and-push reporting, and finalization refresh.
 - [Alice desktop outside-in QA tutorial](./tutorials/alice-desktop-outside-in-qa.md) - collect launch evidence and complete a manual workflow evidence checklist.
 - [Alice desktop outside-in QA reference](./reference/alice-desktop-outside-in-qa.md) - scenario schema, runner commands, configuration, and evidence artifacts.
 - [Learner-world assessment boundary](./reference/learner-world-assessment-boundary.md) - reference for the manual instructor/student setup/open/save evidence boundary, generated checklist wording, unsupported assessment claims, and `define-reviewed-assessment-contract` next boundary.
 - [Select Project Africa Full AT-SPI evidence reference](./reference/select-project-africa-full-atspi-evidence.md) - target starter metadata, runner environment, evidence statuses, blocker contract, and post-open gating.
+- [PR #437 dirty recovery reference](./reference/pr437-dirty-recovery.md) - dirty-repair mode, metadata contract, validation matrix, report shape, no-op prohibition, and push safety rules.
 - [Post-open runtime/display accessibility evidence](./reference/post-open-runtime-display-accessibility-evidence.md) - usage, configuration, artifact API, examples, claim boundaries, and world-canvas pixel target readiness contract.
 - [Desktop Run execution gap report](./reference/desktop-run-execution-gap-report.md) - fail-closed report for bounded Run-window evidence and the missing deterministic world-advance proof blocker.
 - [Accessibility Target Discovery Silver-Thread Contract](./reference/accessibility-target-discovery-silver-thread.md) - focused executable contract that validates bounded launch, run/runtime, and Select Project accessibility target discovery evidence and structured blockers.
@@ -100,6 +102,7 @@ repository.
 - [Desktop procedure edit and Save automation](./reference/desktop-procedure-edit-and-save-automation.md) - checked-in hook points, next tests, and unproven limits for procedure tab selection and project Save automation.
 - [Gadugi exported launcher evidence scenario](./reference/gadugi-exported-launcher-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for exported launcher evidence checks.
 - [Gadugi archive/player boundary evidence scenario](./reference/gadugi-archive-player-boundary-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for archive/player boundary evidence checks.
+- [Gadugi select-project tab-click evidence scenario](./reference/gadugi-select-project-tab-click-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for Select Project tab-click evidence checks added by PR #437.
 - [Gadugi runtime event dispatch evidence scenario](./reference/gadugi-runtime-event-dispatch-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for bounded headless runtime dispatch evidence checks.
 - [Gadugi Run execution gap evidence scenario](./reference/gadugi-run-execution-gap-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for desktop Run execution gap evidence checks.
 - [Gadugi run-window contract evidence scenario](./reference/gadugi-run-window-contract-evidence.md) - Gadugi CLI scenario contract, configuration, commands, and conservative boundaries for Run-window creation/wiring evidence checks.

@@ -13,6 +13,7 @@ For user-facing instructions, see [Run Alice desktop outside-in QA](../../../doc
 | --- | --- | --- |
 | `scenarios/` | User-like workflows, expected outcomes, evidence requirements, automation mode | Java implementation details or brittle internal UI assumptions |
 | `contracts/` | Declarative claim-boundary records, including the learner-world assessment blocker | Runner behavior or assessment implementation |
+| `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence contract checks and Select Project tab-click evidence contract checks (PR #437) | The custom Alice scenario schema or full desktop/rendering claims |
 | `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher, run-render-affordance, and Run-window contract evidence checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `gadugi/` | Gadugi-compatible CLI scenarios for agentic QA tools, including exported launcher evidence and Window menu registration evidence contract checks | The custom Alice scenario schema or full desktop/rendering claims |
 | `schema/` | Scenario structure and allowed field values | Business logic |
@@ -329,9 +330,10 @@ qa/outside-in/alice-desktop/runners/run-scenario.sh run \
 ```
 
 Review `tab-click-observation.json` as the Select Project decision artifact.
-An opened result requires `evidenceStatus=opened`, exact `Africa Full`
-`targetStarter` metadata, `targetStarterObserved.name=Africa Full`,
-`targetStarterSelected=true`, `targetStarterOpenAttempted=true`, matching `openedStarter`, and
+The target contract for an opened result requires `evidenceStatus=opened`,
+exact `Africa Full` `targetStarter` metadata, safe `startersTabSafety`
+(`activatedBeforeTargetSearch=true`, `targetSearchScope=active-starters-tab`),
+`targetSelectionObserved=true`, `openAttempted=true`, and
 `projectOpenObserved=true`. A blocked result preserves string `blocker` and
 `blockerDetail` fields and adds one structured `nextBlocker`; it is not a full
 Alice UI automation, visible rendering, grading, creative assessment, Save,
@@ -375,6 +377,27 @@ wiring and JavaFX handoff/no-go checks only; it does not prove visible
 rendering, save behavior, grading, creative assessment, or full lesson
 completion.
 
+The Gadugi select-project tab-click evidence scenario (PR #437) validates the
+target-specific Select Project tab-click evidence wiring. Validate and run it
+with `gadugi-test`:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test validate \
+  -f qa/outside-in/alice-desktop/gadugi/select-project-tab-click-evidence.yaml
+
+NODE_OPTIONS=--max-old-space-size=32768 gadugi-test run \
+  -d qa/outside-in/alice-desktop/gadugi \
+  -s select-project-tab-click-evidence \
+  --timeout 300000
+```
+
+That Gadugi scenario delegates to the Select Project tab-click smoke runner in
+prepare-only mode by default and writes evidence under
+`qa/outside-in/alice-desktop/evidence/gadugi-select-project-tab-click`. The
+Gadugi lane validates Select Project tab-click evidence wiring and AT-SPI tab
+enumeration/selection contract only; it does not prove visible rendering, AT-SPI
+target opening, full project interaction, grading, creative assessment, Save
+behavior, first-lesson completion, or the full Alice desktop workflow.
 For branch- or commit-installable outside-in checks, run the thin `amplihack` wrapper from the checkout under review:
 The Gadugi Run-window contract evidence scenario is also under `gadugi/`.
 Validate and run it with `gadugi-test` installed on `PATH`:
