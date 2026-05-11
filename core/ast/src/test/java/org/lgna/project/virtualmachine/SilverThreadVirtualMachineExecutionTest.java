@@ -4,21 +4,11 @@ import org.junit.Test;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.Comment;
 import org.lgna.project.ast.ExpressionStatement;
-import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.MethodInvocation;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.UserMethod;
-import org.lgna.project.ast.UserParameter;
-import org.lgna.project.virtualmachine.events.CountLoopIterationEvent;
-import org.lgna.project.virtualmachine.events.EachInTogetherItemEvent;
-import org.lgna.project.virtualmachine.events.ExpressionEvaluationEvent;
-import org.lgna.project.virtualmachine.events.ForEachLoopIterationEvent;
-import org.lgna.project.virtualmachine.events.StatementExecutionEvent;
-import org.lgna.project.virtualmachine.events.VirtualMachineListener;
-import org.lgna.project.virtualmachine.events.WhileLoopIterationEvent;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -39,18 +29,18 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void vmExecutesMethodInvocationAndFiresExpectedEvents() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
 
-    UserMethod helperMethod = createStaticMethod("helperMethod",
+    UserMethod helperMethod = VmTestSupport.createStaticProcedure("helperMethod",
         new BlockStatement(new Comment("helper executed")));
     type.methods.add(helperMethod);
 
     MethodInvocation call = new MethodInvocation(new NullLiteral(), helperMethod);
     ExpressionStatement callStatement = new ExpressionStatement(call);
-    UserMethod entryMethod = createStaticMethod("entryMethod",
+    UserMethod entryMethod = VmTestSupport.createStaticProcedure("entryMethod",
         new BlockStatement(callStatement));
     type.methods.add(entryMethod);
 
@@ -74,15 +64,15 @@ public class SilverThreadVirtualMachineExecutionTest {
   public void vmExecutionCompletesWithoutExceptions() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
 
-    NamedUserType type = createProgramType();
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
 
-    UserMethod helperMethod = createStaticMethod("helperMethod",
+    UserMethod helperMethod = VmTestSupport.createStaticProcedure("helperMethod",
         new BlockStatement(new Comment("helper executed")));
     type.methods.add(helperMethod);
 
     MethodInvocation call = new MethodInvocation(new NullLiteral(), helperMethod);
     ExpressionStatement callStatement = new ExpressionStatement(call);
-    UserMethod entryMethod = createStaticMethod("entryMethod",
+    UserMethod entryMethod = VmTestSupport.createStaticProcedure("entryMethod",
         new BlockStatement(callStatement));
     type.methods.add(entryMethod);
 
@@ -95,18 +85,18 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void vmExecutesEmptyHelperBodyAndFiresSixEvents() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
 
-    UserMethod helperMethod = createStaticMethod("emptyHelper",
+    UserMethod helperMethod = VmTestSupport.createStaticProcedure("emptyHelper",
         new BlockStatement());
     type.methods.add(helperMethod);
 
     MethodInvocation call = new MethodInvocation(new NullLiteral(), helperMethod);
     ExpressionStatement callStatement = new ExpressionStatement(call);
-    UserMethod entryMethod = createStaticMethod("entryMethod",
+    UserMethod entryMethod = VmTestSupport.createStaticProcedure("entryMethod",
         new BlockStatement(callStatement));
     type.methods.add(entryMethod);
 
@@ -127,14 +117,14 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void vmExecutesMultipleSequentialCallsInOneBody() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
 
-    UserMethod helperA = createStaticMethod("helperA",
+    UserMethod helperA = VmTestSupport.createStaticProcedure("helperA",
         new BlockStatement(new Comment("A")));
-    UserMethod helperB = createStaticMethod("helperB",
+    UserMethod helperB = VmTestSupport.createStaticProcedure("helperB",
         new BlockStatement(new Comment("B")));
     type.methods.add(helperA);
     type.methods.add(helperB);
@@ -143,7 +133,7 @@ public class SilverThreadVirtualMachineExecutionTest {
         new MethodInvocation(new NullLiteral(), helperA));
     ExpressionStatement callB = new ExpressionStatement(
         new MethodInvocation(new NullLiteral(), helperB));
-    UserMethod entryMethod = createStaticMethod("entryMethod",
+    UserMethod entryMethod = VmTestSupport.createStaticProcedure("entryMethod",
         new BlockStatement(callA, callB));
     type.methods.add(entryMethod);
 
@@ -173,24 +163,24 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void vmExecutesChainedCallsThreeLevelsDeep() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
 
     // Level 3: leaf method with Comment
-    UserMethod leaf = createStaticMethod("leaf",
+    UserMethod leaf = VmTestSupport.createStaticProcedure("leaf",
         new BlockStatement(new Comment("leaf")));
     type.methods.add(leaf);
 
     // Level 2: middle calls leaf
-    UserMethod middle = createStaticMethod("middle",
+    UserMethod middle = VmTestSupport.createStaticProcedure("middle",
         new BlockStatement(new ExpressionStatement(
             new MethodInvocation(new NullLiteral(), leaf))));
     type.methods.add(middle);
 
     // Level 1: entry calls middle
-    UserMethod entry = createStaticMethod("entry",
+    UserMethod entry = VmTestSupport.createStaticProcedure("entry",
         new BlockStatement(new ExpressionStatement(
             new MethodInvocation(new NullLiteral(), middle))));
     type.methods.add(entry);
@@ -221,13 +211,13 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void vmSkipsInvalidMethodInvocationButStillFiresExpressionStatementEvents() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
 
     // Helper NOT added to type → isValid() returns false (getDeclaringType() == null)
-    UserMethod orphanHelper = createStaticMethod("orphanHelper",
+    UserMethod orphanHelper = VmTestSupport.createStaticProcedure("orphanHelper",
         new BlockStatement(new Comment("should not execute")));
     // Deliberately NOT adding orphanHelper to type
 
@@ -239,7 +229,7 @@ public class SilverThreadVirtualMachineExecutionTest {
         invalidCall.isValid());
 
     ExpressionStatement callStatement = new ExpressionStatement(invalidCall);
-    UserMethod entryMethod = createStaticMethod("entryMethod",
+    UserMethod entryMethod = VmTestSupport.createStaticProcedure("entryMethod",
         new BlockStatement(callStatement));
     type.methods.add(entryMethod);
 
@@ -262,16 +252,16 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void removedListenerReceivesNoFurtherEvents() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
-    UserMethod helperMethod = createStaticMethod("helperMethod",
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
+    UserMethod helperMethod = VmTestSupport.createStaticProcedure("helperMethod",
         new BlockStatement(new Comment("helper")));
     type.methods.add(helperMethod);
 
     MethodInvocation call = new MethodInvocation(new NullLiteral(), helperMethod);
-    UserMethod entryMethod = createStaticMethod("entryMethod",
+    UserMethod entryMethod = VmTestSupport.createStaticProcedure("entryMethod",
         new BlockStatement(new ExpressionStatement(call)));
     type.methods.add(entryMethod);
 
@@ -290,8 +280,8 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void methodInvocationIsValidWhenMethodOwnedByType() {
-    NamedUserType type = createProgramType();
-    UserMethod helper = createStaticMethod("helper",
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
+    UserMethod helper = VmTestSupport.createStaticProcedure("helper",
         new BlockStatement(new Comment("check")));
 
     assertFalse("Method not yet in type should be invalid", helper.isValid());
@@ -306,16 +296,16 @@ public class SilverThreadVirtualMachineExecutionTest {
   @Test
   public void expressionEvaluatedEventFirsForMethodInvocationExpression() {
     ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    RecordingVirtualMachineListener listener = new RecordingVirtualMachineListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
-    NamedUserType type = createProgramType();
-    UserMethod helper = createStaticMethod("helper",
+    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
+    UserMethod helper = VmTestSupport.createStaticProcedure("helper",
         new BlockStatement(new Comment("expr-eval")));
     type.methods.add(helper);
 
     MethodInvocation call = new MethodInvocation(new NullLiteral(), helper);
-    UserMethod entry = createStaticMethod("entry",
+    UserMethod entry = VmTestSupport.createStaticProcedure("entry",
         new BlockStatement(new ExpressionStatement(call)));
     type.methods.add(entry);
 
@@ -324,64 +314,5 @@ public class SilverThreadVirtualMachineExecutionTest {
     // The VM evaluates the NullLiteral expression and fires expressionEvaluated
     assertTrue("At least one expressionEvaluated event should fire for the NullLiteral target",
         listener.expressionEvaluatedCount > 0);
-  }
-
-  // --- Helpers ---
-
-  private static NamedUserType createProgramType() {
-    NamedUserType type = new NamedUserType();
-    type.name.setValue("VMExecutionProgram");
-    type.superType.setValue(JavaType.OBJECT_TYPE);
-    return type;
-  }
-
-  private static UserMethod createStaticMethod(String name, BlockStatement body) {
-    UserMethod method = new UserMethod(name, Void.TYPE, new UserParameter[0], body);
-    method.isStatic.setValue(true);
-    return method;
-  }
-
-  private static class RecordingVirtualMachineListener implements VirtualMachineListener {
-    final List<String> statementEvents = new ArrayList<>();
-    int expressionEvaluatedCount = 0;
-
-    @Override
-    public void statementExecuting(StatementExecutionEvent event) {
-      statementEvents.add("executing:" + event.getStatement().getClass().getSimpleName());
-    }
-
-    @Override
-    public void statementExecuted(StatementExecutionEvent event) {
-      statementEvents.add("executed:" + event.getStatement().getClass().getSimpleName());
-    }
-
-    @Override
-    public void expressionEvaluated(ExpressionEvaluationEvent event) {
-      expressionEvaluatedCount++;
-    }
-
-    @Override
-    public void whileLoopIterating(WhileLoopIterationEvent e) {}
-
-    @Override
-    public void whileLoopIterated(WhileLoopIterationEvent e) {}
-
-    @Override
-    public void countLoopIterating(CountLoopIterationEvent e) {}
-
-    @Override
-    public void countLoopIterated(CountLoopIterationEvent e) {}
-
-    @Override
-    public void forEachLoopIterating(ForEachLoopIterationEvent e) {}
-
-    @Override
-    public void forEachLoopIterated(ForEachLoopIterationEvent e) {}
-
-    @Override
-    public void eachInTogetherItemExecuting(EachInTogetherItemEvent e) {}
-
-    @Override
-    public void eachInTogetherItemExecuted(EachInTogetherItemEvent e) {}
   }
 }

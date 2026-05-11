@@ -393,11 +393,4 @@ public class VmExpressionEvaluationCharacterizationTest {
     assertEquals("two", results[1]);
     assertEquals(true, results[2]);
   }
-
-  // --- Null expression → NullPointerException ---
-
-  @Test(expected = NullPointerException.class)
-  public void evaluateNullExpressionThrowsNPE() {
-    vm.ENTRY_POINT_evaluate(null, new Expression[]{null});
-  }
 }

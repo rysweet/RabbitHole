@@ -25,17 +25,8 @@ import org.lgna.project.ast.UserLocal;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.project.ast.WhileLoop;
-import org.lgna.project.virtualmachine.events.CountLoopIterationEvent;
-import org.lgna.project.virtualmachine.events.EachInTogetherItemEvent;
-import org.lgna.project.virtualmachine.events.ExpressionEvaluationEvent;
-import org.lgna.project.virtualmachine.events.ForEachLoopIterationEvent;
-import org.lgna.project.virtualmachine.events.StatementExecutionEvent;
-import org.lgna.project.virtualmachine.events.VirtualMachineListener;
-import org.lgna.project.virtualmachine.events.WhileLoopIterationEvent;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -54,15 +45,15 @@ import static org.junit.Assert.assertTrue;
 public class VmStatementExecutionCharacterizationTest {
 
   private ReleaseVirtualMachine vm;
-  private RecordingListener listener;
+  private VmTestSupport.RecordingListener listener;
   private NamedUserType type;
 
   @Before
   public void setUp() {
     vm = new ReleaseVirtualMachine();
-    listener = new RecordingListener();
+    listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
-    type = createProgramType();
+    type = VmTestSupport.createProgramType("VmStatementTestProgram");
   }
 
   private void invokeStatic(UserMethod method) {
@@ -77,7 +68,7 @@ public class VmStatementExecutionCharacterizationTest {
 
   @Test
   public void emptyBlockStatementFiresExecutingAndExecutedEvents() {
-    UserMethod method = createStaticProcedure("emptyBlock", new BlockStatement());
+    UserMethod method = VmTestSupport.createStaticProcedure("emptyBlock", new BlockStatement());
     type.methods.add(method);
 
     invokeStatic(method);
@@ -90,7 +81,7 @@ public class VmStatementExecutionCharacterizationTest {
 
   @Test
   public void blockWithCommentFiresFourEvents() {
-    UserMethod method = createStaticProcedure("commented",
+    UserMethod method = VmTestSupport.createStaticProcedure("commented",
         new BlockStatement(new Comment("test")));
     type.methods.add(method);
 
@@ -116,7 +107,7 @@ public class VmStatementExecutionCharacterizationTest {
         },
         new BlockStatement(elseComment));
 
-    UserMethod method = createStaticProcedure("ifTrue", new BlockStatement(conditional));
+    UserMethod method = VmTestSupport.createStaticProcedure("ifTrue", new BlockStatement(conditional));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -139,7 +130,7 @@ public class VmStatementExecutionCharacterizationTest {
         },
         new BlockStatement(elseComment));
 
-    UserMethod method = createStaticProcedure("ifFalse", new BlockStatement(conditional));
+    UserMethod method = VmTestSupport.createStaticProcedure("ifFalse", new BlockStatement(conditional));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -159,7 +150,7 @@ public class VmStatementExecutionCharacterizationTest {
     CountLoop loop = new CountLoop(variable, constant,
         new IntegerLiteral(0), new BlockStatement(new Comment("body")));
 
-    UserMethod method = createStaticProcedure("countZero", new BlockStatement(loop));
+    UserMethod method = VmTestSupport.createStaticProcedure("countZero", new BlockStatement(loop));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -176,7 +167,7 @@ public class VmStatementExecutionCharacterizationTest {
     CountLoop loop = new CountLoop(variable, constant,
         new IntegerLiteral(3), new BlockStatement(new Comment("body")));
 
-    UserMethod method = createStaticProcedure("countThree", new BlockStatement(loop));
+    UserMethod method = VmTestSupport.createStaticProcedure("countThree", new BlockStatement(loop));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -196,7 +187,7 @@ public class VmStatementExecutionCharacterizationTest {
         new BooleanLiteral(false),
         new BlockStatement(new Comment("unreachable")));
 
-    UserMethod method = createStaticProcedure("whileFalse", new BlockStatement(loop));
+    UserMethod method = VmTestSupport.createStaticProcedure("whileFalse", new BlockStatement(loop));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -214,7 +205,7 @@ public class VmStatementExecutionCharacterizationTest {
     DoInOrder doInOrder = new DoInOrder(
         new BlockStatement(new Comment("first"), new Comment("second")));
 
-    UserMethod method = createStaticProcedure("doInOrder", new BlockStatement(doInOrder));
+    UserMethod method = VmTestSupport.createStaticProcedure("doInOrder", new BlockStatement(doInOrder));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -230,7 +221,7 @@ public class VmStatementExecutionCharacterizationTest {
   public void doTogetherEmptyBodyDoesNothing() {
     DoTogether doTogether = new DoTogether(new BlockStatement());
 
-    UserMethod method = createStaticProcedure("togetherEmpty", new BlockStatement(doTogether));
+    UserMethod method = VmTestSupport.createStaticProcedure("togetherEmpty", new BlockStatement(doTogether));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -248,7 +239,7 @@ public class VmStatementExecutionCharacterizationTest {
     DoTogether doTogether = new DoTogether(
         new BlockStatement(new Comment("solo")));
 
-    UserMethod method = createStaticProcedure("togetherOne", new BlockStatement(doTogether));
+    UserMethod method = VmTestSupport.createStaticProcedure("togetherOne", new BlockStatement(doTogether));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -292,7 +283,7 @@ public class VmStatementExecutionCharacterizationTest {
 
   @Test
   public void procedureReturnsNull() {
-    UserMethod method = createStaticProcedure("noop",
+    UserMethod method = VmTestSupport.createStaticProcedure("noop",
         new BlockStatement(new Comment("noop")));
     type.methods.add(method);
 
@@ -307,7 +298,7 @@ public class VmStatementExecutionCharacterizationTest {
     Comment disabled = new Comment("disabled");
     disabled.isEnabled.setValue(false);
 
-    UserMethod method = createStaticProcedure("disabled", new BlockStatement(disabled));
+    UserMethod method = VmTestSupport.createStaticProcedure("disabled", new BlockStatement(disabled));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -330,7 +321,7 @@ public class VmStatementExecutionCharacterizationTest {
     ForEachInArrayLoop forEach = new ForEachInArrayLoop(
         item, arrayExpr, new BlockStatement(new Comment("body")));
 
-    UserMethod method = createStaticProcedure("forEachTest", new BlockStatement(forEach));
+    UserMethod method = VmTestSupport.createStaticProcedure("forEachTest", new BlockStatement(forEach));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -351,7 +342,7 @@ public class VmStatementExecutionCharacterizationTest {
     ForEachInArrayLoop forEach = new ForEachInArrayLoop(
         item, emptyArray, new BlockStatement(new Comment("unreachable")));
 
-    UserMethod method = createStaticProcedure("forEachEmpty", new BlockStatement(forEach));
+    UserMethod method = VmTestSupport.createStaticProcedure("forEachEmpty", new BlockStatement(forEach));
     type.methods.add(method);
 
     invokeStatic(method);
@@ -372,7 +363,7 @@ public class VmStatementExecutionCharacterizationTest {
     ForEachInArrayLoop forEach = new ForEachInArrayLoop(
         item, arrayExpr, new BlockStatement(new Comment("access item")));
 
-    UserMethod method = createStaticProcedure("forEachItem", new BlockStatement(forEach));
+    UserMethod method = VmTestSupport.createStaticProcedure("forEachItem", new BlockStatement(forEach));
     type.methods.add(method);
 
     // Should not throw — the item local is properly managed
@@ -387,7 +378,7 @@ public class VmStatementExecutionCharacterizationTest {
 
   @Test
   public void methodCallInsideDoInOrderFiresNestedEvents() {
-    UserMethod helper = createStaticProcedure("helper",
+    UserMethod helper = VmTestSupport.createStaticProcedure("helper",
         new BlockStatement(new Comment("inner")));
     type.methods.add(helper);
 
@@ -395,72 +386,12 @@ public class VmStatementExecutionCharacterizationTest {
     DoInOrder doInOrder = new DoInOrder(
         new BlockStatement(new ExpressionStatement(call)));
 
-    UserMethod entry = createStaticProcedure("entry", new BlockStatement(doInOrder));
+    UserMethod entry = VmTestSupport.createStaticProcedure("entry", new BlockStatement(doInOrder));
     type.methods.add(entry);
 
     invokeStatic(entry);
 
     assertTrue("Comment from helper should fire inside DoInOrder",
         listener.statementEvents.contains("executing:Comment"));
-  }
-
-  // --- Helpers ---
-
-  private static NamedUserType createProgramType() {
-    NamedUserType programType = new NamedUserType();
-    programType.name.setValue("VmStatementTestProgram");
-    programType.superType.setValue(JavaType.OBJECT_TYPE);
-    return programType;
-  }
-
-  private static UserMethod createStaticProcedure(String name, BlockStatement body) {
-    UserMethod method = new UserMethod(name, Void.TYPE, new UserParameter[0], body);
-    method.isStatic.setValue(true);
-    return method;
-  }
-
-  private static class RecordingListener implements VirtualMachineListener {
-    final List<String> statementEvents = new ArrayList<>();
-    int countLoopIteratingCount = 0;
-    int countLoopIteratedCount = 0;
-    int whileLoopIteratingCount = 0;
-    int forEachIteratingCount = 0;
-
-    @Override
-    public void statementExecuting(StatementExecutionEvent e) {
-      statementEvents.add("executing:" + e.getStatement().getClass().getSimpleName());
-    }
-
-    @Override
-    public void statementExecuted(StatementExecutionEvent e) {
-      statementEvents.add("executed:" + e.getStatement().getClass().getSimpleName());
-    }
-
-    @Override
-    public void expressionEvaluated(ExpressionEvaluationEvent e) {}
-
-    @Override
-    public void whileLoopIterating(WhileLoopIterationEvent e) { whileLoopIteratingCount++; }
-
-    @Override
-    public void whileLoopIterated(WhileLoopIterationEvent e) {}
-
-    @Override
-    public void countLoopIterating(CountLoopIterationEvent e) { countLoopIteratingCount++; }
-
-    @Override
-    public void countLoopIterated(CountLoopIterationEvent e) { countLoopIteratedCount++; }
-
-    @Override
-    public void forEachLoopIterating(ForEachLoopIterationEvent e) { forEachIteratingCount++; }
-
-    @Override
-    public void forEachLoopIterated(ForEachLoopIterationEvent e) {}
-
-    @Override
-    public void eachInTogetherItemExecuting(EachInTogetherItemEvent e) {}
-
-    @Override
-    public void eachInTogetherItemExecuted(EachInTogetherItemEvent e) {}
   }
 }

@@ -5,32 +5,18 @@ import org.junit.Test;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.Comment;
-import org.lgna.project.ast.ConstructorBlockStatement;
 import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.ExpressionStatement;
 import org.lgna.project.ast.IntegerLiteral;
-import org.lgna.project.ast.JavaConstructor;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.MethodInvocation;
-import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.RelationalInfixExpression;
 import org.lgna.project.ast.ReturnStatement;
-import org.lgna.project.ast.SuperConstructorInvocationStatement;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.project.ast.WhileLoop;
-import org.lgna.project.virtualmachine.events.CountLoopIterationEvent;
-import org.lgna.project.virtualmachine.events.EachInTogetherItemEvent;
-import org.lgna.project.virtualmachine.events.ExpressionEvaluationEvent;
-import org.lgna.project.virtualmachine.events.ForEachLoopIterationEvent;
-import org.lgna.project.virtualmachine.events.StatementExecutionEvent;
-import org.lgna.project.virtualmachine.events.VirtualMachineListener;
-import org.lgna.project.virtualmachine.events.WhileLoopIterationEvent;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -56,7 +42,7 @@ public class VmErrorHandlingCharacterizationTest {
   @Before
   public void setUp() {
     vm = new ReleaseVirtualMachine();
-    type = createProgramType();
+    type = VmTestSupport.createProgramType("VmErrorTestProgram");
   }
 
   // --- Null expression → NullPointerException ---
@@ -158,7 +144,7 @@ public class VmErrorHandlingCharacterizationTest {
 
   @Test
   public void disabledStatementIsSkippedSilently() {
-    RecordingListener listener = new RecordingListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
     Comment disabled = new Comment("should be skipped");
@@ -180,7 +166,7 @@ public class VmErrorHandlingCharacterizationTest {
 
   @Test
   public void invalidMethodInvocationReturnsNullAndContinues() {
-    RecordingListener listener = new RecordingListener();
+    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
     vm.addVirtualMachineListener(listener);
 
     // Create an orphan method NOT added to type → isValid() returns false
@@ -231,7 +217,7 @@ public class VmErrorHandlingCharacterizationTest {
 
   @Test
   public void instanceMethodOnNullTargetThrowsLgnaVmNullPointerException() {
-    NamedUserType instType = createTypeWithConstructor();
+    NamedUserType instType = VmTestSupport.createTypeWithConstructor("VmErrorTestInstanceType");
     UserMethod instanceMethod = new UserMethod("doSomething", Void.TYPE,
         new UserParameter[0], new BlockStatement(new Comment("body")));
     // NOT static → instance method
@@ -299,52 +285,5 @@ public class VmErrorHandlingCharacterizationTest {
     } catch (NullPointerException e) {
       // Expected: VM checkNotNull throws NullPointerException
     }
-  }
-
-  // --- Helpers ---
-
-  private static NamedUserType createProgramType() {
-    NamedUserType programType = new NamedUserType();
-    programType.name.setValue("VmErrorTestProgram");
-    programType.superType.setValue(JavaType.OBJECT_TYPE);
-    return programType;
-  }
-
-  private static NamedUserType createTypeWithConstructor() {
-    NamedUserType userType = new NamedUserType();
-    userType.name.setValue("VmErrorTestInstanceType");
-    userType.superType.setValue(JavaType.OBJECT_TYPE);
-
-    JavaConstructor objectConstructor = JavaConstructor.getInstance(Object.class);
-    SuperConstructorInvocationStatement superCall = new SuperConstructorInvocationStatement(objectConstructor);
-    ConstructorBlockStatement constructorBody = new ConstructorBlockStatement(superCall);
-    NamedUserConstructor constructor = new NamedUserConstructor(new UserParameter[0], constructorBody);
-    userType.constructors.add(constructor);
-
-    return userType;
-  }
-
-  private static class RecordingListener implements VirtualMachineListener {
-    final List<String> statementEvents = new ArrayList<>();
-
-    @Override
-    public void statementExecuting(StatementExecutionEvent e) {
-      statementEvents.add("executing:" + e.getStatement().getClass().getSimpleName());
-    }
-
-    @Override
-    public void statementExecuted(StatementExecutionEvent e) {
-      statementEvents.add("executed:" + e.getStatement().getClass().getSimpleName());
-    }
-
-    @Override public void expressionEvaluated(ExpressionEvaluationEvent e) {}
-    @Override public void whileLoopIterating(WhileLoopIterationEvent e) {}
-    @Override public void whileLoopIterated(WhileLoopIterationEvent e) {}
-    @Override public void countLoopIterating(CountLoopIterationEvent e) {}
-    @Override public void countLoopIterated(CountLoopIterationEvent e) {}
-    @Override public void forEachLoopIterating(ForEachLoopIterationEvent e) {}
-    @Override public void forEachLoopIterated(ForEachLoopIterationEvent e) {}
-    @Override public void eachInTogetherItemExecuting(EachInTogetherItemEvent e) {}
-    @Override public void eachInTogetherItemExecuted(EachInTogetherItemEvent e) {}
   }
 }

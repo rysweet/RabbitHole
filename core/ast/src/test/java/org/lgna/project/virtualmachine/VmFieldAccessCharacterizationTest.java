@@ -4,22 +4,17 @@ import org.junit.Before;
 import org.junit.Test;
 import org.lgna.project.ast.AssignmentExpression;
 import org.lgna.project.ast.BlockStatement;
-import org.lgna.project.ast.ConstructorBlockStatement;
-import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.ExpressionStatement;
 import org.lgna.project.ast.FieldAccess;
 import org.lgna.project.ast.IntegerLiteral;
-import org.lgna.project.ast.JavaConstructor;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalAccess;
 import org.lgna.project.ast.LocalDeclarationStatement;
-import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.ast.NullLiteral;
 import org.lgna.project.ast.ParameterAccess;
 import org.lgna.project.ast.ReturnStatement;
 import org.lgna.project.ast.StringLiteral;
-import org.lgna.project.ast.SuperConstructorInvocationStatement;
 import org.lgna.project.ast.ThisExpression;
 import org.lgna.project.ast.UserField;
 import org.lgna.project.ast.UserLocal;
@@ -50,7 +45,7 @@ public class VmFieldAccessCharacterizationTest {
   @Before
   public void setUp() {
     vm = new ReleaseVirtualMachine();
-    type = createTypeWithConstructor();
+    type = VmTestSupport.createTypeWithConstructor("VmFieldTestType");
   }
 
   // --- UserInstance creation ---
@@ -248,21 +243,5 @@ public class VmFieldAccessCharacterizationTest {
 
     assertEquals(10, vm.get(field, inst1));
     assertEquals(20, vm.get(field, inst2));
-  }
-
-  // --- Helpers ---
-
-  private static NamedUserType createTypeWithConstructor() {
-    NamedUserType userType = new NamedUserType();
-    userType.name.setValue("VmFieldTestType");
-    userType.superType.setValue(JavaType.OBJECT_TYPE);
-
-    JavaConstructor objectConstructor = JavaConstructor.getInstance(Object.class);
-    SuperConstructorInvocationStatement superCall = new SuperConstructorInvocationStatement(objectConstructor);
-    ConstructorBlockStatement constructorBody = new ConstructorBlockStatement(superCall);
-    NamedUserConstructor constructor = new NamedUserConstructor(new UserParameter[0], constructorBody);
-    userType.constructors.add(constructor);
-
-    return userType;
   }
 }

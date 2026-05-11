@@ -4,12 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.Comment;
-import org.lgna.project.ast.ConstructorBlockStatement;
-import org.lgna.project.ast.JavaConstructor;
-import org.lgna.project.ast.JavaType;
-import org.lgna.project.ast.NamedUserConstructor;
 import org.lgna.project.ast.NamedUserType;
-import org.lgna.project.ast.SuperConstructorInvocationStatement;
 import org.lgna.project.ast.UserMethod;
 import org.lgna.project.ast.UserParameter;
 import org.lgna.project.ast.UserType;
@@ -37,7 +32,7 @@ public class VmStoryApiDispatchCharacterizationTest {
   @Before
   public void setUp() {
     vm = new ReleaseVirtualMachine();
-    type = createTypeWithJavaSuperclass(TestAbstractBase.class);
+    type = VmTestSupport.createTypeWithJavaSuperclass("VmStoryApiTestType", TestAbstractBase.class);
   }
 
   // --- Test-only abstract class and adapter ---
@@ -141,39 +136,9 @@ public class VmStoryApiDispatchCharacterizationTest {
   @Test
   public void createInstanceWithoutAdapterUsesDirectConstructor() {
     // type with Object superclass (no adapter registered)
-    NamedUserType plainType = createTypeWithObjectSuperclass();
+    NamedUserType plainType = VmTestSupport.createTypeWithConstructor("VmStoryApiPlainType");
     UserInstance instance = vm.ENTRY_POINT_createInstance(plainType);
     assertNotNull("createInstance without adapter should use direct constructor", instance);
     assertNotNull("Java instance should be an Object", instance.getJavaInstance());
-  }
-
-  // --- Helpers ---
-
-  private static NamedUserType createTypeWithJavaSuperclass(Class<?> superclass) {
-    NamedUserType userType = new NamedUserType();
-    userType.name.setValue("VmStoryApiTestType");
-    userType.superType.setValue(JavaType.getInstance(superclass));
-
-    JavaConstructor superConstructor = JavaConstructor.getInstance(superclass);
-    SuperConstructorInvocationStatement superCall = new SuperConstructorInvocationStatement(superConstructor);
-    ConstructorBlockStatement constructorBody = new ConstructorBlockStatement(superCall);
-    NamedUserConstructor constructor = new NamedUserConstructor(new UserParameter[0], constructorBody);
-    userType.constructors.add(constructor);
-
-    return userType;
-  }
-
-  private static NamedUserType createTypeWithObjectSuperclass() {
-    NamedUserType userType = new NamedUserType();
-    userType.name.setValue("VmStoryApiPlainType");
-    userType.superType.setValue(JavaType.OBJECT_TYPE);
-
-    JavaConstructor objectConstructor = JavaConstructor.getInstance(Object.class);
-    SuperConstructorInvocationStatement superCall = new SuperConstructorInvocationStatement(objectConstructor);
-    ConstructorBlockStatement constructorBody = new ConstructorBlockStatement(superCall);
-    NamedUserConstructor constructor = new NamedUserConstructor(new UserParameter[0], constructorBody);
-    userType.constructors.add(constructor);
-
-    return userType;
   }
 }
