@@ -193,6 +193,12 @@ the resource class, then generates:
 `ResourceStructureEncoder`. This makes security review straightforward — only
 one class uses `Class.forName` and `Field.get`.
 
+Note that `ResourceStructureEncoder` also implements the logic for public
+methods like `appendNewJointId`, `appendNewPose`, and
+`appendNewJointTransformation`. These are called by AST nodes during
+`encodeDefinition(this)`, so `TweedleEncoder` keeps public bridge methods that
+delegate to the resource encoder.
+
 ## Step 8: Static maps — EncoderMappings
 
 Open `EncoderMappings.java`. This class holds no methods — only static final
@@ -228,6 +234,7 @@ exercise all four delegates without knowing about them — the public API
 | --- | --- | --- |
 | Visitor `@Override` stubs | TweedleEncoder | Delegates to appropriate encoder |
 | `super.method()` calls | TweedleEncoder | Cannot be forwarded; stays on coordinator |
+| AST-callback bridges | TweedleEncoder | Public methods delegated to ResourceStructureEncoder; called by `encodeDefinition(this)` |
 | Statement logic | StatementEncoder | Calls back to coordinator for shared methods |
 | Expression logic | ExpressionEncoder | Calls back to coordinator; reads from EncoderMappings |
 | Resource reflection | ResourceStructureEncoder | Consolidates all `Class.forName` / `Field.get` |

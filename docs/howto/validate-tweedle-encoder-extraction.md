@@ -140,6 +140,7 @@ calls `TweedleEncoder` public/protected methods and `encode(ProcessableNode)`.
 - [ ] `TweedleEncoder.java` ≤ 500 lines
 - [ ] `TweedleEncoder` class remains `public`
 - [ ] `TweedleEncoderDecoder.java` unchanged
+- [ ] AST-callback bridges (`appendNewJointId`, `appendNewPose`, etc.) remain `public` on TweedleEncoder
 - [ ] `TweedleEncoderTest` passes
 - [ ] `TweedleEncoderRenameContractTest` passes
 - [ ] `TweedleEncoderDecoderTest` passes

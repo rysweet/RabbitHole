@@ -47,14 +47,14 @@ and extend independently.
 ```text
 TweedleEncoderDecoder (public facade — unchanged)
 └── TweedleEncoder (coordinator, ≤ 500 lines)
-    ├── EncoderMappings (package-private, ~170 lines)
+    ├── EncoderMappings (package-private, ~200 lines)
     │   └── Static rename maps, parameter labels, wrapped args, system identifiers
     ├── StatementEncoder (package-private, ~70 lines)
     │   └── Local declarations, super constructor, statement completion, disabled nodes
     ├── ExpressionEncoder (package-private, ~200 lines)
     │   └── Instantiation dispatch, argument labeling/wrapping, keyed arguments,
     │       target+member resolution, math module routing
-    └── ResourceStructureEncoder (package-private, ~170 lines)
+    └── ResourceStructureEncoder (package-private, ~250 lines)
         └── Resource type/dynamic resource classes, fields via reflection,
             constructors, instances, joint IDs, poses, transformations
 ```
@@ -70,10 +70,11 @@ package-private with no public constructors. They are instantiated only by
 | Responsibility | Methods |
 | --- | --- |
 | Entry point | `encode(ProcessableNode)` |
+| Constructors | `TweedleEncoder()`, `TweedleEncoder(Set<AbstractDeclaration>)` |
 | Class structure | `appendClassHeader(NamedUserType)`, `appendClassFooter(String)` |
 | Constructor encoding | `processConstructor(NamedUserConstructor)` |
 | Method encoding | `processMethod(UserMethod)`, `appendMethodHeader(AbstractMethod)` |
-| Statement completion | `appendStatementCompletion(Statement)`, `appendStatementCompletion()` |
+| Statement completion | `appendStatementCompletion(Statement)`, `appendStatementCompletion()` — calls `super` then delegates `appendStatementEnd` to StatementEncoder |
 | Code flow | `processCountLoop(CountLoop)`, `processDoInOrder(DoInOrder)`, `processDoTogether(DoTogether)`, `processEachInTogether(AbstractEachInTogether)` |
 | Formatting primitives | `openBlock()`, `closeBlock()`, `closeBlockInline()`, `appendAssignmentOperator()`, `appendConcatenationOperator()`, `appendForEachToken()`, `appendInEachToken()` |
 | Shared instantiation helpers | `appendInstantiation(String, Runnable)`, `appendArg(String, String)`, `appendArg(String, Runnable)`, `appendAnotherArg(String, String)`, `appendAnotherArg(String, Runnable)` |
@@ -83,6 +84,7 @@ package-private with no public constructors. They are instantiated only by
 | Identifiers | `identifierName(AbstractDeclaration)` |
 | Comments | `appendSingleLineComment(String)`, `getLocalizedComment(...)` |
 | List and syntax | `getListSeparator()`, `appendSingleCodeLine(Runnable)`, `processSingleStatement(Statement, Runnable)`, `appendCodeFlowStatement(Statement, Runnable)` |
+| AST-callback bridges | `appendNewJointId`, `appendNewJointArrayId`, `getFieldReference`, `appendNewPose`, `appendNewJointTransformation` — public methods called by AST nodes via `encodeDefinition(this)`, delegated to ResourceStructureEncoder |
 | Delegate wiring | Creates `StatementEncoder`, `ExpressionEncoder`, `ResourceStructureEncoder` |
 
 The coordinator owns visitor-pattern `@Override` methods because
@@ -104,6 +106,11 @@ delegate to the appropriate encoder.
 `appendEachArgument`, `processSuperReference`, and `parenthesize`. It has no
 mutable state beyond the `TweedleEncoder` reference.
 
+`pushStatementDisabled` and `appendStatementEnd` are called from TweedleEncoder
+bridge methods (`pushStatementDisabled` @Override, `appendStatementCompletion`,
+`appendCodeFlowStatement`). The coordinator calls `super` where needed and
+delegates the extracted formatting to StatementEncoder.
+
 ### ExpressionEncoder
 
 | Responsibility | Methods |
@@ -120,6 +127,7 @@ mutable state beyond the `TweedleEncoder` reference.
 | Single argument dispatch | `appendOneArgument(MethodInvocation)` — extracts single required argument with wrapping |
 | Parameter index | `parameterIndex(JavaMethodParameter)` — ordinal position of parameter in its method |
 | Target and member | `appendTargetAndMember(Expression, String, AbstractType, TweedleEncoder)` |
+| Math target detection | `targetIsMath(Expression)` — returns true for `TypeExpression` wrapping `java.lang.Math` |
 | Math module routing | `tweedleModuleForMath(String, AbstractType)` — `$WholeNumber`, `$Angle`, `$DecimalNumber` |
 | Resource expressions | `processResourceExpression(ResourceExpression, TweedleEncoder)` |
 
@@ -176,6 +184,12 @@ class for security review.
 `TweedleEncoder` coordinator reference. These helpers are shared because
 `ExpressionEncoder` also uses them for `PersonResource` and `Double` boxing.
 
+The public methods in the Joint IDs, Field references, Poses, and
+Transformations rows are called by AST nodes via `encodeDefinition(this)`.
+They are exposed as public bridge methods on `TweedleEncoder` (see
+[AST-callback bridges](#ast-callback-bridges)) and delegate to
+`ResourceStructureEncoder` for their implementation.
+
 ## Public API
 
 The public API is exclusively `TweedleEncoderDecoder`. No API changes are made
@@ -190,8 +204,9 @@ public class TweedleEncoderDecoder implements EncoderDecoder<String> {
   // ...
 
   // Encode methods (unchanged, delegated to TweedleEncoder)
-  public String encode(ProcessableNode node);
-  public String encode(ProcessableNode node, Set<AbstractDeclaration> terminals);
+  public <N extends AbstractNode & ProcessableNode> String encode(N node);
+  public <N extends ProcessableNode> String encodeProcessable(N node);
+  public <N extends AbstractNode & ProcessableNode> String encode(N node, Set<AbstractDeclaration> terminals);
 }
 ```
 
@@ -219,8 +234,12 @@ The following `TweedleEncoder` methods are package-private (widened from
 | `appendStatement(BlockStatement)` | StatementEncoder |
 | `appendEachArgument(SuperConstructorInvocationStatement)` | StatementEncoder |
 | `processSuperReference()` | StatementEncoder |
-| `appendAssignmentOperator()` | StatementEncoder |
+| `appendAssignmentOperator()` | StatementEncoder, ResourceStructureEncoder |
 | `getCodeStringBuilder()` | ResourceStructureEncoder |
+| `bracketize(Runnable)` | ResourceStructureEncoder (inherited from SourceCodeGenerator) |
+| `openBlock()` | ResourceStructureEncoder |
+| `appendSingleCodeLine(Runnable)` | ResourceStructureEncoder |
+| `appendIndent()` | ResourceStructureEncoder |
 | `tweedleTypeName(String)` | ExpressionEncoder, ResourceStructureEncoder |
 | `getListSeparator()` | ResourceStructureEncoder |
 | `appendInstantiation(String, Runnable)` | ExpressionEncoder, ResourceStructureEncoder |
@@ -240,7 +259,9 @@ visitor-pattern `@Override` methods), the `@Override` stubs must remain on
 ```java
 @Override
 public void processInstantiation(InstanceCreation creation) {
-  expressionEncoder.processInstantiation(creation, this);
+  if (!expressionEncoder.processInstantiation(creation, this)) {
+    super.processInstantiation(creation);
+  }
 }
 
 @Override
@@ -252,10 +273,16 @@ public void processLocalDeclaration(LocalDeclarationStatement stmt) {
 public void processResourceType(String jointedModelResource) {
   resourceStructureEncoder.processResourceType(jointedModelResource, this);
 }
+
+@Override
+protected void appendArgument(JavaKeyedArgument arg) {
+  expressionEncoder.processKeyedArgument(arg, this);
+}
 ```
 
 Methods that call `super.method()` remain in `TweedleEncoder` because `super`
-references cannot be forwarded to delegates:
+references cannot be forwarded to delegates. These methods split their work
+between the coordinator (`super` call) and a delegate (extracted logic):
 
 ```java
 @Override
@@ -263,7 +290,44 @@ protected void appendClassFooter(String userTypeName) {
   appendString(EncoderMappings.typesWithAddedCode.getOrDefault(userTypeName, ""));
   super.appendClassFooter(userTypeName);
 }
+
+@Override
+protected void pushStatementDisabled() {
+  statementEncoder.pushStatementDisabled(this);
+  super.pushStatementDisabled();
+}
+
+@Override
+protected void appendStatementCompletion(Statement stmt) {
+  super.appendStatementCompletion(stmt);
+  statementEncoder.appendStatementEnd(stmt, this);
+}
 ```
+
+### AST-callback bridges
+
+Several public methods on `TweedleEncoder` are called by AST nodes during
+`encodeDefinition(this)` — the `this` reference is the encoder. These methods
+must remain public on `TweedleEncoder` because the AST interface types the
+callback parameter as `SourceCodeGenerator` or `TweedleEncoder`. Each bridge
+delegates to `ResourceStructureEncoder`:
+
+```java
+public void appendNewJointId(String joint, String parentReference) {
+  resourceStructureEncoder.appendNewJointId(joint, parentReference, this);
+}
+
+public void appendNewPose(InstantiableTweedleNode[] jointTransformations) {
+  resourceStructureEncoder.appendNewPose(jointTransformations, this);
+}
+
+public void appendNewJointTransformation(String jointId, AffineMatrix4x4 t) {
+  resourceStructureEncoder.appendNewJointTransformation(jointId, t, this);
+}
+```
+
+The full set of AST-callback bridges: `appendNewJointId`, `appendNewJointArrayId`,
+`getFieldReference`, `appendNewPose`, `appendNewJointTransformation`.
 
 ## Security boundary
 
@@ -365,6 +429,7 @@ decomposition.
 | `TweedleEncoder.java` ≤ 500 lines | `wc -l TweedleEncoder.java` |
 | Four new delegate classes created | `EncoderMappings.java`, `StatementEncoder.java`, `ExpressionEncoder.java`, `ResourceStructureEncoder.java` exist in `core/ast/src/main/java/org/alice/serialization/tweedle/` |
 | All delegates are package-private | No `public` class keyword on delegates |
+| AST-callback bridges remain public | `appendNewJointId`, `appendNewPose`, etc. are `public` on `TweedleEncoder` |
 | No public API changes to `TweedleEncoderDecoder` | `TweedleEncoderDecoder.java` is unchanged |
 | `mvn -pl core/ast -am test` passes | Zero test failures |
 | `mvn -pl core/story-api-migration -am test` passes | Zero test failures |
