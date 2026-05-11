@@ -1,7 +1,6 @@
 package org.alice.ide.croquet.models.projecturi;
 
 import edu.cmu.cs.dennisc.crash.CrashDetector;
-import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
 import edu.cmu.cs.dennisc.java.awt.FileDialogUtilities;
 import org.alice.ide.ProjectDocument;
 import org.alice.ide.croquet.models.menubar.FileMenuModel;
@@ -65,7 +64,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -79,6 +77,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
       SaveOperationCompletionEvidence.SAVE_PROOF_SCHEMA_VERSION;
   private static final String READBACK_MARKER = SaveOperationCompletionEvidence.SAVE_PROOF_MARKER;
   private static final String TARGET_FILE_NAME = "robot-save-menu-proof.a3p";
+  private static final String SCREEN_MENU_BAR_PROPERTY = "apple.laf.useScreenMenuBar";
 
   private String previousDiscoveryEvidenceDir;
   private String previousSelectedPath;
@@ -87,6 +86,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
   private String previousSaveProofScenario;
   private String previousSaveProofRunId;
   private String previousSaveProofEvidencePath;
+  private String previousScreenMenuBar;
   private Preferences licensePreferences;
   private String previousLicenseAccepted;
 
@@ -100,6 +100,8 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     previousSaveProofScenario = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY);
     previousSaveProofRunId = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY);
     previousSaveProofEvidencePath = System.getProperty(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY);
+    previousScreenMenuBar = System.getProperty(SCREEN_MENU_BAR_PROPERTY);
+    System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
     licensePreferences = Preferences.userNodeForPackage(License.class);
     previousLicenseAccepted = licensePreferences.get("isLicenseAccepted", null);
   }
@@ -115,13 +117,13 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
     restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_SCENARIO_PROPERTY, previousSaveProofScenario);
     restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_RUN_ID_PROPERTY, previousSaveProofRunId);
     restoreProperty(SaveOperationCompletionEvidence.SAVE_PROOF_EVIDENCE_PATH_PROPERTY, previousSaveProofEvidencePath);
+    restoreProperty(SCREEN_MENU_BAR_PROPERTY, previousScreenMenuBar);
     resetActiveApplication();
   }
 
   @Test
   public void robotFileSaveApprovesChooserWritesReadableMarkedProjectOrWritesBlocker()
       throws Exception {
-    assumeFalse("macOS uses a native menu bar outside the JFrame; Robot screen-coordinate clicks miss", SystemUtilities.isMac());
     Path proofRoot = canonicalProofRoot();
     Path projectsDir = Files.createDirectories(proofRoot.resolve("projects"));
     Path artifact = SaveOperationCompletionEvidence.configuredSaveProofArtifact(proofRoot);
@@ -369,6 +371,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
       StageIDE ide = new StageIDE(new CrashDetector(RobotSaveMenuDialogWriteReadbackProofTest.class));
       licensePreferences.putBoolean("isLicenseAccepted", true);
       ide.initialize(new String[0]);
+      System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
       installMinimalProject(ide);
       showIdeFrame(ide);
       ideRef.set(ide);

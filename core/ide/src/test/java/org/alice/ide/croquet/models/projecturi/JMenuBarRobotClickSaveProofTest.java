@@ -1,7 +1,6 @@
 package org.alice.ide.croquet.models.projecturi;
 
 import edu.cmu.cs.dennisc.crash.CrashDetector;
-import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
 import org.alice.ide.croquet.models.menubar.FileMenuModel;
 import org.alice.stageide.StageIDE;
 import org.junit.After;
@@ -69,19 +68,25 @@ import static org.junit.Assume.assumeFalse;
  */
 public class JMenuBarRobotClickSaveProofTest {
 
+  private static final String SCREEN_MENU_BAR_PROPERTY = "apple.laf.useScreenMenuBar";
+
   private String previousEvidenceDir;
   private String previousProofOnly;
+  private String previousScreenMenuBar;
 
   @Before
   public void captureProperties() {
     previousEvidenceDir = System.getProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY);
     previousProofOnly = System.getProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY);
+    previousScreenMenuBar = System.getProperty(SCREEN_MENU_BAR_PROPERTY);
+    System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
   }
 
   @After
   public void restorePropertiesAndActiveApplication() throws Exception {
     restoreProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY, previousEvidenceDir);
     restoreProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY, previousProofOnly);
+    restoreProperty(SCREEN_MENU_BAR_PROPERTY, previousScreenMenuBar);
     resetActiveApplication();
   }
 
@@ -89,8 +94,6 @@ public class JMenuBarRobotClickSaveProofTest {
   public void robotClickFileMenuInVisibleJMenuBarSelectsSaveDispatchesToSaveOperation()
       throws Exception {
     assumeFalse("requires Xvfb or another headful AWT display", GraphicsEnvironment.isHeadless());
-    assumeFalse("macOS uses a native menu bar outside the JFrame; Robot screen-coordinate clicks miss", SystemUtilities.isMac());
-
     Path evidenceDir = newTestDir();
     System.setProperty(SaveOperationCompletionEvidence.EVIDENCE_DIR_PROPERTY, evidenceDir.toString());
     System.setProperty(SaveOperationCompletionEvidence.PROOF_ONLY_PROPERTY, "true");
@@ -108,6 +111,7 @@ public class JMenuBarRobotClickSaveProofTest {
     SwingUtilities.invokeAndWait(() -> {
       StageIDE ide = new StageIDE(new CrashDetector(JMenuBarRobotClickSaveProofTest.class));
       ide.initialize(new String[0]);
+      System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
       ideRef.set(ide);
 
       FileMenuModel fileMenuModel = findFileMenuModel(ide);
