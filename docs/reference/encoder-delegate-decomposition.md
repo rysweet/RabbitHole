@@ -76,6 +76,8 @@ package-private with no public constructors. They are instantiated only by
 | Statement completion | `appendStatementCompletion(Statement)`, `appendStatementCompletion()` |
 | Code flow | `processCountLoop(CountLoop)`, `processDoInOrder(DoInOrder)`, `processDoTogether(DoTogether)`, `processEachInTogether(AbstractEachInTogether)` |
 | Formatting primitives | `openBlock()`, `closeBlock()`, `closeBlockInline()`, `appendAssignmentOperator()`, `appendConcatenationOperator()`, `appendForEachToken()`, `appendInEachToken()` |
+| Shared instantiation helpers | `appendInstantiation(String, Runnable)`, `appendArg(String, String)`, `appendArg(String, Runnable)`, `appendAnotherArg(String, String)`, `appendAnotherArg(String, Runnable)` |
+| User joint identifiers | `getUserJointIdentifier(String)` |
 | Indentation | `pushIndent()`, `popIndent()`, `appendIndent()`, `appendIndent(Statement)` |
 | Type names | `processTypeName(AbstractType)`, `tweedleTypeName(String)` |
 | Identifiers | `identifierName(AbstractDeclaration)` |
@@ -108,12 +110,15 @@ mutable state beyond the `TweedleEncoder` reference.
 | --- | --- |
 | Instantiation dispatch | `processInstantiation(InstanceCreation, TweedleEncoder)` |
 | Person resource | Evaluates `PersonResource` creation via `ReleaseVirtualMachine` |
+| Class name extraction | `getDeclaringJavaClassName(InstanceCreation)` — resolves Java constructor class name |
 | Double boxing | `$DecimalNumber.from(wholeNumber: ...)` wrapping |
 | Dynamic resource | `DynamicXxxResource` → `XxxResource.DEFAULT` shorthand |
 | Keyed arguments | `processKeyedArgument(JavaKeyedArgument, TweedleEncoder)` |
 | Labeled arguments | `processArgument(AbstractParameter, AbstractArgument, TweedleEncoder)` |
 | Wrapped arguments | `appendWrappedArg(ProcessableNode, String, Map)` |
 | Parameter labels | `getParameterLabel(AbstractParameter)` — constructor relabeling, missing names, type fallback |
+| Single argument dispatch | `appendOneArgument(MethodInvocation)` — extracts single required argument with wrapping |
+| Parameter index | `parameterIndex(JavaMethodParameter)` — ordinal position of parameter in its method |
 | Target and member | `appendTargetAndMember(Expression, String, AbstractType, TweedleEncoder)` |
 | Math module routing | `tweedleModuleForMath(String, AbstractType)` — `$WholeNumber`, `$Angle`, `$DecimalNumber` |
 | Resource expressions | `processResourceExpression(ResourceExpression, TweedleEncoder)` |
@@ -159,13 +164,17 @@ methods — all fields are package-private static.
 | Poses | `appendNewPose(InstantiableTweedleNode[], TweedleEncoder)` |
 | Transformations | `appendNewJointTransformation(String, AffineMatrix4x4, TweedleEncoder)` |
 | Visibility tags | `appendVisibilityTag(FieldTemplate, TweedleEncoder)` |
-| Instantiation helper | `appendInstantiation(String, Runnable, TweedleEncoder)`, `appendArg(...)`, `appendAnotherArg(...)` |
 | List helper | `appendList(T[], Consumer, String, TweedleEncoder)` |
 | Quote helper | `quoteString(String, TweedleEncoder)` |
 
 `ResourceStructureEncoder` uses `Class.forName` for resource class reflection,
 the only reflective code in the encoder. All reflection is consolidated in this
 class for security review.
+
+`ResourceStructureEncoder` calls shared instantiation helpers
+(`appendInstantiation`, `appendArg`, `appendAnotherArg`) via the
+`TweedleEncoder` coordinator reference. These helpers are shared because
+`ExpressionEncoder` also uses them for `PersonResource` and `Double` boxing.
 
 ## Public API
 
@@ -214,6 +223,10 @@ The following `TweedleEncoder` methods are package-private (widened from
 | `getCodeStringBuilder()` | ResourceStructureEncoder |
 | `tweedleTypeName(String)` | ExpressionEncoder, ResourceStructureEncoder |
 | `getListSeparator()` | ResourceStructureEncoder |
+| `appendInstantiation(String, Runnable)` | ExpressionEncoder, ResourceStructureEncoder |
+| `appendArg(String, String/Runnable)` | ExpressionEncoder, ResourceStructureEncoder |
+| `appendAnotherArg(String, String/Runnable)` | ResourceStructureEncoder |
+| `getUserJointIdentifier(String)` | ResourceStructureEncoder (also public for AST node callbacks) |
 
 No interfaces or inheritance are introduced. All collaboration uses direct
 method calls within the same package, matching the Decoder delegate pattern.

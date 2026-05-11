@@ -58,10 +58,12 @@ Expected: `public class TweedleEncoder extends SourceCodeGenerator {`
 ## Step 5: Verify TweedleEncoderDecoder is unchanged
 
 ```bash
-git diff HEAD~1 -- TweedleEncoderDecoder.java
+git diff main -- TweedleEncoderDecoder.java
 ```
 
 Expected: no changes. The public facade is unmodified by this extraction.
+If your branch diverged from a different base, replace `main` with the
+appropriate merge base.
 
 ## Step 6: Run core/ast encoder tests
 

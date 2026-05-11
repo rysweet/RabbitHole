@@ -133,9 +133,12 @@ cases:
 If none match, the method returns `false` and the coordinator falls through to
 `super.processInstantiation(creation)`.
 
-**Key insight:** The try-delegate pattern — returning a boolean to indicate
-whether the delegate handled the call — avoids duplicating the `super` call
-chain in the delegate.
+**Key insight:** The boolean-return pattern is a design decision introduced by
+the extraction. The original code uses early `return` statements inside
+`processInstantiation`. The delegate cannot call `super.processInstantiation()`
+(only the coordinator can), so the delegate returns a boolean to signal whether
+it handled the call. This is the same "try-delegate" pattern used in the Decoder
+decomposition.
 
 ## Step 6: Argument labeling — processArgument
 
