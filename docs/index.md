@@ -129,8 +129,8 @@ repository.
 - [Merge-ready PR recovery](./reference/merge-ready-pr-recovery.md) - Specification for the automated merge-ready blocker resolution script: CLI contract, recovery steps, evidence template, and validation.
 - [Run merge-ready PR recovery](./howto/run-merge-ready-pr-recovery.md) - how to bring a pull request to merge-ready status with QA scenario validation, quality audit cycles, and PR description updates.
 - [CI efficiency and no-op validation skips](./reference/ci-efficiency.md) - conservative docs-only CI skip rules, event-aware Maven gates, and preserved validation surfaces.
-- [Mac-compatible test guards](./reference/mac-compatible-test-guards.md) - platform-tolerant render-target dimension assertions (#496) and JUnit `Assume` headless-skip guards (#497) for cross-platform CI compatibility.
-- [Review Mac-compatible test guards](./howto/review-mac-compatible-test-guards.md) - how to verify, extend, or add platform-tolerant assertions and headless-skip guards for desktop proof tests.
+- [Mac-compatible test guards](./reference/mac-compatible-test-guards.md) - platform-tolerant render-target dimension assertions (#496), JUnit `Assume` headless-skip guards (#497), and macOS screen menu bar property override (#500, #502) for cross-platform CI compatibility.
+- [Review Mac-compatible test guards](./howto/review-mac-compatible-test-guards.md) - how to verify, extend, or add platform-tolerant assertions, headless-skip guards, and macOS menu bar property overrides for desktop proof tests.
 
 ## Modernization evidence and scorecards
 

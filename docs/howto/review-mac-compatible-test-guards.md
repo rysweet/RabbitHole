@@ -9,10 +9,10 @@ contracts for render-target evidence and headless-skip guards.
 - [Run the validation](#run-the-validation)
 - [Review render-target assertions](#review-render-target-assertions)
 - [Review headless-skip guards](#review-headless-skip-guards)
-- [Review macOS native-menu-bar skip guards](#review-macos-native-menu-bar-skip-guards)
+- [Review macOS screen menu bar property override](#review-macos-screen-menu-bar-property-override)
 - [Add a new platform-tolerant assertion](#add-a-new-platform-tolerant-assertion)
 - [Add a new headless-skip guard](#add-a-new-headless-skip-guard)
-- [Add a macOS native-menu-bar skip guard](#add-a-macos-native-menu-bar-skip-guard)
+- [Override the screen menu bar property in new Robot menu tests](#override-the-screen-menu-bar-property-in-new-robot-menu-tests)
 - [Common mistakes](#common-mistakes)
 
 ## Prerequisites
@@ -43,10 +43,11 @@ mvn -pl core/ide -am \
   test -q
 ```
 
-On headless CI, expect the two Save menu tests and two Robot menu tests to
-skip and the render-target test to pass. On macOS, the Robot menu tests also
-skip due to the native menu bar. On a graphical display or Xvfb (Linux/Windows),
-expect all tests to pass.
+On headless CI (any platform), expect the two Save menu tests and two Robot
+menu tests to skip (headless guard) and the render-target test to pass. On
+macOS with a graphical display, all tests pass — the Robot menu tests force
+`apple.laf.useScreenMenuBar=false` to keep the JMenuBar inside the JFrame.
+On Xvfb or a graphical display (Linux/Windows), expect all tests to pass.
 
 ## Review render-target assertions
 
@@ -140,60 +141,68 @@ public void myGuiProofTest() throws Exception {
 }
 ```
 
-## Review macOS native-menu-bar skip guards
+## Review macOS screen menu bar property override
 
-Open `JMenuBarRobotClickSaveProofTest.java` and find the
-`robotClickFileMenuInVisibleJMenuBarSelectsSaveDispatchesToSaveOperation`
-method. Confirm that **after** the headless guard, there is a macOS guard:
+Open `JMenuBarRobotClickSaveProofTest.java` and confirm the class defines a
+`SCREEN_MENU_BAR_PROPERTY` constant and a `previousScreenMenuBar` field:
 
 ```java
-assumeFalse("requires Xvfb or another headful AWT display", GraphicsEnvironment.isHeadless());
-assumeFalse("macOS uses a native menu bar outside the JFrame; Robot screen-coordinate menu clicks miss",
-    SystemUtilities.isMac());
+private static final String SCREEN_MENU_BAR_PROPERTY = "apple.laf.useScreenMenuBar";
+private String previousScreenMenuBar;
 ```
 
-Both guards use `assumeFalse` so JUnit reports **Skip**, not pass.
-
-Open `RobotSaveMenuDialogWriteReadbackProofTest.java` and find the
-`robotFileSaveApprovesChooserWritesReadableMarkedProjectOrWritesBlocker`
-method. Confirm the macOS guard appears at the top of the method, before
-the proof root setup:
+Confirm the `@Before` method captures the original value and sets to `"false"`:
 
 ```java
-assumeFalse("macOS uses a native menu bar outside the JFrame; Robot screen-coordinate menu clicks miss",
-    SystemUtilities.isMac());
-```
-
-Verify that the five evidence-contract test methods in the same class
-(`evidenceArtifactReportsBlockerForHeadlessAwt`, etc.) do **not** contain
-an `isMac()` guard — they validate artifact schemas without Robot interaction.
-
-## Add a macOS native-menu-bar skip guard
-
-When writing a test that uses AWT Robot screen-coordinate clicks on a
-JMenuBar:
-
-1. Add the guard after the headless check (both may apply independently).
-2. Use `assumeFalse("macOS uses a native menu bar...", SystemUtilities.isMac())`.
-3. Import `edu.cmu.cs.dennisc.java.lang.SystemUtilities`.
-4. Only guard the Robot-driven method, not companion artifact-validation
-   methods that don't use Robot interaction.
-5. Include a message explaining the macOS native menu bar issue.
-
-Example:
-
-```java
-import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
-import static org.junit.Assume.assumeFalse;
-
-@Test
-public void myRobotMenuTest() throws Exception {
-  assumeFalse("requires a graphical display", GraphicsEnvironment.isHeadless());
-  assumeFalse("macOS uses a native menu bar outside the JFrame; "
-      + "Robot screen-coordinate menu clicks miss", SystemUtilities.isMac());
-  // ... Robot menu click test body ...
+@Before
+public void captureProperties() {
+  previousScreenMenuBar = System.getProperty(SCREEN_MENU_BAR_PROPERTY);
+  System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
+  // ... other captures ...
 }
 ```
+
+Confirm the `@After` method restores the property:
+
+```java
+@After
+public void restorePropertiesAndActiveApplication() throws Exception {
+  restoreProperty(SCREEN_MENU_BAR_PROPERTY, previousScreenMenuBar);
+  // ... other restores ...
+}
+```
+
+In the test method body, confirm there is a defensive re-set to `"false"`
+after `ide.initialize()`:
+
+```java
+ide.initialize(new String[0]);
+System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
+```
+
+Verify there is **no** `assumeFalse(SystemUtilities.isMac())` in either file.
+The `SystemUtilities` import should not be present.
+
+Repeat the same checks for `RobotSaveMenuDialogWriteReadbackProofTest.java`.
+
+## Override the screen menu bar property in new Robot menu tests
+
+When writing a new test that uses AWT Robot screen-coordinate clicks on a
+JMenuBar:
+
+1. Define a constant: `private static final String SCREEN_MENU_BAR_PROPERTY = "apple.laf.useScreenMenuBar";`
+2. Add a `previousScreenMenuBar` field.
+3. In `@Before`, capture the original and set to `"false"`:
+   ```java
+   previousScreenMenuBar = System.getProperty(SCREEN_MENU_BAR_PROPERTY);
+   System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false");
+   ```
+4. In `@After`, restore via `restoreProperty(SCREEN_MENU_BAR_PROPERTY, previousScreenMenuBar)`.
+5. After any `ide.initialize()` or `Application.initialize()` call in the test
+   body, add `System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false")` as a
+   defensive re-set (because `Application.initialize()` sets it to `"true"` on Mac).
+6. Do **not** use `assumeFalse(SystemUtilities.isMac())` to skip on macOS.
+   The property override makes Robot menu clicks work on macOS.
 
 ## Common mistakes
 
@@ -203,5 +212,6 @@ public void myRobotMenuTest() throws Exception {
 | `if (isHeadless()) { return; }` | JUnit reports the test as passed, hiding that the proof never ran. | Use `assumeFalse(isHeadless())`. |
 | Inlining blocker validation inside the skip guard | Duplicates assertions that belong in a dedicated blocker test. | Move to a separate test method. |
 | Asserting exact pixel values | Platform-dependent; fails on HiDPI, different L&F, or virtual displays. | Assert ranges or structural properties. |
-| Robot menu click test without `isMac()` guard | Fails on macOS because the native menu bar is outside the JFrame. | Add `assumeFalse(SystemUtilities.isMac())` after the headless guard. |
-| Adding `isMac()` guard to evidence-contract methods | Unnecessarily skips artifact-schema validation that doesn't use Robot. | Guard only the Robot-driven method, not companion validators. |
+| `assumeFalse(SystemUtilities.isMac())` for Robot menu tests | Unnecessarily skips tests on macOS. The menu bar can be forced into the JFrame. | Set `apple.laf.useScreenMenuBar=false` in `@Before` with `@After` restore. |
+| Missing defensive re-set after `ide.initialize()` | `Application.initialize()` sets `apple.laf.useScreenMenuBar=true` on Mac, overriding the `@Before` setup. | Add `System.setProperty(SCREEN_MENU_BAR_PROPERTY, "false")` after `ide.initialize()`. |
+| Not restoring `apple.laf.useScreenMenuBar` in `@After` | Leaks test state into other tests in the same JVM. | Use `restoreProperty` to restore or clear the original value. |

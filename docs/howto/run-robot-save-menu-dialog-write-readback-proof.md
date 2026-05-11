@@ -27,11 +27,13 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 Provide a non-headless AWT display. On Linux CI or a headless workstation, run the proof under Xvfb.
 
-On macOS, the Robot-driven test method is automatically skipped via
-`assumeFalse(SystemUtilities.isMac())` because macOS uses a native menu bar
-outside the JFrame, making Robot screen-coordinate clicks miss. The five
-evidence-contract test methods still run on macOS. See
-[Mac-Compatible Test Guards](../reference/mac-compatible-test-guards.md#macos-native-menu-bar-skip-guard-issue-500)
+On macOS with a graphical display, the Robot-driven test method runs
+successfully. The test forces `apple.laf.useScreenMenuBar` to `"false"` in
+`@Before` (with a defensive re-set after `ide.initialize()`), keeping the
+JMenuBar inside the JFrame where Robot screen-coordinate clicks work. On
+macOS without a display, the headless guard skips the Robot test method. The
+five evidence-contract test methods run on all platforms. See
+[Mac-Compatible Test Guards](../reference/mac-compatible-test-guards.md#macos-screen-menu-bar-property-override-issues-500-502)
 for details.
 
 ## Run the focused proof
