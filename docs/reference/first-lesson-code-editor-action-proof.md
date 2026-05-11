@@ -135,16 +135,26 @@ Schema:
   "schema_version": "eatme.alice-first-lesson-code-editor-action-proof/v1",
   "status": "proved",
   "procedure_selector": "scene.eatmeFirstLesson",
-  "action": "append-comment",
-  "marker": "wave4-code-editor-action-proof",
+  "edit_spec": "append-comment:wave4-code-editor-action-proof",
+  "input_project_artifact": "<fixture .a3p path>",
+  "scene_type": "<scene NamedUserType name>",
+  "method_name": "eatmeFirstLesson",
+  "selection_mode": "in_editor_procedure_tab_operation",
   "selected_declaration": "eatmeFirstLesson",
   "code_composite_declaration": "eatmeFirstLesson",
   "code_editor_backing": "org.alice.ide.codeeditor.CodeEditor",
   "code_editor_code": "eatmeFirstLesson",
+  "operation_fired": true,
+  "action": "append-comment",
+  "marker": "wave4-code-editor-action-proof",
   "before_statement_count": 1,
   "after_statement_count": 2,
+  "statement_count_delta": 1,
   "target_marker_count": 1,
   "wrong_target_marker_count": 0,
+  "before_methods": ["eatmeFirstLesson", "<other scene methods>"],
+  "after_methods": ["eatmeFirstLesson", "<other scene methods>"],
+  "edited_project": "<edited .a3p path>",
   "success": true,
   "doesNotClaim": [
     "full first-lesson completion",
@@ -157,6 +167,16 @@ Schema:
   ]
 }
 ```
+
+The test asserts a contract-relevant subset of these fields: `schema_version`,
+`status`, `procedure_selector`, `selected_declaration`,
+`code_composite_declaration`, `code_editor_backing`, `code_editor_code`,
+`action`, `marker`, `before_statement_count`, `after_statement_count`,
+`target_marker_count`, `wrong_target_marker_count`, and `doesNotClaim`. The
+remaining fields (`edit_spec`, `input_project_artifact`, `scene_type`,
+`method_name`, `selection_mode`, `operation_fired`, `statement_count_delta`,
+`before_methods`, `after_methods`, `edited_project`) are informational and
+present in the artifact but not contract-asserted by the test.
 
 `target_marker_count` must be exactly `1` for the canonical marker.
 `wrong_target_marker_count` must be `0`; a marker in any other procedure
@@ -183,7 +203,7 @@ action is accepted.
 | `selectProcedureInEditor(DeclarationsEditorComposite, UserMethod, UserActivity)` | Fires the tab operation and returns the selected `UserMethod`. Throws if the selected procedure is not the supplied method. |
 | `getSelectedProcedure(DeclarationsEditorComposite)` | Returns the selected procedure, or `null` when no procedure tab is selected. |
 | `getSelectedProcedureCodeComposite(DeclarationsEditorComposite)` | Returns the selected procedure `CodeComposite`, or `null` when the selected tab is not a procedure code tab. |
-| `getSelectedCodeEditorCode(DeclarationsEditorComposite)` | Returns the selected tab's backing `CodeEditor.getCode()` value. Throws if the selected procedure tab is not backed by a `CodeEditor`. |
+| `getSelectedCodeEditorCode(DeclarationsEditorComposite)` | Returns the selected tab's backing `CodeEditor.getCode()` value. Returns `null` when no procedure tab is selected. Throws if a procedure tab is selected but not backed by a `CodeEditor`. |
 | `getSelectedCodeEditorBackingClassName(DeclarationsEditorComposite)` | Returns the selected tab's backing code-editor class name so evidence can distinguish the real `CodeEditor` seam from a name-only selection. |
 
 The action proof must assert all three identities before mutation:
