@@ -27,6 +27,13 @@ export NODE_OPTIONS=--max-old-space-size=32768
 
 Provide a non-headless AWT display. On Linux CI or a headless workstation, run the proof under Xvfb.
 
+On macOS, the Robot-driven test method is automatically skipped via
+`assumeFalse(SystemUtilities.isMac())` because macOS uses a native menu bar
+outside the JFrame, making Robot screen-coordinate clicks miss. The five
+evidence-contract test methods still run on macOS. See
+[Mac-Compatible Test Guards](../reference/mac-compatible-test-guards.md#macos-native-menu-bar-skip-guard-issue-500)
+for details.
+
 ## Run the focused proof
 
 ```bash

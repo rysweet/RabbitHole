@@ -1,6 +1,7 @@
 package org.alice.ide.croquet.models.projecturi;
 
 import edu.cmu.cs.dennisc.crash.CrashDetector;
+import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
 import edu.cmu.cs.dennisc.java.awt.FileDialogUtilities;
 import org.alice.ide.ProjectDocument;
 import org.alice.ide.croquet.models.menubar.FileMenuModel;
@@ -64,6 +65,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -119,6 +121,7 @@ public class RobotSaveMenuDialogWriteReadbackProofTest {
   @Test
   public void robotFileSaveApprovesChooserWritesReadableMarkedProjectOrWritesBlocker()
       throws Exception {
+    assumeFalse("macOS uses a native menu bar outside the JFrame; Robot screen-coordinate clicks miss", SystemUtilities.isMac());
     Path proofRoot = canonicalProofRoot();
     Path projectsDir = Files.createDirectories(proofRoot.resolve("projects"));
     Path artifact = SaveOperationCompletionEvidence.configuredSaveProofArtifact(proofRoot);
