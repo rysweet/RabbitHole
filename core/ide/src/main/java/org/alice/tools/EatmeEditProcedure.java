@@ -49,7 +49,7 @@ public final class EatmeEditProcedure {
     }
   }
 
-  static int run(String[] args, PrintStream out, PrintStream err) {
+  public static int run(String[] args, PrintStream out, PrintStream err) {
     PrintStream originalSystemOut = System.out;
     PrintStream silentSystemOut = new PrintStream(OutputStream.nullOutputStream());
     System.setOut(silentSystemOut);
