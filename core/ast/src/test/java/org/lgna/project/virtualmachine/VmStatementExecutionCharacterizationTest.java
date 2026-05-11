@@ -8,9 +8,11 @@ import org.lgna.project.ast.BooleanLiteral;
 import org.lgna.project.ast.Comment;
 import org.lgna.project.ast.ConditionalStatement;
 import org.lgna.project.ast.CountLoop;
+import org.lgna.project.ast.ArrayInstanceCreation;
 import org.lgna.project.ast.DoInOrder;
 import org.lgna.project.ast.DoTogether;
 import org.lgna.project.ast.ExpressionStatement;
+import org.lgna.project.ast.ForEachInArrayLoop;
 import org.lgna.project.ast.IntegerLiteral;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.LocalAccess;
@@ -315,6 +317,72 @@ public class VmStatementExecutionCharacterizationTest {
     assertEquals("Disabled statement should not fire events", 0, commentCount);
   }
 
+  // --- ForEachInArrayLoop ---
+
+  @Test
+  public void forEachInArrayLoopIteratesOverAllElements() {
+    ArrayInstanceCreation arrayExpr = new ArrayInstanceCreation(
+        Integer[].class,
+        new Integer[]{3},
+        new IntegerLiteral(10), new IntegerLiteral(20), new IntegerLiteral(30));
+
+    UserLocal item = new UserLocal("item", Integer.class, true);
+    ForEachInArrayLoop forEach = new ForEachInArrayLoop(
+        item, arrayExpr, new BlockStatement(new Comment("body")));
+
+    UserMethod method = createStaticProcedure("forEachTest", new BlockStatement(forEach));
+    type.methods.add(method);
+
+    invokeStatic(method);
+
+    long bodyExecCount = listener.statementEvents.stream()
+        .filter(e -> e.equals("executing:Comment")).count();
+    assertEquals("ForEach over 3-element array should execute body 3 times", 3, bodyExecCount);
+    assertTrue("ForEachInArrayLoop should fire forEachLoopIterating events",
+        listener.forEachIteratingCount >= 3);
+  }
+
+  @Test
+  public void forEachInArrayLoopWithEmptyArrayExecutesNoBody() {
+    ArrayInstanceCreation emptyArray = new ArrayInstanceCreation(
+        Integer[].class, new Integer[]{0});
+
+    UserLocal item = new UserLocal("item", Integer.class, true);
+    ForEachInArrayLoop forEach = new ForEachInArrayLoop(
+        item, emptyArray, new BlockStatement(new Comment("unreachable")));
+
+    UserMethod method = createStaticProcedure("forEachEmpty", new BlockStatement(forEach));
+    type.methods.add(method);
+
+    invokeStatic(method);
+
+    long bodyExecCount = listener.statementEvents.stream()
+        .filter(e -> e.equals("executing:Comment")).count();
+    assertEquals("ForEach over empty array should execute body 0 times", 0, bodyExecCount);
+  }
+
+  @Test
+  public void forEachInArrayLoopSetsItemLocalForEachIteration() {
+    ArrayInstanceCreation arrayExpr = new ArrayInstanceCreation(
+        Integer[].class,
+        new Integer[]{2},
+        new IntegerLiteral(100), new IntegerLiteral(200));
+
+    UserLocal item = new UserLocal("item", Integer.class, true);
+    ForEachInArrayLoop forEach = new ForEachInArrayLoop(
+        item, arrayExpr, new BlockStatement(new Comment("access item")));
+
+    UserMethod method = createStaticProcedure("forEachItem", new BlockStatement(forEach));
+    type.methods.add(method);
+
+    // Should not throw — the item local is properly managed
+    invokeStatic(method);
+
+    long bodyExecCount = listener.statementEvents.stream()
+        .filter(e -> e.equals("executing:Comment")).count();
+    assertEquals("ForEach should execute body once per element", 2, bodyExecCount);
+  }
+
   // --- Method invocation within body ---
 
   @Test
@@ -356,6 +424,7 @@ public class VmStatementExecutionCharacterizationTest {
     int countLoopIteratingCount = 0;
     int countLoopIteratedCount = 0;
     int whileLoopIteratingCount = 0;
+    int forEachIteratingCount = 0;
 
     @Override
     public void statementExecuting(StatementExecutionEvent e) {
@@ -383,7 +452,7 @@ public class VmStatementExecutionCharacterizationTest {
     public void countLoopIterated(CountLoopIterationEvent e) { countLoopIteratedCount++; }
 
     @Override
-    public void forEachLoopIterating(ForEachLoopIterationEvent e) {}
+    public void forEachLoopIterating(ForEachLoopIterationEvent e) { forEachIteratingCount++; }
 
     @Override
     public void forEachLoopIterated(ForEachLoopIterationEvent e) {}

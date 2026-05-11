@@ -267,6 +267,40 @@ public class VmErrorHandlingCharacterizationTest {
     assertTrue("Stopped VM should exit the while loop", true);
   }
 
+  // --- Array index out of bounds ---
+
+  @Test
+  public void arrayIndexOutOfBoundsThrowsLgnaVmException() {
+    Object[] testArray = new Object[]{10, 20, 30};
+    try {
+      vm.getItemAtIndex(JavaType.getInstance(Integer[].class), testArray, 5);
+      fail("Accessing index 5 of 3-element array should throw");
+    } catch (LgnaVmArrayIndexOutOfBoundsException e) {
+      // Expected: VM wraps java ArrayIndexOutOfBoundsException
+    }
+  }
+
+  @Test
+  public void negativeArrayIndexThrowsLgnaVmException() {
+    Object[] testArray = new Object[]{1, 2};
+    try {
+      vm.getItemAtIndex(JavaType.getInstance(Integer[].class), testArray, -1);
+      fail("Negative index should throw");
+    } catch (LgnaVmArrayIndexOutOfBoundsException e) {
+      // Expected
+    }
+  }
+
+  @Test
+  public void nullArrayThrowsNullPointerException() {
+    try {
+      vm.getItemAtIndex(JavaType.getInstance(Integer[].class), null, 0);
+      fail("Null array should throw");
+    } catch (NullPointerException e) {
+      // Expected: VM checkNotNull throws NullPointerException
+    }
+  }
+
   // --- Helpers ---
 
   private static NamedUserType createProgramType() {
