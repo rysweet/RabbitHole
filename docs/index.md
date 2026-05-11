@@ -160,6 +160,9 @@ repository.
 - [TweedleEncoder Rename](./reference/tweedle-encoder-rename.md) - rename of `Encoder` to `TweedleEncoder` for disambiguation from `java.beans.Encoder` and `org.lgna.project.io.Encoder`, aligning with the `TweedleEncoderDecoder` facade naming while preserving all encoding behavior.
 - [Validate the TweedleEncoder Rename](./howto/validate-tweedle-encoder-rename.md) - step-by-step validation for the `Encoder` → `TweedleEncoder` rename: stale reference check, core AST tests, story-api-migration tests, silver-thread round-trip, and git history preservation.
 - [Tutorial: Trace the TweedleEncoder Rename](./tutorials/trace-tweedle-encoder-rename.md) - guided walkthrough of the rename from facade instantiation through visitor-pattern interfaces to Story API implementors.
+- [Encoder Delegate Decomposition](./reference/encoder-delegate-decomposition.md) - internal decomposition of the 959-line `TweedleEncoder` into a thin coordinator plus `StatementEncoder`, `ExpressionEncoder`, `EncoderMappings`, and `ResourceStructureEncoder` package-private delegates with preserved behavior.
+- [Validate the TweedleEncoder Extraction](./howto/validate-tweedle-encoder-extraction.md) - step-by-step validation for the TweedleEncoder extraction: delegate visibility, line counts, core AST tests, story-api-migration tests, silver-thread round-trip, and stale reference checks.
+- [Tutorial: Trace the Encoder Delegate Decomposition](./tutorials/trace-encoder-delegate-decomposition.md) - guided walkthrough of a Tweedle encode request flowing through TweedleEncoder, StatementEncoder, ExpressionEncoder, EncoderMappings, and ResourceStructureEncoder.
 
 ## Formal specification lane
 
