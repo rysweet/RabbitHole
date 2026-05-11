@@ -33,6 +33,7 @@ public class VmStoryApiDispatchCharacterizationTest {
   public void setUp() {
     vm = new ReleaseVirtualMachine();
     type = VmTestSupport.createTypeWithJavaSuperclass("VmStoryApiTestType", TestAbstractBase.class);
+    vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
   }
 
   // --- Test-only abstract class and adapter ---
@@ -66,7 +67,7 @@ public class VmStoryApiDispatchCharacterizationTest {
 
   @Test
   public void registerAbstractClassAdapterAcceptsAbstractClass() {
-    // Should not throw
+    // Re-registration should not throw (idempotent)
     vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
   }
 
@@ -74,16 +75,12 @@ public class VmStoryApiDispatchCharacterizationTest {
 
   @Test
   public void createInstanceWithAdapterReturnsUserInstance() {
-    vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
-
     UserInstance instance = vm.ENTRY_POINT_createInstance(type);
     assertNotNull("createInstance should succeed with registered adapter", instance);
   }
 
   @Test
   public void createInstanceWithAdapterSetsJavaInstance() {
-    vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
-
     UserInstance instance = vm.ENTRY_POINT_createInstance(type);
     Object javaInstance = instance.getJavaInstance();
     assertNotNull("Java instance should be non-null", javaInstance);
@@ -93,8 +90,6 @@ public class VmStoryApiDispatchCharacterizationTest {
 
   @Test
   public void adapterReceivesMethodContext() {
-    vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
-
     UserInstance instance = vm.ENTRY_POINT_createInstance(type);
     TestAdapter adapter = (TestAdapter) instance.getJavaInstance();
     assertNotNull("Adapter should receive a MethodContext", adapter.getContext());
@@ -102,8 +97,6 @@ public class VmStoryApiDispatchCharacterizationTest {
 
   @Test
   public void adapterReceivesUserType() {
-    vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
-
     UserInstance instance = vm.ENTRY_POINT_createInstance(type);
     TestAdapter adapter = (TestAdapter) instance.getJavaInstance();
     assertEquals("Adapter should receive the UserType", type, adapter.getUserType());
@@ -113,8 +106,6 @@ public class VmStoryApiDispatchCharacterizationTest {
 
   @Test
   public void methodContextCallbackInvokesInstanceMethod() {
-    vm.registerAbstractClassAdapter(TestAbstractBase.class, TestAdapter.class);
-
     // Instance method (not static) — MethodContext passes userInstance as target
     UserMethod instanceHelper = new UserMethod("helperFromCallback", Void.TYPE,
         new UserParameter[0], new BlockStatement(new Comment("callback executed")));

@@ -1,5 +1,6 @@
 package org.lgna.project.virtualmachine;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.lgna.project.ast.BlockStatement;
 import org.lgna.project.ast.Comment;
@@ -24,16 +25,22 @@ import static org.junit.Assert.assertTrue;
  */
 public class SilverThreadVirtualMachineExecutionTest {
 
+  private ReleaseVirtualMachine vm;
+  private VmTestSupport.RecordingListener listener;
+  private NamedUserType type;
+
+  @Before
+  public void setUp() {
+    vm = new ReleaseVirtualMachine();
+    listener = new VmTestSupport.RecordingListener();
+    vm.addVirtualMachineListener(listener);
+    type = VmTestSupport.createProgramType("VMExecutionProgram");
+  }
+
   // --- Core silver-thread tests ---
 
   @Test
   public void vmExecutesMethodInvocationAndFiresExpectedEvents() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
-
     UserMethod helperMethod = VmTestSupport.createStaticProcedure("helperMethod",
         new BlockStatement(new Comment("helper executed")));
     type.methods.add(helperMethod);
@@ -62,10 +69,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void vmExecutionCompletesWithoutExceptions() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
-
     UserMethod helperMethod = VmTestSupport.createStaticProcedure("helperMethod",
         new BlockStatement(new Comment("helper executed")));
     type.methods.add(helperMethod);
@@ -84,12 +87,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void vmExecutesEmptyHelperBodyAndFiresSixEvents() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
-
     UserMethod helperMethod = VmTestSupport.createStaticProcedure("emptyHelper",
         new BlockStatement());
     type.methods.add(helperMethod);
@@ -116,12 +113,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void vmExecutesMultipleSequentialCallsInOneBody() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
-
     UserMethod helperA = VmTestSupport.createStaticProcedure("helperA",
         new BlockStatement(new Comment("A")));
     UserMethod helperB = VmTestSupport.createStaticProcedure("helperB",
@@ -162,12 +153,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void vmExecutesChainedCallsThreeLevelsDeep() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
-
     // Level 3: leaf method with Comment
     UserMethod leaf = VmTestSupport.createStaticProcedure("leaf",
         new BlockStatement(new Comment("leaf")));
@@ -210,12 +195,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void vmSkipsInvalidMethodInvocationButStillFiresExpressionStatementEvents() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
-
     // Helper NOT added to type → isValid() returns false (getDeclaringType() == null)
     UserMethod orphanHelper = VmTestSupport.createStaticProcedure("orphanHelper",
         new BlockStatement(new Comment("should not execute")));
@@ -251,11 +230,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void removedListenerReceivesNoFurtherEvents() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
     UserMethod helperMethod = VmTestSupport.createStaticProcedure("helperMethod",
         new BlockStatement(new Comment("helper")));
     type.methods.add(helperMethod);
@@ -280,7 +254,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void methodInvocationIsValidWhenMethodOwnedByType() {
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
     UserMethod helper = VmTestSupport.createStaticProcedure("helper",
         new BlockStatement(new Comment("check")));
 
@@ -295,11 +268,6 @@ public class SilverThreadVirtualMachineExecutionTest {
 
   @Test
   public void expressionEvaluatedEventFirsForMethodInvocationExpression() {
-    ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
-    VmTestSupport.RecordingListener listener = new VmTestSupport.RecordingListener();
-    vm.addVirtualMachineListener(listener);
-
-    NamedUserType type = VmTestSupport.createProgramType("VMExecutionProgram");
     UserMethod helper = VmTestSupport.createStaticProcedure("helper",
         new BlockStatement(new Comment("expr-eval")));
     type.methods.add(helper);
