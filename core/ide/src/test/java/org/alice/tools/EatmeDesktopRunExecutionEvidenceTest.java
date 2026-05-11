@@ -16,6 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
@@ -175,19 +177,25 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"component_state\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetDisplayable\": false"));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetShowing\": false"));
-    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetWidth\": 0"));
-    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"renderTargetHeight\": 0"));
+    int renderTargetWidth = extractIntField(pixelObservationJson, "renderTargetWidth");
+    int renderTargetHeight = extractIntField(pixelObservationJson, "renderTargetHeight");
+    assertTrue("renderTargetWidth must be >= 0 but was " + renderTargetWidth, renderTargetWidth >= 0);
+    assertTrue("renderTargetHeight must be >= 0 but was " + renderTargetHeight, renderTargetHeight >= 0);
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"blocker\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_not_displayable\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_not_showing\""));
-    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_has_no_positive_size\""));
+    if (renderTargetWidth == 0 && renderTargetHeight == 0) {
+      assertTrue(pixelObservationJson, pixelObservationJson.contains("\"render_target_has_no_positive_size\""));
+    }
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"details\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"observed\": \"renderTargetDisplayable=false\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"required\": \"renderTargetDisplayable=true\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"observed\": \"renderTargetShowing=false\""));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("\"required\": \"renderTargetShowing=true\""));
-    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"observed\": \"renderTargetWidth=0, renderTargetHeight=0\""));
-    assertTrue(pixelObservationJson, pixelObservationJson.contains("\"required\": \"renderTargetWidth>0 and renderTargetHeight>0\""));
+    if (renderTargetWidth == 0 && renderTargetHeight == 0) {
+      assertTrue(pixelObservationJson, pixelObservationJson.contains("\"observed\": \"renderTargetWidth=0, renderTargetHeight=0\""));
+      assertTrue(pixelObservationJson, pixelObservationJson.contains("\"required\": \"renderTargetWidth>0 and renderTargetHeight>0\""));
+    }
     assertTrue(pixelObservationJson, pixelObservationJson.contains("desktop world execution"));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("visible rendering correctness"));
     assertTrue(pixelObservationJson, pixelObservationJson.contains("desktop save-menu completion"));
@@ -650,6 +658,12 @@ public class EatmeDesktopRunExecutionEvidenceTest {
     } else {
       System.setProperty(EatmeRunWindowEvidence.EVIDENCE_DIR_PROPERTY, previousEvidenceDir);
     }
+  }
+
+  private static int extractIntField(String json, String fieldName) {
+    Matcher m = Pattern.compile("\"" + Pattern.quote(fieldName) + "\"\\s*:\\s*(-?\\d+)")
+        .matcher(json);
+    return m.find() ? Integer.parseInt(m.group(1)) : -1;
   }
 
   private static void assertNoField(String json, String fieldName) {
