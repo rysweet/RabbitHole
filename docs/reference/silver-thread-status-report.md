@@ -292,6 +292,13 @@ The implemented report must not claim:
 - New scenario workflow coverage.
 - Current local generated evidence from a previous run.
 
+Related silver-thread tests not aggregated by this report:
+
+| Test | Document |
+| --- | --- |
+| VM recursive method-invocation execution (`core/ast`) | [Silver Thread VM Execution Test](./silver-thread-vm-execution-test.md) |
+| End-to-end launch-build-run-save-reopen (`core/ide`) | [Silver Thread Launch-Build-Run Test](./silver-thread-launch-build-run-test.md) |
+
 ## Troubleshooting
 
 | Symptom | Meaning | Fix |

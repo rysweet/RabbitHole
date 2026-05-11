@@ -226,6 +226,7 @@ Adjacent claims are owned by their own documents:
 | Claim | Document |
 | --- | --- |
 | Headless VM event dispatch (standalone) | `VirtualMachineHeadlessRuntimeEventTest` in `core/ast`. |
+| VM recursive method-invocation execution | [Silver Thread VM Execution Test](./silver-thread-vm-execution-test.md). |
 | Project Save/Export operation behavior | [Project Save and Export Operations](./project-save-export-operations.md). |
 | First-lesson code-editor action proof | [First-Lesson Code-Editor Action Proof](./first-lesson-code-editor-action-proof.md). |
 | Archive round-trip regression | [Project IO Corpus Characterization](./project-io-corpus-characterization.md). |
