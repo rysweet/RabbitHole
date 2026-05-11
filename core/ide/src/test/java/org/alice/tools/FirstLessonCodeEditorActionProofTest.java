@@ -89,6 +89,22 @@ public class FirstLessonCodeEditorActionProofTest {
     assertTrue(proof, proof.contains("\"after_statement_count\": 2"));
     assertTrue(proof, proof.contains("\"target_marker_count\": 1"));
     assertTrue(proof, proof.contains("\"wrong_target_marker_count\": 0"));
+
+    // Verify remaining structural fields to ensure schema completeness
+    assertTrue(proof, proof.contains("\"edit_spec\": \"append-comment:" + MARKER + "\""));
+    assertTrue(proof, proof.contains("\"input_project_artifact\": \"first-lesson.a3p\""));
+    assertTrue(proof, proof.contains("\"scene_type\": \"Scene\""));
+    assertTrue(proof, proof.contains("\"method_name\": \"" + FIRST_LESSON_METHOD + "\""));
+    assertTrue(proof, proof.contains("\"selection_mode\": \"in_editor_procedure_tab_operation\""));
+    assertTrue(proof, proof.contains("\"operation_fired\": true"));
+    assertTrue(proof, proof.contains("\"statement_count_delta\": 1"));
+    assertTrue(proof, proof.contains("\"success\": true"));
+    assertTrue(proof, proof.contains("\"edited_project\": \"edited-project.a3p\""));
+    assertTrue(proof, proof.contains("\"before_methods\":"));
+    assertTrue(proof, proof.contains("\"after_methods\":"));
+
+    assertAllProofFieldsPresent(proof);
+
     assertTrue(proof, proof.contains("\"doesNotClaim\""));
     assertOutOfScopeClaimsStayExplicit(proof + result);
   }
@@ -130,6 +146,8 @@ public class FirstLessonCodeEditorActionProofTest {
     assertTrue(proof, proof.contains("\"code_editor_code\": \"" + FIRST_LESSON_METHOD + "\""));
     assertTrue(proof, proof.contains("\"before_statement_count\": 0"));
     assertTrue(proof, proof.contains("\"after_statement_count\": 1"));
+    assertTrue(proof, proof.contains("\"statement_count_delta\": 1"));
+    assertAllProofFieldsPresent(proof);
     assertNoBlockedOrRetiredArtifacts(evidenceDir);
   }
 
@@ -248,6 +266,23 @@ public class FirstLessonCodeEditorActionProofTest {
         Files.exists(evidenceDir.resolve(BLOCKED_FALLBACK_ARTIFACT)));
     assertFalse("proof must not keep the older no-go artifact as success evidence",
         Files.exists(evidenceDir.resolve(RETIRED_NO_GO_ARTIFACT)));
+  }
+
+  private static final String[] PROOF_ARTIFACT_REQUIRED_FIELDS = {
+      "schema_version", "status", "procedure_selector", "edit_spec",
+      "input_project_artifact", "scene_type", "method_name", "selection_mode",
+      "selected_declaration", "code_composite_declaration", "code_editor_backing",
+      "code_editor_code", "operation_fired", "action", "marker",
+      "before_statement_count", "after_statement_count", "statement_count_delta",
+      "target_marker_count", "wrong_target_marker_count",
+      "before_methods", "after_methods", "edited_project", "success", "doesNotClaim"
+  };
+
+  private static void assertAllProofFieldsPresent(String proof) {
+    for (String field : PROOF_ARTIFACT_REQUIRED_FIELDS) {
+      assertTrue("proof artifact must contain field: " + field,
+          proof.contains("\"" + field + "\""));
+    }
   }
 
   private static void assertOutOfScopeClaimsStayExplicit(String evidence) {
