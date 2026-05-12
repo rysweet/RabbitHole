@@ -3,17 +3,13 @@ package org.alice.serialization.tweedle;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.javax.swing.option.Dialogs;
 import org.alice.math.immutable.AffineMatrix4x4;
-import org.alice.math.immutable.Tuple3;
-import org.alice.math.immutable.UnitQuaternion;
 import org.lgna.project.annotations.FieldTemplate;
 import org.lgna.project.ast.*;
 import org.lgna.project.code.CodeOrganizer;
-import org.lgna.project.code.IdentifiableTweedleNode;
 import org.lgna.project.code.InstantiableTweedleNode;
 import org.lgna.project.code.ProcessableNode;
 import org.lgna.project.virtualmachine.ReleaseVirtualMachine;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -29,7 +25,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
   static final String NODE_DISABLE = "*<";
   static final String NODE_ENABLE = ">*";
-  private static final String USER_PREFIX = "u_";
+  static final String USER_PREFIX = "u_";
   private int indent = 0;
   private static final Map<String, CodeOrganizer.CodeOrganizerDefinition> codeOrganizerDefinitionMap = new HashMap<>();
   private static final Set<String> angleMembers = new HashSet<>();
@@ -230,6 +226,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
 
   private final Set<AbstractDeclaration> terminalNodes;
   private final StatementEncoder statementEncoder = new StatementEncoder(this);
+  private final ResourceEncoder resourceEncoder = new ResourceEncoder(this);
 
   TweedleEncoder(Set<AbstractDeclaration> terminals) {
     super(codeOrganizerDefinitionMap, CodeOrganizer.defaultCodeOrganizer);
@@ -250,215 +247,36 @@ public class TweedleEncoder extends SourceCodeGenerator {
 
   @Override
   public void processResourceType(String jointedModelResource) {
-    try {
-      Class<?> resourceClass = Class.forName(jointedModelResource);
-      final String superclass = resourceClass.getInterfaces().length == 1 ? resourceClass.getInterfaces()[0].getSimpleName() : "JointedModelInterface";
-      getCodeStringBuilder().append("class ").append(resourceClass.getSimpleName()).append(" extends ").append(superclass);
-      openBlock();
-      appendResourceConstructor(superclass, resourceClass.getSimpleName());
-      appendResourceFields(superclass, resourceClass);
-      appendResourceInstances(resourceClass);
-      appendClassFooter(jointedModelResource);
-    } catch (ClassNotFoundException cnfe) {
-      throw new RuntimeException("Unable to find class " + jointedModelResource + " which should have been the caller type. This should not happen and yet it has.", cnfe);
-    }
+    resourceEncoder.processResourceType(jointedModelResource);
   }
 
   @Override
   public void processDynamicResource(String dynamicResourceClass, String variant, InstantiableTweedleNode[] addedJoints) {
-    try {
-      final String variantName = variant + "Resource";
-      Class<?> parentClass = Class.forName(dynamicResourceClass);
-      final String superclass = parentClass.getInterfaces().length == 1 ? parentClass.getInterfaces()[0].getSimpleName() : "JointedModelInterface";
-      getCodeStringBuilder().append("class ").append(variantName).append(" extends ").append(superclass);
-      openBlock();
-      appendResourceConstructor(superclass, variantName);
-      List<String> jointNames = new ArrayList<>();
-      for (InstantiableTweedleNode joint : addedJoints) {
-        final String jointIdentifier = getUserJointIdentifier(joint.toString());
-        appendStaticField(null, "JointId", jointIdentifier, () -> joint.encodeDefinition(this));
-        jointNames.add(jointIdentifier);
-      }
-      appendAddedJoints(superclass, jointNames);
-      appendResourceInstance(variantName, "DEFAULT");
-      appendClassFooter(dynamicResourceClass);
-    } catch (ClassNotFoundException cnfe) {
-      throw new RuntimeException("Unable to find class " + dynamicResourceClass + " which should have been the caller type. This should not happen and yet it has.", cnfe);
-    }
+    resourceEncoder.processDynamicResource(dynamicResourceClass, variant, addedJoints);
   }
 
   public String getUserJointIdentifier(String jointIdentifier) {
-    return "root".equalsIgnoreCase(jointIdentifier) ? jointIdentifier : USER_PREFIX + jointIdentifier;
-  }
-
-  private void appendResourceConstructor(String superclass, String resourceName) {
-    appendIndent();
-    appendString(resourceName);
-    appendString("(TextString name)");
-    bracketize(() -> {
-      appendIndent();
-      appendString("super(name: name");
-      if ("FlyerResource".equals(superclass)) {
-        appendString(",\n"
-                         + "          spreadWingsPose: " + resourceName + ".SPREAD_WINGS_POSE,\n"
-                         + "          foldWingsPose: " + resourceName + ".FOLD_WINGS_POSE,\n"
-                         + "          tailArray: " + resourceName + ".TAIL_ARRAY,\n"
-                         + "          neckArray: " + resourceName + ".NECK_ARRAY");
-      }
-      if ("QuadrupedResource".equals(superclass)) {
-        appendString(", tailArray: " + resourceName + ".TAIL_ARRAY");
-      }
-      if ("SlithererResource".equals(superclass)) {
-        appendString(", tailArray: " + resourceName + ".TAIL_ARRAY");
-      }
-      appendString(");\n");
-    });
-  }
-
-  private void appendResourceInstances(Class<?> resourceClass) {
-    if (!resourceClass.isEnum()) {
-      return;
-    }
-    final String className = resourceClass.getSimpleName();
-    final List<String> resourceNames = Arrays.stream(resourceClass.getEnumConstants()).map(Object::toString).toList();
-    for (String resourceName: resourceNames) {
-      appendResourceInstance(className, resourceName);
-    }
-  }
-
-  private void appendResourceInstance(String className, String resourceName) {
-    appendNewLine();
-    appendIndent();
-    appendString("static ");
-    appendString(className);
-    appendSpace();
-    appendString(resourceName);
-    appendAssignmentOperator();
-    appendInstantiation(className, () -> appendArg("name", () -> appendEscapedString(className.substring(0, className.length() - 8) + "/" + resourceName)));
-    appendStatementCompletion();
-  }
-
-  private void appendResourceFields(String superclass, Class<?> resourceClass) {
-    Field[] fields = resourceClass.getDeclaredFields();
-    List<String> newJoints = new ArrayList<>();
-    for (Field field : fields) {
-      try {
-        Object value = field.get(resourceClass);
-        if (value instanceof InstantiableTweedleNode node) {
-          if (field.getType().getSimpleName().equals("JointId")) {
-            newJoints.add(field.getName());
-          }
-          appendStaticField(field, () -> node.encodeDefinition(this));
-        } else {
-          if (value.getClass().isArray() && IdentifiableTweedleNode.class.isAssignableFrom(field.getType().getComponentType())) {
-            Object[] values = (Object[]) value;
-            appendStaticField(field, () -> {
-              // The new X[] syntax is not required in Java to create an array, but it is in tweedle, for now
-              appendString("new ");
-              appendString(field.getType().getSimpleName());
-              appendList(values, (v) -> appendString(((IdentifiableTweedleNode) v).getCodeIdentifier(this)), getListSeparator());
-            });
-          } else {
-            Logger.info("Export will skip non-generator field " + resourceClass.getSimpleName() + "." + field.getName());
-          }
-        }
-      } catch (IllegalAccessException e) {
-        Logger.info("Export will skip inaccessible field " + resourceClass.getSimpleName() + "." + field.getName());
-      }
-    }
-    appendAddedJoints(superclass, newJoints);
-  }
-
-  private void appendAddedJoints(String superclass, Collection<String> newJoints) {
-    if (newJoints.isEmpty()) {
-      return;
-    }
-    appendNewLine();
-    appendSingleCodeLine(() -> {
-      appendString("@CompletelyHidden static JointId[] ADDED_JOINTS");
-      appendAssignmentOperator();
-      appendString("new JointId[]");
-      appendList(newJoints.toArray(), (v) -> appendString((String) v), getListSeparator());
-    });
-    appendSingleCodeLine(() -> {
-      appendString("@CompletelyHidden static JointId[] ALL_JOINTS");
-      appendAssignmentOperator();
-      appendString("concat(a: ");
-      appendString(superclass);
-      appendString(".EXPECTED_JOINTS, b: ADDED_JOINTS)");
-    });
-    appendNewLine();
-    appendIndent();
-    appendString("@CompletelyHidden JointId[] getJointIds() ");
-    bracketize(() -> appendSingleCodeLine(() -> appendString("return ALL_JOINTS")));
-  }
-
-  private void appendStaticField(Field field, Runnable value) {
-    appendStaticField(field.getAnnotation(FieldTemplate.class),
-                      field.getType().getSimpleName(),
-                      field.getName(),
-                      value);
-  }
-
-  private void appendStaticField(FieldTemplate annotation, String fieldType, String fieldName, Runnable value) {
-    appendSingleCodeLine(() -> {
-      appendVisibilityTag(annotation);
-      appendString("static ");
-      appendString(fieldType);
-      appendSpace();
-      appendString(fieldName);
-      appendAssignmentOperator();
-      value.run();
-    });
+    return resourceEncoder.getUserJointIdentifier(jointIdentifier);
   }
 
   public void appendNewJointId(String joint, String parentReference) {
-    appendInstantiation("JointId", () -> {
-      appendArg("name", () -> quoteString(joint));
-      appendAnotherArg("parent", parentReference);
-    });
+    resourceEncoder.appendNewJointId(joint, parentReference);
   }
 
   public void appendNewJointArrayId(String pattern, String startingJoint) {
-    appendInstantiation("JointArrayId", () -> {
-      appendArg("root", startingJoint);
-      appendAnotherArg("pattern", () -> quoteString(pattern));
-    });
+    resourceEncoder.appendNewJointArrayId(pattern, startingJoint);
   }
 
   public String getFieldReference(String type, String field) {
-    return tweedleTypeName(type) + "." + field;
+    return resourceEncoder.getFieldReference(type, field);
   }
 
   public void appendNewPose(InstantiableTweedleNode[] jointTransformations) {
-    appendInstantiation("JointedModelPose", () -> {
-      appendString("pairs: new JointIdTransformationPair[]");
-      appendList(jointTransformations, (v) -> v.encodeDefinition(this), ",\n");
-    });
+    resourceEncoder.appendNewPose(jointTransformations);
   }
 
   public void appendNewJointTransformation(String jointId, AffineMatrix4x4 transformation) {
-    appendString("        ");
-    appendInstantiation("JointIdTransformationPair", () -> {
-      appendArg("joint", jointId);
-      appendAnotherArg("orientation", () -> {
-        final UnitQuaternion orientationUnitQuaternion = transformation.orientation().asUnitQuaternion();
-        appendInstantiation("Orientation", () -> {
-          appendArg("x", Double.toString(orientationUnitQuaternion.x()));
-          appendAnotherArg("y", Double.toString(orientationUnitQuaternion.y()));
-          appendAnotherArg("z", Double.toString(orientationUnitQuaternion.z()));
-          appendAnotherArg("w", Double.toString(orientationUnitQuaternion.w()));
-        });
-      });
-      appendAnotherArg("position", () -> {
-        final Tuple3 position = transformation.translation();
-        appendInstantiation("Position", () -> {
-          appendArg("x", Double.toString(position.x()));
-          appendAnotherArg("y", Double.toString(position.y()));
-          appendAnotherArg("z", Double.toString(position.z()));
-        });
-      });
-    });
+    resourceEncoder.appendNewJointTransformation(jointId, transformation);
   }
 
   @Override
@@ -611,6 +429,20 @@ public class TweedleEncoder extends SourceCodeGenerator {
 
   void forwardAppendNewLine() {
     appendNewLine();
+  }
+
+  // Bridge methods for ResourceEncoder to call protected inherited methods
+
+  StringBuilder forwardGetCodeStringBuilder() {
+    return getCodeStringBuilder();
+  }
+
+  void forwardBracketize(Runnable appender) {
+    bracketize(appender);
+  }
+
+  void forwardAppendEscapedString(String value) {
+    appendEscapedString(value);
   }
 
   @Override
@@ -884,7 +716,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
     appendString(type == null ? "MISSING_TYPE" : tweedleTypeName(type.getName()));
   }
 
-  private String tweedleTypeName(String typeName) {
+  String tweedleTypeName(String typeName) {
     return typesToRename.getOrDefault(typeName, typeName);
   }
 
@@ -895,7 +727,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
 
   /** Helper methods **/
 
-  private void appendVisibilityTag(FieldTemplate fieldAnnotation) {
+  void appendVisibilityTag(FieldTemplate fieldAnnotation) {
     if (fieldAnnotation == null) {
       return;
     }
@@ -913,35 +745,35 @@ public class TweedleEncoder extends SourceCodeGenerator {
     }
   }
 
-  private void appendInstantiation(String className, Runnable args) {
+  void appendInstantiation(String className, Runnable args) {
     appendString("new ");
     appendString(className);
     parenthesize(args);
   }
 
-  private void appendArg(String label, String value) {
+  void appendArg(String label, String value) {
     appendString(label);
     appendString(": ");
     appendString(value);
   }
 
-  private void appendArg(String label, Runnable value) {
+  void appendArg(String label, Runnable value) {
     appendString(label);
     appendString(": ");
     value.run();
   }
 
-  private void appendAnotherArg(String label, String value) {
+  void appendAnotherArg(String label, String value) {
     appendString(getListSeparator());
     appendArg(label, value);
   }
 
-  private void appendAnotherArg(String label, Runnable value) {
+  void appendAnotherArg(String label, Runnable value) {
     appendString(getListSeparator());
     appendArg(label, value);
   }
 
-  private <T> void appendList(T[] values, Consumer<T> appendValue, String separator) {
+  <T> void appendList(T[] values, Consumer<T> appendValue, String separator) {
     appendChar('{');
     int i = 0;
     while (i < values.length) {
@@ -954,7 +786,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
     appendChar('}');
   }
 
-  private void quoteString(String aString) {
+  void quoteString(String aString) {
     appendChar('\"');
     appendString(aString);
     appendChar('\"');
@@ -977,7 +809,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
     return level < MAX_CACHED_INDENT ? INDENT_CACHE[level] : INDENTION.repeat(level);
   }
 
-  private void appendIndent() {
+  void appendIndent() {
     appendString(indentString(indent));
   }
 
