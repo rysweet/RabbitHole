@@ -39,8 +39,8 @@ class Manager implements BackingStoreManager {
     renderer.setSmoothing(textRenderer.smoothing);
 
     if (NonCachingTextRenderer.DEBUG) {
-      System.err.println(" TextRenderer allocating backing store " +
-          w + " x " + h);
+      System.err.println(" TextRenderer allocating backing store "
+          + w + " x " + h);
     }
 
     return renderer;
@@ -70,8 +70,8 @@ class Manager implements BackingStoreManager {
     if (attemptNumber == 0) {
       if (NonCachingTextRenderer.DEBUG) {
         System.err.println(
-            "Clearing unused entries in preExpand(): attempt number " +
-                attemptNumber);
+            "Clearing unused entries in preExpand(): attempt number "
+                + attemptNumber);
       }
 
       if (textRenderer.inBeginEndPair) {
