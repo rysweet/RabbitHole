@@ -44,18 +44,22 @@ core/glrender/src/test/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTex
 ## 1. Understand the class structure
 
 `NonCachingTextRenderer` is a 1842-line class that handles OpenGL text
-rendering for Alice. It contains seven inner classes:
+rendering for Alice. It contains seven inner classes, three of which are
+extracted to top-level package-private files (see the [inner class extraction
+reference](../reference/noncaching-text-renderer-inner-class-extraction.md)):
 
 ```text
-NonCachingTextRenderer (1842 lines)
+NonCachingTextRenderer (<1350 lines after extraction)
 ├── CharSequenceIterator  (private static)   — CharacterIterator adapter
 ├── TextData              (package static)   — glyph texture metadata
 ├── Manager               (package instance) — BackingStoreManager for RectanglePacker
 ├── DefaultRenderDelegate (public static)    — default TextRenderer.RenderDelegate
-├── Glyph                 (package instance) — single glyph or string chunk
-├── GlyphProducer         (package instance) — glyph cache + layout engine
-├── CharacterCache        (private static)   — ASCII Character cache
-└── Pipelined_QuadRenderer (package instance) — VBO quad batching
+└── CharacterCache        (private static)   — ASCII Character cache
+
+Extracted to top-level files:
+├── TextRendererGlyph.java          (was Glyph)                 — single glyph or string chunk
+├── TextRendererGlyphProducer.java  (was GlyphProducer)         — glyph cache + layout engine
+└── TextRendererQuadRenderer.java   (was Pipelined_QuadRenderer) — VBO quad batching
 ```
 
 The characterization tests focus on the four static inner classes
@@ -77,7 +81,8 @@ static final int kTotalBufferSizeVerts = kQuadsPerBuffer * kVertsPerQuad;
 // ... and so on
 ```
 
-**Why test constants?** These values are wired into `Pipelined_QuadRenderer`,
+**Why test constants?** These values are wired into `TextRendererQuadRenderer`
+(formerly `Pipelined_QuadRenderer`),
 which allocates direct `FloatBuffer` instances for VBO rendering. If someone
 changes `kQuadsPerBuffer` from 100 to 200 without updating
 `kTotalBufferSizeVerts`, the VBO buffer will be half the expected size and

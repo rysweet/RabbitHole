@@ -33,15 +33,15 @@ It covers:
 | TextData | The package-private static inner class preserves constructor arguments through accessor methods: `string()`, `origin()`, `origRect()`, `origOriginX()`, `origOriginY()`, and the `used`/`markUsed()`/`clearUsed()` lifecycle. |
 | DefaultRenderDelegate | The public static inner class returns `true` from `intensityOnly()` and delegates `getBounds(GlyphVector, FontRenderContext)` to `GlyphVector.getVisualBounds()`. |
 | CharacterCache | The private static inner class caches `Character` values for codepoints 0–127 and returns fresh `Character.valueOf()` for codepoints > 127. |
-| Glyph | Not directly tested. Documented below for reference; requires enclosing `NonCachingTextRenderer` instance (GL-dependent). |
-| GlyphProducer | Not directly tested. Documented below for reference; requires enclosing `NonCachingTextRenderer` instance (GL-dependent). |
+| TextRendererGlyph (Glyph) | Not directly tested. Documented below for reference; requires a `NonCachingTextRenderer` instance (GL-dependent). Extracted to top-level class. |
+| TextRendererGlyphProducer (GlyphProducer) | Not directly tested. Documented below for reference; requires a `NonCachingTextRenderer` instance (GL-dependent). Extracted to top-level class. |
 | Constructor / Accessors | `getFont()`, `getSmoothing()`, `getMyUseVertexArrays()`, `setUseVertexArrays()`, `antialiased` field, `renderDelegate` field, `mGlyphProducer` field — guarded by `Assume.assumeTrue` (skip in headless CI). |
 
 This lane does not cover:
 
 - OpenGL rendering (`beginRendering`, `endRendering`, `draw3D`, `draw3D_ROBUST`)
 - Texture allocation (`Manager.allocateBackingStore`)
-- VBO pipeline (`Pipelined_QuadRenderer`)
+- VBO pipeline (`TextRendererQuadRenderer`, formerly `Pipelined_QuadRenderer`)
 - Font metrics that require a live `FontRenderContext` from a GL surface
 - Mipmap generation or backing store compaction
 - Full `getBounds(CharSequence)` with cached string locations
@@ -50,7 +50,10 @@ This lane does not cover:
 
 | Artifact | Purpose |
 | --- | --- |
-| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTextRenderer.java` | Production class (1842 lines). Contains all inner classes under test. |
+| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTextRenderer.java` | Production class (<1350 lines after inner class extraction). Contains static inner classes under test. |
+| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyph.java` | Extracted from `Glyph` inner class. Package-private. |
+| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyphProducer.java` | Extracted from `GlyphProducer` inner class. Package-private. |
+| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererQuadRenderer.java` | Extracted from `Pipelined_QuadRenderer` inner class. Package-private. |
 | `core/glrender/src/test/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTextRendererCharacterizationTest.java` | Characterization test suite (~479 lines, 49 test methods). First test file in `core/glrender`. |
 
 ## Inner class contracts
@@ -160,17 +163,20 @@ A private static inner class caching `Character` objects for ASCII codepoints:
 Tests access this class via reflection and verify identity semantics with
 `assertSame()` for cached values.
 
-### Glyph (lines 1201–1392) — not directly tested
+### TextRendererGlyph (extracted from Glyph) — not directly tested
 
-A non-static inner class representing a unicode glyph or character substring.
-Documented here for reference; no characterization tests exist for this class
-because constructing a `Glyph` requires an enclosing `NonCachingTextRenderer`
-instance, which triggers GL initialization in headless CI.
+Extracted from inner class `Glyph` into top-level package-private
+`TextRendererGlyph.java`. See the [inner class extraction
+reference](noncaching-text-renderer-inner-class-extraction.md) for details.
+
+No characterization tests exist for this class because constructing a
+`TextRendererGlyph` requires a `NonCachingTextRenderer` instance, which
+triggers GL initialization in headless CI.
 
 | Constructor | Fields set |
 | --- | --- |
-| `Glyph(unicodeID, glyphCode, advance, glyphVector, producer)` | Individual unicode glyph with all rendering fields. |
-| `Glyph(str, needAdvance)` | String fallback glyph for complex text sequences. |
+| `TextRendererGlyph(unicodeID, glyphCode, advance, glyphVector, producer, textRenderer)` | Individual unicode glyph with all rendering fields. |
+| `TextRendererGlyph(str, needAdvance, textRenderer)` | String fallback glyph for complex text sequences. |
 
 | Method | Contract |
 | --- | --- |
@@ -179,15 +185,18 @@ instance, which triggers GL initialization in headless CI.
 | `getAdvance()` | Returns the `advance` field. |
 | `clear()` | Sets `glyphRectForTextureMapping` to `null`. |
 
-### GlyphProducer (lines 1394–1555) — not directly tested
+### TextRendererGlyphProducer (extracted from GlyphProducer) — not directly tested
 
-A non-static inner class managing the glyph cache. Documented here for
-reference; no characterization tests exist for this class (same GL dependency
-as `Glyph`).
+Extracted from inner class `GlyphProducer` into top-level package-private
+`TextRendererGlyphProducer.java`. See the [inner class extraction
+reference](noncaching-text-renderer-inner-class-extraction.md) for details.
+
+No characterization tests exist for this class (same GL dependency as
+`TextRendererGlyph`).
 
 | Method | Contract |
 | --- | --- |
-| Constructor | Allocates `unicodes2Glyphs[512]` filled with `undefined` (-2), and `glyphCache[fontLengthInGlyphs]`. |
+| Constructor | Takes `(int fontLengthInGlyphs, NonCachingTextRenderer textRenderer)`. Allocates `unicodes2Glyphs[512]` filled with `undefined` (-2), and `glyphCache[fontLengthInGlyphs]`. |
 | `clearAllCacheEntries()` | Iterates 0–511, setting each `unicodes2Glyphs` entry to `undefined`. |
 | `register(glyph)` | Sets `unicodes2Glyphs[glyph.unicodeID] = glyph.glyphCode` and `glyphCache[glyph.glyphCode] = glyph`. |
 | `clearCacheEntry(unicodeID)` | Clears the glyph at the given unicode ID and resets the mapping to `undefined`. |
@@ -297,7 +306,7 @@ Before changing `kQuadsPerBuffer` from 100 to 200:
 2. The constant tests fail, showing the old expected values.
 3. Recalculate all derived constants.
 4. Update the test expectations to match.
-5. Verify that VBO allocation in `Pipelined_QuadRenderer` uses the same
+5. Verify that VBO allocation in `TextRendererQuadRenderer` uses the same
    constants and that buffer sizes are consistent.
 
 ### Add a new headless-safe inner class test

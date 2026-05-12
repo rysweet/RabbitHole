@@ -14,7 +14,13 @@ Use this guide for changes near:
 
 ```text
 core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTextRenderer.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyph.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyphProducer.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererQuadRenderer.java
 ```
+
+For the inner class extraction details, see [Validate NonCachingTextRenderer
+Inner Class Extraction](validate-noncaching-text-renderer-inner-class-extraction.md).
 
 Also run these checks when changing:
 
@@ -167,7 +173,7 @@ If `Class.forName("...NonCachingTextRenderer$CharSequenceIterator")` throws
 
 - OpenGL rendering (`beginRendering`, `endRendering`, `draw3D`)
 - Texture allocation or backing store management
-- VBO pipeline (`Pipelined_QuadRenderer`)
+- VBO pipeline (`TextRendererQuadRenderer`, formerly `Pipelined_QuadRenderer`)
 - Full text bounds with cached string locations
 - Font selection or `getFont()` / `setFont()` (the `font` field is `final`)
 - Mipmap generation
