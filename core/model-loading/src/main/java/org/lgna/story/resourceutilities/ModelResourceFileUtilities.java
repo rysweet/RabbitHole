@@ -46,7 +46,10 @@ package org.lgna.story.resourceutilities;
 import edu.cmu.cs.dennisc.java.io.FileUtilities;
 import org.lgna.story.implementation.alice.ModelResourceIoUtilities;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipException;
@@ -58,6 +61,10 @@ import java.util.zip.ZipException;
 class ModelResourceFileUtilities {
 
   private ModelResourceFileUtilities() {
+  }
+
+  private static String forwardSlash(String path) {
+    return path.replace('\\', '/');
   }
 
   static void ensureOutputFile(File outputFile, String description) throws IOException {
@@ -75,7 +82,7 @@ class ModelResourceFileUtilities {
       destPathPrefix = "";
     }
     if (!destPathPrefix.isEmpty()) {
-      destPathPrefix = destPathPrefix.replace("\\", "/");
+      destPathPrefix = forwardSlash(destPathPrefix);
       if (!destPathPrefix.endsWith("/")) {
         destPathPrefix += "/";
       }
@@ -84,13 +91,13 @@ class ModelResourceFileUtilities {
       }
     }
 
-    String root = source.getAbsolutePath().replace("\\", "/") + "/";
+    String root = forwardSlash(source.getAbsolutePath()) + "/";
     add(source, target, root, destPathPrefix, recursive);
   }
 
   static void add(File source, JarOutputStream target, String root, String destPathPrefix, boolean recursive) throws IOException {
     if (source.isDirectory()) {
-      String name = source.getPath().replace("\\", "/");
+      String name = forwardSlash(source.getPath());
       name = name.replace("//", "/");
       if (name.length() > 0) {
         if (!name.endsWith("/")) {
@@ -113,7 +120,11 @@ class ModelResourceFileUtilities {
           }
         }
       }
-      for (File nestedFile : source.listFiles()) {
+      File[] children = source.listFiles();
+      if (children == null) {
+        return;
+      }
+      for (File nestedFile : children) {
         if (!nestedFile.isDirectory() || recursive) {
           add(nestedFile, target, root, destPathPrefix, recursive);
         }
@@ -121,7 +132,7 @@ class ModelResourceFileUtilities {
       return;
     }
 
-    String entryName = source.getPath().replace("\\", "/");
+    String entryName = forwardSlash(source.getPath());
     entryName = entryName.substring(root.length());
     if (entryName.startsWith("/")) {
       entryName = entryName.substring(1);
@@ -130,12 +141,8 @@ class ModelResourceFileUtilities {
     JarEntry entry = new JarEntry(entryName);
     entry.setTime(source.lastModified());
     target.putNextEntry(entry);
-    try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(source))) {
-      byte[] buffer = new byte[1024];
-      int count;
-      while ((count = in.read(buffer)) != -1) {
-        target.write(buffer, 0, count);
-      }
+    try (InputStream in = Files.newInputStream(source.toPath())) {
+      in.transferTo(target);
     }
     target.closeEntry();
   }
@@ -156,7 +163,8 @@ class ModelResourceFileUtilities {
   }
 
   static File getXMLFile(String root, String packageString, String className) {
-    if (!root.endsWith("/") && !root.endsWith("\\")) {
+    root = forwardSlash(root);
+    if (!root.endsWith("/")) {
       root += "/";
     }
     String resourceDirectory = root + JavaCodeUtilities.getDirectoryStringForPackage(packageString) + ModelResourceIoUtilities.getResourceSubDirWithSeparator("");
