@@ -524,4 +524,52 @@ public class ModelExportTest {
       throw new UncheckedIOException(e);
     }
   }
+
+  // ── Joint suppression/hiding characterization ────────────────────
+
+  @Test
+  public void shouldHideJointsOfArrayReturnsTrueForHiddenArray() {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestBiped", ModelClassData.BIPED_CLASS_DATA);
+    exporter.addArrayNamesToHideElementsOf(Collections.singletonList("TAIL"));
+    assertTrue("TAIL should be hidden", exporter.shouldHideJointsOfArray("TAIL"));
+  }
+
+  @Test
+  public void shouldHideJointsOfArrayReturnsFalseForNonHiddenArray() {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestBiped", ModelClassData.BIPED_CLASS_DATA);
+    assertFalse("ARM should not be hidden", exporter.shouldHideJointsOfArray("ARM"));
+  }
+
+  @Test
+  public void addJointToSuppressAffectsGeneratedJavaCode() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addAttribution("Alice Test", "2026");
+    exporter.addResource("TestProp", "Default", "ALICE", "Resource Artist", "2025");
+    exporter.addJointIdsToSuppress(Collections.singletonList("SPINE_UPPER"));
+    String javaCode = exporter.createJavaCode();
+    assertFalse("Suppressed joint should not appear in generated code",
+        javaCode.contains("SPINE_UPPER"));
+  }
+
+  @Test
+  public void accessorMethodNameFollowsCamelCaseConvention() {
+    String enumName = "LEFT_ARM";
+    String expected = "getLeftArm";
+    String actual = "get" + org.lgna.story.implementation.alice.AliceResourceUtilities.enumToCamelCase(enumName);
+    assertEquals("Accessor method name should be camelCase", expected, actual);
+  }
+
+  @Test
+  public void createResourceEnumNameUsesTextureEnumWhenModelMatchesClassName() {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestModel", ModelClassData.PROP_CLASS_DATA);
+    String result = exporter.createResourceEnumName("TestModel", "TestModel");
+    assertEquals("TEST_MODEL", result);
+  }
+
+  @Test
+  public void createResourceEnumNameUsesTextureNameWhenDifferent() {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestModel", ModelClassData.PROP_CLASS_DATA);
+    String result = exporter.createResourceEnumName("TestModel", "BLUE");
+    assertEquals("BLUE", result);
+  }
 }
