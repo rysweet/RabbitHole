@@ -20,8 +20,8 @@ import java.util.function.Consumer;
 
 public class TweedleEncoder extends SourceCodeGenerator {
   private static final String INDENTION = "  ";
-  private static final String NODE_DISABLE = "*<";
-  private static final String NODE_ENABLE = ">*";
+  static final String NODE_DISABLE = "*<";
+  static final String NODE_ENABLE = ">*";
   private static final String USER_PREFIX = "u_";
   private int indent = 0;
   private static final Map<String, CodeOrganizer.CodeOrganizerDefinition> codeOrganizerDefinitionMap = new HashMap<>();
@@ -222,6 +222,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   private final Set<AbstractDeclaration> terminalNodes;
+  private final StatementEncoder statementEncoder = new StatementEncoder(this);
 
   TweedleEncoder(Set<AbstractDeclaration> terminals) {
     super(codeOrganizerDefinitionMap, CodeOrganizer.defaultCodeOrganizer);
@@ -566,28 +567,43 @@ public class TweedleEncoder extends SourceCodeGenerator {
 
   @Override
   protected void appendStatementCompletion(Statement stmt) {
-    super.appendStatementCompletion(stmt);
-    appendStatementEnd(stmt);
+    statementEncoder.appendStatementCompletion(stmt);
   }
 
   @Override
   protected void appendStatementCompletion() {
-    super.appendStatementCompletion();
-    appendNewLine();
-  }
-
-  private void appendStatementEnd(Statement stmt) {
-    if (!stmt.isEnabled.getValue()) {
-      appendSpace();
-      appendString(NODE_ENABLE);
-    }
-    appendNewLine();
+    statementEncoder.appendStatementCompletion();
   }
 
   @Override
   protected void pushStatementDisabled() {
-    appendString(NODE_DISABLE);
+    statementEncoder.pushStatementDisabled();
+  }
+
+  // Bridge methods for StatementEncoder to call super and protected methods
+
+  void superAppendStatementCompletion(Statement stmt) {
+    super.appendStatementCompletion(stmt);
+  }
+
+  void superAppendStatementCompletion() {
+    super.appendStatementCompletion();
+  }
+
+  void superPushStatementDisabled() {
     super.pushStatementDisabled();
+  }
+
+  void forwardAppendString(String s) {
+    appendString(s);
+  }
+
+  void forwardAppendSpace() {
+    appendSpace();
+  }
+
+  void forwardAppendNewLine() {
+    appendNewLine();
   }
 
   @Override
@@ -711,8 +727,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
   @Override
   protected void appendCodeFlowStatement(Statement stmt, Runnable appender) {
     appendIndent(stmt);
-    appender.run();
-    appendStatementEnd(stmt);
+    statementEncoder.appendCodeFlowStatement(stmt, appender);
   }
 
   @Override
