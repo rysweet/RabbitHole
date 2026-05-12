@@ -84,7 +84,8 @@ StatementEncoder(TweedleEncoder encoder) {
 | --- | --- |
 | New field | `private final StatementEncoder statementEncoder` |
 | Constructor wiring | `this.statementEncoder = new StatementEncoder(this)` |
-| `NODE_ENABLE` visibility | Changed from `private` to package-private (no modifier) so `StatementEncoder` can read it |
+| `NODE_ENABLE` visibility | Changed from `private` to package-private (no modifier) so `StatementEncoder.appendStatementEnd` can read it |
+| `NODE_DISABLE` visibility | Changed from `private` to package-private (no modifier) so `StatementEncoder.pushStatementDisabled` can read it |
 | `appendStatementCompletion(Statement)` | Body delegates to `statementEncoder.appendStatementCompletion(stmt)` |
 | `appendStatementCompletion()` | Body delegates to `statementEncoder.appendStatementCompletion()` |
 | `pushStatementDisabled()` | Body delegates to `statementEncoder.pushStatementDisabled()`, then calls `super` |
@@ -126,7 +127,8 @@ forwarding methods. The following methods on `TweedleEncoder` are used by
 | `forwardAppendNewLine()` | Append platform newline |
 | `superAppendStatementCompletion(Statement)` | Call `SourceCodeGenerator.appendStatementCompletion(Statement)` |
 | `superAppendStatementCompletion()` | Call `SourceCodeGenerator.appendStatementCompletion()` |
-| `NODE_ENABLE` | Package-private static constant (was `private`) |
+| `NODE_DISABLE` | Package-private static constant `"*<"` (was `private`) |
+| `NODE_ENABLE` | Package-private static constant `">*"` (was `private`) |
 
 No interfaces or inheritance are introduced. All collaboration uses direct
 method calls within the same package, matching the
@@ -248,7 +250,7 @@ All suites must pass with identical results before and after the extraction.
 | Constructor takes `TweedleEncoder` | `StatementEncoder(TweedleEncoder encoder)` |
 | 3 `appendStatement*` methods extracted | `appendStatementCompletion(Statement)`, `appendStatementCompletion()`, `appendStatementEnd(Statement)` |
 | `pushStatementDisabled` extracted | `pushStatementDisabled()` |
-| `NODE_ENABLE` widened to package-private | No `private` modifier on `NODE_ENABLE` in `TweedleEncoder` |
+| `NODE_ENABLE` and `NODE_DISABLE` widened to package-private | No `private` modifier on either constant in `TweedleEncoder` |
 | `TweedleEncoder` delegates `@Override` bodies | `appendStatementCompletion`, `pushStatementDisabled`, `appendCodeFlowStatement` delegate to `statementEncoder` |
 | `TweedleEncoderDecoder.java` unchanged | `git diff` shows no changes |
 | `TweedleEncoderTest` passes | `mvn -Dtest=TweedleEncoderTest test` — zero failures |

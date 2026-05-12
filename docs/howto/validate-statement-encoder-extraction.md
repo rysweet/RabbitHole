@@ -47,14 +47,16 @@ grep -E 'appendStatementCompletion|appendStatementEnd|pushStatementDisabled' \
 Expected: at least four method signatures (two `appendStatementCompletion`
 overloads, one `appendStatementEnd`, one `pushStatementDisabled`).
 
-## Step 5: Verify NODE_ENABLE is package-private on TweedleEncoder
+## Step 5: Verify NODE_ENABLE and NODE_DISABLE are package-private on TweedleEncoder
 
 ```bash
-grep 'NODE_ENABLE' \
+grep -E 'NODE_ENABLE|NODE_DISABLE' \
   core/ast/src/main/java/org/alice/serialization/tweedle/TweedleEncoder.java
 ```
 
-Expected: `static final String NODE_ENABLE = ">*";` — no `private` modifier.
+Expected:
+- `static final String NODE_DISABLE = "*<";` — no `private` modifier.
+- `static final String NODE_ENABLE = ">*";` — no `private` modifier.
 
 ## Step 6: Verify TweedleEncoder delegates to StatementEncoder
 
@@ -113,7 +115,7 @@ Expected: **zero matches**. The `appendStatementEnd` method has moved to
 - [ ] `StatementEncoder` is package-private (no `public` keyword)
 - [ ] Constructor takes `TweedleEncoder` reference
 - [ ] Four methods present: `appendStatementCompletion` (×2), `appendStatementEnd`, `pushStatementDisabled`
-- [ ] `NODE_ENABLE` is package-private on `TweedleEncoder`
+- [ ] `NODE_ENABLE` and `NODE_DISABLE` are package-private on `TweedleEncoder`
 - [ ] `TweedleEncoder` delegates via `statementEncoder.` calls
 - [ ] `TweedleEncoderDecoder.java` is unchanged
 - [ ] `TweedleEncoderTest` passes
