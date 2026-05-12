@@ -1,5 +1,6 @@
 id: alice-desktop-generated-listener-runtime-dispatch-smoke
 title: Generated listener headless runtime dispatch smoke
+name: Generated listener headless runtime dispatch smoke
 workflow: generated-listener-runtime-dispatch-smoke
 automationMode: gated-command-smoke
 preconditions:

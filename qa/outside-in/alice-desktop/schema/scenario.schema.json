@@ -252,7 +252,10 @@
                   "const": "mvn"
                 },
                 {
-                  "const": "-DfailIfNoTests=false"
+                  "const": "-DincludeSims=false"
+                },
+                {
+                  "const": "-Dinstall4j.skip"
                 },
                 {
                   "const": "-DfailIfNoTests=false"
@@ -311,8 +314,8 @@
                 }
               ],
               "items": false,
-              "minItems": 8,
-              "maxItems": 8
+              "minItems": 9,
+              "maxItems": 9
             },
             {
               "prefixItems": [
@@ -1003,7 +1006,6 @@
           "workflow": {
             "enum": [
               "project-io-smoke",
-              "save-menu-dialog-write-proof"
               "save-menu-dialog-write-proof",
               "run-window-contract"
             ]

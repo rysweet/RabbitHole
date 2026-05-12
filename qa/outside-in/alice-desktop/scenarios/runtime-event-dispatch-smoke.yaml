@@ -1,5 +1,6 @@
 id: alice-desktop-runtime-event-dispatch-smoke
 title: Headless runtime event dispatch smoke
+name: Headless runtime event dispatch smoke
 workflow: runtime-event-dispatch-smoke
 automationMode: gated-command-smoke
 preconditions:

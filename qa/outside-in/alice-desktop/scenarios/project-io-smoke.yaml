@@ -24,7 +24,8 @@ automation:
   cwd: .
   argv:
     - mvn
-    - -DfailIfNoTests=false
+    - -DincludeSims=false
+    - -Dinstall4j.skip
     - -Dsurefire.failIfNoSpecifiedTests=false
     - -pl
     - core/story-api-migration

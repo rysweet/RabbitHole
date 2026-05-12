@@ -87,6 +87,7 @@ mode_values = {
 }
 no_timeout_workflows = {
     "project-io-smoke",
+    "run-window-contract",
     "save-menu-dialog-write-proof",
 }
 allowed_automation = {
@@ -164,7 +165,6 @@ allowed_automation = {
         ".",
         (
             "mvn",
-            "-DfailIfNoTests=false",
             "-DincludeSims=false",
             "-Dinstall4j.skip",
             "-DfailIfNoTests=false",
@@ -740,7 +740,6 @@ def validate(path, scenario):
             if field not in automation:
                 errors.append(f"automation must include {field} when present")
         if workflow in no_timeout_workflows:
-        if workflow in {"save-menu-dialog-write-proof", "run-window-contract"}:
             if "timeoutSeconds" in automation:
                 errors.append(f"{workflow} must not include automation.timeoutSeconds")
         elif "timeoutSeconds" not in automation:
