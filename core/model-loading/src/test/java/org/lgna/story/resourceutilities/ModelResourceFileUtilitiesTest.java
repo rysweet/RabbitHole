@@ -136,7 +136,7 @@ public class ModelResourceFileUtilitiesTest {
   }
 
   @Test
-  public void addHandlesNullDestPathPrefix() throws Exception {
+  public void addHandlesEmptyDestPathPrefix() throws Exception {
     Path workDir = newTestWorkDir("jar-null-prefix");
     Path sourceFile = workDir.resolve("data.txt");
     Files.writeString(sourceFile, "data", StandardCharsets.UTF_8);
