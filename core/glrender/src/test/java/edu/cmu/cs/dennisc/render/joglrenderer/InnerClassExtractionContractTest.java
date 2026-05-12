@@ -75,11 +75,9 @@ public class InnerClassExtractionContractTest {
   }
 
   @Test
-  public void textRendererGlyph_hasSuppressWarningsCheckStyle() {
+  public void textRendererGlyph_hasSuppressWarningsCheckStyle() throws Exception {
     assertNotNull("class must exist", glyphClass);
-    SuppressWarnings sw = glyphClass.getAnnotation(SuppressWarnings.class);
-    assertNotNull("@SuppressWarnings required", sw);
-    assertContains(sw.value(), "CheckStyle");
+    assertSourceContainsSuppressWarnings("TextRendererGlyph.java");
   }
 
   @Test
@@ -160,11 +158,9 @@ public class InnerClassExtractionContractTest {
   }
 
   @Test
-  public void textRendererGlyphProducer_hasSuppressWarningsCheckStyle() {
+  public void textRendererGlyphProducer_hasSuppressWarningsCheckStyle() throws Exception {
     assertNotNull("class must exist", glyphProducerClass);
-    SuppressWarnings sw = glyphProducerClass.getAnnotation(SuppressWarnings.class);
-    assertNotNull("@SuppressWarnings required", sw);
-    assertContains(sw.value(), "CheckStyle");
+    assertSourceContainsSuppressWarnings("TextRendererGlyphProducer.java");
   }
 
   @Test
@@ -277,11 +273,9 @@ public class InnerClassExtractionContractTest {
   }
 
   @Test
-  public void textRendererQuadRenderer_hasSuppressWarningsCheckStyle() {
+  public void textRendererQuadRenderer_hasSuppressWarningsCheckStyle() throws Exception {
     assertNotNull("class must exist", quadRendererClass);
-    SuppressWarnings sw = quadRendererClass.getAnnotation(SuppressWarnings.class);
-    assertNotNull("@SuppressWarnings required", sw);
-    assertContains(sw.value(), "CheckStyle");
+    assertSourceContainsSuppressWarnings("TextRendererQuadRenderer.java");
   }
 
   @Test
@@ -514,6 +508,16 @@ public class InnerClassExtractionContractTest {
   }
 
   // ── Assertion helpers ─────────────────────────────────────────────
+
+  private void assertSourceContainsSuppressWarnings(String fileName) throws Exception {
+    Path sourceFile = findSourceFile(
+        "core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/"
+            + fileName);
+    assertNotNull("Must find " + fileName, sourceFile);
+    String source = new String(Files.readAllBytes(sourceFile));
+    assertTrue(fileName + " must have @SuppressWarnings(\"CheckStyle\")",
+        source.contains("@SuppressWarnings(\"CheckStyle\")"));
+  }
 
   private void assertContains(String[] values, String expected) {
     for (String v : values) {
