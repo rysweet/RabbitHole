@@ -5,7 +5,6 @@ import edu.cmu.cs.dennisc.javax.swing.option.Dialogs;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.alice.math.immutable.Tuple3;
 import org.alice.math.immutable.UnitQuaternion;
-import org.apache.commons.lang.StringUtils;
 import org.lgna.project.annotations.FieldTemplate;
 import org.lgna.project.ast.*;
 import org.lgna.project.code.CodeOrganizer;
@@ -20,12 +19,20 @@ import java.util.function.Consumer;
 
 public class TweedleEncoder extends SourceCodeGenerator {
   private static final String INDENTION = "  ";
+  private static final int MAX_CACHED_INDENT = 16;
+  private static final String[] INDENT_CACHE = new String[MAX_CACHED_INDENT];
+  static {
+    INDENT_CACHE[0] = "";
+    for (int i = 1; i < MAX_CACHED_INDENT; i++) {
+      INDENT_CACHE[i] = INDENT_CACHE[i - 1] + INDENTION;
+    }
+  }
   static final String NODE_DISABLE = "*<";
   static final String NODE_ENABLE = ">*";
   private static final String USER_PREFIX = "u_";
   private int indent = 0;
   private static final Map<String, CodeOrganizer.CodeOrganizerDefinition> codeOrganizerDefinitionMap = new HashMap<>();
-  private static final List<String> angleMembers = new ArrayList<>();
+  private static final Set<String> angleMembers = new HashSet<>();
   private static final Map<String, String> typesToRename = new HashMap<>();
   private static final Map<String, String> typesWithAddedCode = new HashMap<>();
   private static final Map<String, String> membersToRename = new HashMap<>();
@@ -34,7 +41,7 @@ public class TweedleEncoder extends SourceCodeGenerator {
   private static final Map<String, String> optionalParamsToWrap = new HashMap<>();
   private static final Map<String, String> methodParamsToRelabel = new HashMap<>();
   private static final Map<String, Map<String, String>> constructorsWithRelabeledParams = new HashMap<>();
-  private static final List<String> systemIdentifiers = new ArrayList<>();
+  private static final Set<String> systemIdentifiers = new HashSet<>();
 
   static {
     codeOrganizerDefinitionMap.put("Scene", CodeOrganizer.sceneClassCodeOrganizer);
@@ -963,12 +970,16 @@ public class TweedleEncoder extends SourceCodeGenerator {
     indent--;
   }
 
+  private static String indentString(int level) {
+    return level < MAX_CACHED_INDENT ? INDENT_CACHE[level] : INDENTION.repeat(level);
+  }
+
   private void appendIndent() {
-    appendString(StringUtils.repeat(INDENTION, indent));
+    appendString(indentString(indent));
   }
 
   private void appendIndent(Statement stmt) {
-    final int indent = stmt.isEnabled.getValue() ? this.indent : this.indent - 1;
-    appendString(StringUtils.repeat(INDENTION, indent));
+    final int level = stmt.isEnabled.getValue() ? this.indent : this.indent - 1;
+    appendString(indentString(level));
   }
 }
