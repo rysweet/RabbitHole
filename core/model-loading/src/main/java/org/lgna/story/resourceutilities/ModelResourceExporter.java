@@ -67,7 +67,6 @@ import org.lgna.story.SwimmerPoseBuilder;
 import org.lgna.story.implementation.alice.AliceResourceClassUtilities;
 import org.lgna.story.implementation.alice.AliceResourceUtilities;
 import org.lgna.story.implementation.alice.JointImplementationAndVisualDataFactory;
-import org.lgna.story.implementation.alice.ModelResourceIoUtilities;
 import org.lgna.story.resources.*;
 
 import java.awt.Image;
@@ -77,10 +76,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.jar.JarEntry;
-import java.util.jar.JarOutputStream;
 import java.util.zip.DataFormatException;
-import java.util.zip.ZipException;
 
 public class ModelResourceExporter {
 
@@ -1105,103 +1101,8 @@ public class ModelResourceExporter {
     return sb.toString();
   }
 
-  private void add(File source, JarOutputStream target, String destPathPrefix, boolean recursive) throws IOException {
-    if (destPathPrefix == null) {
-      destPathPrefix = "";
-    }
-    if ((destPathPrefix != null) && (destPathPrefix.length() > 0)) {
-      destPathPrefix = destPathPrefix.replace("\\", "/");
-      if (!destPathPrefix.endsWith("/")) {
-        destPathPrefix += "/";
-      }
-      if (destPathPrefix.startsWith("/") || destPathPrefix.startsWith("\\")) {
-        destPathPrefix = destPathPrefix.substring(1);
-      }
-    }
-
-    String root = source.getAbsolutePath().replace("\\", "/") + "/";
-    this.add(source, target, root, destPathPrefix, recursive);
-  }
-
-  private void add(File source, JarOutputStream target, String root, String destPathPrefix, boolean recursive) throws IOException {
-    BufferedInputStream in = null;
-    try {
-      if (source.isDirectory()) {
-        String name = source.getPath().replace("\\", "/");
-        name = name.replace("//", "/");
-        if (name.length() > 0) {
-          if (!name.endsWith("/")) {
-            name += "/";
-          }
-          name = name.substring(root.length());
-          if (name.startsWith("/")) {
-            name = name.substring(1);
-          }
-          if (name.length() > 0) {
-            name = destPathPrefix + name;
-            JarEntry entry = new JarEntry(name);
-            entry.setTime(source.lastModified());
-            try {
-              System.out.println("   Adding: " + name);
-              target.putNextEntry(entry);
-              target.closeEntry();
-            } catch (ZipException ze) {
-              System.err.println(ze.getMessage());
-            }
-          }
-        }
-        for (File nestedFile : source.listFiles()) {
-          if (!nestedFile.isDirectory() || recursive) {
-            add(nestedFile, target, root, destPathPrefix, recursive);
-          }
-        }
-        return;
-      }
-
-      String entryName = source.getPath().replace("\\", "/");
-      entryName = entryName.substring(root.length());
-      if (entryName.startsWith("/") || entryName.startsWith("\\")) {
-        entryName = entryName.substring(1);
-      }
-      entryName = destPathPrefix + entryName;
-      JarEntry entry = new JarEntry(entryName);
-      entry.setTime(source.lastModified());
-      target.putNextEntry(entry);
-      in = new BufferedInputStream(new FileInputStream(source));
-
-      byte[] buffer = new byte[1024];
-      while (true) {
-        int count = in.read(buffer);
-        if (count == -1) {
-          break;
-        }
-        target.write(buffer, 0, count);
-      }
-      target.closeEntry();
-    } finally {
-      if (in != null) {
-        in.close();
-      }
-    }
-  }
-
   String getJavaClassName() {
     return this.className + AliceResourceClassUtilities.RESOURCE_SUFFIX;
-  }
-
-  private File getJavaCodeDir(String root) {
-    String packageDirectory = JavaCodeUtilities.getDirectoryStringForPackage(this.classData.packageString);
-    return new File(root + packageDirectory);
-  }
-
-  private File getJavaClassFile(String root) {
-    String filename = JavaCodeUtilities.getDirectoryStringForPackage(this.classData.packageString) + this.getJavaClassName() + ".class";
-    return new File(root + filename);
-  }
-
-  private File getJavaFile(String root) {
-    String filename = JavaCodeUtilities.getDirectoryStringForPackage(this.classData.packageString) + this.getJavaClassName() + ".java";
-    return new File(root + filename);
   }
 
   private File createJavaCode(String root) throws DataFormatException {
@@ -1210,7 +1111,7 @@ public class ModelResourceExporter {
     String javaCode = createJavaCode();
     System.out.println(javaCode);
     System.out.println(System.getProperty("java.class.path"));
-    File javaFile = getJavaFile(root);
+    File javaFile = ModelResourceFileUtilities.getJavaFile(root, this.classData.packageString, getJavaClassName());
     TextFileUtilities.write(javaFile, javaCode);
     return javaFile;
   }
@@ -1219,18 +1120,9 @@ public class ModelResourceExporter {
     return ModelResourceXmlGenerator.createXMLString(this);
   }
 
-  private File getXMLFile(String root) {
-    if (!root.endsWith("/") && !root.endsWith("\\")) {
-      root += "/";
-    }
-    String resourceDirectory = root + JavaCodeUtilities.getDirectoryStringForPackage(this.classData.packageString) + ModelResourceIoUtilities.getResourceSubDirWithSeparator("");
-    File xmlFile = new File(resourceDirectory, this.className + ".xml");
-    return xmlFile;
-  }
-
   File createXMLFile(String root, boolean forceRebuild) throws IOException {
-    File outputFile = getXMLFile(root);
-    ensureOutputFile(outputFile, "XML resource");
+    File outputFile = ModelResourceFileUtilities.getXMLFile(root, this.classData.packageString, this.className);
+    ModelResourceFileUtilities.ensureOutputFile(outputFile, "XML resource");
     if (!forceRebuild && (this.xmlFile != null) && this.xmlFile.exists()) {
       FileUtilities.copyFile(this.xmlFile, outputFile);
       return outputFile;
@@ -1248,16 +1140,6 @@ public class ModelResourceExporter {
       return outputFile;
     }
 
-  }
-
-  private static void ensureOutputFile(File outputFile, String description) throws IOException {
-    FileUtilities.createParentDirectoriesIfNecessary(outputFile);
-    if (!outputFile.exists() && !outputFile.createNewFile()) {
-      throw new IOException("Failed to create " + description + " file: " + outputFile);
-    }
-    if (!outputFile.isFile()) {
-      throw new IOException(description + " path is not a file: " + outputFile);
-    }
   }
 
   public String getThumbnailPath(String rootPath, String thumbnailName) {
