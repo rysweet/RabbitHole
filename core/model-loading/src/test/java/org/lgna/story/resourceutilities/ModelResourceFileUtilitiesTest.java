@@ -9,16 +9,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -76,130 +69,6 @@ public class ModelResourceFileUtilitiesTest {
     assertTrue(error.getMessage().contains("custom-desc"));
   }
 
-  // ── add (JAR methods) ────────────────────────────────────────────
-
-  @Test
-  public void addSingleFileToJar() throws Exception {
-    Path workDir = newTestWorkDir("jar-single-file");
-    Path sourceFile = workDir.resolve("hello.txt");
-    Files.writeString(sourceFile, "hello world", StandardCharsets.UTF_8);
-    Path jarPath = workDir.resolve("test.jar");
-
-    try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(jarPath))) {
-      ModelResourceFileUtilities.add(sourceFile.toFile(), jos,
-          sourceFile.getParent().toAbsolutePath().toString().replace("\\", "/") + "/",
-          "prefix/", false);
-    }
-
-    Set<String> entryNames = jarEntryNames(jarPath);
-    assertTrue("JAR should contain prefixed file entry",
-        entryNames.contains("prefix/hello.txt"));
-  }
-
-  @Test
-  public void addDirectoryToJarRecursivelyIncludesSubdirectories() throws Exception {
-    Path workDir = newTestWorkDir("jar-recursive");
-    Path sourceDir = workDir.resolve("src");
-    Files.createDirectories(sourceDir.resolve("sub"));
-    Files.writeString(sourceDir.resolve("top.txt"), "top", StandardCharsets.UTF_8);
-    Files.writeString(sourceDir.resolve("sub/nested.txt"), "nested", StandardCharsets.UTF_8);
-    Path jarPath = workDir.resolve("test.jar");
-
-    try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(jarPath))) {
-      ModelResourceFileUtilities.add(sourceDir.toFile(), jos, "dest/", true);
-    }
-
-    Set<String> entryNames = jarEntryNames(jarPath);
-    assertTrue("Should contain top-level file", entryNames.contains("dest/top.txt"));
-    assertTrue("Should contain nested file", entryNames.contains("dest/sub/nested.txt"));
-  }
-
-  @Test
-  public void addDirectoryNonRecursiveSkipsSubdirectories() throws Exception {
-    Path workDir = newTestWorkDir("jar-non-recursive");
-    Path sourceDir = workDir.resolve("src");
-    Files.createDirectories(sourceDir.resolve("sub"));
-    Files.writeString(sourceDir.resolve("top.txt"), "top", StandardCharsets.UTF_8);
-    Files.writeString(sourceDir.resolve("sub/nested.txt"), "nested", StandardCharsets.UTF_8);
-    Path jarPath = workDir.resolve("test.jar");
-
-    try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(jarPath))) {
-      ModelResourceFileUtilities.add(sourceDir.toFile(), jos, "out/", false);
-    }
-
-    Set<String> entryNames = jarEntryNames(jarPath);
-    assertTrue("Should contain top-level file", entryNames.contains("out/top.txt"));
-    for (String name : entryNames) {
-      assertFalse("Nested files should not be present: " + name,
-          name.contains("nested"));
-    }
-  }
-
-  @Test
-  public void addHandlesEmptyDestPathPrefix() throws Exception {
-    Path workDir = newTestWorkDir("jar-null-prefix");
-    Path sourceFile = workDir.resolve("data.txt");
-    Files.writeString(sourceFile, "data", StandardCharsets.UTF_8);
-    Path jarPath = workDir.resolve("test.jar");
-
-    try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(jarPath))) {
-      ModelResourceFileUtilities.add(sourceFile.toFile(), jos,
-          sourceFile.getParent().toAbsolutePath().toString().replace("\\", "/") + "/",
-          "", false);
-    }
-
-    Set<String> entryNames = jarEntryNames(jarPath);
-    assertTrue("Should contain file without prefix", entryNames.contains("data.txt"));
-  }
-
-  @Test
-  public void addFourArgOverloadSetsRootFromSource() throws Exception {
-    Path workDir = newTestWorkDir("jar-four-arg");
-    Path sourceDir = workDir.resolve("content");
-    Files.createDirectories(sourceDir);
-    Files.writeString(sourceDir.resolve("file.txt"), "content", StandardCharsets.UTF_8);
-    Path jarPath = workDir.resolve("test.jar");
-
-    try (JarOutputStream jos = new JarOutputStream(Files.newOutputStream(jarPath))) {
-      ModelResourceFileUtilities.add(sourceDir.toFile(), jos, "pkg/", true);
-    }
-
-    Set<String> entryNames = jarEntryNames(jarPath);
-    assertTrue("Should contain file under prefix", entryNames.contains("pkg/file.txt"));
-  }
-
-  // ── getJavaCodeDir ────────────────────────────────────────────────
-
-  @Test
-  public void getJavaCodeDirReturnsPackageDirectory() {
-    File result = ModelResourceFileUtilities.getJavaCodeDir("/root/", "org.lgna.story.resources.prop");
-
-    String expected = "/root/" + "org" + File.separator + "lgna" + File.separator
-        + "story" + File.separator + "resources" + File.separator + "prop" + File.separator;
-    assertEquals(new File(expected), result);
-  }
-
-  @Test
-  public void getJavaCodeDirWithSimplePackage() {
-    File result = ModelResourceFileUtilities.getJavaCodeDir("/out/", "com.example");
-
-    String expected = "/out/" + "com" + File.separator + "example" + File.separator;
-    assertEquals(new File(expected), result);
-  }
-
-  // ── getJavaClassFile ──────────────────────────────────────────────
-
-  @Test
-  public void getJavaClassFileReturnsCorrectPath() {
-    File result = ModelResourceFileUtilities.getJavaClassFile(
-        "/root/", "org.lgna.story.resources.prop", "TestPropResource");
-
-    String expected = "/root/" + "org" + File.separator + "lgna" + File.separator
-        + "story" + File.separator + "resources" + File.separator + "prop" + File.separator
-        + "TestPropResource.class";
-    assertEquals(new File(expected), result);
-  }
-
   // ── getJavaFile ───────────────────────────────────────────────────
 
   @Test
@@ -211,20 +80,6 @@ public class ModelResourceFileUtilitiesTest {
         + "story" + File.separator + "resources" + File.separator + "prop" + File.separator
         + "TestPropResource.java";
     assertEquals(new File(expected), result);
-  }
-
-  @Test
-  public void getJavaFileAndClassFileOnlyDifferByExtension() {
-    String root = "/output/";
-    String pkg = "org.lgna.story.resources.prop";
-    String className = "MyResource";
-
-    File javaFile = ModelResourceFileUtilities.getJavaFile(root, pkg, className);
-    File classFile = ModelResourceFileUtilities.getJavaClassFile(root, pkg, className);
-
-    assertEquals(javaFile.getParent(), classFile.getParent());
-    assertEquals(javaFile.getName().replace(".java", ""),
-        classFile.getName().replace(".class", ""));
   }
 
   // ── getXMLFile ────────────────────────────────────────────────────
@@ -262,35 +117,7 @@ public class ModelResourceFileUtilitiesTest {
         path.contains("org/lgna/story/resources/prop") || path.contains("org" + File.separator));
   }
 
-  // ── path method contract: file methods share same package directory ────
-
-  @Test
-  public void allFileMethodsShareSamePackageDirectory() {
-    String root = "/base/";
-    String pkg = "org.lgna.story.resources.prop";
-    String className = "TestProp";
-    String javaClassName = "TestPropResource";
-
-    File codeDir = ModelResourceFileUtilities.getJavaCodeDir(root, pkg);
-    File javaFile = ModelResourceFileUtilities.getJavaFile(root, pkg, javaClassName);
-    File classFile = ModelResourceFileUtilities.getJavaClassFile(root, pkg, javaClassName);
-
-    assertEquals("Java file should be in code directory", codeDir.getPath(), javaFile.getParentFile().getPath());
-    assertEquals("Class file should be in code directory", codeDir.getPath(), classFile.getParentFile().getPath());
-  }
-
   // ── helpers ───────────────────────────────────────────────────────
-
-  private static Set<String> jarEntryNames(Path jarPath) throws IOException {
-    Set<String> names = new HashSet<>();
-    try (JarFile jar = new JarFile(jarPath.toFile())) {
-      Enumeration<JarEntry> entries = jar.entries();
-      while (entries.hasMoreElements()) {
-        names.add(entries.nextElement().getName());
-      }
-    }
-    return names;
-  }
 
   private static Path newTestWorkDir(String name) throws IOException {
     Path workRoot = Path.of("target", "test-work",

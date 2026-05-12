@@ -48,14 +48,9 @@ import org.lgna.story.implementation.alice.ModelResourceIoUtilities;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.util.jar.JarEntry;
-import java.util.jar.JarOutputStream;
-import java.util.zip.ZipException;
 
 /**
- * Package-private utility class holding file and JAR helper methods
+ * Package-private utility class holding file-path helper methods
  * extracted from {@link ModelResourceExporter}.
  */
 class ModelResourceFileUtilities {
@@ -75,86 +70,6 @@ class ModelResourceFileUtilities {
     if (!outputFile.isFile()) {
       throw new IOException(description + " path is not a file: " + outputFile);
     }
-  }
-
-  static void add(File source, JarOutputStream target, String destPathPrefix, boolean recursive) throws IOException {
-    if (destPathPrefix == null) {
-      destPathPrefix = "";
-    }
-    if (!destPathPrefix.isEmpty()) {
-      destPathPrefix = forwardSlash(destPathPrefix);
-      if (!destPathPrefix.endsWith("/")) {
-        destPathPrefix += "/";
-      }
-      if (destPathPrefix.startsWith("/")) {
-        destPathPrefix = destPathPrefix.substring(1);
-      }
-    }
-
-    String root = forwardSlash(source.getAbsolutePath()) + "/";
-    add(source, target, root, destPathPrefix, recursive);
-  }
-
-  static void add(File source, JarOutputStream target, String root, String destPathPrefix, boolean recursive) throws IOException {
-    if (source.isDirectory()) {
-      String name = forwardSlash(source.getPath());
-      name = name.replace("//", "/");
-      if (name.length() > 0) {
-        if (!name.endsWith("/")) {
-          name += "/";
-        }
-        name = name.substring(root.length());
-        if (name.startsWith("/")) {
-          name = name.substring(1);
-        }
-        if (name.length() > 0) {
-          name = destPathPrefix + name;
-          JarEntry entry = new JarEntry(name);
-          entry.setTime(source.lastModified());
-          try {
-            System.out.println("   Adding: " + name);
-            target.putNextEntry(entry);
-            target.closeEntry();
-          } catch (ZipException ze) {
-            System.err.println(ze.getMessage());
-          }
-        }
-      }
-      File[] children = source.listFiles();
-      if (children == null) {
-        return;
-      }
-      for (File nestedFile : children) {
-        if (!nestedFile.isDirectory() || recursive) {
-          add(nestedFile, target, root, destPathPrefix, recursive);
-        }
-      }
-      return;
-    }
-
-    String entryName = forwardSlash(source.getPath());
-    entryName = entryName.substring(root.length());
-    if (entryName.startsWith("/")) {
-      entryName = entryName.substring(1);
-    }
-    entryName = destPathPrefix + entryName;
-    JarEntry entry = new JarEntry(entryName);
-    entry.setTime(source.lastModified());
-    target.putNextEntry(entry);
-    try (InputStream in = Files.newInputStream(source.toPath())) {
-      in.transferTo(target);
-    }
-    target.closeEntry();
-  }
-
-  static File getJavaCodeDir(String root, String packageString) {
-    String packageDirectory = JavaCodeUtilities.getDirectoryStringForPackage(packageString);
-    return new File(root + packageDirectory);
-  }
-
-  static File getJavaClassFile(String root, String packageString, String javaClassName) {
-    String filename = JavaCodeUtilities.getDirectoryStringForPackage(packageString) + javaClassName + ".class";
-    return new File(root + filename);
   }
 
   static File getJavaFile(String root, String packageString, String javaClassName) {
