@@ -4,15 +4,24 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import java.awt.AWTException;
 import java.awt.GraphicsEnvironment;
+import java.awt.Point;
+import java.awt.Robot;
 import java.awt.Window;
+import java.awt.event.InputEvent;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -29,7 +38,9 @@ import static org.junit.Assume.assumeTrue;
  *
  * <p>The proof creates a synthetic {@link JFrame}, polls for it via the standard
  * AWT window enumeration API, records its identity hash and title in structured
- * JSON evidence, and verifies the evidence schema contract.
+ * JSON evidence, and verifies the evidence schema contract. A {@link Robot}-based
+ * test additionally proves the detection pipeline works when the window is created
+ * asynchronously from a simulated toolbar button click.
  *
  * <p>Headful tests (polling, hex-ID verification) are gated behind
  * {@code GraphicsEnvironment.isHeadless()} and skip cleanly on headless CI.
@@ -163,6 +174,72 @@ public class RunWindowDetectionProofTest {
       }
     }
     assertFalse("Frame must not be showing after dispose()", stillShowing);
+  }
+
+  @Test
+  public void robotClickedRunButtonTriggersWindowDetection() throws Exception {
+    assumeFalse("Requires a display (Xvfb or native)",
+        GraphicsEnvironment.isHeadless());
+    Path evidenceDir = temporaryFolder.newFolder("robot-detection-evidence").toPath();
+    String runWindowTitle = WINDOW_TITLE + " robot-" + System.nanoTime();
+    AtomicReference<JFrame> runWindowRef = new AtomicReference<>();
+    CountDownLatch buttonClicked = new CountDownLatch(1);
+
+    JFrame toolbarFrame = new JFrame("Toolbar Simulation");
+    try {
+      JButton runButton = new JButton("Run");
+      runButton.addActionListener(e -> {
+        JFrame runWindow = new JFrame(runWindowTitle);
+        runWindow.setSize(300, 200);
+        runWindow.setVisible(true);
+        runWindowRef.set(runWindow);
+        buttonClicked.countDown();
+      });
+      toolbarFrame.getContentPane().add(runButton);
+      toolbarFrame.setSize(200, 100);
+      toolbarFrame.setLocationRelativeTo(null);
+      toolbarFrame.setVisible(true);
+
+      Thread.sleep(500);
+
+      Robot robot = new Robot();
+      robot.setAutoDelay(50);
+      robot.setAutoWaitForIdle(true);
+
+      Point buttonLocation = runButton.getLocationOnScreen();
+      int clickX = buttonLocation.x + runButton.getWidth() / 2;
+      int clickY = buttonLocation.y + runButton.getHeight() / 2;
+      robot.mouseMove(clickX, clickY);
+      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+
+      assertTrue("Run button action must fire within 5s",
+          buttonClicked.await(5, TimeUnit.SECONDS));
+
+      DetectionResult result = pollForWindow(runWindowTitle);
+
+      assertNotNull("Robot-clicked Run window should be detected", result);
+      assertEquals("detected", result.status);
+      assertTrue("window_title should contain expected title",
+          result.windowTitle.contains(runWindowTitle));
+      assertTrue("window_id should be hex format",
+          result.windowId.startsWith("0x"));
+
+      Path artifact = writeDetectionEvidence(evidenceDir, result);
+      assertTrue(Files.isRegularFile(artifact, LinkOption.NOFOLLOW_LINKS));
+      String json = Files.readString(artifact);
+      assertSuccessSchemaFields(json);
+      assertAllFalseClaimBooleans(json);
+      assertDoesNotClaimArray(json);
+    } catch (AWTException ex) {
+      assumeTrue("Robot unavailable in this environment: " + ex.getMessage(), false);
+    } finally {
+      JFrame runWindow = runWindowRef.get();
+      if (runWindow != null) {
+        runWindow.dispose();
+      }
+      toolbarFrame.dispose();
+    }
   }
 
   // --- Schema contract tests (headless-safe) ---
