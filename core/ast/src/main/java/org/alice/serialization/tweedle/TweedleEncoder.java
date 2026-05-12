@@ -971,6 +971,9 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   private static String indentString(int level) {
+    if (level <= 0) {
+      return "";
+    }
     return level < MAX_CACHED_INDENT ? INDENT_CACHE[level] : INDENTION.repeat(level);
   }
 
