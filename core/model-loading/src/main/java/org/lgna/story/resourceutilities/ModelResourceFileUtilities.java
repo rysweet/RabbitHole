@@ -74,12 +74,12 @@ class ModelResourceFileUtilities {
     if (destPathPrefix == null) {
       destPathPrefix = "";
     }
-    if ((destPathPrefix != null) && (destPathPrefix.length() > 0)) {
+    if (!destPathPrefix.isEmpty()) {
       destPathPrefix = destPathPrefix.replace("\\", "/");
       if (!destPathPrefix.endsWith("/")) {
         destPathPrefix += "/";
       }
-      if (destPathPrefix.startsWith("/") || destPathPrefix.startsWith("\\")) {
+      if (destPathPrefix.startsWith("/")) {
         destPathPrefix = destPathPrefix.substring(1);
       }
     }
@@ -89,65 +89,55 @@ class ModelResourceFileUtilities {
   }
 
   static void add(File source, JarOutputStream target, String root, String destPathPrefix, boolean recursive) throws IOException {
-    BufferedInputStream in = null;
-    try {
-      if (source.isDirectory()) {
-        String name = source.getPath().replace("\\", "/");
-        name = name.replace("//", "/");
+    if (source.isDirectory()) {
+      String name = source.getPath().replace("\\", "/");
+      name = name.replace("//", "/");
+      if (name.length() > 0) {
+        if (!name.endsWith("/")) {
+          name += "/";
+        }
+        name = name.substring(root.length());
+        if (name.startsWith("/")) {
+          name = name.substring(1);
+        }
         if (name.length() > 0) {
-          if (!name.endsWith("/")) {
-            name += "/";
-          }
-          name = name.substring(root.length());
-          if (name.startsWith("/")) {
-            name = name.substring(1);
-          }
-          if (name.length() > 0) {
-            name = destPathPrefix + name;
-            JarEntry entry = new JarEntry(name);
-            entry.setTime(source.lastModified());
-            try {
-              System.out.println("   Adding: " + name);
-              target.putNextEntry(entry);
-              target.closeEntry();
-            } catch (ZipException ze) {
-              System.err.println(ze.getMessage());
-            }
+          name = destPathPrefix + name;
+          JarEntry entry = new JarEntry(name);
+          entry.setTime(source.lastModified());
+          try {
+            System.out.println("   Adding: " + name);
+            target.putNextEntry(entry);
+            target.closeEntry();
+          } catch (ZipException ze) {
+            System.err.println(ze.getMessage());
           }
         }
-        for (File nestedFile : source.listFiles()) {
-          if (!nestedFile.isDirectory() || recursive) {
-            add(nestedFile, target, root, destPathPrefix, recursive);
-          }
+      }
+      for (File nestedFile : source.listFiles()) {
+        if (!nestedFile.isDirectory() || recursive) {
+          add(nestedFile, target, root, destPathPrefix, recursive);
         }
-        return;
       }
+      return;
+    }
 
-      String entryName = source.getPath().replace("\\", "/");
-      entryName = entryName.substring(root.length());
-      if (entryName.startsWith("/") || entryName.startsWith("\\")) {
-        entryName = entryName.substring(1);
-      }
-      entryName = destPathPrefix + entryName;
-      JarEntry entry = new JarEntry(entryName);
-      entry.setTime(source.lastModified());
-      target.putNextEntry(entry);
-      in = new BufferedInputStream(new FileInputStream(source));
-
+    String entryName = source.getPath().replace("\\", "/");
+    entryName = entryName.substring(root.length());
+    if (entryName.startsWith("/")) {
+      entryName = entryName.substring(1);
+    }
+    entryName = destPathPrefix + entryName;
+    JarEntry entry = new JarEntry(entryName);
+    entry.setTime(source.lastModified());
+    target.putNextEntry(entry);
+    try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(source))) {
       byte[] buffer = new byte[1024];
-      while (true) {
-        int count = in.read(buffer);
-        if (count == -1) {
-          break;
-        }
+      int count;
+      while ((count = in.read(buffer)) != -1) {
         target.write(buffer, 0, count);
       }
-      target.closeEntry();
-    } finally {
-      if (in != null) {
-        in.close();
-      }
     }
+    target.closeEntry();
   }
 
   static File getJavaCodeDir(String root, String packageString) {
@@ -170,7 +160,6 @@ class ModelResourceFileUtilities {
       root += "/";
     }
     String resourceDirectory = root + JavaCodeUtilities.getDirectoryStringForPackage(packageString) + ModelResourceIoUtilities.getResourceSubDirWithSeparator("");
-    File xmlFile = new File(resourceDirectory, className + ".xml");
-    return xmlFile;
+    return new File(resourceDirectory, className + ".xml");
   }
 }

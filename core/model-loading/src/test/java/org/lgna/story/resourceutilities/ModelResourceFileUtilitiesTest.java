@@ -18,6 +18,7 @@ import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -129,8 +130,8 @@ public class ModelResourceFileUtilitiesTest {
     Set<String> entryNames = jarEntryNames(jarPath);
     assertTrue("Should contain top-level file", entryNames.contains("out/top.txt"));
     for (String name : entryNames) {
-      assertTrue("Nested files should not be present: " + name,
-          !name.contains("nested"));
+      assertFalse("Nested files should not be present: " + name,
+          name.contains("nested"));
     }
   }
 
