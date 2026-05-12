@@ -107,7 +107,7 @@ Required fields on success:
 | `save_claimed` | boolean | Always `false`. |
 | `grading_claimed` | boolean | Always `false`. |
 | `full_ui_automation_claimed` | boolean | Always `false`. |
-| `does_not_claim` | string array | Includes `rendering-correctness`, `grading`, `save`, `full-ui-automation`, `active-rendering`, `run-execution`, `world-execution-correctness`. |
+| `does_not_claim` | string array | Includes `active-rendering`, `run-execution`, `world-execution-correctness`, `rendering-correctness`, `save`, `grading`, `full-ui-automation`. |
 
 Required fields on failure:
 
@@ -190,13 +190,13 @@ Representative success artifact:
   "grading_claimed": false,
   "full_ui_automation_claimed": false,
   "does_not_claim": [
-    "rendering-correctness",
-    "grading",
-    "save",
-    "full-ui-automation",
     "active-rendering",
     "run-execution",
-    "world-execution-correctness"
+    "world-execution-correctness",
+    "rendering-correctness",
+    "save",
+    "grading",
+    "full-ui-automation"
   ]
 }
 ```
@@ -219,13 +219,13 @@ Representative failure artifact:
   "grading_claimed": false,
   "full_ui_automation_claimed": false,
   "does_not_claim": [
-    "rendering-correctness",
-    "grading",
-    "save",
-    "full-ui-automation",
     "active-rendering",
     "run-execution",
-    "world-execution-correctness"
+    "world-execution-correctness",
+    "rendering-correctness",
+    "save",
+    "grading",
+    "full-ui-automation"
   ]
 }
 ```
@@ -270,6 +270,11 @@ proof may claim only:
 - The detected window's identity hash and title can be recorded in structured
   JSON evidence.
 - The detection completes within a bounded 10-second polling interval.
+
+The existing `EatmeRunWindowEvidence` creation/wiring schema includes
+`run_program_claimed` (specific to the `runProgram()` invocation path). That
+field is intentionally absent from the detection proof schema because
+Run-window detection does not interact with program execution at all.
 
 This proof must not claim:
 

@@ -92,10 +92,12 @@ proof establishes that the detection mechanism works; integration with Alice's
 After `setVisible(true)`, the test polls:
 
 ```java
+String title = "Run Window Detection Proof";
+// ...
 for (int i = 0; i < 100; i++) {
     for (Window w : Window.getWindows()) {
         if (w instanceof JFrame jf
-            && jf.getTitle().contains(expectedTitle)
+            && jf.getTitle().contains(title)
             && jf.isShowing()) {
             // detected — record window_id and window_title
         }
