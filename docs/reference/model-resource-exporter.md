@@ -241,13 +241,19 @@ Behavior-preserving refactors must keep these outputs stable:
 | XML generation state | Missing class and subresource bounding boxes may be populated during XML generation; that mutation must stay explicit and covered by `ModelExportTest`. |
 | Java source shape | Package, enum name, constants, resource type constructor arguments, factory methods, joint declarations, and pose declarations remain compatible. |
 | Deprecated metadata | `setIsDeprecated(true)` continues to write XML `deprecated="TRUE"` and a generated Java `@Deprecated` enum annotation together. |
-| File paths | XML and thumbnail output paths continue to use the package directory and resource subdirectory conventions. |
+| File paths | XML, Java, and class output paths continue to use the package directory and resource subdirectory conventions through `ModelResourceFileUtilities`. |
 | Error handling | Output and thumbnail failures surface as checked `IOException` where the exporter API declares them. |
 | Dependencies | Export behavior does not require Git LFS checkout changes, new CI dependencies, or artificial coverage exclusions. |
 
-`ModelResourceJavaGenerator`, `ModelResourceXmlGenerator`, and
-`ModelResourceThumbnailWriter` are package-private helpers. Callers use
-`ModelResourceExporter`; they do not depend on the helper classes directly.
+`ModelResourceFileUtilities`, `ModelResourceJavaGenerator`,
+`ModelResourceXmlGenerator`, and `ModelResourceThumbnailWriter` are
+package-private helpers. Callers use `ModelResourceExporter`; they do not
+depend on the helper classes directly.
+
+`ModelResourceFileUtilities` owns file-path resolution and JAR-entry
+creation. See the
+[ModelResourceFileUtilities reference](model-resource-file-utilities.md)
+for method signatures and usage.
 
 ## Configuration
 

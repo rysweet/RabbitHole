@@ -6,6 +6,8 @@ goal is to preserve downstream-visible export behavior, not to pad coverage.
 
 For the API and output contract, see the
 [Model resource exporter reference](../reference/model-resource-exporter.md).
+For file-path resolution and JAR helpers extracted from the exporter, see the
+[ModelResourceFileUtilities reference](../reference/model-resource-file-utilities.md).
 
 ## When to use this guide
 
