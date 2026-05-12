@@ -1,7 +1,7 @@
 # NonCachingTextRenderer Characterization
 
 This reference is the build contract for the `NonCachingTextRenderer`
-characterization lane: headless-safe inner class behavior, buffer constant
+characterization lane: headless-safe class behavior, buffer constant
 identity, glyph cache lifecycle, text data accessors, character iterator
 compliance, and GL-boundary skip rules.
 
@@ -9,7 +9,7 @@ compliance, and GL-boundary skip rules.
 
 - [Scope](#scope)
 - [Artifact inventory](#artifact-inventory)
-- [Inner class contracts](#inner-class-contracts)
+- [Class contracts](#class-contracts)
 - [API reference](#api-reference)
 - [Validation commands](#validation-commands)
 - [Compatibility rules](#compatibility-rules)
@@ -19,22 +19,27 @@ compliance, and GL-boundary skip rules.
 
 This lane characterizes observable `NonCachingTextRenderer` behavior that is
 testable without an OpenGL context, display server, or native JOGL bindings.
-It documents the headless-safe inner classes, static constants, and pure-logic
-helper methods that form the foundation of Alice's OpenGL text rendering
-pipeline.
+It documents the headless-safe classes (now top-level after extraction),
+static constants, and pure-logic helper methods that form the foundation of
+Alice's OpenGL text rendering pipeline.
+
+All 9 inner classes have been extracted to top-level files (see the
+[inner class extraction reference](noncaching-text-renderer-inner-class-extraction.md)).
+The characterization tests reference these classes directly by their
+top-level fully-qualified names rather than `$`-notation inner class paths.
 
 It covers:
 
 | Area | Contract |
 | --- | --- |
 | Buffer constants | Static constant values and derived buffer sizes are self-consistent: `kSize`, `kQuadsPerBuffer`, `kVertsPerQuad`, `kCoordsPerVertVerts`, `kCoordsPerVertTex`, computed totals, and debug/config flags (`DISABLE_GLYPH_CACHE`, `DRAW_BBOXES`, `CYCLES_PER_FLUSH`, `MAX_VERTICAL_FRAGMENTATION`). |
-| `preNormalize` | The private static geometry method expands a `Rectangle2D` by floor/ceil rounding + 1px slop on all sides. |
-| CharSequenceIterator | The private static inner class implements `CharacterIterator` correctly: `first()`, `last()`, `current()`, `next()`, `previous()`, `setIndex()`, `getBeginIndex()`, `getEndIndex()`, `getIndex()`, `clone()`, and empty-sequence edge cases. |
-| TextData | The package-private static inner class preserves constructor arguments through accessor methods: `string()`, `origin()`, `origRect()`, `origOriginX()`, `origOriginY()`, and the `used`/`markUsed()`/`clearUsed()` lifecycle. |
-| DefaultRenderDelegate | The public static inner class returns `true` from `intensityOnly()` and delegates `getBounds(GlyphVector, FontRenderContext)` to `GlyphVector.getVisualBounds()`. |
-| CharacterCache | The private static inner class caches `Character` values for codepoints 0–127 and returns fresh `Character.valueOf()` for codepoints > 127. |
-| TextRendererGlyph (Glyph) | Not directly tested. Documented below for reference; requires a `NonCachingTextRenderer` instance (GL-dependent). Extracted to top-level class. |
-| TextRendererGlyphProducer (GlyphProducer) | Not directly tested. Documented below for reference; requires a `NonCachingTextRenderer` instance (GL-dependent). Extracted to top-level class. |
+| `preNormalize` | The static geometry method expands a `Rectangle2D` by floor/ceil rounding + 1px slop on all sides. |
+| CharSequenceIterator | The package-private top-level class implements `CharacterIterator` correctly: `first()`, `last()`, `current()`, `next()`, `previous()`, `setIndex()`, `getBeginIndex()`, `getEndIndex()`, `getIndex()`, `clone()`, and empty-sequence edge cases. |
+| TextData | The package-private top-level class preserves constructor arguments through accessor methods: `string()`, `origin()`, `origRect()`, `origOriginX()`, `origOriginY()`, and the `used`/`markUsed()`/`clearUsed()` lifecycle. |
+| DefaultRenderDelegate | The public top-level class returns `true` from `intensityOnly()` and delegates `getBounds(GlyphVector, FontRenderContext)` to `GlyphVector.getVisualBounds()`. |
+| CharacterCache | The package-private top-level class caches `Character` values for codepoints 0–127 and returns fresh `Character.valueOf()` for codepoints > 127. |
+| TextRendererGlyph (Glyph) | Not directly tested. Extracted to top-level class. Requires a `NonCachingTextRenderer` instance (GL-dependent). |
+| TextRendererGlyphProducer (GlyphProducer) | Not directly tested. Extracted to top-level class. Requires a `NonCachingTextRenderer` instance (GL-dependent). |
 | Constructor / Accessors | `getFont()`, `getSmoothing()`, `getMyUseVertexArrays()`, `setUseVertexArrays()`, `antialiased` field, `renderDelegate` field, `mGlyphProducer` field — guarded by `Assume.assumeTrue` (skip in headless CI). |
 
 This lane does not cover:
@@ -50,15 +55,21 @@ This lane does not cover:
 
 | Artifact | Purpose |
 | --- | --- |
-| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTextRenderer.java` | Production class (<1350 lines after inner class extraction). Contains static inner classes under test. |
-| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyph.java` | Extracted from `Glyph` inner class. Package-private. |
-| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyphProducer.java` | Extracted from `GlyphProducer` inner class. Package-private. |
-| `core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererQuadRenderer.java` | Extracted from `Pipelined_QuadRenderer` inner class. Package-private. |
-| `core/glrender/src/test/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTextRendererCharacterizationTest.java` | Characterization test suite (~479 lines, 49 test methods). First test file in `core/glrender`. |
+| `NonCachingTextRenderer.java` | Production class (~850 lines after full inner class extraction). No inner classes remain. |
+| `CharSequenceIterator.java` | Extracted from `CharSequenceIterator` static inner class. Package-private. |
+| `TextData.java` | Extracted from `TextData` static inner class. Package-private. |
+| `DefaultRenderDelegate.java` | Extracted from `DefaultRenderDelegate` public static inner class. Public. |
+| `CharacterCache.java` | Extracted from `CharacterCache` static inner class. Package-private. |
+| `Manager.java` | Extracted from `Manager` non-static inner class. Package-private. Has `NonCachingTextRenderer` back-reference. |
+| `DebugListener.java` | Extracted from `DebugListener` non-static inner class. Package-private. Has `NonCachingTextRenderer` back-reference. |
+| `TextRendererGlyph.java` | Extracted from `Glyph` inner class. Package-private. |
+| `TextRendererGlyphProducer.java` | Extracted from `GlyphProducer` inner class. Package-private. |
+| `TextRendererQuadRenderer.java` | Extracted from `Pipelined_QuadRenderer` inner class. Package-private. |
+| `NonCachingTextRendererCharacterizationTest.java` | Characterization test suite (~480 lines, 49 test methods). |
 
-## Inner class contracts
+## Class contracts
 
-### Constants (lines 57–79)
+### Constants (in NonCachingTextRenderer)
 
 The buffer size constants form a derivation chain:
 
@@ -81,13 +92,11 @@ DISABLE_GLYPH_CACHE = true
 
 The characterization tests verify each derivation step. If any constant
 changes, the tests will fail, alerting reviewers to recalculate downstream
-buffer allocations. Additionally, the debug/config flags (`DISABLE_GLYPH_CACHE
-= true`, `DRAW_BBOXES = false`, `CYCLES_PER_FLUSH = 100`,
-`MAX_VERTICAL_FRAGMENTATION = 0.7f`) are pinned to their current values.
+buffer allocations.
 
-### preNormalize (line 454)
+### preNormalize (static method in NonCachingTextRenderer)
 
-A private static method that expands a `Rectangle2D` by rounding to integer
+A static method that expands a `Rectangle2D` by rounding to integer
 coordinates and adding 1-pixel slop on all sides:
 
 | Input | Output |
@@ -96,9 +105,9 @@ coordinates and adding 1-pixel slop on all sides:
 | `(-3.2, -1.8, 5.0, 4.0)` | `(-5.0, -3.0, 8.0, 7.0)` — handles negative coordinates |
 | `(0, 0, 10, 10)` | `(-1.0, -1.0, 12.0, 12.0)` — integer input still expands |
 
-### CharSequenceIterator (lines 803–891)
+### CharSequenceIterator (top-level class, formerly static inner)
 
-A private static inner class implementing `java.text.CharacterIterator` for
+A package-private class implementing `java.text.CharacterIterator` for
 `CharSequence` inputs. Key behavioral contracts:
 
 | Method | Behavior |
@@ -115,11 +124,12 @@ A private static inner class implementing `java.text.CharacterIterator` for
 | `getEndIndex()` | Returns sequence length. |
 | `clone()` | Returns a new `CharSequenceIterator` with the same sequence and current index. |
 
-The tests access this class via reflection because it is `private static`.
+The tests access this class directly as a top-level class. No reflection
+with `$`-notation is needed.
 
-### TextData (lines 893–960)
+### TextData (top-level class, formerly static inner)
 
-A package-private static inner class storing text rendering metadata:
+A package-private class storing text rendering metadata:
 
 | Field / Method | Contract |
 | --- | --- |
@@ -131,14 +141,14 @@ A package-private static inner class storing text rendering metadata:
 | `used()` / `markUsed()` / `clearUsed()` | Boolean lifecycle: starts `false`, `markUsed()` sets `true`, `clearUsed()` resets to `false`. |
 | `unicodeID` | Stores the unicode ID from the constructor (public field). |
 
-### DefaultRenderDelegate (lines 1145–1180)
+### DefaultRenderDelegate (top-level class, formerly public static inner)
 
-A public static inner class implementing `TextRenderer.RenderDelegate`:
+A public class implementing `TextRenderer.RenderDelegate`:
 
 | Method | Contract |
 | --- | --- |
 | `intensityOnly()` | Always returns `true`. |
-| `getBounds(CharSequence, Font, FRC)` | Creates a `GlyphVector` via `font.createGlyphVector(frc, CharSequenceIterator)`, then delegates to `getBounds(GlyphVector, FRC)`. |
+| `getBounds(CharSequence, Font, FRC)` | Creates a `GlyphVector` via `font.createGlyphVector(frc, new CharSequenceIterator(str))`, then delegates to `getBounds(GlyphVector, FRC)`. |
 | `getBounds(String, Font, FRC)` | Creates a `GlyphVector` via `font.createGlyphVector(frc, str)`, then delegates to `getBounds(GlyphVector, FRC)`. |
 | `getBounds(GlyphVector, FRC)` | Returns `gv.getVisualBounds()`. |
 | `drawGlyphVector(g, gv, x, y)` | Delegates to `g.drawGlyphVector(gv, x, y)`. |
@@ -148,9 +158,9 @@ The bounds methods are tested with non-empty strings to verify non-null,
 positive-dimension results. Exact pixel values are not asserted because font
 metrics vary across platforms and JDK versions.
 
-### CharacterCache (lines 1557–1575)
+### CharacterCache (top-level class, formerly static inner)
 
-A private static inner class caching `Character` objects for ASCII codepoints:
+A package-private class caching `Character` objects for ASCII codepoints:
 
 | Behavior | Contract |
 | --- | --- |
@@ -160,8 +170,8 @@ A private static inner class caching `Character` objects for ASCII codepoints:
 | Boundary: `valueOf((char) 127)` | Returns cached object. |
 | Boundary: `valueOf((char) 128)` | Returns non-cached object. |
 
-Tests access this class via reflection and verify identity semantics with
-`assertSame()` for cached values.
+Tests access this class directly as a top-level class. No reflection with
+`$`-notation is needed.
 
 ### TextRendererGlyph (extracted from Glyph) — not directly tested
 
@@ -203,10 +213,10 @@ No characterization tests exist for this class (same GL dependency as
 | `getGlyphs(CharSequence)` | Requires `getFontRenderContext()` → **GL-dependent, not tested headlessly**. |
 | `getGlyphPixelWidth(char)` | Returns `glyph.getAdvance()` for cached glyphs. For uncached glyphs, falls through to `fontRenderContext` which is never initialized → **throws `InternalError` (FIXME in source)**. |
 
-### Constructor / Accessors (lines 139–180) — guarded, skipped without GL
+### Constructor / Accessors — guarded, skipped without GL
 
 The 7 constructor/accessor tests require a `NonCachingTextRenderer` instance.
-In headless CI, the constructor call to `new RectanglePacker(new Manager(),
+The constructor calls `new RectanglePacker(new Manager(this),
 kSize, kSize)` may fail without native JOGL libraries. Tests guard with
 `Assume.assumeTrue("Needs headless JOGL to construct", sharedRenderer != null)`.
 
@@ -222,19 +232,19 @@ kSize, kSize)` may fail without native JOGL libraries. Tests guard with
 
 ## API reference
 
-The test suite uses reflection to access private and package-private inner
-classes. The reflection targets are:
+The test suite uses a mix of direct class access and reflection. After Phase 2
+extraction, `CharSequenceIterator`, `TextData`, `CharacterCache`, and
+`DefaultRenderDelegate` are top-level classes. Tests reference them directly
+rather than via `Class.forName` with `$`-notation.
 
-| Reflection target | Access pattern |
+| Class | Access pattern |
 | --- | --- |
-| `NonCachingTextRenderer$CharSequenceIterator` | `Class.forName(...)`, constructor via `getDeclaredConstructor(CharSequence.class)` with `setAccessible(true)`. |
-| `NonCachingTextRenderer$TextData` | Direct constructor access (package-private). |
-| `NonCachingTextRenderer$CharacterCache` | `Class.forName(...)`, `valueOf` method via `getDeclaredMethod("valueOf", char.class)` with `setAccessible(true)`, `cache` field via `getDeclaredField("cache")` with `setAccessible(true)`. |
-| `preNormalize` method | `getDeclaredMethod("preNormalize", Rectangle2D.class)` with `setAccessible(true)`. |
+| `CharSequenceIterator` | Direct constructor access — top-level package-private class. |
+| `TextData` | Direct constructor access — top-level package-private class. |
+| `DefaultRenderDelegate` | Direct class reference — top-level public class. |
+| `CharacterCache` | Direct class access — `valueOf` method and `cache` field. |
+| `preNormalize` method | `getDeclaredMethod("preNormalize", Rectangle2D.class)` with `setAccessible(true)` (still a private method in `NonCachingTextRenderer`). |
 | Constructor fields | `getDeclaredField("antialiased")`, `getDeclaredField("renderDelegate")`, `getDeclaredField("mGlyphProducer")` with `setAccessible(true)`. |
-
-If any inner class is renamed, the tests fail with a descriptive message
-naming the expected class rather than a silent skip.
 
 ## Validation commands
 
@@ -258,11 +268,11 @@ errors.
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
-mvn -pl core/glrender -am -DfailIfNoTests=false test
+mvn -pl core/glrender -am -DfailIfNoTests=false -Dcheckstyle.skip clean test
 ```
 
-The characterization suite is the first test file in `core/glrender`. It runs
-alongside any future tests without interference.
+The characterization suite runs alongside the contract tests and any future
+tests without interference.
 
 ## Compatibility rules
 
@@ -279,22 +289,21 @@ alongside any future tests without interference.
    coordinate scaling, and quad vertex positioning all depend on these exact
    values.
 
-4. **Reflection targets are fragile by design.** If an inner class is renamed
-   during refactoring, the corresponding test fails immediately with a clear
-   `Class.forName` or `getDeclaredMethod` error. This is the intended safety
-   net — fix the test target names as part of the rename.
+4. **Reflection targets for extracted classes use top-level FQNs.** After
+   Phase 2 extraction, `Class.forName` paths no longer use `$`-notation
+   (e.g., `...NonCachingTextRenderer$CharSequenceIterator`). Instead, tests
+   reference classes directly (e.g., `CharSequenceIterator.class`). If a
+   class is renamed, update the direct reference.
 
 5. **`CharSequenceIterator` boundary behavior is load-bearing.** The `previous()`
    clamping to index 0 and the `DONE` sentinel for empty sequences are
-   used by `GlyphProducer.getGlyphs()` during text layout. Changes to these
-   behaviors require updating both the tests and all callers.
+   used by `TextRendererGlyphProducer.getGlyphs()` during text layout.
+   Changes to these behaviors require updating both the tests and all callers.
 
 6. **`DISABLE_GLYPH_CACHE = true` is the current production value.** This means
-   `GlyphProducer.getGlyphs()` always takes the "punt to robust renderer"
-   path. The glyph cache data structures (`unicodes2Glyphs`, `glyphCache`) are
-   allocated but effectively unused in production. Tests characterize both the
-   allocation and the cache operations to protect against regressions if the
-   flag is later set to `false`.
+   `TextRendererGlyphProducer.getGlyphs()` always takes the "punt to robust
+   renderer" path. The glyph cache data structures (`unicodes2Glyphs`,
+   `glyphCache`) are allocated but effectively unused in production.
 
 ## Examples
 
@@ -309,11 +318,11 @@ Before changing `kQuadsPerBuffer` from 100 to 200:
 5. Verify that VBO allocation in `TextRendererQuadRenderer` uses the same
    constants and that buffer sizes are consistent.
 
-### Add a new headless-safe inner class test
+### Add a new headless-safe test for an extracted class
 
-1. Identify the inner class and its access level.
-2. If `private static`, use `Class.forName` + `setAccessible(true)`.
-3. If non-static (requires enclosing instance), guard with
+1. Identify the class and its access level.
+2. If package-private, access it directly from the test (same package).
+3. If the class requires a `NonCachingTextRenderer` instance, guard with
    `Assume.assumeTrue` in case the constructor triggers GL.
 4. Assert observable behavior (return values, field state), not implementation
    details.
@@ -322,9 +331,9 @@ Before changing `kQuadsPerBuffer` from 100 to 200:
 ### Understand why constructor tests are skipped
 
 The 7 constructor/accessor tests require a `NonCachingTextRenderer` instance.
-The constructor calls `new RectanglePacker(new Manager(), kSize, kSize)`, which
-may trigger `Manager.allocateBackingStore()`. On a headless CI server without
-native JOGL libraries, this fails. The tests guard against this with:
+The constructor calls `new RectanglePacker(new Manager(this), kSize, kSize)`,
+which may trigger `Manager.allocateBackingStore()`. On a headless CI server
+without native JOGL libraries, this fails. The tests guard against this with:
 
 ```java
 Assume.assumeTrue("Needs headless JOGL to construct", sharedRenderer != null);

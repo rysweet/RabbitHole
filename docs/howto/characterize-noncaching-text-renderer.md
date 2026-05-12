@@ -1,7 +1,7 @@
 # Characterize NonCachingTextRenderer
 
 Use this guide to run and review the `NonCachingTextRenderer` characterization
-tests. These tests validate buffer constants, inner class behavior, and
+tests. These tests validate buffer constants, extracted class behavior, and
 glyph cache lifecycle without an OpenGL context, display server, or native
 JOGL bindings.
 
@@ -17,6 +17,12 @@ core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/NonCachingTex
 core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyph.java
 core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererGlyphProducer.java
 core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextRendererQuadRenderer.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/CharSequenceIterator.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/TextData.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/Manager.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/DefaultRenderDelegate.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/CharacterCache.java
+core/glrender/src/main/java/edu/cmu/cs/dennisc/render/joglrenderer/DebugListener.java
 ```
 
 For the inner class extraction details, see [Validate NonCachingTextRenderer
@@ -34,8 +40,7 @@ Also run these checks when changing:
 - `Glyph` constructor fields, `clear()`, `getAdvance()`, or `getGlyphCode()`;
 - `GlyphProducer` constructor, `register()`, `clearCacheEntry()`, or
   `clearAllCacheEntries()`;
-- Any rename of a private or package-private inner class inside
-  `NonCachingTextRenderer`.
+- Any rename of an extracted class in the package.
 
 Do not use this guide for OpenGL rendering, texture allocation, VBO pipeline,
 mipmap generation, or full `getBounds` with cached string locations. Those
@@ -83,9 +88,9 @@ alongside any future tests without interference.
 | --- | --- |
 | Buffer size derivation | Each derived constant equals the product of its inputs. A failure means a constant was changed without updating dependent values. |
 | `kSize` value | The initial texture backing store dimension (256). A change affects `RectanglePacker` allocation. |
-| `DISABLE_GLYPH_CACHE` | Currently `true`. Changing this to `false` activates the per-glyph cache path in `GlyphProducer.getGlyphs()`. |
+| `DISABLE_GLYPH_CACHE` | Currently `true`. Changing this to `false` activates the per-glyph cache path in `TextRendererGlyphProducer.getGlyphs()`. |
 
-### CharSequenceIterator
+### CharSequenceIterator (top-level class)
 
 | Assertion category | Meaning |
 | --- | --- |
@@ -95,7 +100,7 @@ alongside any future tests without interference.
 | Boundary: before-start | `previous()` at index 0 clamps to 0, returns the first character. |
 | Clone independence | Cloned iterator has the same position but modifying one does not affect the other. |
 
-### TextData
+### TextData (top-level class)
 
 | Assertion category | Meaning |
 | --- | --- |
@@ -103,14 +108,14 @@ alongside any future tests without interference.
 | Derived origin | `origOriginX()` and `origOriginY()` return `(int) -origRect.getMinX()` and `(int) -origRect.getMinY()`. |
 | Used lifecycle | `used()` starts `false`; `markUsed()` sets it `true`; `clearUsed()` resets to `false`. |
 
-### DefaultRenderDelegate
+### DefaultRenderDelegate (top-level class)
 
 | Assertion category | Meaning |
 | --- | --- |
 | `intensityOnly()` | Returns `true`. This controls whether the text renderer uses intensity-only textures for performance. |
 | `getBounds` delegation | Non-null rectangle with positive width and height for non-empty text. Exact values are platform-dependent. |
 
-### CharacterCache
+### CharacterCache (top-level class)
 
 | Assertion category | Meaning |
 | --- | --- |
@@ -133,8 +138,8 @@ alongside any future tests without interference.
 
 ### All 49 tests are skipped
 
-The test class uses reflection to access inner classes. If the reflection
-fails (e.g., due to a Java module system restriction or security manager),
+The test class accesses extracted top-level classes and uses reflection for
+`NonCachingTextRenderer` private members. If the JDK blocks reflective access,
 all tests may be skipped. Verify that the JDK allows reflective access to
 private members:
 
@@ -163,11 +168,11 @@ not exact pixel values. If a test fails with bounds == 0:
 1. Check that at least one font is available to the JDK.
 2. On minimal Docker images, install `fontconfig` and a base font package.
 
-### Reflection target not found
+### Class not found after extraction
 
-If `Class.forName("...NonCachingTextRenderer$CharSequenceIterator")` throws
-`ClassNotFoundException`, an inner class was renamed. Update the test's
-`Class.forName` string to match the new name.
+After Phase 2 extraction, all 9 inner classes are top-level. Tests reference
+them directly (e.g., `CharSequenceIterator.class`, `TextData.class`). No
+`Class.forName` with `$`-notation should remain in the test suite.
 
 ## What this guide does NOT cover
 
