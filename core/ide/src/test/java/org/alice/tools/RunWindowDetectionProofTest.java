@@ -445,7 +445,7 @@ public class RunWindowDetectionProofTest {
         + "  \"schema_version\": \"" + SCHEMA_VERSION + "\",\n"
         + "  \"status\": \"detected\",\n"
         + "  \"window_title\": \"" + EatmeRunWindowEvidence.escapeJson(windowTitle) + "\",\n"
-        + "  \"window_id\": \"" + windowId + "\",\n"
+        + "  \"window_id\": \"" + EatmeRunWindowEvidence.escapeJson(windowId) + "\",\n"
         + pollingParametersJson()
         + claimedFieldsJson()
         + doesNotClaimJson()
