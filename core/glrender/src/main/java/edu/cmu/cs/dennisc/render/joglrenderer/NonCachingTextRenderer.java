@@ -54,8 +54,8 @@ public class NonCachingTextRenderer extends TextRenderer {
   }
 
   // These are occasionally useful for more in-depth debugging
-  private static final boolean DISABLE_GLYPH_CACHE = true;
-  private static final boolean DRAW_BBOXES = false;
+  static final boolean DISABLE_GLYPH_CACHE = true;
+  static final boolean DRAW_BBOXES = false;
 
   static final int kSize = 256;
 
@@ -77,20 +77,20 @@ public class NonCachingTextRenderer extends TextRenderer {
   static final int kTotalBufferSizeBytesTex = kTotalBufferSizeCoordsTex * 4;
   static final int kSizeInBytes_OneVertices_VertexData = kCoordsPerVertVerts * 4;
   static final int kSizeInBytes_OneVertices_TexData = kCoordsPerVertTex * 4;
-  private final Font font;
+  final Font font;
   private final boolean antialiased;
   private final boolean useFractionalMetrics;
 
   // Whether we're attempting to use automatic mipmap generation support
   private boolean mipmap;
-  private RectanglePacker packer;
+  RectanglePacker packer;
   private boolean haveMaxSize;
-  private final TextRenderer.RenderDelegate renderDelegate;
+  final TextRenderer.RenderDelegate renderDelegate;
   private TextureRenderer cachedBackingStore;
   private Graphics2D cachedGraphics;
   private FontRenderContext cachedFontRenderContext;
   private final Map<String, Rect> stringLocations = new HashMap<String, Rect>();
-  private final NonCachingTextRenderer.GlyphProducer mGlyphProducer;
+  private final TextRendererGlyphProducer mGlyphProducer;
 
   private int numRenderCycles;
 
@@ -117,13 +117,13 @@ public class NonCachingTextRenderer extends TextRenderer {
 
   // Debugging purposes only
   private boolean debugged;
-  NonCachingTextRenderer.Pipelined_QuadRenderer mPipelinedQuadRenderer;
+  TextRendererQuadRenderer mPipelinedQuadRenderer;
 
   //emzic: added boolean flag
   private boolean useVertexArrays = true;
 
   //emzic: added boolean flag
-  private boolean isExtensionAvailable_GL_VERSION_1_5;
+  boolean isExtensionAvailable_GL_VERSION_1_5;
   private boolean checkFor_isExtensionAvailable_GL_VERSION_1_5;
 
   // Whether GL_LINEAR filtering is enabled for the backing store
@@ -176,7 +176,7 @@ public class NonCachingTextRenderer extends TextRenderer {
 
     this.renderDelegate = renderDelegate;
 
-    mGlyphProducer = new NonCachingTextRenderer.GlyphProducer(font.getNumGlyphs());
+    mGlyphProducer = new TextRendererGlyphProducer(font.getNumGlyphs(), this);
   }
 
   /** Returns the bounding rectangle of the given String, assuming it
@@ -451,7 +451,7 @@ public class NonCachingTextRenderer extends TextRenderer {
   // Internals only below this point
   //
 
-  private static Rectangle2D preNormalize(final Rectangle2D src) {
+  static Rectangle2D preNormalize(final Rectangle2D src) {
     // Need to round to integer coordinates
     // Also give ourselves a little slop around the reported
     // bounds of glyphs because it looks like neither the visual
@@ -464,7 +464,7 @@ public class NonCachingTextRenderer extends TextRenderer {
   }
 
 
-  private Rectangle2D normalize(final Rectangle2D src) {
+  Rectangle2D normalize(final Rectangle2D src) {
     // Give ourselves a boundary around each entity on the backing
     // store in order to prevent bleeding of nearby Strings due to
     // the fact that we use linear filtering
@@ -480,7 +480,7 @@ public class NonCachingTextRenderer extends TextRenderer {
         (int) Math.ceil(src.getHeight()) + 2 * boundary);
   }
 
-  private TextureRenderer getBackingStore() {
+  TextureRenderer getBackingStore() {
     final TextureRenderer renderer = (TextureRenderer) packer.getBackingStore();
 
     if (renderer != cachedBackingStore) {
@@ -497,7 +497,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     return cachedBackingStore;
   }
 
-  private Graphics2D getGraphics2D() {
+  Graphics2D getGraphics2D() {
     final TextureRenderer renderer = getBackingStore();
 
     if (cachedGraphics == null) {
@@ -675,7 +675,7 @@ public class NonCachingTextRenderer extends TextRenderer {
 
   private void internal_draw3D(final CharSequence str, float x, final float y, final float z,
                                final float scaleFactor) {
-    for (final NonCachingTextRenderer.Glyph glyph : mGlyphProducer.getGlyphs(str)) {
+    for (final TextRendererGlyph glyph : mGlyphProducer.getGlyphs(str)) {
       final float advance = glyph.draw3D(x, y, z, scaleFactor);
       x += advance * scaleFactor;
     }
@@ -687,7 +687,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     }
   }
 
-  private void draw3D_ROBUST(final CharSequence str, final float x, final float y, final float z,
+  void draw3D_ROBUST(final CharSequence str, final float x, final float y, final float z,
                              final float scaleFactor) {
     String curStr;
     if (str instanceof String string) {
@@ -800,7 +800,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     debugged = true;
   }
 
-  private static class CharSequenceIterator implements CharacterIterator {
+  static class CharSequenceIterator implements CharacterIterator {
     CharSequence mSequence;
     int mLength;
     int mCurrentIndex;
@@ -1184,377 +1184,11 @@ public class NonCachingTextRenderer extends TextRenderer {
   //
 
   // A temporary to prevent excessive garbage creation
-  private final char[] singleUnicode = new char[1];
+  final char[] singleUnicode = new char[1];
 
-  /** A Glyph represents either a single unicode glyph or a
-   substring of characters to be drawn. The reason for the dual
-   behavior is so that we can take in a sequence of unicode
-   characters and partition them into runs of individual glyphs,
-   but if we encounter complex text and/or unicode sequences we
-   don't understand, we can render them using the
-   string-by-string method. <P>
 
-   Glyphs need to be able to re-upload themselves to the backing
-   store on demand as we go along in the render sequence.
-   */
 
-  class Glyph {
-    // If this Glyph represents an individual unicode glyph, this
-    // is its unicode ID. If it represents a String, this is -1.
-    private int unicodeID;
-    // If the above field isn't -1, then these fields are used.
-    // The glyph code in the font
-    private int glyphCode;
-    // The GlyphProducer which created us
-    private NonCachingTextRenderer.GlyphProducer producer;
-    // The advance of this glyph
-    private float advance;
-    // The GlyphVector for this single character; this is passed
-    // in during construction but cleared during the upload
-    // process
-    private GlyphVector singleUnicodeGlyphVector;
-    // The rectangle of this glyph on the backing store, or null
-    // if it has been cleared due to space pressure
-    private Rect glyphRectForTextureMapping;
-    // If this Glyph represents a String, this is the sequence of
-    // characters
-    private String str;
-    // Whether we need a valid advance when rendering this string
-    // (i.e., whether it has other single glyphs coming after it)
-    private boolean needAdvance;
-
-    // Creates a Glyph representing an individual Unicode character
-    public Glyph(final int unicodeID,
-                 final int glyphCode,
-                 final float advance,
-                 final GlyphVector singleUnicodeGlyphVector,
-                 final NonCachingTextRenderer.GlyphProducer producer) {
-      this.unicodeID = unicodeID;
-      this.glyphCode = glyphCode;
-      this.advance = advance;
-      this.singleUnicodeGlyphVector = singleUnicodeGlyphVector;
-      this.producer = producer;
-    }
-
-    // Creates a Glyph representing a sequence of characters, with
-    // an indication of whether additional single glyphs are being
-    // rendered after it
-    public Glyph(final String str, final boolean needAdvance) {
-      this.str = str;
-      this.needAdvance = needAdvance;
-    }
-
-    /** Returns this glyph's unicode ID */
-    public int getUnicodeID() {
-      return unicodeID;
-    }
-
-    /** Returns this glyph's (font-specific) glyph code */
-    public int getGlyphCode() {
-      return glyphCode;
-    }
-
-    /** Returns the advance for this glyph */
-    public float getAdvance() {
-      return advance;
-    }
-
-    /** Draws this glyph and returns the (x) advance for this glyph */
-    public float draw3D(final float inX, final float inY, final float z, final float scaleFactor) {
-      if (str != null) {
-        draw3D_ROBUST(str, inX, inY, z, scaleFactor);
-        if (!needAdvance) {
-          return 0;
-        }
-        // Compute and return the advance for this string
-        final GlyphVector gv = font.createGlyphVector(getFontRenderContext(), str);
-        float totalAdvance = 0;
-        for (int i = 0; i < gv.getNumGlyphs(); i++) {
-          totalAdvance += gv.getGlyphMetrics(i).getAdvance();
-        }
-        return totalAdvance;
-      }
-
-      // This is the code path taken for individual glyphs
-      if (glyphRectForTextureMapping == null) {
-        upload();
-      }
-
-      try {
-        if (mPipelinedQuadRenderer == null) {
-          mPipelinedQuadRenderer = new NonCachingTextRenderer.Pipelined_QuadRenderer();
-        }
-
-        final TextureRenderer renderer = getBackingStore();
-        // Handles case where NPOT texture is used for backing store
-        final TextureCoords wholeImageTexCoords = renderer.getTexture().getImageTexCoords();
-        final float xScale = wholeImageTexCoords.right();
-        final float yScale = wholeImageTexCoords.bottom();
-
-        final Rect rect = glyphRectForTextureMapping;
-        final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
-        data.markUsed();
-
-        final Rectangle2D origRect = data.origRect();
-
-        final float x = inX - (scaleFactor * data.origOriginX());
-        final float y = inY - (scaleFactor * ((float) origRect.getHeight() - data.origOriginY()));
-
-        final int texturex = rect.x() + (data.origin().x - data.origOriginX());
-        final int texturey = renderer.getHeight() - rect.y() - (int) origRect.getHeight() -
-            (data.origin().y - data.origOriginY());
-        final int width = (int) origRect.getWidth();
-        final int height = (int) origRect.getHeight();
-
-        final float tx1 = xScale * texturex / renderer.getWidth();
-        final float ty1 = yScale * (1.0f -
-            ((float) texturey / (float) renderer.getHeight()));
-        final float tx2 = xScale * (texturex + width) / renderer.getWidth();
-        final float ty2 = yScale * (1.0f -
-            ((float) (texturey + height) / (float) renderer.getHeight()));
-
-        mPipelinedQuadRenderer.glTexCoord2f(tx1, ty1);
-        mPipelinedQuadRenderer.glVertex3f(x, y, z);
-        mPipelinedQuadRenderer.glTexCoord2f(tx2, ty1);
-        mPipelinedQuadRenderer.glVertex3f(x + (width * scaleFactor), y,
-            z);
-        mPipelinedQuadRenderer.glTexCoord2f(tx2, ty2);
-        mPipelinedQuadRenderer.glVertex3f(x + (width * scaleFactor),
-            y + (height * scaleFactor), z);
-        mPipelinedQuadRenderer.glTexCoord2f(tx1, ty2);
-        mPipelinedQuadRenderer.glVertex3f(x,
-            y + (height * scaleFactor), z);
-      } catch (final Exception e) {
-        e.printStackTrace();
-      }
-      return advance;
-    }
-
-    /** Notifies this glyph that it's been cleared out of the cache */
-    public void clear() {
-      glyphRectForTextureMapping = null;
-    }
-
-    private void upload() {
-      final GlyphVector gv = getGlyphVector();
-      final Rectangle2D origBBox = preNormalize(renderDelegate.getBounds(gv, getFontRenderContext()));
-      final Rectangle2D bbox = normalize(origBBox);
-      final Point origin = new Point((int) -bbox.getMinX(),
-          (int) -bbox.getMinY());
-      final Rect rect = new Rect(0, 0, (int) bbox.getWidth(),
-          (int) bbox.getHeight(),
-          new NonCachingTextRenderer.TextData(null, origin, origBBox, unicodeID));
-      packer.add(rect);
-      glyphRectForTextureMapping = rect;
-      final Graphics2D g = getGraphics2D();
-      // OK, should now have an (x, y) for this rectangle; rasterize
-      // the glyph
-      final int strx = rect.x() + origin.x;
-      final int stry = rect.y() + origin.y;
-
-      // Clear out the area we're going to draw into
-      g.setComposite(AlphaComposite.Clear);
-      g.fillRect(rect.x(), rect.y(), rect.w(), rect.h());
-      g.setComposite(AlphaComposite.Src);
-
-      // Draw the string
-      renderDelegate.drawGlyphVector(g, gv, strx, stry);
-
-      if (DRAW_BBOXES) {
-        final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
-        // Draw a bounding box on the backing store
-        g.drawRect(strx - data.origOriginX(),
-            stry - data.origOriginY(),
-            (int) data.origRect().getWidth(),
-            (int) data.origRect().getHeight());
-        g.drawRect(strx - data.origin().x,
-            stry - data.origin().y,
-            rect.w(),
-            rect.h());
-      }
-
-      // Mark this region of the TextureRenderer as dirty
-      getBackingStore().markDirty(rect.x(), rect.y(), rect.w(),
-          rect.h());
-      // Re-register ourselves with our producer
-      producer.register(this);
-    }
-
-    private GlyphVector getGlyphVector() {
-      final GlyphVector gv = singleUnicodeGlyphVector;
-      if (gv != null) {
-        singleUnicodeGlyphVector = null; // Don't need this anymore
-        return gv;
-      }
-      singleUnicode[0] = (char) unicodeID;
-      return font.createGlyphVector(getFontRenderContext(), singleUnicode);
-    }
-  }
-
-  class GlyphProducer {
-    static final int undefined = -2;
-    final FontRenderContext fontRenderContext = null; // FIXME: Never initialized!
-    List<NonCachingTextRenderer.Glyph> glyphsOutput = new ArrayList<NonCachingTextRenderer.Glyph>();
-    HashMap<String, GlyphVector> fullGlyphVectorCache = new HashMap<String, GlyphVector>();
-    HashMap<Character, GlyphMetrics> glyphMetricsCache = new HashMap<Character, GlyphMetrics>();
-    // The mapping from unicode character to font-specific glyph ID
-    int[] unicodes2Glyphs;
-    // The mapping from glyph ID to Glyph
-    NonCachingTextRenderer.Glyph[] glyphCache;
-    // We re-use this for each incoming string
-    NonCachingTextRenderer.CharSequenceIterator iter = new NonCachingTextRenderer.CharSequenceIterator();
-
-    GlyphProducer(final int fontLengthInGlyphs) {
-      unicodes2Glyphs = new int[512];
-      glyphCache = new NonCachingTextRenderer.Glyph[fontLengthInGlyphs];
-      clearAllCacheEntries();
-    }
-
-    public List<NonCachingTextRenderer.Glyph> getGlyphs(final CharSequence inString) {
-      glyphsOutput.clear();
-      GlyphVector fullRunGlyphVector;
-      fullRunGlyphVector = fullGlyphVectorCache.get(inString.toString());
-      if (fullRunGlyphVector == null) {
-        iter.initFromCharSequence(inString);
-        fullRunGlyphVector = font.createGlyphVector(getFontRenderContext(), iter);
-        fullGlyphVectorCache.put(inString.toString(), fullRunGlyphVector);
-      }
-      final boolean complex = (fullRunGlyphVector.getLayoutFlags() != 0);
-
-      // Copied entire class for this. Disabling the glyph cache
-      if (complex || DISABLE_GLYPH_CACHE) {
-        // Punt to the robust version of the renderer
-        glyphsOutput.add(new NonCachingTextRenderer.Glyph(inString.toString(), false));
-        return glyphsOutput;
-      }
-
-      final int lengthInGlyphs = fullRunGlyphVector.getNumGlyphs();
-      int i = 0;
-      while (i < lengthInGlyphs) {
-        final Character letter = NonCachingTextRenderer.CharacterCache.valueOf(inString.charAt(i));
-        GlyphMetrics metrics = glyphMetricsCache.get(letter);
-        if (metrics == null) {
-          metrics = fullRunGlyphVector.getGlyphMetrics(i);
-          glyphMetricsCache.put(letter, metrics);
-        }
-        final NonCachingTextRenderer.Glyph glyph = getGlyph(inString, metrics, i);
-        if (glyph != null) {
-          glyphsOutput.add(glyph);
-          i++;
-        } else {
-          // Assemble a run of characters that don't fit in
-          // the cache
-          final StringBuilder buf = new StringBuilder();
-          while (i < lengthInGlyphs &&
-              getGlyph(inString, fullRunGlyphVector.getGlyphMetrics(i), i) == null) {
-            buf.append(inString.charAt(i++));
-          }
-          glyphsOutput.add(new NonCachingTextRenderer.Glyph(buf.toString(),
-              // Any more glyphs after this run?
-              i < lengthInGlyphs));
-        }
-      }
-      return glyphsOutput;
-    }
-
-    public void clearCacheEntry(final int unicodeID) {
-      final int glyphID = unicodes2Glyphs[unicodeID];
-      if (glyphID != undefined) {
-        final NonCachingTextRenderer.Glyph glyph = glyphCache[glyphID];
-        if (glyph != null) {
-          glyph.clear();
-        }
-        glyphCache[glyphID] = null;
-      }
-      unicodes2Glyphs[unicodeID] = undefined;
-    }
-
-    public void clearAllCacheEntries() {
-      for (int i = 0; i < unicodes2Glyphs.length; i++) {
-        clearCacheEntry(i);
-      }
-    }
-
-    public void register(final NonCachingTextRenderer.Glyph glyph) {
-      unicodes2Glyphs[glyph.getUnicodeID()] = glyph.getGlyphCode();
-      glyphCache[glyph.getGlyphCode()] = glyph;
-    }
-
-    public float getGlyphPixelWidth(final char unicodeID) {
-      final NonCachingTextRenderer.Glyph glyph = getGlyph(unicodeID);
-      if (glyph != null) {
-        return glyph.getAdvance();
-      }
-
-      // Have to do this the hard / uncached way
-      singleUnicode[0] = unicodeID;
-      if( null == fontRenderContext ) { // FIXME: Never initialized!
-        throw new InternalError("fontRenderContext never initialized!");
-      }
-      final GlyphVector gv = font.createGlyphVector(fontRenderContext,
-          singleUnicode);
-      return gv.getGlyphMetrics(0).getAdvance();
-    }
-
-    // Returns a glyph object for this single glyph. Returns null
-    // if the unicode or glyph ID would be out of bounds of the
-    // glyph cache.
-    private NonCachingTextRenderer.Glyph getGlyph(final CharSequence inString,
-                                                  final GlyphMetrics glyphMetrics,
-                                                  final int index) {
-      final char unicodeID = inString.charAt(index);
-
-      if (unicodeID >= unicodes2Glyphs.length) {
-        return null;
-      }
-
-      final int glyphID = unicodes2Glyphs[unicodeID];
-      if (glyphID != undefined) {
-        return glyphCache[glyphID];
-      }
-
-      // Must fabricate the glyph
-      singleUnicode[0] = unicodeID;
-      final GlyphVector gv = font.createGlyphVector(getFontRenderContext(), singleUnicode);
-      return getGlyph(unicodeID, gv, glyphMetrics);
-    }
-
-    // It's unclear whether this variant might produce less
-    // optimal results than if we can see the entire GlyphVector
-    // for the incoming string
-    private NonCachingTextRenderer.Glyph getGlyph(final int unicodeID) {
-      if (unicodeID >= unicodes2Glyphs.length) {
-        return null;
-      }
-
-      final int glyphID = unicodes2Glyphs[unicodeID];
-      if (glyphID != undefined) {
-        return glyphCache[glyphID];
-      }
-      singleUnicode[0] = (char) unicodeID;
-      final GlyphVector gv = font.createGlyphVector(getFontRenderContext(), singleUnicode);
-      return getGlyph(unicodeID, gv, gv.getGlyphMetrics(0));
-    }
-
-    private NonCachingTextRenderer.Glyph getGlyph(final int unicodeID,
-                                                  final GlyphVector singleUnicodeGlyphVector,
-                                                  final GlyphMetrics metrics) {
-      final int glyphCode = singleUnicodeGlyphVector.getGlyphCode(0);
-      // Have seen huge glyph codes (65536) coming out of some fonts in some Unicode situations
-      if (glyphCode >= glyphCache.length) {
-        return null;
-      }
-      final NonCachingTextRenderer.Glyph glyph = new NonCachingTextRenderer.Glyph(unicodeID,
-          glyphCode,
-          metrics.getAdvance(),
-          singleUnicodeGlyphVector,
-          this);
-      register(glyph);
-      return glyph;
-    }
-  }
-
-  private static class CharacterCache {
+  static class CharacterCache {
     private CharacterCache() {
     }
 
@@ -1574,164 +1208,6 @@ public class NonCachingTextRenderer extends TextRenderer {
     }
   }
 
-  class Pipelined_QuadRenderer {
-    int mOutstandingGlyphsVerticesPipeline = 0;
-    FloatBuffer mTexCoords;
-    FloatBuffer mVertCoords;
-    boolean usingVBOs;
-    int mVBO_For_ResuableTileVertices;
-    int mVBO_For_ResuableTileTexCoords;
-
-    Pipelined_QuadRenderer() {
-      final GL2 gl = GLContext.getCurrentGL().getGL2();
-      mVertCoords = Buffers.newDirectFloatBuffer(kTotalBufferSizeCoordsVerts);
-      mTexCoords = Buffers.newDirectFloatBuffer(kTotalBufferSizeCoordsTex);
-
-      usingVBOs = getMyUseVertexArrays() && is15Available(gl);
-
-      if (usingVBOs) {
-        try {
-          final int[] vbos = new int[2];
-          gl.glGenBuffers(2, IntBuffer.wrap(vbos));
-
-          mVBO_For_ResuableTileVertices = vbos[0];
-          mVBO_For_ResuableTileTexCoords = vbos[1];
-
-          gl.glBindBuffer(GL.GL_ARRAY_BUFFER,
-              mVBO_For_ResuableTileVertices);
-          gl.glBufferData(GL.GL_ARRAY_BUFFER, kTotalBufferSizeBytesVerts,
-              null, GL2ES2.GL_STREAM_DRAW); // stream draw because this is a single quad use pipeline
-
-          gl.glBindBuffer(GL.GL_ARRAY_BUFFER,
-              mVBO_For_ResuableTileTexCoords);
-          gl.glBufferData(GL.GL_ARRAY_BUFFER, kTotalBufferSizeBytesTex,
-              null, GL2ES2.GL_STREAM_DRAW); // stream draw because this is a single quad use pipeline
-        } catch (final Exception e) {
-          isExtensionAvailable_GL_VERSION_1_5 = false;
-          usingVBOs = false;
-        }
-      }
-    }
-
-    public void glTexCoord2f(final float v, final float v1) {
-      mTexCoords.put(v);
-      mTexCoords.put(v1);
-    }
-
-    public void glVertex3f(final float inX, final float inY, final float inZ) {
-      mVertCoords.put(inX);
-      mVertCoords.put(inY);
-      mVertCoords.put(inZ);
-
-      mOutstandingGlyphsVerticesPipeline++;
-
-      if (mOutstandingGlyphsVerticesPipeline >= kTotalBufferSizeVerts) {
-        this.draw();
-      }
-    }
-
-    private void draw() {
-      if (useVertexArrays) {
-        drawVertexArrays();
-      } else {
-        drawIMMEDIATE();
-      }
-    }
-
-    private void drawVertexArrays() {
-      if (mOutstandingGlyphsVerticesPipeline > 0) {
-        final GL2 gl = GLContext.getCurrentGL().getGL2();
-
-        final TextureRenderer renderer = getBackingStore();
-        renderer.getTexture(); // triggers texture uploads.  Maybe this should be more obvious?
-
-        mVertCoords.rewind();
-        mTexCoords.rewind();
-
-        gl.glEnableClientState(GLPointerFunc.GL_VERTEX_ARRAY);
-
-        if (usingVBOs) {
-          gl.glBindBuffer(GL.GL_ARRAY_BUFFER,
-              mVBO_For_ResuableTileVertices);
-          gl.glBufferSubData(GL.GL_ARRAY_BUFFER, 0,
-              mOutstandingGlyphsVerticesPipeline * kSizeInBytes_OneVertices_VertexData,
-              mVertCoords); // upload only the new stuff
-          gl.glVertexPointer(3, GL.GL_FLOAT, 0, 0);
-        } else {
-          gl.glVertexPointer(3, GL.GL_FLOAT, 0, mVertCoords);
-        }
-
-        gl.glEnableClientState(GLPointerFunc.GL_TEXTURE_COORD_ARRAY);
-
-        if (usingVBOs) {
-          gl.glBindBuffer(GL.GL_ARRAY_BUFFER,
-              mVBO_For_ResuableTileTexCoords);
-          gl.glBufferSubData(GL.GL_ARRAY_BUFFER, 0,
-              mOutstandingGlyphsVerticesPipeline * kSizeInBytes_OneVertices_TexData,
-              mTexCoords); // upload only the new stuff
-          gl.glTexCoordPointer(2, GL.GL_FLOAT, 0, 0);
-        } else {
-          gl.glTexCoordPointer(2, GL.GL_FLOAT, 0, mTexCoords);
-        }
-
-        gl.glDrawArrays(GL2ES3.GL_QUADS, 0,
-            mOutstandingGlyphsVerticesPipeline);
-
-        mVertCoords.rewind();
-        mTexCoords.rewind();
-        mOutstandingGlyphsVerticesPipeline = 0;
-      }
-    }
-
-    private void drawIMMEDIATE() {
-      if (mOutstandingGlyphsVerticesPipeline > 0) {
-        final TextureRenderer renderer = getBackingStore();
-        renderer.getTexture(); // triggers texture uploads.  Maybe this should be more obvious?
-
-        final GL2 gl = GLContext.getCurrentGL().getGL2();
-        gl.glBegin(GL2ES3.GL_QUADS);
-
-        try {
-          final int numberOfQuads = mOutstandingGlyphsVerticesPipeline / 4;
-          mVertCoords.rewind();
-          mTexCoords.rewind();
-
-          for (int i = 0; i < numberOfQuads; i++) {
-            gl.glTexCoord2f(mTexCoords.get(), mTexCoords.get());
-            gl.glVertex3f(mVertCoords.get(), mVertCoords.get(),
-                mVertCoords.get());
-
-            gl.glTexCoord2f(mTexCoords.get(), mTexCoords.get());
-            gl.glVertex3f(mVertCoords.get(), mVertCoords.get(),
-                mVertCoords.get());
-
-            gl.glTexCoord2f(mTexCoords.get(), mTexCoords.get());
-            gl.glVertex3f(mVertCoords.get(), mVertCoords.get(),
-                mVertCoords.get());
-
-            gl.glTexCoord2f(mTexCoords.get(), mTexCoords.get());
-            gl.glVertex3f(mVertCoords.get(), mVertCoords.get(),
-                mVertCoords.get());
-          }
-        } catch (final Exception e) {
-          e.printStackTrace();
-        } finally {
-          gl.glEnd();
-          mVertCoords.rewind();
-          mTexCoords.rewind();
-          mOutstandingGlyphsVerticesPipeline = 0;
-        }
-      }
-    }
-
-    public void dispose() {
-      final GL2 gl = GLContext.getCurrentGL().getGL2();
-      final int[] vbos = new int[2];
-      vbos[0] = mVBO_For_ResuableTileVertices;
-      vbos[1] = mVBO_For_ResuableTileTexCoords;
-      gl.glDeleteBuffers(2, IntBuffer.wrap(vbos));
-    }
-  }
 
   class DebugListener implements GLEventListener {
     private GLU glu;
@@ -1832,7 +1308,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     return smoothing;
   }
 
-  private final boolean is15Available(final GL gl) {
+  final boolean is15Available(final GL gl) {
     if (!checkFor_isExtensionAvailable_GL_VERSION_1_5) {
       isExtensionAvailable_GL_VERSION_1_5 = gl.isExtensionAvailable(GLExtensions.VERSION_1_5);
       checkFor_isExtensionAvailable_GL_VERSION_1_5 = true;
