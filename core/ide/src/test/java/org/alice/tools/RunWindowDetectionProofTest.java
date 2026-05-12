@@ -6,7 +6,6 @@ import org.junit.rules.TemporaryFolder;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
 import java.awt.AWTException;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
@@ -58,7 +57,7 @@ public class RunWindowDetectionProofTest {
   private static final String WINDOW_TITLE = "Run Window Detection Proof";
   private static final int POLL_INTERVAL_MS = 100;
   private static final int MAX_POLL_ITERATIONS = 100;
-  private static final int MAX_WAIT_SECONDS = 10;
+  private static final int MAX_WAIT_SECONDS = (MAX_POLL_ITERATIONS * POLL_INTERVAL_MS) / 1000;
   private static final String[] DOES_NOT_CLAIM = {
       "active-rendering",
       "run-execution",
@@ -76,8 +75,7 @@ public class RunWindowDetectionProofTest {
 
   @Test
   public void detectsJFrameViaWindowGetWindowsAndWritesDetectionEvidence() throws Exception {
-    assumeFalse("Requires a display (Xvfb or native)",
-        GraphicsEnvironment.isHeadless());
+    assumeHeadful();
     Path evidenceDir = temporaryFolder.newFolder("detection-evidence").toPath();
 
     JFrame frame = new JFrame(WINDOW_TITLE);
@@ -109,8 +107,7 @@ public class RunWindowDetectionProofTest {
 
   @Test
   public void windowIdIsHexFormattedIdentityHashCode() throws Exception {
-    assumeFalse("Requires a display (Xvfb or native)",
-        GraphicsEnvironment.isHeadless());
+    assumeHeadful();
     String uniqueTitle = WINDOW_TITLE + " hex-" + System.nanoTime();
     JFrame frame = new JFrame(uniqueTitle);
     try {
@@ -129,8 +126,7 @@ public class RunWindowDetectionProofTest {
 
   @Test
   public void writesNotDetectedEvidenceWhenWindowNotFoundWithinTimeout() throws Exception {
-    assumeFalse("Requires a display (Xvfb or native)",
-        GraphicsEnvironment.isHeadless());
+    assumeHeadful();
     Path evidenceDir = temporaryFolder.newFolder("failure-evidence").toPath();
 
     DetectionResult result = pollForWindow(
@@ -154,8 +150,7 @@ public class RunWindowDetectionProofTest {
 
   @Test
   public void disposesFrameRegardlessOfDetectionOutcome() throws Exception {
-    assumeFalse("Requires a display (Xvfb or native)",
-        GraphicsEnvironment.isHeadless());
+    assumeHeadful();
     String uniqueTitle = WINDOW_TITLE + " dispose-" + System.nanoTime();
     JFrame frame = new JFrame(uniqueTitle);
     try {
@@ -178,8 +173,7 @@ public class RunWindowDetectionProofTest {
 
   @Test
   public void robotClickedRunButtonTriggersWindowDetection() throws Exception {
-    assumeFalse("Requires a display (Xvfb or native)",
-        GraphicsEnvironment.isHeadless());
+    assumeHeadful();
     Path evidenceDir = temporaryFolder.newFolder("robot-detection-evidence").toPath();
     String runWindowTitle = WINDOW_TITLE + " robot-" + System.nanoTime();
     AtomicReference<JFrame> runWindowRef = new AtomicReference<>();
@@ -509,14 +503,19 @@ public class RunWindowDetectionProofTest {
 
   // --- Assertion helpers ---
 
+  private static void assumeHeadful() {
+    assumeFalse("Requires a display (Xvfb or native)",
+        GraphicsEnvironment.isHeadless());
+  }
+
   private static void assertSuccessSchemaFields(String json) {
     assertTrue(json, json.contains("\"schema_version\": \"" + SCHEMA_VERSION + "\""));
     assertTrue(json, json.contains("\"status\": \"detected\""));
     assertTrue(json, json.contains("\"window_title\":"));
     assertTrue(json, json.contains("\"window_id\": \"0x"));
-    assertTrue(json, json.contains("\"poll_interval_ms\": 100"));
-    assertTrue(json, json.contains("\"max_poll_iterations\": 100"));
-    assertTrue(json, json.contains("\"max_wait_seconds\": 10"));
+    assertTrue(json, json.contains("\"poll_interval_ms\": " + POLL_INTERVAL_MS));
+    assertTrue(json, json.contains("\"max_poll_iterations\": " + MAX_POLL_ITERATIONS));
+    assertTrue(json, json.contains("\"max_wait_seconds\": " + MAX_WAIT_SECONDS));
   }
 
   private static void assertAllFalseClaimBooleans(String json) {
