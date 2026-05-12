@@ -133,17 +133,17 @@ class TextRendererGlyph {
       final float y = inY - (scaleFactor * ((float) origRect.getHeight() - data.origOriginY()));
 
       final int texturex = rect.x() + (data.origin().x - data.origOriginX());
-      final int texturey = renderer.getHeight() - rect.y() - (int) origRect.getHeight() -
-          (data.origin().y - data.origOriginY());
+      final int texturey = renderer.getHeight() - rect.y() - (int) origRect.getHeight()
+          - (data.origin().y - data.origOriginY());
       final int width = (int) origRect.getWidth();
       final int height = (int) origRect.getHeight();
 
       final float tx1 = xScale * texturex / renderer.getWidth();
-      final float ty1 = yScale * (1.0f -
-          ((float) texturey / (float) renderer.getHeight()));
+      final float ty1 = yScale * (1.0f
+          - ((float) texturey / (float) renderer.getHeight()));
       final float tx2 = xScale * (texturex + width) / renderer.getWidth();
-      final float ty2 = yScale * (1.0f -
-          ((float) (texturey + height) / (float) renderer.getHeight()));
+      final float ty2 = yScale * (1.0f
+          - ((float) (texturey + height) / (float) renderer.getHeight()));
 
       textRenderer.mPipelinedQuadRenderer.glTexCoord2f(tx1, ty1);
       textRenderer.mPipelinedQuadRenderer.glVertex3f(x, y, z);

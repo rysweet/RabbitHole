@@ -69,8 +69,8 @@ class TextRendererGlyphProducer {
         // Assemble a run of characters that don't fit in
         // the cache
         final StringBuilder buf = new StringBuilder();
-        while (i < lengthInGlyphs &&
-            getGlyph(inString, fullRunGlyphVector.getGlyphMetrics(i), i) == null) {
+        while (i < lengthInGlyphs
+            && getGlyph(inString, fullRunGlyphVector.getGlyphMetrics(i), i) == null) {
           buf.append(inString.charAt(i++));
         }
         glyphsOutput.add(new TextRendererGlyph(buf.toString(),
@@ -112,7 +112,7 @@ class TextRendererGlyphProducer {
 
     // Have to do this the hard / uncached way
     textRenderer.singleUnicode[0] = unicodeID;
-    if( null == fontRenderContext ) { // FIXME: Never initialized!
+    if (null == fontRenderContext) { // FIXME: Never initialized!
       throw new InternalError("fontRenderContext never initialized!");
     }
     final GlyphVector gv = textRenderer.font.createGlyphVector(fontRenderContext,
