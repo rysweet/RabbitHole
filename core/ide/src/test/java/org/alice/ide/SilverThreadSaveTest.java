@@ -25,8 +25,11 @@ import org.lgna.story.SProgram;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -109,6 +112,30 @@ public class SilverThreadSaveTest {
     assertTrue("First statement must be a Comment", firstStatement instanceof Comment);
     assertEquals("Comment text must survive production save round-trip",
         COMMENT_TEXT, ((Comment) firstStatement).text.getValue());
+  }
+
+  // ── Test: Load indiaMinimum.a3p → save → verify non-zero file size ───
+
+  @Test
+  public void verifyFileSizeIsNonZero() throws Exception {
+    // Copy bundled starter project from classpath to a temp file
+    File starterFile = new File(temporaryFolder.getRoot(), "indiaMinimum.a3p");
+    try (InputStream in = getClass().getResourceAsStream("/starters/indiaMinimum.a3p")) {
+      assertNotNull("indiaMinimum.a3p must be on the test classpath", in);
+      Files.copy(in, starterFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    // Load the starter project
+    Project loadedProject = IoUtilities.readProject(starterFile);
+    assertNotNull("Loaded project must not be null", loadedProject);
+
+    // Save to a new temp file
+    File savedFile = new File(temporaryFolder.getRoot(), "indiaMinimum-saved.a3p");
+    IoUtilities.writeProject(savedFile, loadedProject);
+
+    // Assert the saved file exists and has non-zero size
+    assertTrue("Saved file must exist on disk", savedFile.isFile());
+    assertTrue("Saved file size must be greater than zero", savedFile.length() > 0);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
