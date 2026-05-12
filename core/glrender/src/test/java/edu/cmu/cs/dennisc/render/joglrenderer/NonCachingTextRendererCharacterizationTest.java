@@ -40,7 +40,7 @@ public class NonCachingTextRendererCharacterizationTest {
   private static Method preNormalizeMethod;
   private static Class<?> characterCacheClass;
   private static Method charCacheValueOf;
-  private static NonCachingTextRenderer.DefaultRenderDelegate defaultDelegate;
+  private static DefaultRenderDelegate defaultDelegate;
   private static Class<?> charSeqIterClass;
   private static Constructor<?> charSeqIterCtor;
   private static Constructor<?> charSeqIterNoArgCtor;
@@ -57,18 +57,18 @@ public class NonCachingTextRendererCharacterizationTest {
     preNormalizeMethod.setAccessible(true);
 
     characterCacheClass = Class.forName(
-        "edu.cmu.cs.dennisc.render.joglrenderer.NonCachingTextRenderer$CharacterCache");
+        "edu.cmu.cs.dennisc.render.joglrenderer.CharacterCache");
     charCacheValueOf = characterCacheClass.getDeclaredMethod("valueOf", char.class);
     charCacheValueOf.setAccessible(true);
 
     charSeqIterClass = Class.forName(
-        "edu.cmu.cs.dennisc.render.joglrenderer.NonCachingTextRenderer$CharSequenceIterator");
+        "edu.cmu.cs.dennisc.render.joglrenderer.CharSequenceIterator");
     charSeqIterCtor = charSeqIterClass.getDeclaredConstructor(CharSequence.class);
     charSeqIterCtor.setAccessible(true);
     charSeqIterNoArgCtor = charSeqIterClass.getDeclaredConstructor();
     charSeqIterNoArgCtor.setAccessible(true);
 
-    defaultDelegate = new NonCachingTextRenderer.DefaultRenderDelegate();
+    defaultDelegate = new DefaultRenderDelegate();
 
     try {
       sharedRenderer = new NonCachingTextRenderer(TEST_FONT);
@@ -286,7 +286,7 @@ public class NonCachingTextRendererCharacterizationTest {
 
   @Test
   public void textData_string_returnsConstructorArg() {
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         "hello", new Point(5, 10), new Rectangle2D.Double(-2, -3, 20, 15), 42);
     assertEquals("hello", td.string());
   }
@@ -294,7 +294,7 @@ public class NonCachingTextRendererCharacterizationTest {
   @Test
   public void textData_origin_returnsConstructorPoint() {
     Point p = new Point(5, 10);
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         "x", p, new Rectangle2D.Double(0, 0, 10, 10), -1);
     assertSame(p, td.origin());
   }
@@ -302,7 +302,7 @@ public class NonCachingTextRendererCharacterizationTest {
   @Test
   public void textData_origOriginX_isNegativeMinX() {
     Rectangle2D origRect = new Rectangle2D.Double(-3.0, -5.0, 20, 15);
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         "x", new Point(0, 0), origRect, -1);
     // origOriginX = (int) -origRect.getMinX() = (int) -(-3.0) = 3
     assertEquals(3, td.origOriginX());
@@ -311,7 +311,7 @@ public class NonCachingTextRendererCharacterizationTest {
   @Test
   public void textData_origOriginY_isNegativeMinY() {
     Rectangle2D origRect = new Rectangle2D.Double(-3.0, -5.0, 20, 15);
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         "x", new Point(0, 0), origRect, -1);
     assertEquals(5, td.origOriginY());
   }
@@ -319,14 +319,14 @@ public class NonCachingTextRendererCharacterizationTest {
   @Test
   public void textData_origRect_returnsSameInstance() {
     Rectangle2D origRect = new Rectangle2D.Double(0, 0, 10, 10);
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         "x", new Point(0, 0), origRect, -1);
     assertSame(origRect, td.origRect());
   }
 
   @Test
   public void textData_usedLifecycle() {
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         "x", new Point(0, 0), new Rectangle2D.Double(0, 0, 10, 10), -1);
     assertFalse("starts unused", td.used());
     td.markUsed();
@@ -337,14 +337,14 @@ public class NonCachingTextRendererCharacterizationTest {
 
   @Test
   public void textData_unicodeID_isAccessible() {
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         null, new Point(0, 0), new Rectangle2D.Double(0, 0, 1, 1), 65);
     assertEquals(65, td.unicodeID);
   }
 
   @Test
   public void textData_nullString_isAllowed() {
-    NonCachingTextRenderer.TextData td = new NonCachingTextRenderer.TextData(
+    TextData td = new TextData(
         null, new Point(0, 0), new Rectangle2D.Double(0, 0, 1, 1), -1);
     assertNull(td.string());
   }
@@ -466,7 +466,7 @@ public class NonCachingTextRendererCharacterizationTest {
     f.setAccessible(true);
     Object delegate = f.get(sharedRenderer);
     assertTrue("null renderDelegate should create DefaultRenderDelegate",
-        delegate instanceof NonCachingTextRenderer.DefaultRenderDelegate);
+        delegate instanceof DefaultRenderDelegate);
   }
 
   @Test

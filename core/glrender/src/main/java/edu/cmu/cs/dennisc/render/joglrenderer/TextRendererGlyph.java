@@ -124,7 +124,7 @@ class TextRendererGlyph {
       final float yScale = wholeImageTexCoords.bottom();
 
       final Rect rect = glyphRectForTextureMapping;
-      final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
+      final TextData data = (TextData) rect.getUserData();
       data.markUsed();
 
       final Rectangle2D origRect = data.origRect();
@@ -176,7 +176,7 @@ class TextRendererGlyph {
         (int) -bbox.getMinY());
     final Rect rect = new Rect(0, 0, (int) bbox.getWidth(),
         (int) bbox.getHeight(),
-        new NonCachingTextRenderer.TextData(null, origin, origBBox, unicodeID));
+        new TextData(null, origin, origBBox, unicodeID));
     textRenderer.packer.add(rect);
     glyphRectForTextureMapping = rect;
     final Graphics2D g = textRenderer.getGraphics2D();
@@ -194,7 +194,7 @@ class TextRendererGlyph {
     textRenderer.renderDelegate.drawGlyphVector(g, gv, strx, stry);
 
     if (NonCachingTextRenderer.DRAW_BBOXES) {
-      final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
+      final TextData data = (TextData) rect.getUserData();
       // Draw a bounding box on the backing store
       g.drawRect(strx - data.origOriginX(),
           stry - data.origOriginY(),

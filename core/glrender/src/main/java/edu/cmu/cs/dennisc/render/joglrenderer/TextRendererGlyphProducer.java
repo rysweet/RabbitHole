@@ -25,7 +25,7 @@ class TextRendererGlyphProducer {
   // The mapping from glyph ID to Glyph
   TextRendererGlyph[] glyphCache;
   // We re-use this for each incoming string
-  NonCachingTextRenderer.CharSequenceIterator iter = new NonCachingTextRenderer.CharSequenceIterator();
+  CharSequenceIterator iter = new CharSequenceIterator();
 
   TextRendererGlyphProducer(final int fontLengthInGlyphs, final NonCachingTextRenderer textRenderer) {
     this.textRenderer = textRenderer;
@@ -55,7 +55,7 @@ class TextRendererGlyphProducer {
     final int lengthInGlyphs = fullRunGlyphVector.getNumGlyphs();
     int i = 0;
     while (i < lengthInGlyphs) {
-      final Character letter = NonCachingTextRenderer.CharacterCache.valueOf(inString.charAt(i));
+      final Character letter = CharacterCache.valueOf(inString.charAt(i));
       GlyphMetrics metrics = glyphMetricsCache.get(letter);
       if (metrics == null) {
         metrics = fullRunGlyphVector.getGlyphMetrics(i);

@@ -1,32 +1,23 @@
 package edu.cmu.cs.dennisc.render.joglrenderer;
 
-import com.jogamp.common.nio.Buffers;
 import com.jogamp.common.util.InterruptSource;
 import com.jogamp.common.util.PropertyAccess;
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
-import com.jogamp.opengl.fixedfunc.GLPointerFunc;
-import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.awt.TextRenderer;
 import com.jogamp.opengl.util.awt.TextureRenderer;
-import com.jogamp.opengl.util.packrect.BackingStoreManager;
 import com.jogamp.opengl.util.packrect.Rect;
 import com.jogamp.opengl.util.packrect.RectVisitor;
 import com.jogamp.opengl.util.packrect.RectanglePacker;
-import com.jogamp.opengl.util.texture.TextureCoords;
 import jogamp.opengl.Debug;
 
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.font.FontRenderContext;
-import java.awt.font.GlyphMetrics;
 import java.awt.font.GlyphVector;
 import java.awt.geom.Rectangle2D;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.text.CharacterIterator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +37,7 @@ import java.util.Map;
  */
 @SuppressWarnings("CheckStyle")
 public class NonCachingTextRenderer extends TextRenderer {
-  private static final boolean DEBUG;
+  static final boolean DEBUG;
 
   static {
     Debug.initSingleton();
@@ -82,35 +73,35 @@ public class NonCachingTextRenderer extends TextRenderer {
   private final boolean useFractionalMetrics;
 
   // Whether we're attempting to use automatic mipmap generation support
-  private boolean mipmap;
+  boolean mipmap;
   RectanglePacker packer;
   private boolean haveMaxSize;
   final TextRenderer.RenderDelegate renderDelegate;
   private TextureRenderer cachedBackingStore;
   private Graphics2D cachedGraphics;
   private FontRenderContext cachedFontRenderContext;
-  private final Map<String, Rect> stringLocations = new HashMap<String, Rect>();
-  private final TextRendererGlyphProducer mGlyphProducer;
+  final Map<String, Rect> stringLocations = new HashMap<String, Rect>();
+  final TextRendererGlyphProducer mGlyphProducer;
 
   private int numRenderCycles;
 
   // Need to keep track of whether we're in a beginRendering() /
   // endRendering() cycle so we can re-enter the exact same state if
   // we have to reallocate the backing store
-  private boolean inBeginEndPair;
-  private boolean isOrthoMode;
-  private int beginRenderingWidth;
-  private int beginRenderingHeight;
-  private boolean beginRenderingDepthTestDisabled;
+  boolean inBeginEndPair;
+  boolean isOrthoMode;
+  int beginRenderingWidth;
+  int beginRenderingHeight;
+  boolean beginRenderingDepthTestDisabled;
 
   // For resetting the color after disposal of the old backing store
-  private boolean haveCachedColor;
-  private float cachedR;
-  private float cachedG;
-  private float cachedB;
-  private float cachedA;
-  private Color cachedColor;
-  private boolean needToResetColor;
+  boolean haveCachedColor;
+  float cachedR;
+  float cachedG;
+  float cachedB;
+  float cachedA;
+  Color cachedColor;
+  boolean needToResetColor;
 
   // For debugging only
   private Frame dbgFrame;
@@ -127,7 +118,7 @@ public class NonCachingTextRenderer extends TextRenderer {
   private boolean checkFor_isExtensionAvailable_GL_VERSION_1_5;
 
   // Whether GL_LINEAR filtering is enabled for the backing store
-  private boolean smoothing = true;
+  boolean smoothing = true;
 
   /** Creates a new TextRenderer with the given font, using no
    antialiasing or fractional metrics, and the default
@@ -168,10 +159,10 @@ public class NonCachingTextRenderer extends TextRenderer {
 
     // FIXME: consider adjusting the size based on font size
     // (it will already automatically resize if necessary)
-    packer = new RectanglePacker(new NonCachingTextRenderer.Manager(), kSize, kSize);
+    packer = new RectanglePacker(new Manager(this), kSize, kSize);
 
     if (renderDelegate == null) {
-      renderDelegate = new NonCachingTextRenderer.DefaultRenderDelegate();
+      renderDelegate = new DefaultRenderDelegate();
     }
 
     this.renderDelegate = renderDelegate;
@@ -206,7 +197,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     final Rect r = stringLocations.get(str);
 
     if (r != null) {
-      final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) r.getUserData();
+      final TextData data = (TextData) r.getUserData();
 
       // Reconstitute the Java 2D results based on the cached values
       return new Rectangle2D.Double(-data.origin().x, -data.origin().y,
@@ -618,7 +609,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     }
   }
 
-  private void clearUnusedEntries() {
+  void clearUnusedEntries() {
     final java.util.List<Rect> deadRects = new ArrayList<Rect>();
 
     // Iterate through the contents of the backing store, removing
@@ -626,7 +617,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     packer.visit(new RectVisitor() {
       @Override
       public void visit(final Rect rect) {
-        final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
+        final TextData data = (TextData) rect.getUserData();
 
         if (data.used()) {
           data.clearUsed();
@@ -638,9 +629,9 @@ public class NonCachingTextRenderer extends TextRenderer {
 
     for (final Rect r : deadRects) {
       packer.remove(r);
-      stringLocations.remove(((NonCachingTextRenderer.TextData) r.getUserData()).string());
+      stringLocations.remove(((TextData) r.getUserData()).string());
 
-      final int unicodeToClearFromCache = ((NonCachingTextRenderer.TextData) r.getUserData()).unicodeID;
+      final int unicodeToClearFromCache = ((TextData) r.getUserData()).unicodeID;
 
       if (unicodeToClearFromCache > 0) {
         mGlyphProducer.clearCacheEntry(unicodeToClearFromCache);
@@ -681,7 +672,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     }
   }
 
-  private void flushGlyphPipeline() {
+  void flushGlyphPipeline() {
     if (mPipelinedQuadRenderer != null) {
       mPipelinedQuadRenderer.draw();
     }
@@ -708,7 +699,7 @@ public class NonCachingTextRenderer extends TextRenderer {
           (int) -bbox.getMinY());
       rect = new Rect(0, 0, (int) bbox.getWidth(),
           (int) bbox.getHeight(),
-          new NonCachingTextRenderer.TextData(curStr, origin, origBBox, -1));
+          new TextData(curStr, origin, origBBox, -1));
 
       packer.add(rect);
       stringLocations.put(curStr, rect);
@@ -731,7 +722,7 @@ public class NonCachingTextRenderer extends TextRenderer {
       renderDelegate.draw(g, curStr, strx, stry);
 
       if (DRAW_BBOXES) {
-        final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
+        final TextData data = (TextData) rect.getUserData();
         // Draw a bounding box on the backing store
         g.drawRect(strx - data.origOriginX(),
             stry - data.origOriginY(),
@@ -754,7 +745,7 @@ public class NonCachingTextRenderer extends TextRenderer {
     // NOTE that the rectangles managed by the packer have their
     // origin at the upper-left but the TextureRenderer's origin is
     // at its lower left!!!
-    final NonCachingTextRenderer.TextData data = (NonCachingTextRenderer.TextData) rect.getUserData();
+    final TextData data = (TextData) rect.getUserData();
     data.markUsed();
 
     final Rectangle2D origRect = data.origRect();
@@ -776,7 +767,7 @@ public class NonCachingTextRenderer extends TextRenderer {
 
     final GLCanvas dbgCanvas = new GLCanvas(new GLCapabilities(gl.getGLProfile()));
     dbgCanvas.setSharedContext(GLContext.getCurrent());
-    dbgCanvas.addGLEventListener(new NonCachingTextRenderer.DebugListener(gl, dbgFrame));
+    dbgCanvas.addGLEventListener(new DebugListener(this, gl, dbgFrame));
     dbgFrame.add(dbgCanvas);
 
     final FPSAnimator anim = new FPSAnimator(dbgCanvas, 10);
@@ -800,472 +791,12 @@ public class NonCachingTextRenderer extends TextRenderer {
     debugged = true;
   }
 
-  static class CharSequenceIterator implements CharacterIterator {
-    CharSequence mSequence;
-    int mLength;
-    int mCurrentIndex;
-
-    CharSequenceIterator() {
-    }
-
-    CharSequenceIterator(final CharSequence sequence) {
-      initFromCharSequence(sequence);
-    }
-
-    public void initFromCharSequence(final CharSequence sequence) {
-      mSequence = sequence;
-      mLength = mSequence.length();
-      mCurrentIndex = 0;
-    }
-
-    @Override
-    public char last() {
-      mCurrentIndex = Math.max(0, mLength - 1);
-
-      return current();
-    }
-
-    @Override
-    public char current() {
-      if ((mLength == 0) || (mCurrentIndex >= mLength)) {
-        return CharacterIterator.DONE;
-      }
-
-      return mSequence.charAt(mCurrentIndex);
-    }
-
-    @Override
-    public char next() {
-      mCurrentIndex++;
-
-      return current();
-    }
-
-    @Override
-    public char previous() {
-      mCurrentIndex = Math.max(mCurrentIndex - 1, 0);
-
-      return current();
-    }
-
-    @Override
-    public char setIndex(final int position) {
-      mCurrentIndex = position;
-
-      return current();
-    }
-
-    @Override
-    public int getBeginIndex() {
-      return 0;
-    }
-
-    @Override
-    public int getEndIndex() {
-      return mLength;
-    }
-
-    @Override
-    public int getIndex() {
-      return mCurrentIndex;
-    }
-
-    @Override
-    public Object clone() {
-      final NonCachingTextRenderer.CharSequenceIterator iter = new NonCachingTextRenderer.CharSequenceIterator(mSequence);
-      iter.mCurrentIndex = mCurrentIndex;
-
-      return iter;
-    }
-
-    @Override
-    public char first() {
-      if (mLength == 0) {
-        return CharacterIterator.DONE;
-      }
-
-      mCurrentIndex = 0;
-
-      return current();
-    }
-  }
-
-  // Data associated with each rectangle of text
-  static class TextData {
-    // Back-pointer to String this TextData describes, if it
-    // represents a String rather than a single glyph
-    private final String str;
-
-    // If this TextData represents a single glyph, this is its
-    // unicode ID
-    int unicodeID;
-
-    // The following must be defined and used VERY precisely. This is
-    // the offset from the upper-left corner of this rectangle (Java
-    // 2D coordinate system) at which the string must be rasterized in
-    // order to fit within the rectangle -- the leftmost point of the
-    // baseline.
-    private final Point origin;
-
-    // This represents the pre-normalized rectangle, which fits
-    // within the rectangle on the backing store. We keep a
-    // one-pixel border around entries on the backing store to
-    // prevent bleeding of adjacent letters when using GL_LINEAR
-    // filtering for rendering. The origin of this rectangle is
-    // equivalent to the origin above.
-    private final Rectangle2D origRect;
-
-    private boolean used; // Whether this text was used recently
-
-    TextData(final String str, final Point origin, final Rectangle2D origRect, final int unicodeID) {
-      this.str = str;
-      this.origin = origin;
-      this.origRect = origRect;
-      this.unicodeID = unicodeID;
-    }
-
-    String string() {
-      return str;
-    }
-
-    Point origin() {
-      return origin;
-    }
-
-    // The following three methods are used to locate the glyph
-    // within the expanded rectangle coming from normalize()
-    int origOriginX() {
-      return (int) -origRect.getMinX();
-    }
-
-    int origOriginY() {
-      return (int) -origRect.getMinY();
-    }
-
-    Rectangle2D origRect() {
-      return origRect;
-    }
-
-    boolean used() {
-      return used;
-    }
-
-    void markUsed() {
-      used = true;
-    }
-
-    void clearUsed() {
-      used = false;
-    }
-  }
-
-  class Manager implements BackingStoreManager {
-    private Graphics2D g;
-
-    @Override
-    public Object allocateBackingStore(final int w, final int h) {
-      // FIXME: should consider checking Font's attributes to see
-      // whether we're likely to need to support a full RGBA backing
-      // store (i.e., non-default Paint, foreground color, etc.), but
-      // for now, let's just be more efficient
-      TextureRenderer renderer;
-
-      if (renderDelegate.intensityOnly()) {
-        renderer = TextureRenderer.createAlphaOnlyRenderer(w, h, mipmap);
-      } else {
-        renderer = new TextureRenderer(w, h, true, mipmap);
-      }
-      renderer.setSmoothing(smoothing);
-
-      if (DEBUG) {
-        System.err.println(" TextRenderer allocating backing store " +
-            w + " x " + h);
-      }
-
-      return renderer;
-    }
-
-    @Override
-    public void deleteBackingStore(final Object backingStore) {
-      ((TextureRenderer) backingStore).dispose();
-    }
-
-    @Override
-    public boolean preExpand(final Rect cause, final int attemptNumber) {
-      // Only try this one time; clear out potentially obsolete entries
-      // NOTE: this heuristic and the fact that it clears the used bit
-      // of all entries seems to cause cycling of entries in some
-      // situations, where the backing store becomes small compared to
-      // the amount of text on the screen (see the TextFlow demo) and
-      // the entries continually cycle in and out of the backing
-      // store, decreasing performance. If we added a little age
-      // information to the entries, and only cleared out entries
-      // above a certain age, this behavior would be eliminated.
-      // However, it seems the system usually stabilizes itself, so
-      // for now we'll just keep things simple. Note that if we don't
-      // clear the used bit here, the backing store tends to increase
-      // very quickly to its maximum size, at least with the TextFlow
-      // demo when the text is being continually re-laid out.
-      if (attemptNumber == 0) {
-        if (DEBUG) {
-          System.err.println(
-              "Clearing unused entries in preExpand(): attempt number " +
-                  attemptNumber);
-        }
-
-        if (inBeginEndPair) {
-          // Draw any outstanding glyphs
-          flush();
-        }
-
-        clearUnusedEntries();
-
-        return true;
-      }
-
-      return false;
-    }
-
-    @Override
-    public boolean additionFailed(final Rect cause, final int attemptNumber) {
-      // Heavy hammer -- might consider doing something different
-      packer.clear();
-      stringLocations.clear();
-      mGlyphProducer.clearAllCacheEntries();
-
-      if (DEBUG) {
-        System.err.println(
-            " *** Cleared all text because addition failed ***");
-      }
-
-      if (attemptNumber == 0) {
-        return true;
-      }
-
-      return false;
-    }
-
-    @Override
-    public boolean canCompact() {
-      return true;
-    }
-
-    @Override
-    public void beginMovement(final Object oldBackingStore, final Object newBackingStore) {
-      // Exit the begin / end pair if necessary
-      if (inBeginEndPair) {
-        // Draw any outstanding glyphs
-        flush();
-
-        final GL2 gl = GLContext.getCurrentGL().getGL2();
-
-        // Pop client attrib bits used by the pipelined quad renderer
-        gl.glPopClientAttrib();
-
-        // The OpenGL spec is unclear about whether this changes the
-        // buffer bindings, so preemptively zero out the GL_ARRAY_BUFFER
-        // binding
-        if (getMyUseVertexArrays() && is15Available(gl)) {
-          try {
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-          } catch (final Exception e) {
-            isExtensionAvailable_GL_VERSION_1_5 = false;
-          }
-        }
-
-        if (isOrthoMode) {
-          ((TextureRenderer) oldBackingStore).endOrthoRendering();
-        } else {
-          ((TextureRenderer) oldBackingStore).end3DRendering();
-        }
-      }
-
-      final TextureRenderer newRenderer = (TextureRenderer) newBackingStore;
-      g = newRenderer.createGraphics();
-    }
-
-    @Override
-    public void move(final Object oldBackingStore, final Rect oldLocation,
-                     final Object newBackingStore, final Rect newLocation) {
-      final TextureRenderer oldRenderer = (TextureRenderer) oldBackingStore;
-      final TextureRenderer newRenderer = (TextureRenderer) newBackingStore;
-
-      if (oldRenderer == newRenderer) {
-        // Movement on the same backing store -- easy case
-        g.copyArea(oldLocation.x(), oldLocation.y(), oldLocation.w(),
-            oldLocation.h(), newLocation.x() - oldLocation.x(),
-            newLocation.y() - oldLocation.y());
-      } else {
-        // Need to draw from the old renderer's image into the new one
-        final Image img = oldRenderer.getImage();
-        g.drawImage(img, newLocation.x(), newLocation.y(),
-            newLocation.x() + newLocation.w(),
-            newLocation.y() + newLocation.h(), oldLocation.x(),
-            oldLocation.y(), oldLocation.x() + oldLocation.w(),
-            oldLocation.y() + oldLocation.h(), null);
-      }
-    }
-
-    @Override
-    public void endMovement(final Object oldBackingStore, final Object newBackingStore) {
-      g.dispose();
-
-      // Sync the whole surface
-      final TextureRenderer newRenderer = (TextureRenderer) newBackingStore;
-      newRenderer.markDirty(0, 0, newRenderer.getWidth(),
-          newRenderer.getHeight());
-
-      // Re-enter the begin / end pair if necessary
-      if (inBeginEndPair) {
-        if (isOrthoMode) {
-          ((TextureRenderer) newBackingStore).beginOrthoRendering(beginRenderingWidth,
-              beginRenderingHeight, beginRenderingDepthTestDisabled);
-        } else {
-          ((TextureRenderer) newBackingStore).begin3DRendering();
-        }
-
-        // Push client attrib bits used by the pipelined quad renderer
-        final GL2 gl = GLContext.getCurrentGL().getGL2();
-        gl.glPushClientAttrib((int) GL2.GL_ALL_CLIENT_ATTRIB_BITS);
-
-        if (haveCachedColor) {
-          if (cachedColor == null) {
-            ((TextureRenderer) newBackingStore).setColor(cachedR,
-                cachedG, cachedB, cachedA);
-          } else {
-            ((TextureRenderer) newBackingStore).setColor(cachedColor);
-          }
-        }
-      } else {
-        needToResetColor = true;
-      }
-    }
-  }
-
-  public static class DefaultRenderDelegate implements TextRenderer.RenderDelegate {
-    @Override
-    public boolean intensityOnly() {
-      return true;
-    }
-
-    @Override
-    public Rectangle2D getBounds(final CharSequence str, final Font font,
-                                 final FontRenderContext frc) {
-      return getBounds(font.createGlyphVector(frc,
-              new NonCachingTextRenderer.CharSequenceIterator(str)),
-          frc);
-    }
-
-    @Override
-    public Rectangle2D getBounds(final String str, final Font font,
-                                 final FontRenderContext frc) {
-      return getBounds(font.createGlyphVector(frc, str), frc);
-    }
-
-    @Override
-    public Rectangle2D getBounds(final GlyphVector gv, final FontRenderContext frc) {
-      return gv.getVisualBounds();
-    }
-
-    @Override
-    public void drawGlyphVector(final Graphics2D graphics, final GlyphVector str,
-                                final int x, final int y) {
-      graphics.drawGlyphVector(str, x, y);
-    }
-
-    @Override
-    public void draw(final Graphics2D graphics, final String str, final int x, final int y) {
-      graphics.drawString(str, x, y);
-    }
-  }
-
   //----------------------------------------------------------------------
   // Glyph-by-glyph rendering support
   //
 
   // A temporary to prevent excessive garbage creation
   final char[] singleUnicode = new char[1];
-
-
-
-  static class CharacterCache {
-    private CharacterCache() {
-    }
-
-    static final Character cache[] = new Character[127 + 1];
-
-    static {
-      for (int i = 0; i < cache.length; i++) {
-        cache[i] = Character.valueOf((char) i);
-      }
-    }
-
-    public static Character valueOf(final char c) {
-      if (c <= 127) { // must cache
-        return NonCachingTextRenderer.CharacterCache.cache[c];
-      }
-      return Character.valueOf(c);
-    }
-  }
-
-
-  class DebugListener implements GLEventListener {
-    private GLU glu;
-    private Frame frame;
-
-    DebugListener(final GL gl, final Frame frame) {
-      this.glu = GLU.createGLU(gl);
-      this.frame = frame;
-    }
-
-    @Override
-    public void display(final GLAutoDrawable drawable) {
-      final GL2 gl = GLContext.getCurrentGL().getGL2();
-      gl.glClear(GL.GL_DEPTH_BUFFER_BIT | GL.GL_COLOR_BUFFER_BIT);
-
-      if (packer == null) {
-        return;
-      }
-
-      final TextureRenderer rend = getBackingStore();
-      final int w = rend.getWidth();
-      final int h = rend.getHeight();
-      rend.beginOrthoRendering(w, h);
-      rend.drawOrthoRect(0, 0);
-      rend.endOrthoRendering();
-
-      if ((frame.getWidth() != w) || (frame.getHeight() != h)) {
-        EventQueue.invokeLater(new Runnable() {
-          @Override
-          public void run() {
-            frame.setSize(w, h);
-          }
-        });
-      }
-    }
-
-    @Override
-    public void dispose(final GLAutoDrawable drawable) {
-      mPipelinedQuadRenderer.dispose();
-      // n/a glu.destroy(); ??
-      glu=null;
-      frame=null;
-    }
-
-    // Unused methods
-    @Override
-    public void init(final GLAutoDrawable drawable) {
-    }
-
-    @Override
-    public void reshape(final GLAutoDrawable drawable, final int x, final int y, final int width,
-                        final int height) {
-    }
-
-    public void displayChanged(final GLAutoDrawable drawable,
-                               final boolean modeChanged, final boolean deviceChanged) {
-    }
-  }
 
   /**
    * Sets whether vertex arrays are being used internally for
