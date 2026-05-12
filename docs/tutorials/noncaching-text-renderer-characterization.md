@@ -16,7 +16,7 @@ reference](../reference/noncaching-text-renderer-characterization.md).
 - [4. Trace TextData tests](#4-trace-textdata-tests)
 - [5. Trace DefaultRenderDelegate tests](#5-trace-defaultrenderdelegate-tests)
 - [6. Trace CharacterCache tests](#6-trace-charactercache-tests)
-- [7. Understand Glyph and GlyphProducer boundaries](#7-understand-glyph-and-glyphproducer-boundaries)
+- [7. Understand constructor/accessor test boundaries](#7-understand-constructoraccessor-test-boundaries)
 - [8. Run the tests](#8-run-the-tests)
 - [9. Understand the boundaries](#9-understand-the-boundaries)
 
@@ -32,7 +32,7 @@ After this tutorial you will be able to explain:
 - How `TextData` acts as a data carrier for glyph texture coordinates
 - Why `DefaultRenderDelegate.intensityOnly()` returns `true`
 - How `CharacterCache` optimizes character boxing for ASCII text
-- Why `Glyph` and `GlyphProducer` tests are skipped in headless CI
+- Why constructor/accessor tests are skipped in headless CI
 
 Open these source files alongside this guide:
 
@@ -60,9 +60,8 @@ NonCachingTextRenderer (1842 lines)
 
 The characterization tests focus on the four static inner classes
 (`CharSequenceIterator`, `TextData`, `DefaultRenderDelegate`,
-`CharacterCache`) which need no GL context, plus guarded tests for `Glyph`
-and `GlyphProducer` which require an enclosing `NonCachingTextRenderer`
-instance.
+`CharacterCache`) which need no GL context, plus guarded constructor/accessor
+tests which require a `NonCachingTextRenderer` instance.
 
 ## 2. Trace constant verification
 
@@ -244,19 +243,17 @@ which has no identity guarantee for values > 127.
 layout. Caching ASCII characters avoids autoboxing allocation pressure during
 text rendering, which happens every frame.
 
-## 7. Understand Glyph and GlyphProducer boundaries
+## 7. Understand constructor/accessor test boundaries
 
-These inner classes are non-static — they require an enclosing
-`NonCachingTextRenderer` instance. The test attempts to construct one:
+The 7 constructor/accessor tests require an enclosing `NonCachingTextRenderer`
+instance. The test setup attempts to construct one:
 
 ```java
-NonCachingTextRenderer renderer = null;
 try {
-    renderer = new NonCachingTextRenderer(new Font("SansSerif", Font.PLAIN, 12));
-} catch (Exception e) {
-    // GL not available
+    sharedRenderer = new NonCachingTextRenderer(TEST_FONT);
+} catch (Exception | Error e) {
+    sharedRenderer = null;
 }
-Assume.assumeTrue("Requires GL context", renderer != null);
 ```
 
 The `NonCachingTextRenderer` constructor (line 160) calls:
@@ -278,13 +275,13 @@ Tests run: 49, Failures: 0, Errors: 0, Skipped: 7
 
 The 7 skipped tests are:
 
-1. `glyphUnicodeConstructorStoresFields`
-2. `glyphStringConstructorStoresString`
-3. `glyphClearNullsRect`
-4. `glyphProducerInitializesArrays`
-5. `glyphProducerUnicodesAllUndefined`
-6. `glyphProducerRegisterRoundTrip`
-7. `glyphProducerClearAllResetsUnicodes`
+1. `constructor_getFont_returnsSameFont`
+2. `constructor_useVertexArrays_defaultsTrue`
+3. `constructor_smoothing_defaultsTrue`
+4. `constructor_setUseVertexArrays_changes`
+5. `constructor_antialiased_storedCorrectly`
+6. `constructor_renderDelegate_isDefaultWhenNull`
+7. `constructor_glyphProducer_isInitialized`
 
 In a full GL environment (desktop or Xvfb with JOGL natives), all 49 tests
 pass.

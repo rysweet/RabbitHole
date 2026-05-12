@@ -56,8 +56,8 @@ mvn -pl core/glrender -am \
   test
 ```
 
-Expected outcome: 49 test methods total. 42 pass, 7 skipped (GL-dependent
-`Glyph`/`GlyphProducer` tests). 0 failures, 0 errors. BUILD SUCCESS.
+Expected outcome: 49 test methods total. 42 pass, 7 skipped (constructor/accessor
+tests requiring JOGL). 0 failures, 0 errors. BUILD SUCCESS.
 
 ## Run alongside all core/glrender tests
 
@@ -112,22 +112,16 @@ alongside any future tests without interference.
 | Non-cache boundary | `valueOf((char) 128)` returns a new `Character` object (no identity guarantee). |
 | Cache array length | `cache.length == 128`. |
 
-### Glyph (skipped without GL)
+### Constructor / Accessors (skipped without GL)
 
 | Assertion category | Meaning |
 | --- | --- |
-| Field storage | Constructor arguments are retrievable via `getUnicodeID()`, `getGlyphCode()`, `getAdvance()`. |
-| `clear()` | Sets `glyphRectForTextureMapping` to `null` (verified via reflection). |
-| String constructor | `Glyph(str, needAdvance)` stores the string for robust rendering fallback. |
-
-### GlyphProducer (skipped without GL)
-
-| Assertion category | Meaning |
-| --- | --- |
-| Array initialization | `unicodes2Glyphs` has length 512, all entries set to `undefined` (-2). |
-| `glyphCache` size | Length equals the font's glyph count. |
-| `register()` round-trip | After `register(glyph)`, `unicodes2Glyphs[unicodeID]` equals the glyph code and `glyphCache[glyphCode]` equals the glyph. |
-| `clearAllCacheEntries()` | All `unicodes2Glyphs` entries return to `undefined`. |
+| `getFont()` | Returns the `Font` passed to the constructor. |
+| `getMyUseVertexArrays()` | Defaults to `true`; `setUseVertexArrays(false)` toggles it. |
+| `getSmoothing()` | Defaults to `true`. |
+| `antialiased` field | Stores the constructor argument (default `false`). |
+| `renderDelegate` field | When `null` is passed, constructor creates a `DefaultRenderDelegate`. |
+| `mGlyphProducer` field | Non-null after construction. |
 
 ## Troubleshooting
 
@@ -143,7 +137,7 @@ java -version
 # Ensure JDK 11+ without restrictive module flags
 ```
 
-### Glyph/GlyphProducer tests are skipped
+### Constructor/accessor tests are skipped
 
 This is expected in headless CI. These tests require a `NonCachingTextRenderer`
 instance, which triggers `RectanglePacker` → `Manager.allocateBackingStore()`.

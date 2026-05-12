@@ -27,13 +27,15 @@ It covers:
 
 | Area | Contract |
 | --- | --- |
-| Buffer constants | Static constant values and derived buffer sizes are self-consistent: `kSize`, `kQuadsPerBuffer`, `kVertsPerQuad`, `kCoordsPerVertVerts`, `kCoordsPerVertTex`, and the computed totals `kTotalBufferSizeVerts`, `kTotalBufferSizeCoordsVerts`, `kTotalBufferSizeCoordsTex`, `kTotalBufferSizeBytesVerts`, `kTotalBufferSizeBytesTex`, `kSizeInBytes_OneVertices_VertexData`, `kSizeInBytes_OneVertices_TexData`. |
+| Buffer constants | Static constant values and derived buffer sizes are self-consistent: `kSize`, `kQuadsPerBuffer`, `kVertsPerQuad`, `kCoordsPerVertVerts`, `kCoordsPerVertTex`, computed totals, and debug/config flags (`DISABLE_GLYPH_CACHE`, `DRAW_BBOXES`, `CYCLES_PER_FLUSH`, `MAX_VERTICAL_FRAGMENTATION`). |
+| `preNormalize` | The private static geometry method expands a `Rectangle2D` by floor/ceil rounding + 1px slop on all sides. |
 | CharSequenceIterator | The private static inner class implements `CharacterIterator` correctly: `first()`, `last()`, `current()`, `next()`, `previous()`, `setIndex()`, `getBeginIndex()`, `getEndIndex()`, `getIndex()`, `clone()`, and empty-sequence edge cases. |
 | TextData | The package-private static inner class preserves constructor arguments through accessor methods: `string()`, `origin()`, `origRect()`, `origOriginX()`, `origOriginY()`, and the `used`/`markUsed()`/`clearUsed()` lifecycle. |
 | DefaultRenderDelegate | The public static inner class returns `true` from `intensityOnly()` and delegates `getBounds(GlyphVector, FontRenderContext)` to `GlyphVector.getVisualBounds()`. |
 | CharacterCache | The private static inner class caches `Character` values for codepoints 0–127 and returns fresh `Character.valueOf()` for codepoints > 127. |
-| Glyph | The non-static inner class stores unicode ID, glyph code, advance, and string fields through its constructors, and `clear()` nulls `glyphRectForTextureMapping`. |
-| GlyphProducer | The non-static inner class initializes `unicodes2Glyphs` (length 512, all `undefined`) and `glyphCache` (length = font glyph count), and `register()` / `clearAllCacheEntries()` round-trip correctly. |
+| Glyph | Not directly tested. Documented below for reference; requires enclosing `NonCachingTextRenderer` instance (GL-dependent). |
+| GlyphProducer | Not directly tested. Documented below for reference; requires enclosing `NonCachingTextRenderer` instance (GL-dependent). |
+| Constructor / Accessors | `getFont()`, `getSmoothing()`, `getMyUseVertexArrays()`, `setUseVertexArrays()`, `antialiased` field, `renderDelegate` field, `mGlyphProducer` field — guarded by `Assume.assumeTrue` (skip in headless CI). |
 
 This lane does not cover:
 
@@ -76,7 +78,20 @@ DISABLE_GLYPH_CACHE = true
 
 The characterization tests verify each derivation step. If any constant
 changes, the tests will fail, alerting reviewers to recalculate downstream
-buffer allocations.
+buffer allocations. Additionally, the debug/config flags (`DISABLE_GLYPH_CACHE
+= true`, `DRAW_BBOXES = false`, `CYCLES_PER_FLUSH = 100`,
+`MAX_VERTICAL_FRAGMENTATION = 0.7f`) are pinned to their current values.
+
+### preNormalize (line 454)
+
+A private static method that expands a `Rectangle2D` by rounding to integer
+coordinates and adding 1-pixel slop on all sides:
+
+| Input | Output |
+| --- | --- |
+| `(0.5, 0.5, 10.0, 10.0)` | `(-1.0, -1.0, 13.0, 13.0)` — floor(min)-1, ceil(max)+1 |
+| `(-3.2, -1.8, 5.0, 4.0)` | `(-5.0, -3.0, 8.0, 7.0)` — handles negative coordinates |
+| `(0, 0, 10, 10)` | `(-1.0, -1.0, 12.0, 12.0)` — integer input still expands |
 
 ### CharSequenceIterator (lines 803–891)
 
@@ -145,9 +160,12 @@ A private static inner class caching `Character` objects for ASCII codepoints:
 Tests access this class via reflection and verify identity semantics with
 `assertSame()` for cached values.
 
-### Glyph (lines 1201–1392)
+### Glyph (lines 1201–1392) — not directly tested
 
-A non-static inner class representing a unicode glyph or character substring:
+A non-static inner class representing a unicode glyph or character substring.
+Documented here for reference; no characterization tests exist for this class
+because constructing a `Glyph` requires an enclosing `NonCachingTextRenderer`
+instance, which triggers GL initialization in headless CI.
 
 | Constructor | Fields set |
 | --- | --- |
@@ -161,16 +179,11 @@ A non-static inner class representing a unicode glyph or character substring:
 | `getAdvance()` | Returns the `advance` field. |
 | `clear()` | Sets `glyphRectForTextureMapping` to `null`. |
 
-**GL dependency:** Constructing a `Glyph` requires an enclosing
-`NonCachingTextRenderer` instance, which calls `new RectanglePacker(...)` in
-its constructor. In headless CI, the `RectanglePacker` constructor may trigger
-`Manager.allocateBackingStore()` which requires a GL context. Tests guard
-construction with `Assume.assumeTrue` and skip gracefully when GL is
-unavailable.
+### GlyphProducer (lines 1394–1555) — not directly tested
 
-### GlyphProducer (lines 1394–1555)
-
-A non-static inner class managing the glyph cache:
+A non-static inner class managing the glyph cache. Documented here for
+reference; no characterization tests exist for this class (same GL dependency
+as `Glyph`).
 
 | Method | Contract |
 | --- | --- |
@@ -181,8 +194,22 @@ A non-static inner class managing the glyph cache:
 | `getGlyphs(CharSequence)` | Requires `getFontRenderContext()` → **GL-dependent, not tested headlessly**. |
 | `getGlyphPixelWidth(char)` | Returns `glyph.getAdvance()` for cached glyphs. For uncached glyphs, falls through to `fontRenderContext` which is never initialized → **throws `InternalError` (FIXME in source)**. |
 
-**GL dependency:** Same as `Glyph` — requires an enclosing
-`NonCachingTextRenderer`. Tests guard with `Assume.assumeTrue`.
+### Constructor / Accessors (lines 139–180) — guarded, skipped without GL
+
+The 7 constructor/accessor tests require a `NonCachingTextRenderer` instance.
+In headless CI, the constructor call to `new RectanglePacker(new Manager(),
+kSize, kSize)` may fail without native JOGL libraries. Tests guard with
+`Assume.assumeTrue("Needs headless JOGL to construct", sharedRenderer != null)`.
+
+| Test | Contract |
+| --- | --- |
+| `constructor_getFont_returnsSameFont` | `getFont()` returns the `Font` passed to the constructor. |
+| `constructor_useVertexArrays_defaultsTrue` | `getMyUseVertexArrays()` defaults to `true`. |
+| `constructor_smoothing_defaultsTrue` | `getSmoothing()` defaults to `true`. |
+| `constructor_setUseVertexArrays_changes` | `setUseVertexArrays(false)` toggles the value. |
+| `constructor_antialiased_storedCorrectly` | `antialiased` field stores the constructor argument (default `false`). |
+| `constructor_renderDelegate_isDefaultWhenNull` | When `null` is passed, constructor creates a `DefaultRenderDelegate`. |
+| `constructor_glyphProducer_isInitialized` | `mGlyphProducer` field is non-null after construction. |
 
 ## API reference
 
@@ -194,7 +221,8 @@ classes. The reflection targets are:
 | `NonCachingTextRenderer$CharSequenceIterator` | `Class.forName(...)`, constructor via `getDeclaredConstructor(CharSequence.class)` with `setAccessible(true)`. |
 | `NonCachingTextRenderer$TextData` | Direct constructor access (package-private). |
 | `NonCachingTextRenderer$CharacterCache` | `Class.forName(...)`, `valueOf` method via `getDeclaredMethod("valueOf", char.class)` with `setAccessible(true)`, `cache` field via `getDeclaredField("cache")` with `setAccessible(true)`. |
-| `Glyph` fields | `getDeclaredField("glyphRectForTextureMapping")` with `setAccessible(true)` to verify `clear()`. |
+| `preNormalize` method | `getDeclaredMethod("preNormalize", Rectangle2D.class)` with `setAccessible(true)`. |
+| Constructor fields | `getDeclaredField("antialiased")`, `getDeclaredField("renderDelegate")`, `getDeclaredField("mGlyphProducer")` with `setAccessible(true)`. |
 
 If any inner class is renamed, the tests fail with a descriptive message
 naming the expected class rather than a silent skip.
@@ -213,8 +241,8 @@ mvn -pl core/glrender -am \
   test
 ```
 
-Expected outcome: 49 test methods. 42 pass, 7 skipped (GL-dependent
-`Glyph`/`GlyphProducer` tests guarded by `Assume.assumeTrue`). 0 failures, 0
+Expected outcome: 49 test methods. 42 pass, 7 skipped (constructor/accessor
+tests requiring JOGL, guarded by `Assume.assumeTrue`). 0 failures, 0
 errors.
 
 ### Run alongside all core/glrender tests
@@ -282,17 +310,15 @@ Before changing `kQuadsPerBuffer` from 100 to 200:
    details.
 5. Run the validation command and verify the new test appears in the results.
 
-### Understand why Glyph tests are skipped
+### Understand why constructor tests are skipped
 
-The `Glyph` and `GlyphProducer` inner classes are non-static. Creating one
-requires a `NonCachingTextRenderer` instance. The `NonCachingTextRenderer`
-constructor calls `new RectanglePacker(new Manager(), kSize, kSize)`, which
+The 7 constructor/accessor tests require a `NonCachingTextRenderer` instance.
+The constructor calls `new RectanglePacker(new Manager(), kSize, kSize)`, which
 may trigger `Manager.allocateBackingStore()`. On a headless CI server without
 native JOGL libraries, this fails. The tests guard against this with:
 
 ```java
-Assume.assumeTrue("Requires GL context for NonCachingTextRenderer construction",
-    renderer != null);
+Assume.assumeTrue("Needs headless JOGL to construct", sharedRenderer != null);
 ```
 
 When the assumption fails, JUnit marks the test as skipped (not failed). In a
