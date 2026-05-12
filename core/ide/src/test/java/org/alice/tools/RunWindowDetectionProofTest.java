@@ -194,7 +194,10 @@ public class RunWindowDetectionProofTest {
       toolbarFrame.setLocationRelativeTo(null);
       toolbarFrame.setVisible(true);
 
-      Thread.sleep(500);
+      // Poll for button visibility instead of fixed 500ms sleep
+      for (int i = 0; i < 50 && !runButton.isShowing(); i++) {
+        Thread.sleep(10);
+      }
 
       Robot robot = new Robot();
       robot.setAutoDelay(50);
@@ -413,7 +416,9 @@ public class RunWindowDetectionProofTest {
           return new DetectionResult("detected", jf.getTitle(), windowId, null);
         }
       }
-      Thread.sleep(intervalMs);
+      if (i + 1 < maxIterations) {
+        Thread.sleep(intervalMs);
+      }
     }
     int totalSeconds = (maxIterations * intervalMs) / 1000;
     return new DetectionResult("not_detected", null, null,
