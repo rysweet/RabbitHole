@@ -1,6 +1,5 @@
 package org.alice.ide;
 
-import org.alice.ide.uricontent.FileProjectLoader;
 import org.alice.ide.uricontent.UriProjectLoader;
 import org.alice.ide.frametitle.IdeFrameTitleGenerator;
 import org.alice.ide.projecturi.RecentProjectCountState;
