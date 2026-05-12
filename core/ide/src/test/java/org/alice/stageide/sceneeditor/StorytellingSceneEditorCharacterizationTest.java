@@ -4,10 +4,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,9 @@ public class StorytellingSceneEditorCharacterizationTest {
 
   private static final String FQCN = "org.alice.stageide.sceneeditor.StorytellingSceneEditor";
   private static Class<?> clazz;
+  private static final Map<String, Class<?>> classCache = new HashMap<>();
+  private static Class<?>[] cachedInnerClasses;
+  private static final Map<String, Class<?>> innerClassMap = new HashMap<>();
 
   @BeforeClass
   public static void loadClass() {
@@ -34,17 +38,23 @@ public class StorytellingSceneEditorCharacterizationTest {
     } catch (ClassNotFoundException e) {
       fail("StorytellingSceneEditor class not found: " + e.getMessage());
     }
+    cachedInnerClasses = clazz.getDeclaredClasses();
+    for (Class<?> c : cachedInnerClasses) {
+      innerClassMap.put(c.getSimpleName(), c);
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
 
   private static Class<?> resolve(String fqcn) {
-    try {
-      return Class.forName(fqcn);
-    } catch (ClassNotFoundException e) {
-      fail("Could not resolve class: " + fqcn);
-      return null;
-    }
+    return classCache.computeIfAbsent(fqcn, name -> {
+      try {
+        return Class.forName(name);
+      } catch (ClassNotFoundException e) {
+        fail("Could not resolve class: " + name);
+        return null;
+      }
+    });
   }
 
   private static void assertPublicMethod(String name, Class<?>... paramTypes) {
@@ -65,16 +75,11 @@ public class StorytellingSceneEditorCharacterizationTest {
   }
 
   private static Class<?>[] innerClasses() {
-    return clazz.getDeclaredClasses();
+    return cachedInnerClasses;
   }
 
   private static Class<?> findInner(String simpleName) {
-    for (Class<?> c : innerClasses()) {
-      if (c.getSimpleName().equals(simpleName)) {
-        return c;
-      }
-    }
-    return null;
+    return innerClassMap.get(simpleName);
   }
 
   // ── 1. Class hierarchy ────────────────────────────────────────────
