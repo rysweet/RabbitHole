@@ -155,10 +155,11 @@ There is no runtime configuration. Path conventions are derived from
 
 ## Validation
 
-`ModelResourceFileUtilities` is tested indirectly through `ModelExportTest`,
-which exercises the exporter workflows that delegate to these utilities. The
-extraction preserves identical behavior, so no dedicated test class is
-required. Run the focused exporter test after modifying this class:
+`ModelResourceFileUtilities` has a dedicated test class,
+`ModelResourceFileUtilitiesTest`, which covers all public methods including
+path resolution, JAR entry writing, output-file creation, and edge cases.
+The exporter workflows that delegate to these utilities are also exercised
+by `ModelExportTest`. Run both test classes after modifying this class:
 
 ```sh
 git submodule update --init tweedle-lang
