@@ -106,8 +106,9 @@ grep 'private.*appendStatementEnd' \
 ```
 
 Expected: **zero matches**. The `appendStatementEnd` method has moved to
-`StatementEncoder`. `TweedleEncoder` calls it via
-`statementEncoder.appendStatementEnd(stmt)`.
+`StatementEncoder` (as a private helper). `TweedleEncoder` reaches it
+indirectly through `statementEncoder.appendCodeFlowStatement(stmt, appender)`
+and `statementEncoder.appendStatementCompletion(stmt)`.
 
 ## Checklist
 

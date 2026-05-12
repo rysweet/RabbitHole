@@ -88,8 +88,8 @@ StatementEncoder(TweedleEncoder encoder) {
 | `NODE_DISABLE` visibility | Changed from `private` to package-private (no modifier) so `StatementEncoder.pushStatementDisabled` can read it |
 | `appendStatementCompletion(Statement)` | Body delegates to `statementEncoder.appendStatementCompletion(stmt)` |
 | `appendStatementCompletion()` | Body delegates to `statementEncoder.appendStatementCompletion()` |
-| `pushStatementDisabled()` | Body delegates to `statementEncoder.pushStatementDisabled()`, then calls `super` |
-| `appendCodeFlowStatement(Statement, Runnable)` | Calls `appendIndent(stmt)`, runs appender, then delegates `statementEncoder.appendStatementEnd(stmt)` |
+| `pushStatementDisabled()` | Body delegates to `statementEncoder.pushStatementDisabled()` (delegate calls `super` via bridge) |
+| `appendCodeFlowStatement(Statement, Runnable)` | Calls `appendIndent(stmt)`, then delegates `statementEncoder.appendCodeFlowStatement(stmt, appender)` (delegate runs appender and appends statement end) |
 | Bridge methods added | `superAppendStatementCompletion(Statement)`, `superAppendStatementCompletion()` — package-private methods that call `super.appendStatementCompletion(...)` on behalf of the delegate |
 | Forwarding methods added | `forwardAppendString(String)`, `forwardAppendSpace()`, `forwardAppendNewLine()` — package-private methods that call the inherited `protected` methods, since `StatementEncoder` cannot call `protected` methods inherited from `SourceCodeGenerator` (different package) |
 
@@ -157,7 +157,6 @@ void superAppendStatementCompletion(Statement stmt) {
 @Override
 protected void pushStatementDisabled() {
   statementEncoder.pushStatementDisabled();
-  super.pushStatementDisabled();
 }
 ```
 
@@ -165,8 +164,7 @@ protected void pushStatementDisabled() {
 @Override
 protected void appendCodeFlowStatement(Statement stmt, Runnable appender) {
   appendIndent(stmt);
-  appender.run();
-  statementEncoder.appendStatementEnd(stmt);
+  statementEncoder.appendCodeFlowStatement(stmt, appender);
 }
 ```
 

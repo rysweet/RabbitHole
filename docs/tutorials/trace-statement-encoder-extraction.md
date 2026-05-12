@@ -115,13 +115,13 @@ Before the statement body, the encoder calls `pushStatementDisabled()`:
 @Override
 protected void pushStatementDisabled() {
   statementEncoder.pushStatementDisabled();
-  super.pushStatementDisabled();
 }
 ```
 
 **Ordering matters:** The delegate writes `NODE_DISABLE` (`*<`) first, then
-`super.pushStatementDisabled()` increments the disabled counter. If the order
-were reversed, the counter would be wrong during the marker write.
+calls the bridge `encoder.superPushStatementDisabled()` which increments the
+disabled counter. If the order were reversed, the counter would be wrong
+during the marker write.
 
 ### Step 2: StatementEncoder writes the marker
 
@@ -170,15 +170,14 @@ public void processCountLoop(CountLoop loop) {
 @Override
 protected void appendCodeFlowStatement(Statement stmt, Runnable appender) {
   appendIndent(stmt);
-  appender.run();
-  statementEncoder.appendStatementEnd(stmt);
+  statementEncoder.appendCodeFlowStatement(stmt, appender);
 }
 ```
 
-The coordinator handles `appendIndent(stmt)` and runs the appender lambda.
-The statement-end formatting delegates to `StatementEncoder`. This split keeps
-indentation management on the coordinator while statement-end markers live on
-the delegate.
+The coordinator handles `appendIndent(stmt)`, then delegates the rest to
+`StatementEncoder.appendCodeFlowStatement(stmt, appender)` which runs the
+appender and appends the statement end. This split keeps indentation management
+on the coordinator while statement-end markers live on the delegate.
 
 ## Summary of the delegation pattern
 
@@ -187,7 +186,7 @@ the delegate.
 | `appendStatementCompletion(Statement)` | `statementEncoder.appendStatementCompletion(stmt)` |
 | `appendStatementCompletion()` | `statementEncoder.appendStatementCompletion()` |
 | `pushStatementDisabled()` | `statementEncoder.pushStatementDisabled()` then `super.pushStatementDisabled()` |
-| `appendCodeFlowStatement(Statement, Runnable)` | `statementEncoder.appendStatementEnd(stmt)` (after indent + appender) |
+| `appendCodeFlowStatement(Statement, Runnable)` | `statementEncoder.appendCodeFlowStatement(stmt, appender)` (after indent) |
 
 ## Exercises
 
