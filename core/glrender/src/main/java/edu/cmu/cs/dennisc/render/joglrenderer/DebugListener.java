@@ -52,12 +52,10 @@ class DebugListener implements GLEventListener {
   @Override
   public void dispose(final GLAutoDrawable drawable) {
     textRenderer.mPipelinedQuadRenderer.dispose();
-    // n/a glu.destroy(); ??
-    glu=null;
-    frame=null;
+    glu = null;
+    frame = null;
   }
 
-  // Unused methods
   @Override
   public void init(final GLAutoDrawable drawable) {
   }
@@ -65,9 +63,5 @@ class DebugListener implements GLEventListener {
   @Override
   public void reshape(final GLAutoDrawable drawable, final int x, final int y, final int width,
                       final int height) {
-  }
-
-  public void displayChanged(final GLAutoDrawable drawable,
-                             final boolean modeChanged, final boolean deviceChanged) {
   }
 }

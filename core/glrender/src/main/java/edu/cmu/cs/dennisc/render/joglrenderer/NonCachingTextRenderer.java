@@ -636,13 +636,6 @@ public class NonCachingTextRenderer extends TextRenderer {
       if (unicodeToClearFromCache > 0) {
         mGlyphProducer.clearCacheEntry(unicodeToClearFromCache);
       }
-
-      //      if (DEBUG) {
-      //        Graphics2D g = getGraphics2D();
-      //        g.setComposite(AlphaComposite.Clear);
-      //        g.fillRect(r.x(), r.y(), r.w(), r.h());
-      //        g.setComposite(AlphaComposite.Src);
-      //      }
     }
 
     // If we removed dead rectangles this cycle, try to do a compaction
