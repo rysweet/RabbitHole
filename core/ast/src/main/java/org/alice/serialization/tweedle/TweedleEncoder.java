@@ -14,28 +14,18 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class TweedleEncoder extends SourceCodeGenerator {
-  private static final String INDENTION = "  ";
-  private static final int MAX_CACHED_INDENT = 16;
-  private static final String[] INDENT_CACHE = new String[MAX_CACHED_INDENT];
-  static {
-    INDENT_CACHE[0] = "";
-    for (int i = 1; i < MAX_CACHED_INDENT; i++) {
-      INDENT_CACHE[i] = INDENT_CACHE[i - 1] + INDENTION;
-    }
-  }
   static final String NODE_DISABLE = "*<";
   static final String NODE_ENABLE = ">*";
   static final String USER_PREFIX = "u_";
-  private int indent = 0;
   private final Set<AbstractDeclaration> terminalNodes;
   private final StatementEncoder statementEncoder = new StatementEncoder(this);
   private final ResourceEncoder resourceEncoder = new ResourceEncoder(this);
+  private final FormattingEncoder formattingEncoder = new FormattingEncoder(this);
 
   TweedleEncoder(Set<AbstractDeclaration> terminals) {
     super(TweedleEncoderData.codeOrganizerDefinitionMap, CodeOrganizer.defaultCodeOrganizer);
     terminalNodes = terminals;
   }
-
   TweedleEncoder() {
     super(TweedleEncoderData.codeOrganizerDefinitionMap, CodeOrganizer.defaultCodeOrganizer);
     terminalNodes = new HashSet<>();
@@ -47,37 +37,29 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   /** Class structure **/
-
   @Override
   public void processResourceType(String jointedModelResource) {
     resourceEncoder.processResourceType(jointedModelResource);
   }
-
   @Override
   public void processDynamicResource(String dynamicResourceClass, String variant, InstantiableTweedleNode[] addedJoints) {
     resourceEncoder.processDynamicResource(dynamicResourceClass, variant, addedJoints);
   }
-
   public String getUserJointIdentifier(String jointIdentifier) {
     return resourceEncoder.getUserJointIdentifier(jointIdentifier);
   }
-
   public void appendNewJointId(String joint, String parentReference) {
     resourceEncoder.appendNewJointId(joint, parentReference);
   }
-
   public void appendNewJointArrayId(String pattern, String startingJoint) {
     resourceEncoder.appendNewJointArrayId(pattern, startingJoint);
   }
-
   public String getFieldReference(String type, String field) {
     return resourceEncoder.getFieldReference(type, field);
   }
-
   public void appendNewPose(InstantiableTweedleNode[] jointTransformations) {
     resourceEncoder.appendNewPose(jointTransformations);
   }
-
   public void appendNewJointTransformation(String jointId, AffineMatrix4x4 transformation) {
     resourceEncoder.appendNewJointTransformation(jointId, transformation);
   }
@@ -90,7 +72,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     getCodeStringBuilder().append(" models ").append(tweedleTypeName(userType.getName()));
     openBlock();
   }
-
   @Override
   protected void appendClassFooter(String userTypeName) {
     appendString(TweedleEncoderData.typesWithAddedCode.getOrDefault(userTypeName, ""));
@@ -98,7 +79,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   /** Methods and Fields **/
-
   @Override
   public void processConstructor(NamedUserConstructor constructor) {
     appendIndent();
@@ -106,7 +86,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     appendParameters(constructor);
     appendStatement(constructor.body.getValue());
   }
-
   @Override
   public void processSuperConstructor(SuperConstructorInvocationStatement supCon) {
     processSingleStatement(supCon, () -> {
@@ -114,13 +93,11 @@ public class TweedleEncoder extends SourceCodeGenerator {
       parenthesize(() -> appendEachArgument(supCon));
     });
   }
-
   @Override
   public void processMethod(UserMethod method) {
     super.processMethod(method);
     appendNewLine();
   }
-
   @Override
   public void appendMethodHeader(AbstractMethod method) {
     appendNewLine();
@@ -133,7 +110,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     appendString(method.getName());
     appendParameters(method);
   }
-
   @Override
   public void processInstantiation(InstanceCreation creation) {
     String className = getDeclaringJavaClassName(creation);
@@ -170,7 +146,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     }
     super.processInstantiation(creation);
   }
-
   private String getDeclaringJavaClassName(InstanceCreation creation) {
     final AbstractConstructor constructor = creation.constructor.getValue();
     if (constructor instanceof JavaConstructor javaConstructor) {
@@ -180,7 +155,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   /** Statements **/
-
   @Override
   public void processLocalDeclaration(LocalDeclarationStatement stmt) {
     processSingleStatement(stmt, () -> {
@@ -192,67 +166,65 @@ public class TweedleEncoder extends SourceCodeGenerator {
       processExpression(stmt.initializer.getValue());
     });
   }
-
   @Override
   protected void appendStatementCompletion(Statement stmt) {
     statementEncoder.appendStatementCompletion(stmt);
   }
-
   @Override
   protected void appendStatementCompletion() {
     statementEncoder.appendStatementCompletion();
   }
-
   @Override
   protected void pushStatementDisabled() {
     statementEncoder.pushStatementDisabled();
   }
 
-  // Bridge methods for StatementEncoder to call super and protected methods
-
+  // Bridge methods for StatementEncoder
   void superAppendStatementCompletion(Statement stmt) {
     super.appendStatementCompletion(stmt);
   }
-
   void superAppendStatementCompletion() {
     super.appendStatementCompletion();
   }
-
   void superPushStatementDisabled() {
     super.pushStatementDisabled();
   }
-
   void forwardAppendString(String s) {
     appendString(s);
   }
-
   void forwardAppendSpace() {
     appendSpace();
   }
-
   void forwardAppendNewLine() {
     appendNewLine();
   }
 
-  // Bridge methods for ResourceEncoder to call protected inherited methods
-
+  // Bridge methods for ResourceEncoder
   StringBuilder forwardGetCodeStringBuilder() {
     return getCodeStringBuilder();
   }
-
   void forwardBracketize(Runnable appender) {
     bracketize(appender);
   }
-
   void forwardAppendEscapedString(String value) {
     appendEscapedString(value);
+  }
+
+  // Bridge methods for FormattingEncoder
+  void forwardAppendChar(char c) {
+    appendChar(c);
+  }
+  void forwardParenthesize(Runnable appender) {
+    parenthesize(appender);
+  }
+  String forwardGetListSeparator() {
+    return getListSeparator();
   }
 
   @Override
   protected void appendArgument(JavaKeyedArgument arg) {
     processKeyedArgument(arg);
   }
-
   @Override
   public void processKeyedArgument(JavaKeyedArgument arg) {
     Expression expressionValue = arg.expression.getValue();
@@ -269,7 +241,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     }
     processExpression(expressionValue);
   }
-
   private void appendOneArgument(MethodInvocation argumentOwner) {
     if (!argumentOwner.getVariableArgumentsProperty().isEmpty() || !argumentOwner.getKeyedArgumentsProperty().isEmpty() || argumentOwner.getRequiredArgumentsProperty().size() != 1) {
       Logger.errln("Expected a single argument.", argumentOwner);
@@ -280,20 +251,17 @@ public class TweedleEncoder extends SourceCodeGenerator {
       appendWrappedArg(argumentOwner.getRequiredArgumentsProperty().get(0), methodName, wrappedParams);
     }
   }
-
   @Override
   public void processArgument(AbstractParameter parameter, AbstractArgument argument) {
     final String parameterLabel = getParameterLabel(parameter);
     appendString(parameterLabel);
     appendString(": ");
-
     final Code parameterCode = parameter.getCode();
     Map<String, String> wrappedParams = parameterCode == null
         ? null
         : TweedleEncoderData.methodsWithWrappedArgs.get(parameterCode.getName());
     appendWrappedArg(argument, parameterLabel, wrappedParams);
   }
-
   private void appendWrappedArg(ProcessableNode argument, String parameterLabel, Map<String, String> wrappedParams) {
     String argStart = wrappedParams == null ? null : wrappedParams.get(parameterLabel);
     if (argStart != null) {
@@ -304,7 +272,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
       appendString(")");
     }
   }
-
   private String getParameterLabel(AbstractParameter parameter) {
     if (parameter instanceof JavaConstructorParameter constructorParameter) {
       String className = constructorParameter.getCode().getDeclaringType().getName();
@@ -341,7 +308,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     Logger.errln(message);
     return paramType;
   }
-
   private int parameterIndex(JavaMethodParameter parameter) {
     AbstractParameter[] parameters = parameter.getCode().getAllParameters();
     for (int i = 0; i < parameters.length; i++) {
@@ -351,13 +317,11 @@ public class TweedleEncoder extends SourceCodeGenerator {
     }
     return -1;
   }
-
   @Override
   public void processSingleStatement(Statement stmt, Runnable appender) {
-    appendIndent(stmt);
+    formattingEncoder.appendIndent(stmt);
     super.processSingleStatement(stmt, appender);
   }
-
   @Override
   protected void appendSingleCodeLine(Runnable appender) {
     appendIndent();
@@ -365,13 +329,11 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   /** Code Flow **/
-
   @Override
   protected void appendCodeFlowStatement(Statement stmt, Runnable appender) {
-    appendIndent(stmt);
+    formattingEncoder.appendIndent(stmt);
     statementEncoder.appendCodeFlowStatement(stmt, appender);
   }
-
   @Override
   public void processCountLoop(CountLoop loop) {
     appendCodeFlowStatement(loop, () -> {
@@ -383,34 +345,28 @@ public class TweedleEncoder extends SourceCodeGenerator {
       appendStatement(loop.body.getValue());
     });
   }
-
   @Override
   protected void appendForEachToken() {
     appendString("forEach");
   }
-
   @Override
   protected void appendInEachToken() {
     appendString(" in ");
   }
-
   @Override
   public void processDoInOrder(DoInOrder doInOrder) {
     appendLabeledCodeFlow(doInOrder, "doInOrder");
   }
-
   @Override
   public void processDoTogether(DoTogether doTogether) {
     appendLabeledCodeFlow(doTogether, "doTogether");
   }
-
   private void appendLabeledCodeFlow(AbstractStatementWithBody stmt, String label) {
     appendCodeFlowStatement(stmt, () -> {
       appendString(label);
       appendStatement(stmt.body.getValue());
     });
   }
-
   @Override
   public void processEachInTogether(AbstractEachInTogether eachInTogether) {
     appendCodeFlowStatement(eachInTogether, () -> {
@@ -423,7 +379,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
   }
 
   /** Expressions **/
-
   @Override
   protected void appendTargetAndMember(Expression target, String member, AbstractType<?, ?, ?> returnType) {
     if (targetIsMath(target)) {
@@ -432,11 +387,9 @@ public class TweedleEncoder extends SourceCodeGenerator {
       processExpression(target);
     }
     appendAccessSeparator();
-
     String tweedleName = TweedleEncoderData.membersToRename.get(member);
     appendString(tweedleName == null ? member : tweedleName);
   }
-
   private boolean targetIsMath(Expression target) {
     if (target instanceof TypeExpression expression) {
       AbstractType<?, ?, ?> innerType = expression.value.getValue();
@@ -444,7 +397,6 @@ public class TweedleEncoder extends SourceCodeGenerator {
     }
     return false;
   }
-
   private String tweedleModuleForMath(String member, AbstractType<?, ?, ?> returnType) {
     if (returnType != null && "int".equals(returnType.getName())) {
       return "$WholeNumber";
@@ -454,51 +406,43 @@ public class TweedleEncoder extends SourceCodeGenerator {
     }
     return "$DecimalNumber";
   }
-
   @Override
   public void processResourceExpression(ResourceExpression resourceExpression) {
     appendEscapedString(resourceExpression.resource.getValue().getName());
   }
 
   /** Comments **/
-
   @Override
   protected void appendSingleLineComment(String line) {
     appendIndent();
     super.appendSingleLineComment(line);
   }
-
   @Override
   public String getLocalizedComment(AbstractType<?, ?, ?> type, String itemName, Locale locale) {
     return "//";
   }
 
   /** Primitives and syntax **/
-
   @Override
   protected void openBlock() {
     appendString(" {\n");
-    pushIndent();
+    formattingEncoder.pushIndent();
   }
-
   @Override
   protected void closeBlockInline() {
-    popIndent();
+    formattingEncoder.popIndent();
     appendIndent();
     super.closeBlockInline();
   }
-
   @Override
   protected void closeBlock() {
     super.closeBlock();
     appendNewLine();
   }
-
   @Override
   protected void appendAssignmentOperator() {
     appendString(" <- ");
   }
-
   @Override
   protected String identifierName(AbstractDeclaration variable) {
     final String varName = super.identifierName(variable);
@@ -508,116 +452,48 @@ public class TweedleEncoder extends SourceCodeGenerator {
       return varName;
     }
   }
-
   @Override
   protected void appendConcatenationOperator() {
     appendString(" .. ");
   }
-
   @Override
   public void processTypeName(AbstractType<?, ?, ?> type) {
     appendString(type == null ? "MISSING_TYPE" : tweedleTypeName(type.getName()));
   }
-
   String tweedleTypeName(String typeName) {
     return TweedleEncoderData.typesToRename.getOrDefault(typeName, typeName);
   }
-
   @Override
   protected String getListSeparator() {
     return ", ";
   }
 
-  /** Helper methods **/
-
+  /** Formatting and helper bridges (delegated to FormattingEncoder) **/
   void appendVisibilityTag(FieldTemplate fieldAnnotation) {
-    if (fieldAnnotation == null) {
-      return;
-    }
-    switch (fieldAnnotation.visibility()) {
-    case COMPLETELY_HIDDEN:
-      appendString("@CompletelyHidden ");
-      break;
-    case PRIME_TIME:
-      appendString("@PrimeTime ");
-      break;
-    case TUCKED_AWAY:
-      appendString("@TuckedAway ");
-      break;
-    default:
-    }
+    formattingEncoder.appendVisibilityTag(fieldAnnotation);
   }
-
   void appendInstantiation(String className, Runnable args) {
-    appendString("new ");
-    appendString(className);
-    parenthesize(args);
+    formattingEncoder.appendInstantiation(className, args);
   }
-
   void appendArg(String label, String value) {
-    appendString(label);
-    appendString(": ");
-    appendString(value);
+    formattingEncoder.appendArg(label, value);
   }
-
   void appendArg(String label, Runnable value) {
-    appendString(label);
-    appendString(": ");
-    value.run();
+    formattingEncoder.appendArg(label, value);
   }
-
   void appendAnotherArg(String label, String value) {
-    appendString(getListSeparator());
-    appendArg(label, value);
+    formattingEncoder.appendAnotherArg(label, value);
   }
-
   void appendAnotherArg(String label, Runnable value) {
-    appendString(getListSeparator());
-    appendArg(label, value);
+    formattingEncoder.appendAnotherArg(label, value);
   }
-
   <T> void appendList(T[] values, Consumer<T> appendValue, String separator) {
-    appendChar('{');
-    int i = 0;
-    while (i < values.length) {
-      appendValue.accept(values[i]);
-      i++;
-      if (i < values.length) {
-        appendString(separator);
-      }
-    }
-    appendChar('}');
+    formattingEncoder.appendList(values, appendValue, separator);
   }
-
   void quoteString(String aString) {
-    appendChar('\"');
-    appendString(aString);
-    appendChar('\"');
+    formattingEncoder.quoteString(aString);
   }
-
-  /** Formatting **/
-
-  private void pushIndent() {
-    indent++;
-  }
-
-  private void popIndent() {
-    indent--;
-  }
-
-  private static String indentString(int level) {
-    if (level <= 0) {
-      return "";
-    }
-    return level < MAX_CACHED_INDENT ? INDENT_CACHE[level] : INDENTION.repeat(level);
-  }
-
   void appendIndent() {
-    appendString(indentString(indent));
-  }
-
-  private void appendIndent(Statement stmt) {
-    final int level = stmt.isEnabled.getValue() ? this.indent : this.indent - 1;
-    appendString(indentString(level));
+    formattingEncoder.appendIndent();
   }
 }
