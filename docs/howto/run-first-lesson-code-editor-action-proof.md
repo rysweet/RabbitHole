@@ -65,7 +65,7 @@ Confirm that failure cases do not write the success artifact.
 
 | Failure case | Expected behavior |
 | --- | --- |
-| Missing target procedure | Reports the missing `scene.eatmeFirstLesson` target and stops before mutation; it must not create the method for this proof. |
+| Missing target procedure | Reports the missing target procedure and stops before mutation; it must not create the method for this proof. |
 | Wrong selected procedure | Rejects the evidence because the selected method is not the target. |
 | Unsupported action | Rejects edit specs outside `append-comment:<marker>`. |
 | Blank marker | Rejects the action before mutation. |

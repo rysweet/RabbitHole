@@ -182,10 +182,11 @@ public class FirstLessonCodeEditorActionProofTest {
   }
 
   @Test
-  public void rejectsWrongProcedureTargetForFirstLessonActionProof() throws Exception {
-    File projectFile = temporaryFolder.newFile("wrong-target.a3p");
+  public void acceptsAlternativeProcedureTarget() throws Exception {
+    File projectFile = temporaryFolder.newFile("alt-target.a3p");
     IoUtilities.writeProject(projectFile, projectWithSceneMethods(FIRST_LESSON_METHOD, WRONG_METHOD));
     Path evidenceDir = temporaryFolder.newFolder("evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
     ByteArrayOutputStream stderr = new ByteArrayOutputStream();
 
     int status = EatmeEditProcedure.run(
@@ -196,15 +197,20 @@ public class FirstLessonCodeEditorActionProofTest {
             "--evidence-dir", evidenceDir.toString(),
             "--json"
         },
-        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(stdout),
         new PrintStream(stderr));
 
-    assertEquals(2, status);
-    assertTrue(stderr.toString(StandardCharsets.UTF_8),
-        stderr.toString(StandardCharsets.UTF_8).contains(
-            "first-lesson code-editor action proof requires target " + FIRST_LESSON_TARGET));
-    assertFalse(Files.exists(evidenceDir.resolve("edited-project.a3p")));
-    assertFalse(Files.exists(evidenceDir.resolve(ACTION_PROOF_ARTIFACT)));
+    assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    String result = stdout.toString(StandardCharsets.UTF_8);
+    assertTrue(result, result.contains("\"status\":\"proved\""));
+    assertTrue(result, result.contains("\"procedure_selector\":\"scene." + WRONG_METHOD + "\""));
+    assertNonEmptyFile(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertNonEmptyFile(evidenceDir.resolve("edited-project.a3p"));
+
+    Project editedProject = IoUtilities.readProject(evidenceDir.resolve("edited-project.a3p").toFile());
+    NamedUserType editedSceneType = sceneType(editedProject);
+    assertCommentMarkerCount(requireMethod(editedSceneType, WRONG_METHOD), MARKER, 1);
+    assertCommentMarkerCount(requireMethod(editedSceneType, FIRST_LESSON_METHOD), MARKER, 0);
     assertNoBlockedOrRetiredArtifacts(evidenceDir);
   }
 

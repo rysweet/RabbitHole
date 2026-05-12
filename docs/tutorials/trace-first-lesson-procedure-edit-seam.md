@@ -94,8 +94,8 @@ The edit step uses:
 --edit-spec append-comment:<deterministic proof text>
 ```
 
-`EatmeEditProcedure` requires the targeted scene method named by
-`scene.eatmeFirstLesson` to exist and fails closed when it is missing.
+`EatmeEditProcedure` requires the targeted scene method (here
+`scene.eatmeFirstLesson`) to exist and fails closed when it is missing.
 
 The proof is accepted only after the edited project is reopened, the placed
 bunny field is still present, and the targeted scene procedure contains the

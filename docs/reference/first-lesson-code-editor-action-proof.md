@@ -55,7 +55,7 @@ This proof is implemented by the focused Java characterization and the
 | Surface | Current state |
 | --- | --- |
 | `ProcedureTabSelection` backing observations | Implemented by the tab/code-editor backing seam and exposes selected declaration, selected `CodeComposite`, selected `CodeEditor` class, and selected `CodeEditor.getCode()` observations. |
-| `EatmeEditProcedure.run(...)` | Accepts only `scene.eatmeFirstLesson` for this proof, applies `append-comment:<text>`, fails closed when the target is missing, and writes `first-lesson-code-editor-action-proof.json` on success. |
+| `EatmeEditProcedure.run(...)` | Accepts any valid `scene.<methodName>` selector (where the method name matches `[A-Za-z_][A-Za-z0-9_]*`), applies `append-comment:<text>`, fails closed when the target is missing, and writes `first-lesson-code-editor-action-proof.json` on success. The canonical proof uses `scene.eatmeFirstLesson`. |
 | Action proof test | Implemented by `org.alice.tools.FirstLessonCodeEditorActionProofTest`. |
 | Success artifact | `first-lesson-code-editor-action-proof.json`. |
 | Blocked artifact | Not emitted by the implemented success path. |
@@ -112,7 +112,7 @@ temporary evidence assertions hold.
 
 The proof must fail closed if the selected declaration, selected
 `CodeComposite`, selected `CodeEditor.getCode()` value, target procedure, or
-marker observation does not match `scene.eatmeFirstLesson`.
+marker observation does not match the requested selector.
 
 This proof must not create a missing `eatmeFirstLesson` method. Missing target
 means failure before mutation.
@@ -218,16 +218,17 @@ assertSame(target, ProcedureTabSelection.getSelectedCodeEditorCode(editor));
 ### `EatmeEditProcedure.run(...)`
 
 `EatmeEditProcedure` exposes the CLI-style `run(...)` entry point used by the
-proof. For this action proof, it fails closed when `scene.eatmeFirstLesson` is
-missing and records the selected declaration, selected `CodeComposite`, selected
-`CodeEditor` class, and selected `CodeEditor.getCode()` identities.
+proof. It accepts any valid `scene.<methodName>` selector and fails closed when
+the named target method is missing from the project's scene type. It records the
+selected declaration, selected `CodeComposite`, selected `CodeEditor` class, and
+selected `CodeEditor.getCode()` identities.
 
 CLI arguments:
 
 | Argument | Required value |
 | --- | --- |
 | `--project` | Existing `.a3p` project file from the focused fixture. |
-| `--procedure-selector` | `scene.eatmeFirstLesson` for this proof. |
+| `--procedure-selector` | Any valid `scene.<methodName>` selector. The canonical proof uses `scene.eatmeFirstLesson`; starter projects like `africa.a3p` use `scene.myFirstMethod`. |
 | `--edit-spec` | `append-comment:wave4-code-editor-action-proof`. |
 | `--evidence-dir` | Writable temporary evidence directory. |
 | `--json` | Required; standard output is one structured result object. |
@@ -240,9 +241,10 @@ Exit codes:
 | `2` | Invalid arguments, missing target, unsupported selector, unsupported action, blank marker, wrong target, or pre-existing marker evidence. Missing target must be gated to fail for this proof. |
 | `3` | Runtime or invariant failure after validation, including selected/backing mismatches or after-state marker observation mismatches. |
 
-Supported selectors are intentionally narrow for this proof. The selector must
-name the scene procedure `scene.eatmeFirstLesson`; a different selector may be
-covered by a different characterization but is not this proof.
+The selector must name a valid scene procedure using the `scene.<methodName>`
+format, where `<methodName>` matches `[A-Za-z_][A-Za-z0-9_]*`. The canonical
+proof uses `scene.eatmeFirstLesson`; any project-specific scene method (such as
+`scene.myFirstMethod` in `africa.a3p`) is also accepted.
 
 Supported edit specs are intentionally whitelisted:
 

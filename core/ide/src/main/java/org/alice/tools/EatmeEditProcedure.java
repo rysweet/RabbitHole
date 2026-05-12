@@ -30,12 +30,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import javax.swing.SwingUtilities;
 
 public final class EatmeEditProcedure {
   private static final String SUPPORTED_SELECTOR_PREFIX = "scene.";
+  private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
   private static final String SUPPORTED_EDIT_PREFIX = "append-comment:";
-  private static final String FIRST_LESSON_SELECTOR = "scene.eatmeFirstLesson";
   private static final String ACTION_PROOF_ARTIFACT = "first-lesson-code-editor-action-proof.json";
   private static final String EDITED_PROJECT = "edited-project.a3p";
 
@@ -81,11 +82,8 @@ public final class EatmeEditProcedure {
       throw new IllegalArgumentException("unsupported edit spec: " + arguments.editSpec());
     }
     String methodName = arguments.procedureSelector().substring(SUPPORTED_SELECTOR_PREFIX.length());
-    if (!methodName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+    if (!IDENTIFIER_PATTERN.matcher(methodName).matches()) {
       throw new IllegalArgumentException("procedure selector must name one scene method: " + arguments.procedureSelector());
-    }
-    if (!FIRST_LESSON_SELECTOR.equals(arguments.procedureSelector())) {
-      throw new IllegalArgumentException("first-lesson code-editor action proof requires target " + FIRST_LESSON_SELECTOR);
     }
     String commentText = arguments.editSpec().substring(SUPPORTED_EDIT_PREFIX.length());
     if (commentText.isBlank()) {

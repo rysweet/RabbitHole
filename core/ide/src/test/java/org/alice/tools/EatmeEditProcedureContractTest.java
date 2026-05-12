@@ -148,6 +148,125 @@ public class EatmeEditProcedureContractTest {
         jsonValue.contains("\"injected\""));
   }
 
+  // --- Issue #521: selector validation edge cases ---
+
+  @Test
+  public void acceptsMyFirstMethodSelectorForAfricaProject() throws Exception {
+    File projectFile = temporaryFolder.newFile("africa-selector.a3p");
+    Project project = projectWithSceneMethods("myFirstMethod");
+    IoUtilities.writeProject(projectFile, project);
+    Path evidenceDir = temporaryFolder.newFolder("africa-evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.myFirstMethod",
+            "--edit-spec", "append-comment:" + MARKER,
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(stdout),
+        new PrintStream(stderr));
+
+    assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    assertTrue(stdout.toString(StandardCharsets.UTF_8),
+        stdout.toString(StandardCharsets.UTF_8).contains("\"status\":\"proved\""));
+  }
+
+  @Test
+  public void rejectsEmptyMethodNameAfterScenePrefix() throws Exception {
+    File projectFile = temporaryFolder.newFile("empty-name.a3p");
+    IoUtilities.writeProject(projectFile, projectWithSceneMethods("eatmeFirstLesson"));
+    Path evidenceDir = temporaryFolder.newFolder("empty-name-evidence").toPath();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.",
+            "--edit-spec", "append-comment:" + MARKER,
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(stderr));
+
+    assertEquals("empty method name after scene. should be rejected", 2, status);
+    assertTrue(stderr.toString(StandardCharsets.UTF_8),
+        stderr.toString(StandardCharsets.UTF_8).contains("procedure selector must name one scene method"));
+  }
+
+  @Test
+  public void rejectsSelectorWithHyphenInMethodName() throws Exception {
+    File projectFile = temporaryFolder.newFile("hyphen-name.a3p");
+    IoUtilities.writeProject(projectFile, projectWithSceneMethods("eatmeFirstLesson"));
+    Path evidenceDir = temporaryFolder.newFolder("hyphen-evidence").toPath();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.my-method",
+            "--edit-spec", "append-comment:" + MARKER,
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(stderr));
+
+    assertEquals("hyphenated method name should be rejected", 2, status);
+    assertTrue(stderr.toString(StandardCharsets.UTF_8),
+        stderr.toString(StandardCharsets.UTF_8).contains("procedure selector must name one scene method"));
+  }
+
+  @Test
+  public void rejectsSelectorWithDotInMethodName() throws Exception {
+    File projectFile = temporaryFolder.newFile("dotted-name.a3p");
+    IoUtilities.writeProject(projectFile, projectWithSceneMethods("eatmeFirstLesson"));
+    Path evidenceDir = temporaryFolder.newFolder("dotted-evidence").toPath();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.my.method",
+            "--edit-spec", "append-comment:" + MARKER,
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(stderr));
+
+    assertEquals("dotted method name should be rejected", 2, status);
+    assertTrue(stderr.toString(StandardCharsets.UTF_8),
+        stderr.toString(StandardCharsets.UTF_8).contains("procedure selector must name one scene method"));
+  }
+
+  @Test
+  public void rejectsNonexistentMethodWithTargetNotFoundError() throws Exception {
+    File projectFile = temporaryFolder.newFile("no-method.a3p");
+    IoUtilities.writeProject(projectFile, projectWithSceneMethods("eatmeFirstLesson"));
+    Path evidenceDir = temporaryFolder.newFolder("no-method-evidence").toPath();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.noSuchMethod",
+            "--edit-spec", "append-comment:" + MARKER,
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(new ByteArrayOutputStream()),
+        new PrintStream(stderr));
+
+    assertEquals("nonexistent method should be rejected", 2, status);
+    assertTrue(stderr.toString(StandardCharsets.UTF_8),
+        stderr.toString(StandardCharsets.UTF_8).contains("target procedure not found"));
+  }
+
   // --- Argument parsing: missing --json ---
 
   @Test

@@ -214,6 +214,78 @@ public class EatmeEditProcedureTest {
     return json.substring(fieldStart, nextFieldStart);
   }
 
+  // --- Issue #521: alternative selectors (e.g., africa.a3p's myFirstMethod) ---
+
+  @Test
+  public void editsAfricaStyleMyFirstMethodProcedure() throws Exception {
+    File projectFile = temporaryFolder.newFile("africa.a3p");
+    IoUtilities.writeProject(projectFile, projectWithSceneMethod("myFirstMethod"));
+    Path evidenceDir = temporaryFolder.newFolder("africa-evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene.myFirstMethod",
+            "--edit-spec", "append-comment:africa edit proof",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(stdout),
+        new PrintStream(stderr));
+
+    assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    String result = stdout.toString(StandardCharsets.UTF_8);
+    assertTrue(result, result.contains("\"status\":\"proved\""));
+    assertTrue(result, result.contains("\"procedure_selector\":\"scene.myFirstMethod\""));
+    assertNonEmptyFile(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertNonEmptyFile(evidenceDir.resolve("edited-project.a3p"));
+
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(proof, proof.contains("\"procedure_selector\": \"scene.myFirstMethod\""));
+    assertTrue(proof, proof.contains("\"method_name\": \"myFirstMethod\""));
+    assertTrue(proof, proof.contains("\"selected_declaration\": \"myFirstMethod\""));
+    assertTrue(proof, proof.contains("\"target_marker_count\": 1"));
+    assertTrue(proof, proof.contains("\"wrong_target_marker_count\": 0"));
+
+    Project editedProject = IoUtilities.readProject(evidenceDir.resolve("edited-project.a3p").toFile());
+    NamedUserType editedSceneType = sceneType(editedProject);
+    UserMethod method = findMethod(editedSceneType, "myFirstMethod");
+    assertNotNull("edited project should contain myFirstMethod", method);
+    Statement lastStatement = method.body.getValue().statements.get(1);
+    assertTrue("appended edit should be a comment", lastStatement instanceof Comment);
+    assertEquals("africa edit proof", ((Comment) lastStatement).text.getValue());
+  }
+
+  @Test
+  public void editsUnderscorePrefixedProcedure() throws Exception {
+    File projectFile = temporaryFolder.newFile("custom.a3p");
+    IoUtilities.writeProject(projectFile, projectWithSceneMethod("_setup"));
+    Path evidenceDir = temporaryFolder.newFolder("underscore-evidence").toPath();
+    ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+    ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+
+    int status = EatmeEditProcedure.run(
+        new String[] {
+            "--project", projectFile.getAbsolutePath(),
+            "--procedure-selector", "scene._setup",
+            "--edit-spec", "append-comment:underscore proof",
+            "--evidence-dir", evidenceDir.toString(),
+            "--json"
+        },
+        new PrintStream(stdout),
+        new PrintStream(stderr));
+
+    assertEquals(stderr.toString(StandardCharsets.UTF_8), 0, status);
+    String result = stdout.toString(StandardCharsets.UTF_8);
+    assertTrue(result, result.contains("\"status\":\"proved\""));
+    assertNonEmptyFile(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+
+    String proof = Files.readString(evidenceDir.resolve(ACTION_PROOF_ARTIFACT));
+    assertTrue(proof, proof.contains("\"method_name\": \"_setup\""));
+  }
+
   @Test
   public void appendsToExistingSceneProcedure() throws Exception {
     File projectFile = temporaryFolder.newFile("placed.a3p");

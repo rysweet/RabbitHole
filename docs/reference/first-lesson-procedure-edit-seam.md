@@ -222,7 +222,7 @@ Required arguments:
 | Argument | Value |
 | --- | --- |
 | `--project` | Existing `.a3p` file. The chained proof passes `placed-project.a3p`. |
-| `--procedure-selector` | Scene procedure selector. The proof uses `scene.eatmeFirstLesson`. |
+| `--procedure-selector` | Scene procedure selector using `scene.<methodName>` format. The proof uses `scene.eatmeFirstLesson`; other projects may use selectors like `scene.myFirstMethod`. |
 | `--edit-spec` | Supported deterministic edit spec. The proof uses `append-comment:<text>`. |
 | `--evidence-dir` | Directory where edit artifacts are written. |
 | `--json` | Required flag. Standard output is a single result JSON object. |
@@ -235,10 +235,12 @@ Exit codes:
 | `2` | Invalid arguments, unsupported selector, unsupported edit spec, missing project, missing scene, or unsupported project version. |
 | `3` | Runtime procedure-edit failure. |
 
-The only supported selector is `scene.eatmeFirstLesson`.
-`EatmeEditProcedure` must find that existing scene method and fails closed when
-the target method is missing. The supported edit form is
-`append-comment:<non-blank text>`.
+The selector must use the `scene.<methodName>` format, where `<methodName>`
+matches `[A-Za-z_][A-Za-z0-9_]*`. The canonical proof uses
+`scene.eatmeFirstLesson`; starter projects like `africa.a3p` use
+`scene.myFirstMethod`. `EatmeEditProcedure` must find the named existing scene
+method and fails closed when the target method is missing. The supported edit
+form is `append-comment:<non-blank text>`.
 
 The edit is accepted only after `edited-project.a3p` is written. Reopening the
 archive must show the selected scene method and the appended AST `Comment`

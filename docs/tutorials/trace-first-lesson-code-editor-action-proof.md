@@ -139,7 +139,7 @@ Read the negative tests as part of the proof. They keep the success case honest:
 
 | Negative check | Why it matters |
 | --- | --- |
-| Missing target | Prevents accidental method creation from masquerading as first-lesson proof. |
+| Missing target | Prevents accidental method creation from masquerading as proof. |
 | Wrong target | Prevents a different scene procedure from satisfying the selector. |
 | Unsupported action | Keeps the action contract whitelisted and deterministic. |
 | Blank marker | Prevents empty evidence from passing. |
