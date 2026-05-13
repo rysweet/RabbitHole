@@ -43,6 +43,7 @@
 
 package org.lgna.story.resourceutilities;
 
+import edu.cmu.cs.dennisc.java.io.TextFileUtilities;
 import edu.cmu.cs.dennisc.java.lang.reflect.ReflectionUtilities;
 import edu.cmu.cs.dennisc.pattern.Tuple2;
 import org.alice.math.immutable.AffineMatrix4x4;
@@ -73,6 +74,7 @@ import org.lgna.story.resources.QuadrupedResource;
 import org.lgna.story.resources.SlithererResource;
 import org.lgna.story.resources.SwimmerResource;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -85,7 +87,115 @@ import java.util.zip.DataFormatException;
 import java.util.Map;
 
 final class ModelResourceJavaGenerator {
+
+  private static final boolean REMOVE_ROOT_JOINTS = false;
+  static final String ROOT_IDS_FIELD_NAME = "JOINT_ID_ROOTS";
+  static final String ROOT_IDS_METHOD_NAME = "getRootJointIds";
+
   private ModelResourceJavaGenerator() {
+  }
+
+  static String getJavaClassName(ModelResourceExporter exporter) {
+    return exporter.getClassName() + AliceResourceClassUtilities.RESOURCE_SUFFIX;
+  }
+
+  static Field getJointRootsField(Class<?> cls) {
+    if (cls == null) {
+      return null;
+    }
+    Field[] rootFields = AliceResourceClassUtilities.getFieldsOfType(cls, JointId[].class);
+    if (rootFields.length == 1) {
+      return rootFields[0];
+    } else {
+      Class[] interfaces = cls.getInterfaces();
+      for (Class i : interfaces) {
+        Field rootField = getJointRootsField(i);
+        if (rootField != null) {
+          return rootField;
+        }
+      }
+    }
+    return null;
+  }
+
+  static boolean needsToDefineRootsMethod(Class<?> cls) {
+    if (cls == null) {
+      return false;
+    }
+    Method[] methods = cls.getMethods();
+    for (Method m : methods) {
+      if (JointId[].class.isAssignableFrom(m.getReturnType())) {
+        return true;
+      }
+    }
+    Class[] interfaces = cls.getInterfaces();
+    for (Class i : interfaces) {
+      boolean needToDefineMethod = needsToDefineRootsMethod(i);
+      if (needToDefineMethod) {
+        return needToDefineMethod;
+      }
+    }
+    return false;
+  }
+
+  private static String createResourceEnumName(ModelResourceExporter parentExporter, String modelName, String textureName) {
+    if (modelName.equalsIgnoreCase(parentExporter.getClassName())) {
+      return AliceResourceUtilities.makeEnumName(textureName);
+    }
+    String modelEnumName = AliceResourceUtilities.makeEnumName(modelName);
+    if (modelName.equalsIgnoreCase(textureName) || textureName.equalsIgnoreCase(AliceResourceUtilities.getDefaultTextureEnumName(modelName)) || textureName.equalsIgnoreCase(modelEnumName)) {
+      return modelEnumName;
+    } else {
+      return modelEnumName + "_" + AliceResourceUtilities.makeEnumName(textureName);
+    }
+  }
+
+  static String createResourceEnumName(ModelResourceExporter parentExporter, ModelSubResourceExporter resource) {
+    return createResourceEnumName(parentExporter, resource.getModelName(), resource.getTextureName());
+  }
+
+  static String createResourceEnumNameForModelAndTexture(ModelResourceExporter parentExporter, String modelName, String textureName) {
+    return createResourceEnumName(parentExporter, modelName, textureName);
+  }
+
+  static boolean isValidEnumName(ModelResourceExporter exporter, String modelName, String enumName) {
+    Map<String, List<String>> forcedEnumNamesMap = exporter.getForcedEnumNamesMap();
+    if (forcedEnumNamesMap.containsKey(modelName)) {
+      List<String> validEnums = forcedEnumNamesMap.get(modelName);
+      for (String e : validEnums) {
+        String otherToCheck = modelName.toUpperCase() + "_" + e;
+        if (e.equalsIgnoreCase(enumName) || otherToCheck.equalsIgnoreCase(enumName)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    List<String> forcedOverridingEnumNames = exporter.getForcedOverridingEnumNames();
+    if (forcedOverridingEnumNames.isEmpty()) {
+      return true;
+    }
+    for (String e : forcedOverridingEnumNames) {
+      if (e.equalsIgnoreCase(enumName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static List<Tuple2<String, String>> makeCodeReadyTree(List<Tuple2<String, String>> sourceList) {
+    return ModelResourceJointTreeUtilities.makeCodeReadyTree(sourceList, REMOVE_ROOT_JOINTS);
+  }
+
+  static String getJointAccessMethodNameForArrayJoint(String jointName) {
+    String arrayName = ModelResourceArrayUtilities.getArrayNameForJoint(jointName, null, null);
+    return getAccessorMethodName(arrayName);
+  }
+
+  static File createJavaFile(ModelResourceExporter exporter, String root) throws DataFormatException {
+    String javaCode = buildJavaCodeBody(exporter);
+    File javaFile = ModelResourceFileUtilities.getJavaFile(root, exporter.getPackageString(), getJavaClassName(exporter));
+    TextFileUtilities.write(javaFile, javaCode);
+    return javaFile;
   }
 
   static String getAccessorMethodName(String arrayName) {
@@ -215,7 +325,7 @@ final class ModelResourceJavaGenerator {
     if (exporter.isDeprecated()) {
       sb.append("@Deprecated" + JavaCodeUtilities.LINE_RETURN);
     }
-    sb.append("public enum " + exporter.getJavaClassName() + " implements " + classData.superClass.getCanonicalName() + " {" + JavaCodeUtilities.LINE_RETURN);
+    sb.append("public enum " + getJavaClassName(exporter) + " implements " + classData.superClass.getCanonicalName() + " {" + JavaCodeUtilities.LINE_RETURN);
     appendEnumConstants(sb, exporter);
     sb.append(";" + JavaCodeUtilities.LINE_RETURN);
   }
@@ -224,8 +334,8 @@ final class ModelResourceJavaGenerator {
     assert !exporter.getSubResources().isEmpty();
     boolean isFirst = true;
     for (ModelSubResourceExporter resource : exporter.getSubResources()) {
-      String resourceEnumName = ModelResourceExporter.createResourceEnumName(exporter, resource);
-      if (exporter.isValidEnumName(resource.getModelName(), resourceEnumName)) {
+      String resourceEnumName = createResourceEnumName(exporter, resource);
+      if (isValidEnumName(exporter, resource.getModelName(), resourceEnumName)) {
         if (!isFirst) {
           sb.append("," + JavaCodeUtilities.LINE_RETURN);
         }
@@ -290,7 +400,7 @@ final class ModelResourceJavaGenerator {
       ModelResourceJavaGenerator.appendPreambleAndEnumConstants(sb, exporter);
       Set<String> existingIds = new HashSet<>(getExistingJointIds(exporter.getClassData().superClass));
       boolean addedRoots = false;
-      List<Tuple2<String, String>> trimmedSkeleton = exporter.makeCodeReadyTree(exporter.getJointList());
+      List<Tuple2<String, String>> trimmedSkeleton = makeCodeReadyTree(exporter.getJointList());
       if (trimmedSkeleton != null) {
         Map<String, List<String>> arrayEntries;
         if (exporter.isEnableArraySupport()) {
@@ -319,19 +429,19 @@ final class ModelResourceJavaGenerator {
             } else {
               String arrayName = ModelResourceJavaGenerator.getArrayNameFromMapForJoint(jointString, arrayEntries);
               if (arrayName != null) {
-                sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME, methodNameHint=\"" + exporter.getJointAccessMethodNameForArrayJoint(jointString) + "\")" + JavaCodeUtilities.LINE_RETURN);
+                sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME, methodNameHint=\"" + getJointAccessMethodNameForArrayJoint(jointString) + "\")" + JavaCodeUtilities.LINE_RETURN);
               } else {
                 sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME)" + JavaCodeUtilities.LINE_RETURN);
               }
 
             }
-            sb.append("\tpublic static final org.lgna.story.resources.JointId " + jointString + " = new org.lgna.story.resources.JointId( " + parentString + ", " + exporter.getJavaClassName() + ".class );" + JavaCodeUtilities.LINE_RETURN);
+            sb.append("\tpublic static final org.lgna.story.resources.JointId " + jointString + " = new org.lgna.story.resources.JointId( " + parentString + ", " + getJavaClassName(exporter) + ".class );" + JavaCodeUtilities.LINE_RETURN);
           }
         }
 
         if (addedRoots) {
           sb.append("\n@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
-          sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] " + ModelResourceExporter.ROOT_IDS_FIELD_NAME + " = { ");
+          sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] " + ROOT_IDS_FIELD_NAME + " = { ");
           for (int i = 0; i < rootJoints.size(); i++) {
             sb.append(rootJoints.get(i));
             if (i < (rootJoints.size() - 1)) {
@@ -385,7 +495,7 @@ final class ModelResourceJavaGenerator {
             if (needsAccessor) {
               String poseAccessorName = ModelResourceJavaGenerator.getAccessorMethodName(fullPoseName);
               sb.append("\tpublic " + poseType.getName() + " " + poseAccessorName + "(){" + JavaCodeUtilities.LINE_RETURN);
-              sb.append("\t\treturn " + exporter.getJavaClassName() + "." + fullPoseName + ";" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\t\treturn " + getJavaClassName(exporter) + "." + fullPoseName + ";" + JavaCodeUtilities.LINE_RETURN);
               sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
             }
           }
@@ -433,7 +543,7 @@ final class ModelResourceJavaGenerator {
                 }
               }
               sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME)" + JavaCodeUtilities.LINE_RETURN);
-              sb.append("\tpublic static final org.lgna.story.resources.JointArrayId " + fullArrayName + " = new org.lgna.story.resources.JointArrayId( \"" + arrayEntry.getKey() + "\", " + parentString + ", " + exporter.getJavaClassName() + ".class );" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\tpublic static final org.lgna.story.resources.JointArrayId " + fullArrayName + " = new org.lgna.story.resources.JointArrayId( \"" + arrayEntry.getKey() + "\", " + parentString + ", " + getJavaClassName(exporter) + ".class );" + JavaCodeUtilities.LINE_RETURN);
             } else {
               sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] " + fullArrayName + " = { ");
               for (int i = 0; i < arrayElements.size(); i++) {
@@ -447,7 +557,7 @@ final class ModelResourceJavaGenerator {
             if (needsAccessor) {
               String arrayAccessorName = ModelResourceJavaGenerator.getAccessorMethodName(fullArrayName);
               sb.append("\tpublic org.lgna.story.resources.JointId[] " + arrayAccessorName + "(){" + JavaCodeUtilities.LINE_RETURN);
-              sb.append("\t\treturn " + exporter.getJavaClassName() + "." + fullArrayName + ";" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\t\treturn " + getJavaClassName(exporter) + "." + fullArrayName + ";" + JavaCodeUtilities.LINE_RETURN);
               sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
             }
           }
@@ -455,18 +565,18 @@ final class ModelResourceJavaGenerator {
       }
       sb.append(JavaCodeUtilities.LINE_RETURN);
       sb.append("\tprivate final ImplementationAndVisualType resourceType;" + JavaCodeUtilities.LINE_RETURN);
-      sb.append("\tprivate " + exporter.getJavaClassName() + "() {" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\tprivate " + getJavaClassName(exporter) + "() {" + JavaCodeUtilities.LINE_RETURN);
       sb.append("\t\tthis( ImplementationAndVisualType.ALICE );" + JavaCodeUtilities.LINE_RETURN);
       sb.append("\t}" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
-      sb.append("\tprivate " + exporter.getJavaClassName() + "( ImplementationAndVisualType resourceType ) {" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\tprivate " + getJavaClassName(exporter) + "( ImplementationAndVisualType resourceType ) {" + JavaCodeUtilities.LINE_RETURN);
       sb.append("\t\tthis.resourceType = resourceType;" + JavaCodeUtilities.LINE_RETURN);
       sb.append("\t}" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
-      if (exporter.needsToDefineRootsMethod(exporter.getClassData().superClass)) {
-        sb.append("\tpublic org.lgna.story.resources.JointId[] " + ModelResourceExporter.ROOT_IDS_METHOD_NAME + "(){" + JavaCodeUtilities.LINE_RETURN);
+      if (needsToDefineRootsMethod(exporter.getClassData().superClass)) {
+        sb.append("\tpublic org.lgna.story.resources.JointId[] " + ROOT_IDS_METHOD_NAME + "(){" + JavaCodeUtilities.LINE_RETURN);
         if (addedRoots) {
-          sb.append("\t\treturn " + exporter.getJavaClassName() + "." + ModelResourceExporter.ROOT_IDS_FIELD_NAME + ";" + JavaCodeUtilities.LINE_RETURN);
+          sb.append("\t\treturn " + getJavaClassName(exporter) + "." + ROOT_IDS_FIELD_NAME + ";" + JavaCodeUtilities.LINE_RETURN);
         } else {
-          Field rootsField = exporter.getJointRootsField(exporter.getClassData().superClass);
+          Field rootsField = getJointRootsField(exporter.getClassData().superClass);
           if (rootsField != null) {
             sb.append("\t\treturn " + rootsField.getDeclaringClass().getCanonicalName() + "." + rootsField.getName() + ";" + JavaCodeUtilities.LINE_RETURN);
           } else {

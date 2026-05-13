@@ -43,35 +43,17 @@
 
 package org.lgna.story.resourceutilities;
 
-import edu.cmu.cs.dennisc.java.io.FileUtilities;
-import edu.cmu.cs.dennisc.java.io.TextFileUtilities;
 import edu.cmu.cs.dennisc.pattern.Tuple2;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.alice.math.immutable.AxisAlignedBox;
-import org.lgna.story.implementation.alice.AliceResourceClassUtilities;
-import org.lgna.story.implementation.alice.AliceResourceUtilities;
-import org.lgna.story.implementation.alice.JointImplementationAndVisualDataFactory;
-import org.lgna.story.resources.*;
 
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.zip.DataFormatException;
 
 public class ModelResourceExporter {
-
-  private static boolean REMOVE_ROOT_JOINTS = false;
-
-  static final String ROOT_IDS_FIELD_NAME = "JOINT_ID_ROOTS";
-  static final String ROOT_IDS_METHOD_NAME = "getRootJointIds";
-
-  private interface SubResourceTagUpdater {
-    void addTags(ModelSubResourceExporter subResource, String... tags);
-  }
 
   private String resourceName;
   private String className;
@@ -80,7 +62,6 @@ public class ModelResourceExporter {
   private List<String> themeTags = new ArrayList<>();
   private Map<String, AxisAlignedBox> boundingBoxes = new HashMap<>();
   private File xmlFile;
-  private File javaFile;
   private List<String> jointIdsToSuppress = new ArrayList<>();
   private List<String> arraysToExposeFirstElementOf = new ArrayList<>();
   private List<String> arraysToHideElementsOf = new ArrayList<>();
@@ -91,7 +72,6 @@ public class ModelResourceExporter {
   private boolean hasNewData = false;
   private boolean forceRebuildCode = false;
   private boolean forceRebuildXML = false;
-  private Date lastEdited = null;
   private boolean shouldRecenter = false;
   private boolean recenterXZ = false;
   private boolean moveCenterToBottom = true;
@@ -104,14 +84,9 @@ public class ModelResourceExporter {
   private boolean isDeprecated = false;
   private boolean placeOnGround = false;
   private boolean validData = false;
-
   private boolean enableArraySupport = true;
-
   private String attributionName;
   private String attributionYear;
-
-  private Class<?> jointAndVisualFactory = JointImplementationAndVisualDataFactory.class;
-
   private ModelClassData classData;
   private List<Tuple2<String, String>> jointList;
 
@@ -139,12 +114,10 @@ public class ModelResourceExporter {
 
   public ModelResourceExporter(String className, ModelClassData classData, Class<?> jointAndVisualFactoryClass) {
     this(className, classData);
-    this.jointAndVisualFactory = jointAndVisualFactoryClass;
   }
 
   public ModelResourceExporter(String className, String resourceName, ModelClassData classData, Class<?> jointAndVisualFactoryClass) {
     this(className, resourceName, classData);
-    this.jointAndVisualFactory = jointAndVisualFactoryClass;
   }
 
   public void setResourceName(String resourceName) {
@@ -182,54 +155,30 @@ public class ModelResourceExporter {
   public boolean shouldRecenter() {
     return this.shouldRecenter;
   }
-
   public void setMoveCenterToBottom(boolean moveCenter) {
     this.moveCenterToBottom = moveCenter;
   }
-
   public boolean shouldMoveCenterToBottom() {
     return this.moveCenterToBottom;
   }
-
   public void setRecenterXZ(boolean recenterXZ) {
     this.recenterXZ = recenterXZ;
   }
-
   public boolean shouldRecenterXZ() {
     return this.recenterXZ;
   }
-
   public boolean hasValidData() {
     return this.validData;
   }
-
   public void setHasValidData(boolean validData) {
     this.validData = validData;
   }
-
   public boolean hasNewData() {
     return this.hasNewData;
   }
-
-  public void setLastEdited(Date lastEdited) {
-    this.lastEdited = lastEdited;
-  }
-
-  public void addLastEditedDate(Date date) {
-    if (date == null) {
-      return;
-    }
-    if (this.lastEdited == null) {
-      this.lastEdited = date;
-    } else if (date.after(this.lastEdited)) {
-      this.lastEdited = date;
-    }
-  }
-
   public void setExportGalleryResources(boolean exportResources) {
     this.exportGalleryResources = exportResources;
   }
-
   public boolean getExportGalleryResources() {
     return this.exportGalleryResources;
   }
@@ -237,98 +186,61 @@ public class ModelResourceExporter {
   public String getResourceName() {
     return this.resourceName;
   }
-
   public ModelClassData getClassData() {
     return this.classData;
   }
-
   public void setForceRebuildCode(boolean rebuildCode) {
     this.forceRebuildCode = rebuildCode;
   }
-
   public void setForceRebuildXML(boolean rebuildXML) {
     this.forceRebuildXML = rebuildXML;
   }
-
   public boolean getForceRebuildCode() {
     return this.forceRebuildCode;
   }
-
   public boolean getForceRebuildXML() {
     return this.forceRebuildXML;
   }
-
-  public void setJointAndVisualFactory(Class<?> jointAndVisualFactoryClass) {
-    this.jointAndVisualFactory = jointAndVisualFactoryClass;
-  }
-
   public boolean hasJointMap() {
     return this.jointList != null;
   }
-
   public boolean hasJoints() {
     return hasJointMap() && !this.jointList.isEmpty();
   }
-
   public List<Tuple2<String, String>> getJointMap() {
     return this.jointList;
   }
 
   public void addArrayNamesToExposeFirstElementOf(List<String> arrayNames) {
-    for (String arrayName : arrayNames) {
-      if (!this.arraysToExposeFirstElementOf.contains(arrayName)) {
-        this.arraysToExposeFirstElementOf.add(arrayName);
-      }
-    }
+    addAllUnique(this.arraysToExposeFirstElementOf, arrayNames);
   }
 
   public void addArrayNamesToExposeFirstElementOf(String[] arrayNames) {
-    for (String arrayName : arrayNames) {
-      if (!this.arraysToExposeFirstElementOf.contains(arrayName)) {
-        this.arraysToExposeFirstElementOf.add(arrayName);
-      }
-    }
+    addAllUnique(this.arraysToExposeFirstElementOf, Arrays.asList(arrayNames));
   }
 
   public void addArrayNamesToHideElementsOf(List<String> arrayNames) {
-    for (String arrayName : arrayNames) {
-      if (!this.arraysToHideElementsOf.contains(arrayName)) {
-        this.arraysToHideElementsOf.add(arrayName);
-      }
-    }
+    addAllUnique(this.arraysToHideElementsOf, arrayNames);
   }
 
   public void addArrayNamesToHideElementsOf(String[] arrayNames) {
-    for (String arrayName : arrayNames) {
-      if (!this.arraysToHideElementsOf.contains(arrayName)) {
-        this.arraysToHideElementsOf.add(arrayName);
-      }
-    }
+    addAllUnique(this.arraysToHideElementsOf, Arrays.asList(arrayNames));
   }
 
   public void addJointIdsToSuppress(List<String> jointIds) {
-    for (String jointId : jointIds) {
-      if (!this.jointIdsToSuppress.contains(jointId)) {
-        this.jointIdsToSuppress.add(jointId);
-      }
-    }
+    addAllUnique(this.jointIdsToSuppress, jointIds);
   }
 
   public void addJointIdsToSuppress(String[] jointIds) {
-    for (String jointId : jointIds) {
-      if (!this.jointIdsToSuppress.contains(jointId)) {
-        this.jointIdsToSuppress.add(jointId);
-      }
-    }
+    addAllUnique(this.jointIdsToSuppress, Arrays.asList(jointIds));
   }
 
-
-
-
-
-
-  List<Tuple2<String, String>> makeCodeReadyTree(List<Tuple2<String, String>> sourceList) {
-    return ModelResourceJointTreeUtilities.makeCodeReadyTree(sourceList, REMOVE_ROOT_JOINTS);
+  private static void addAllUnique(List<String> target, List<String> source) {
+    for (String item : source) {
+      if (!target.contains(item)) {
+        target.add(item);
+      }
+    }
   }
 
   public void setJointMap(List<Tuple2<String, String>> jointList) {
@@ -340,21 +252,16 @@ public class ModelResourceExporter {
   }
 
   public void addResource(String modelName, String textureName, String resourceType, String attributionName, String attributionYear) {
-    String attributionNameToUse = null;
-    String attributionYearToUse = null;
-    if ((attributionName != null) && !attributionName.equals(this.attributionName)) {
-      attributionNameToUse = attributionName;
+    String nameToUse = normalizeAttribution(attributionName, this.attributionName);
+    String yearToUse = normalizeAttribution(attributionYear, this.attributionYear);
+    this.addSubResource(new ModelSubResourceExporter(modelName, textureName, resourceType, nameToUse, yearToUse));
+  }
+
+  private static String normalizeAttribution(String value, String parentValue) {
+    if ((value != null) && !value.equals(parentValue) && !value.isEmpty()) {
+      return value;
     }
-    if ((attributionYear != null) && !attributionYear.equals(this.attributionYear)) {
-      attributionYearToUse = attributionYear;
-    }
-    if ((attributionNameToUse != null) && (attributionNameToUse.length() == 0)) {
-      attributionNameToUse = null;
-    }
-    if ((attributionYearToUse != null) && (attributionYearToUse.length() == 0)) {
-      attributionYearToUse = null;
-    }
-    this.addSubResource(new ModelSubResourceExporter(modelName, textureName, resourceType, attributionNameToUse, attributionYearToUse));
+    return null;
   }
 
   public void addSubResourceTags(String modelName, String textureName, String... tags) {
@@ -369,13 +276,13 @@ public class ModelResourceExporter {
     addTagsToMatchingSubResources(modelName, textureName, tags, ModelSubResourceExporter::addThemeTags);
   }
 
-  private void addTagsToMatchingSubResources(String modelName, String textureName, String[] tags, SubResourceTagUpdater updater) {
+  private void addTagsToMatchingSubResources(String modelName, String textureName,
+      String[] tags, java.util.function.BiConsumer<ModelSubResourceExporter, String[]> updater) {
     if ((tags != null) && (tags.length > 0)) {
       for (ModelSubResourceExporter subResource : this.subResources) {
-        if (subResource.getModelName().equalsIgnoreCase(modelName)) {
-          if ((textureName == null) || subResource.getTextureName().equalsIgnoreCase(textureName)) {
-            updater.addTags(subResource, tags);
-          }
+        if (subResource.getModelName().equalsIgnoreCase(modelName)
+            && ((textureName == null) || subResource.getTextureName().equalsIgnoreCase(textureName))) {
+          updater.accept(subResource, tags);
         }
       }
     }
@@ -432,12 +339,8 @@ public class ModelResourceExporter {
     return this.boundingBoxes.containsKey(modelName);
   }
 
-  AxisAlignedBox computeBoundingBoxUnion() {
-    AxisAlignedBox superBox = AxisAlignedBox.NaN;
-    for (AxisAlignedBox boundingBox : this.boundingBoxes.values()) {
-      superBox = superBox.union(boundingBox);
-    }
-    return superBox;
+  Collection<AxisAlignedBox> getBoundingBoxValues() {
+    return this.boundingBoxes.values();
   }
 
   public void addExistingThumbnail(String name, File thumbnailFile) {
@@ -455,156 +358,75 @@ public class ModelResourceExporter {
     this.xmlFile = xmlFile;
   }
 
-  public void setJavaFile(File javaFile) {
-    this.javaFile = javaFile;
-  }
-
   String getAttributionName() {
     return this.attributionName;
   }
-
   String getAttributionYear() {
     return this.attributionYear;
   }
-
   boolean isDeprecated() {
     return this.isDeprecated;
   }
-
   boolean isPlaceOnGround() {
     return this.placeOnGround;
   }
-
   List<String> getTags() {
     return this.tags;
   }
-
   List<String> getGroupTags() {
     return this.groupTags;
   }
-
   List<String> getThemeTags() {
     return this.themeTags;
   }
-
   List<ModelSubResourceExporter> getSubResources() {
     return this.subResources;
   }
 
-  Field getJointRootsField(Class<?> cls) {
-    if (cls == null) {
-      return null;
-    }
-    Field[] rootFields = AliceResourceClassUtilities.getFieldsOfType(cls, JointId[].class);
-    if (rootFields.length == 1) {
-      return rootFields[0];
-    } else {
-      Class[] interfaces = cls.getInterfaces();
-      for (Class i : interfaces) {
-        Field rootField = getJointRootsField(i);
-        if (rootField != null) {
-          return rootField;
-        }
-      }
-    }
-    return null;
-  }
-
-  boolean needsToDefineRootsMethod(Class<?> cls) {
-    if (cls == null) {
-      return false;
-    }
-    Method[] methods = cls.getMethods();
-    for (Method m : methods) {
-      if (JointId[].class.isAssignableFrom(m.getReturnType())) {
-        return true;
-      }
-    }
-    Class[] interfaces = cls.getInterfaces();
-    for (Class i : interfaces) {
-      boolean needToDefineMethod = needsToDefineRootsMethod(i);
-      if (needToDefineMethod) {
-        return needToDefineMethod;
-      }
-    }
-    return false;
-  }
-
-  private static String createResourceEnumName(ModelResourceExporter parentExporter, String modelName, String textureName) {
-    if (modelName.equalsIgnoreCase(parentExporter.getClassName())) {
-      return AliceResourceUtilities.makeEnumName(textureName);
-    }
-    String modelEnumName = AliceResourceUtilities.makeEnumName(modelName);
-    if (modelName.equalsIgnoreCase(textureName) || textureName.equalsIgnoreCase(AliceResourceUtilities.getDefaultTextureEnumName(modelName)) || textureName.equalsIgnoreCase(modelEnumName)) {
-      return modelEnumName;
-    } else {
-      return modelEnumName + "_" + AliceResourceUtilities.makeEnumName(textureName);
-    }
-  }
-
-  static String createResourceEnumName(ModelResourceExporter parentExporter, ModelSubResourceExporter resource) {
-    return createResourceEnumName(parentExporter, resource.getModelName(), resource.getTextureName());
-  }
-
   public String createResourceEnumName(String modelName, String textureName) {
-    return createResourceEnumName(this, modelName, textureName);
+    return ModelResourceJavaGenerator.createResourceEnumNameForModelAndTexture(this, modelName, textureName);
   }
 
   public boolean shouldHideJointsOfArray(String arrayName) {
     return this.arraysToHideElementsOf.contains(arrayName);
   }
 
-  String getJointAccessMethodNameForArrayJoint(String jointName) {
-    String arrayName = ModelResourceArrayUtilities.getArrayNameForJoint(jointName, null, null);
-    return ModelResourceJavaGenerator.getAccessorMethodName(arrayName);
-  }
-
   public String createJavaCode() throws DataFormatException {
     return ModelResourceJavaGenerator.buildJavaCodeBody(this);
-  }
-
-  String getJavaClassName() {
-    return this.className + AliceResourceClassUtilities.RESOURCE_SUFFIX;
   }
 
   Map<String, Map<String, AffineMatrix4x4>> getPoses() {
     return this.poses;
   }
-
   boolean isEnableArraySupport() {
     return this.enableArraySupport;
   }
-
   List<String> getArraysToHideElementsOf() {
     return this.arraysToHideElementsOf;
   }
-
   List<String> getArraysToExposeFirstElementOf() {
     return this.arraysToExposeFirstElementOf;
   }
-
   List<Tuple2<String, String>> getJointList() {
     return this.jointList;
   }
-
   Map<String, String> getCustomArrayNameMap() {
     return this.customArrayNameMap;
   }
-
   List<String> getJointIdsToSuppress() {
     return this.jointIdsToSuppress;
   }
-
   String[] getArrayNamesToSkip() {
     return this.arrayNamesToSkip;
   }
-
-
-  private File createJavaCode(String root) throws DataFormatException {
-    String javaCode = createJavaCode();
-    File javaFile = ModelResourceFileUtilities.getJavaFile(root, this.classData.packageString, getJavaClassName());
-    TextFileUtilities.write(javaFile, javaCode);
-    return javaFile;
+  Map<String, List<String>> getForcedEnumNamesMap() {
+    return this.forcedEnumNamesMap;
+  }
+  List<String> getForcedOverridingEnumNames() {
+    return this.forcedOverridingEnumNames;
+  }
+  File getXmlFile() {
+    return this.xmlFile;
   }
 
   String createXMLString() {
@@ -612,20 +434,7 @@ public class ModelResourceExporter {
   }
 
   File createXMLFile(String root, boolean forceRebuild) throws IOException {
-    File outputFile = ModelResourceFileUtilities.getXMLFile(root, this.classData.packageString, this.className);
-    ModelResourceFileUtilities.ensureOutputFile(outputFile, "XML resource");
-    if (!forceRebuild && (this.xmlFile != null) && this.xmlFile.exists()) {
-      FileUtilities.copyFile(this.xmlFile, outputFile);
-      return outputFile;
-    } else {
-      String xmlString = this.createXMLString();
-      try (FileWriter fw = new FileWriter(outputFile)) {
-        fw.write(xmlString);
-      }
-
-      return outputFile;
-    }
-
+    return ModelResourceXmlGenerator.createXMLFile(this, root, forceRebuild);
   }
 
   public String getThumbnailPath(String rootPath, String thumbnailName) {
@@ -648,26 +457,7 @@ public class ModelResourceExporter {
   }
 
   public boolean isValidEnumName(String modelName, String enumName) {
-    if (this.forcedEnumNamesMap.containsKey(modelName)) {
-      List<String> validEnums = this.forcedEnumNamesMap.get(modelName);
-      for (String e : validEnums) {
-        String otherToCheck = modelName.toUpperCase() + "_" + e;
-        if (e.equalsIgnoreCase(enumName) || otherToCheck.equalsIgnoreCase(enumName)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    //If we aren't forcing any enum names then all enum names are valid
-    if (this.forcedOverridingEnumNames.isEmpty()) {
-      return true;
-    }
-    for (String e : this.forcedOverridingEnumNames) {
-      if (e.equalsIgnoreCase(enumName)) {
-        return true;
-      }
-    }
-    return false;
+    return ModelResourceJavaGenerator.isValidEnumName(this, modelName, enumName);
   }
 
   public void setArrayNamesToSkip(String[] arrayNamesToSkip) {
@@ -679,24 +469,15 @@ public class ModelResourceExporter {
   }
 
   public void addCustomArrayNames(Map<String, String> customArrayNames) {
-    for (Entry<String, String> entry : customArrayNames.entrySet()) {
-      this.customArrayNameMap.put(entry.getKey(), entry.getValue());
-    }
+    this.customArrayNameMap.putAll(customArrayNames);
   }
 
   public void addForcedEnumNames(String resourceName, List<String> enumNames) {
-    if ((enumNames != null) && (!enumNames.isEmpty())) {
+    if ((enumNames != null) && !enumNames.isEmpty()) {
       if (resourceName == null) {
         this.forcedOverridingEnumNames.addAll(enumNames);
       } else {
-        List<String> nameList;
-        if (!this.forcedEnumNamesMap.containsKey(resourceName)) {
-          nameList = new ArrayList<>();
-          this.forcedEnumNamesMap.put(resourceName, nameList);
-        } else {
-          nameList = this.forcedEnumNamesMap.get(resourceName);
-        }
-        nameList.addAll(enumNames);
+        this.forcedEnumNamesMap.computeIfAbsent(resourceName, k -> new ArrayList<>()).addAll(enumNames);
       }
     }
   }

@@ -43,6 +43,7 @@
 
 package org.lgna.story.resourceutilities;
 
+import edu.cmu.cs.dennisc.java.io.FileUtilities;
 import edu.cmu.cs.dennisc.xml.XMLUtilities;
 import org.alice.math.immutable.AxisAlignedBox;
 import org.lgna.story.implementation.alice.AliceResourceUtilities;
@@ -54,6 +55,9 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +65,30 @@ import java.util.Set;
 
 final class ModelResourceXmlGenerator {
   private ModelResourceXmlGenerator() {
+  }
+
+  static File createXMLFile(ModelResourceExporter exporter, String root, boolean forceRebuild) throws IOException {
+    File outputFile = ModelResourceFileUtilities.getXMLFile(root, exporter.getPackageString(), exporter.getClassName());
+    ModelResourceFileUtilities.ensureOutputFile(outputFile, "XML resource");
+    File existingXmlFile = exporter.getXmlFile();
+    if (!forceRebuild && (existingXmlFile != null) && existingXmlFile.exists()) {
+      FileUtilities.copyFile(existingXmlFile, outputFile);
+      return outputFile;
+    } else {
+      String xmlString = createXMLString(exporter);
+      try (FileWriter fw = new FileWriter(outputFile)) {
+        fw.write(xmlString);
+      }
+      return outputFile;
+    }
+  }
+
+  static AxisAlignedBox computeBoundingBoxUnion(Iterable<AxisAlignedBox> boundingBoxes) {
+    AxisAlignedBox superBox = AxisAlignedBox.NaN;
+    for (AxisAlignedBox boundingBox : boundingBoxes) {
+      superBox = superBox.union(boundingBox);
+    }
+    return superBox;
   }
 
   static String createXMLString(ModelResourceExporter exporter) {
@@ -138,7 +166,7 @@ final class ModelResourceXmlGenerator {
   private static AxisAlignedBox persistComputedClassBoundingBoxIfMissing(ModelResourceExporter exporter, String className) {
     AxisAlignedBox classBoundingBox = exporter.getBoundingBox(className);
     if (classBoundingBox == null) {
-      classBoundingBox = exporter.computeBoundingBoxUnion();
+      classBoundingBox = computeBoundingBoxUnion(exporter.getBoundingBoxValues());
       exporter.setBoundingBox(className, classBoundingBox);
     }
     return classBoundingBox;
