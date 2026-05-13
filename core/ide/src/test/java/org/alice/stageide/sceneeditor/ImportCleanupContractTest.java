@@ -251,7 +251,7 @@ public class ImportCleanupContractTest {
 
   private static void assertImportAbsent(Set<String> imports, String simpleTypeName, String reason) {
     boolean found = imports.stream().anyMatch(line ->
-        line.contains("." + simpleTypeName + ";") || line.endsWith("." + simpleTypeName + ";"));
+        line.contains("." + simpleTypeName + ";"));
     assertFalse("Import of " + simpleTypeName + " must be absent (" + reason + ")",
         found);
   }
