@@ -141,8 +141,8 @@ import static com.jogamp.opengl.GL2ES1.GL_ALPHA_SCALE;
   // preserving the L1137 bug where the font map is cleared instead.
   void disposeForgottenImageGenerators() {
     synchronized (this.forgottenImageGeneratorToPixelsMap) {
-      for (ImageGenerator imageGenerator : this.forgottenImageGeneratorToPixelsMap.keySet()) {
-        disposeImageGenerator(imageGenerator);
+      for (ReferencedObject<Pixels> referencedObject : this.forgottenImageGeneratorToPixelsMap.values()) {
+        referencedObject.getObject().release();
       }
     }
   }

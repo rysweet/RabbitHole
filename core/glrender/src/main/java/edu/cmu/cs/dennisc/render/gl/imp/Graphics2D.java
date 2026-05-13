@@ -390,34 +390,32 @@ import static com.jogamp.opengl.fixedfunc.GLMatrixFunc.GL_PROJECTION;
   @Override
   public void setRenderingHints(Map<?, ?> hints) { this.renderingHints = new RenderingHints((Map<RenderingHints.Key, ?>) hints); }
 
-  private static double[] s_matrix = new double[6];
+  private final double[] s_matrix = new double[6];
 
   private void glUpdateTransform() {
-    synchronized (s_matrix) {
-      this.affineTransform.getMatrix(s_matrix);
-      if (s_matrix[4] != this.affineTransform.getTranslateX()) {
-        System.err.println("WARNING: translate x: " + s_matrix[4] + " != " + this.affineTransform.getTranslateX());
-      }
-      if (s_matrix[5] != this.affineTransform.getTranslateY()) {
-        System.err.println("WARNING: translate y: " + s_matrix[5] + " != " + this.affineTransform.getTranslateY());
-      }
-      this.glTransform[0] = s_matrix[0];
-      this.glTransform[4] = s_matrix[2];
-      this.glTransform[8] = 0;
-      this.glTransform[12] = s_matrix[4];
-      this.glTransform[1] = s_matrix[1];
-      this.glTransform[5] = s_matrix[3];
-      this.glTransform[9] = 0;
-      this.glTransform[13] = s_matrix[5];
-      this.glTransform[2] = 0;
-      this.glTransform[6] = 0;
-      this.glTransform[10] = 1;
-      this.glTransform[14] = 0;
-      this.glTransform[3] = 0;
-      this.glTransform[7] = 0;
-      this.glTransform[11] = 0;
-      this.glTransform[15] = 1;
+    this.affineTransform.getMatrix(s_matrix);
+    if (s_matrix[4] != this.affineTransform.getTranslateX()) {
+      System.err.println("WARNING: translate x: " + s_matrix[4] + " != " + this.affineTransform.getTranslateX());
     }
+    if (s_matrix[5] != this.affineTransform.getTranslateY()) {
+      System.err.println("WARNING: translate y: " + s_matrix[5] + " != " + this.affineTransform.getTranslateY());
+    }
+    this.glTransform[0] = s_matrix[0];
+    this.glTransform[4] = s_matrix[2];
+    this.glTransform[8] = 0;
+    this.glTransform[12] = s_matrix[4];
+    this.glTransform[1] = s_matrix[1];
+    this.glTransform[5] = s_matrix[3];
+    this.glTransform[9] = 0;
+    this.glTransform[13] = s_matrix[5];
+    this.glTransform[2] = 0;
+    this.glTransform[6] = 0;
+    this.glTransform[10] = 1;
+    this.glTransform[14] = 0;
+    this.glTransform[3] = 0;
+    this.glTransform[7] = 0;
+    this.glTransform[11] = 0;
+    this.glTransform[15] = 1;
     this.renderContext.gl.glLoadMatrixd(this.glTransformBuffer);
   }
 

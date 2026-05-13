@@ -786,7 +786,8 @@ public class Graphics2DExtractionContractTest {
     assertNotNull("Graphics2D must exist", graphics2DClass);
     try {
       Field f = graphics2DClass.getDeclaredField("s_matrix");
-      assertTrue("s_matrix must be static",
+      // Converted from static to instance field to eliminate synchronized contention on hot path
+      assertFalse("s_matrix should be instance field (perf optimization)",
           Modifier.isStatic(f.getModifiers()));
     } catch (NoSuchFieldException e) {
       fail("s_matrix must remain in Graphics2D");

@@ -194,23 +194,18 @@ import static com.jogamp.opengl.GL2.GL_LINE_STIPPLE;
   }
 
   void draw(Shape s) {
-    boolean isLine;
-    if (graphics2D.getStrokeField() instanceof BasicStroke basicStroke) {
+    Stroke currentStroke = graphics2D.getStrokeField();
+    if (currentStroke instanceof BasicStroke basicStroke) {
       if (basicStroke.getDashArray() != null) {
         //todo
         graphics2D.renderContext.gl.glLineStipple(1, (short) 0x00FF);
         graphics2D.renderContext.gl.glEnable(GL_LINE_STIPPLE);
       }
-      isLine = true;
-    } else {
-      isLine = false;
-    }
 
-    if (isLine) {
       Shape outlinesShape = LINE_STROKE.createStrokedShape(s);
       PathIterator pi = outlinesShape.getPathIterator(null, FLATNESS);
       float[] segment = new float[6];
-      graphics2D.renderContext.gl.glLineWidth(((BasicStroke) graphics2D.getStrokeField()).getLineWidth());
+      graphics2D.renderContext.gl.glLineWidth(basicStroke.getLineWidth());
       try {
         while (!pi.isDone()) {
           switch (pi.currentSegment(segment)) {
@@ -239,7 +234,7 @@ import static com.jogamp.opengl.GL2.GL_LINE_STIPPLE;
       }
     } else {
       //todo: investigate
-      Shape outlinesShape = graphics2D.getStrokeField().createStrokedShape(s);
+      Shape outlinesShape = currentStroke.createStrokedShape(s);
       PathIterator pi = outlinesShape.getPathIterator(null, FLATNESS);
       fill(pi);
     }

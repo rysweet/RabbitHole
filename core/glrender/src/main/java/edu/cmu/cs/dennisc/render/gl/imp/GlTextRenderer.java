@@ -140,8 +140,7 @@ import java.util.Map;
 
   void disposeForgottenFonts() {
     synchronized (this.forgottenFontToTextRendererMap) {
-      for (Font font : this.forgottenFontToTextRendererMap.keySet()) {
-        ReferencedObject<TextRendererHolder> referencedObject = this.forgottenFontToTextRendererMap.get(font);
+      for (ReferencedObject<TextRendererHolder> referencedObject : this.forgottenFontToTextRendererMap.values()) {
         referencedObject.getObject().dispose();
       }
       this.forgottenFontToTextRendererMap.clear();
