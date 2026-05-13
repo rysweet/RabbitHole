@@ -45,25 +45,12 @@ package org.lgna.story.resourceutilities;
 
 import edu.cmu.cs.dennisc.java.io.FileUtilities;
 import edu.cmu.cs.dennisc.java.io.TextFileUtilities;
-import edu.cmu.cs.dennisc.java.lang.reflect.ReflectionUtilities;
 import edu.cmu.cs.dennisc.pattern.Tuple2;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.alice.math.immutable.AxisAlignedBox;
 import org.alice.math.immutable.Point3;
 import org.alice.math.immutable.UnitQuaternion;
-import org.lgna.story.BipedPose;
-import org.lgna.story.BipedPoseBuilder;
-import org.lgna.story.FlyerPose;
-import org.lgna.story.FlyerPoseBuilder;
 import org.lgna.story.JointedModelPose;
-import org.lgna.story.JointedModelPoseBuilder;
-import org.lgna.story.Pose;
-import org.lgna.story.QuadrupedPose;
-import org.lgna.story.QuadrupedPoseBuilder;
-import org.lgna.story.SlithererPose;
-import org.lgna.story.SlithererPoseBuilder;
-import org.lgna.story.SwimmerPose;
-import org.lgna.story.SwimmerPoseBuilder;
 import org.lgna.story.implementation.alice.AliceResourceClassUtilities;
 import org.lgna.story.implementation.alice.AliceResourceUtilities;
 import org.lgna.story.implementation.alice.JointImplementationAndVisualDataFactory;
@@ -767,7 +754,7 @@ public class ModelResourceExporter {
 
   private String getJointAccessMethodNameForArrayJoint(String jointName) {
     String arrayName = getArrayNameForJoint(jointName, null, null);
-    return getAccessorMethodName(arrayName);
+    return ModelResourceJavaGenerator.getAccessorMethodName(arrayName);
   }
 
   private String getAccessorMethodName(String arrayName) {
@@ -777,126 +764,7 @@ public class ModelResourceExporter {
   //If a parent interface has declared an accessor for a given field, return true
   // otherwisse return false
   private boolean needsAccessorMethodForFieldName(ModelClassData classData, String fieldName) {
-    String fieldAccessorMethodName = getAccessorMethodName(fieldName);
-    Method m = null;
-    try {
-      m = classData.superClass.getMethod(fieldAccessorMethodName);
-      if ((m != null) && m.getDeclaringClass().isInterface()) {
-        return true;
-      }
-    } catch (NoSuchMethodException me) {
-    }
-    return false;
-  }
-
-  private List<Method> getMandatoryMethods(Class<?> superClass, Class<?> returnType) {
-    List<Method> methods = new LinkedList<Method>();
-    for (Method method : superClass.getMethods()) {
-      if (returnType.isAssignableFrom(method.getReturnType()) && method.getDeclaringClass().isInterface()) {
-        methods.add(method);
-      }
-    }
-    return methods;
-  }
-
-  private List<String> getMandatoryJointArrayNames(Class<?> superClass) {
-    List<String> methodNames = new LinkedList<String>();
-    for (Method method : getMandatoryMethods(superClass, JointId[].class)) {
-      methodNames.add(method.getName());
-    }
-    List<String> arrayNames = new LinkedList<String>();
-    for (String methodName : methodNames) {
-      int index = methodName.indexOf("get");
-      if ((index == 0)) {
-        if (!methodName.equals(ROOT_IDS_METHOD_NAME)) {
-          String newName = methodName.substring(3);
-          int arrayIndex = newName.indexOf("Array");
-          if (arrayIndex != -1) {
-            newName = newName.substring(0, arrayIndex);
-          }
-          newName = AliceResourceUtilities.makeEnumName(newName);
-          arrayNames.add(newName);
-        }
-      } else {
-        System.err.println("FROM " + superClass + ": UNABLE TO CONVERT " + methodName + " INTO AN ARRAY NAME.");
-      }
-
-    }
-    return arrayNames;
-  }
-
-  //  We don't support defining poses ahead of time in classes.
-  //  All poses are either declared as functions in the interface to be implemented by the generated code
-  //  Or they're defined by the model resource and added as part of the generative process
-  //  private List<String> getAlreadyDeclaredPoseNames( Class<?> superClass ) {
-  //    List<String> fieldNames = new LinkedList<String>();
-  //    for( Field field : ReflectionUtilities.getPublicStaticFinalFields( superClass, org.lgna.story.Pose.class ) ) {
-  //      fieldNames.add( field.getName() );
-  //    }
-  //    return fieldNames;
-  //  }
-
-  private List<String> getMandatoryPoseNames(Class<?> superClass) {
-    List<String> methodNames = new LinkedList<String>();
-    for (Method method : getMandatoryMethods(superClass, Pose.class)) {
-      methodNames.add(method.getName());
-    }
-    List<String> poseNames = new LinkedList<String>();
-    for (String methodName : methodNames) {
-      int index = methodName.indexOf("get");
-      if ((index == 0)) {
-        String newName = methodName.substring(3);
-        int arrayIndex = newName.indexOf("Pose");
-        if (arrayIndex != -1) {
-          newName = newName.substring(0, arrayIndex);
-        }
-        newName = AliceResourceUtilities.makeEnumName(newName);
-        poseNames.add(newName);
-      } else {
-        System.err.println("FROM " + superClass + ": UNABLE TO CONVERT " + methodName + " INTO POSE NAME.");
-      }
-
-    }
-    return poseNames;
-  }
-
-  private Class getPoseBuilderTypeForSuperClass(Class<?> superClass) {
-    if (FlyerResource.class.isAssignableFrom(superClass)) {
-      return FlyerPoseBuilder.class;
-    } else if (BipedResource.class.isAssignableFrom(superClass)) {
-      return BipedPoseBuilder.class;
-    } else if (QuadrupedResource.class.isAssignableFrom(superClass)) {
-      return QuadrupedPoseBuilder.class;
-    } else if (SwimmerResource.class.isAssignableFrom(superClass)) {
-      return SwimmerPoseBuilder.class;
-    } else if (SlithererResource.class.isAssignableFrom(superClass)) {
-      return SlithererPoseBuilder.class;
-    }
-    return JointedModelPoseBuilder.class;
-  }
-
-  private Class getPoseTypeForSuperClass(Class<?> superClass) {
-    if (FlyerResource.class.isAssignableFrom(superClass)) {
-      return FlyerPose.class;
-    } else if (BipedResource.class.isAssignableFrom(superClass)) {
-      return BipedPose.class;
-    } else if (QuadrupedResource.class.isAssignableFrom(superClass)) {
-      return QuadrupedPose.class;
-    } else if (SwimmerResource.class.isAssignableFrom(superClass)) {
-      return SwimmerPose.class;
-    } else if (SlithererResource.class.isAssignableFrom(superClass)) {
-      return SlithererPose.class;
-    }
-    return JointedModelPose.class;
-
-  }
-
-  private List<String> getAlreadyDeclaredJointArrayNames(Class<?> superClass) {
-    List<String> fieldNames = new LinkedList<String>();
-    for (Field field : ReflectionUtilities.getPublicStaticFinalFields(superClass, JointArrayId.class)) {
-      fieldNames.add(field.getName());
-    }
-    return fieldNames;
+    return ModelResourceJavaGenerator.needsAccessorMethodForFieldName(classData, fieldName);
   }
 
   public String createJavaCode() throws DataFormatException {
@@ -956,7 +824,7 @@ public class ModelResourceExporter {
         sb.append(" };" + JavaCodeUtilities.LINE_RETURN);
       }
       //Handle pose code
-      List<String> mandatoryPoseNames = getMandatoryPoseNames(classData.superClass);
+      List<String> mandatoryPoseNames = ModelResourceJavaGenerator.getMandatoryPoseNames(classData.superClass);
       if (!poseEntries.isEmpty() || (!mandatoryPoseNames.isEmpty())) {
         for (String mandatoryPose : mandatoryPoseNames) {
           if (!poseEntries.containsKey(mandatoryPose)) {
@@ -979,9 +847,9 @@ public class ModelResourceExporter {
             sb.append("\n\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
           }
 
-          //          Class poseType = getPoseTypeForSuperClass( classData.superClass );
+          //          Class poseType = ModelResourceJavaGenerator.getPoseTypeForSuperClass( classData.superClass );
           Class poseType = JointedModelPose.class;
-          Class poseBuilderType = getPoseBuilderTypeForSuperClass(classData.superClass);
+          Class poseBuilderType = ModelResourceJavaGenerator.getPoseBuilderTypeForSuperClass(classData.superClass);
           String poseTypeString = poseType.getName();
           sb.append("\n\tpublic static final " + poseTypeString + " " + fullPoseName + " = new " + poseTypeString + "( ");
           sb.append(JavaCodeUtilities.LINE_RETURN);
@@ -998,7 +866,7 @@ public class ModelResourceExporter {
           }
           sb.append("\t);" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
           if (needsAccessor) {
-            String poseAccessorName = getAccessorMethodName(fullPoseName);
+            String poseAccessorName = ModelResourceJavaGenerator.getAccessorMethodName(fullPoseName);
             sb.append("\tpublic " + poseType.getName() + " " + poseAccessorName + "(){" + JavaCodeUtilities.LINE_RETURN);
             sb.append("\t\treturn " + this.getJavaClassName() + "." + fullPoseName + ";" + JavaCodeUtilities.LINE_RETURN);
             sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
@@ -1006,8 +874,8 @@ public class ModelResourceExporter {
         }
       }
       //Handle array code
-      List<String> mandatoryArrayNames = getMandatoryJointArrayNames(classData.superClass);
-      List<String> declaredArrays = getAlreadyDeclaredJointArrayNames(classData.superClass);
+      List<String> mandatoryArrayNames = ModelResourceJavaGenerator.getMandatoryJointArrayNames(classData.superClass);
+      List<String> declaredArrays = ModelResourceJavaGenerator.getAlreadyDeclaredJointArrayNames(classData.superClass);
       if (!arrayEntries.isEmpty() || (!mandatoryArrayNames.isEmpty())) {
         //Loop through and remove any existing arrays from the mandatory array list
         // This should leave only the mandatory arrays that need an empty list defined
@@ -1060,7 +928,7 @@ public class ModelResourceExporter {
             sb.append(" };" + JavaCodeUtilities.LINE_RETURN);
           }
           if (needsAccessor) {
-            String arrayAccessorName = getAccessorMethodName(fullArrayName);
+            String arrayAccessorName = ModelResourceJavaGenerator.getAccessorMethodName(fullArrayName);
             sb.append("\tpublic org.lgna.story.resources.JointId[] " + arrayAccessorName + "(){" + JavaCodeUtilities.LINE_RETURN);
             sb.append("\t\treturn " + this.getJavaClassName() + "." + fullArrayName + ";" + JavaCodeUtilities.LINE_RETURN);
             sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);

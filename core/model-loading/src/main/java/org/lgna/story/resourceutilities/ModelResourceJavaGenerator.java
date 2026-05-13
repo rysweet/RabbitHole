@@ -43,10 +43,151 @@
 
 package org.lgna.story.resourceutilities;
 
+import edu.cmu.cs.dennisc.java.lang.reflect.ReflectionUtilities;
+import org.lgna.story.BipedPose;
+import org.lgna.story.BipedPoseBuilder;
+import org.lgna.story.FlyerPose;
+import org.lgna.story.FlyerPoseBuilder;
+import org.lgna.story.JointedModelPose;
+import org.lgna.story.JointedModelPoseBuilder;
+import org.lgna.story.Pose;
+import org.lgna.story.QuadrupedPose;
+import org.lgna.story.QuadrupedPoseBuilder;
+import org.lgna.story.SlithererPose;
+import org.lgna.story.SlithererPoseBuilder;
+import org.lgna.story.SwimmerPose;
+import org.lgna.story.SwimmerPoseBuilder;
+import org.lgna.story.implementation.alice.AliceResourceUtilities;
+import org.lgna.story.resources.BipedResource;
+import org.lgna.story.resources.FlyerResource;
 import org.lgna.story.resources.ImplementationAndVisualType;
+import org.lgna.story.resources.JointArrayId;
+import org.lgna.story.resources.JointId;
+import org.lgna.story.resources.QuadrupedResource;
+import org.lgna.story.resources.SlithererResource;
+import org.lgna.story.resources.SwimmerResource;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.LinkedList;
+import java.util.List;
 
 final class ModelResourceJavaGenerator {
   private ModelResourceJavaGenerator() {
+  }
+
+  static String getAccessorMethodName(String arrayName) {
+    return "get" + AliceResourceUtilities.enumToCamelCase(arrayName);
+  }
+
+  static boolean needsAccessorMethodForFieldName(ModelClassData classData, String fieldName) {
+    String fieldAccessorMethodName = getAccessorMethodName(fieldName);
+    try {
+      Method m = classData.superClass.getMethod(fieldAccessorMethodName);
+      if ((m != null) && m.getDeclaringClass().isInterface()) {
+        return true;
+      }
+    } catch (NoSuchMethodException me) {
+    }
+    return false;
+  }
+
+  static List<Method> getMandatoryMethods(Class<?> superClass, Class<?> returnType) {
+    List<Method> methods = new LinkedList<Method>();
+    for (Method method : superClass.getMethods()) {
+      if (returnType.isAssignableFrom(method.getReturnType()) && method.getDeclaringClass().isInterface()) {
+        methods.add(method);
+      }
+    }
+    return methods;
+  }
+
+  static List<String> getMandatoryJointArrayNames(Class<?> superClass) {
+    List<String> methodNames = new LinkedList<String>();
+    for (Method method : getMandatoryMethods(superClass, JointId[].class)) {
+      methodNames.add(method.getName());
+    }
+    List<String> arrayNames = new LinkedList<String>();
+    for (String methodName : methodNames) {
+      int index = methodName.indexOf("get");
+      if ((index == 0)) {
+        if (!methodName.equals("getRootJointIds")) {
+          String newName = methodName.substring(3);
+          int arrayIndex = newName.indexOf("Array");
+          if (arrayIndex != -1) {
+            newName = newName.substring(0, arrayIndex);
+          }
+          newName = AliceResourceUtilities.makeEnumName(newName);
+          arrayNames.add(newName);
+        }
+      } else {
+        System.err.println("FROM " + superClass
+            + ": UNABLE TO CONVERT " + methodName + " INTO AN ARRAY NAME.");
+      }
+    }
+    return arrayNames;
+  }
+
+  static List<String> getMandatoryPoseNames(Class<?> superClass) {
+    List<String> methodNames = new LinkedList<String>();
+    for (Method method : getMandatoryMethods(superClass, Pose.class)) {
+      methodNames.add(method.getName());
+    }
+    List<String> poseNames = new LinkedList<String>();
+    for (String methodName : methodNames) {
+      int index = methodName.indexOf("get");
+      if ((index == 0)) {
+        String newName = methodName.substring(3);
+        int arrayIndex = newName.indexOf("Pose");
+        if (arrayIndex != -1) {
+          newName = newName.substring(0, arrayIndex);
+        }
+        newName = AliceResourceUtilities.makeEnumName(newName);
+        poseNames.add(newName);
+      } else {
+        System.err.println("FROM " + superClass
+            + ": UNABLE TO CONVERT " + methodName + " INTO POSE NAME.");
+      }
+    }
+    return poseNames;
+  }
+
+  static Class<?> getPoseBuilderTypeForSuperClass(Class<?> superClass) {
+    if (FlyerResource.class.isAssignableFrom(superClass)) {
+      return FlyerPoseBuilder.class;
+    } else if (BipedResource.class.isAssignableFrom(superClass)) {
+      return BipedPoseBuilder.class;
+    } else if (QuadrupedResource.class.isAssignableFrom(superClass)) {
+      return QuadrupedPoseBuilder.class;
+    } else if (SwimmerResource.class.isAssignableFrom(superClass)) {
+      return SwimmerPoseBuilder.class;
+    } else if (SlithererResource.class.isAssignableFrom(superClass)) {
+      return SlithererPoseBuilder.class;
+    }
+    return JointedModelPoseBuilder.class;
+  }
+
+  static Class<?> getPoseTypeForSuperClass(Class<?> superClass) {
+    if (FlyerResource.class.isAssignableFrom(superClass)) {
+      return FlyerPose.class;
+    } else if (BipedResource.class.isAssignableFrom(superClass)) {
+      return BipedPose.class;
+    } else if (QuadrupedResource.class.isAssignableFrom(superClass)) {
+      return QuadrupedPose.class;
+    } else if (SwimmerResource.class.isAssignableFrom(superClass)) {
+      return SwimmerPose.class;
+    } else if (SlithererResource.class.isAssignableFrom(superClass)) {
+      return SlithererPose.class;
+    }
+    return JointedModelPose.class;
+  }
+
+  static List<String> getAlreadyDeclaredJointArrayNames(Class<?> superClass) {
+    List<String> fieldNames = new LinkedList<String>();
+    for (Field field : ReflectionUtilities.getPublicStaticFinalFields(superClass, JointArrayId.class)) {
+      fieldNames.add(field.getName());
+    }
+    return fieldNames;
   }
 
   static void appendPreambleAndEnumConstants(StringBuilder sb, ModelResourceExporter exporter) {
