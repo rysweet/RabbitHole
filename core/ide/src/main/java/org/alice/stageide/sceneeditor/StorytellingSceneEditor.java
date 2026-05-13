@@ -46,20 +46,18 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import edu.cmu.cs.dennisc.animation.Animator;
 import edu.cmu.cs.dennisc.animation.ClockBasedAnimator;
 import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
-import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.render.OnscreenRenderTarget;
 import edu.cmu.cs.dennisc.render.RenderCapabilities;
-import edu.cmu.cs.dennisc.render.event.*;
+import edu.cmu.cs.dennisc.render.event.AutomaticDisplayEvent;
+import edu.cmu.cs.dennisc.render.event.AutomaticDisplayListener;
 import edu.cmu.cs.dennisc.render.gl.GlrRenderFactory;
 import edu.cmu.cs.dennisc.scenegraph.*;
 import edu.cmu.cs.dennisc.scenegraph.AsSeenBy;
-import edu.cmu.cs.dennisc.scenegraph.Element;
 import org.alice.ide.IDE;
 import org.alice.ide.ProjectDocumentFrame;
 import org.alice.ide.ReasonToDisableSomeAmountOfRendering;
 import org.alice.ide.icons.Icons;
 import org.alice.ide.instancefactory.InstanceFactory;
-import org.alice.ide.instancefactory.ThisFieldAccessFactory;
 import org.alice.ide.instancefactory.croquet.InstanceFactoryState;
 import org.alice.ide.preferences.IsToolBarShowing;
 import org.alice.ide.sceneeditor.AbstractSceneEditor;
@@ -76,7 +74,6 @@ import org.alice.math.immutable.*;
 import org.alice.nonfree.NebulousIde;
 import org.alice.stageide.StageIDE;
 import org.alice.stageide.croquet.models.sceneditor.ViewListSelectionState;
-import org.alice.stageide.oneshot.DynamicOneShotMenuModel;
 import org.alice.stageide.run.RunComposite;
 import org.alice.stageide.sceneeditor.interact.CameraNavigatorWidget;
 import org.alice.stageide.sceneeditor.interact.GlobalDragAdapter;
@@ -87,7 +84,6 @@ import org.alice.stageide.sceneeditor.views.InstanceFactorySelectionPanel;
 import org.alice.stageide.sceneeditor.views.SceneObjectPropertyManagerPanel;
 import org.lgna.croquet.*;
 import org.lgna.croquet.history.UserActivity;
-import org.lgna.croquet.triggers.InputEventTrigger;
 import org.lgna.croquet.views.*;
 import org.lgna.croquet.views.SpringPanel.Horizontal;
 import org.lgna.croquet.views.SpringPanel.Vertical;
@@ -108,7 +104,7 @@ import java.util.*;
 /**
  * @author dculyba
  */
-public class StorytellingSceneEditor extends AbstractSceneEditor implements RenderTargetListener {
+public class StorytellingSceneEditor extends AbstractSceneEditor {
   private boolean isVrScene;
 
   private static final String SHOW_JOINTED_MODEL_VISUALIZATIONS_KEY = StorytellingSceneEditor.class.getName() + ".showJointedModelVisualizations";
@@ -122,7 +118,8 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
   }
 
   private final SceneEditorDropReceptor dropReceptor = new SceneEditorDropReceptor(this);
-  private final SceneFieldCodeGenerator codeGenerator = new SceneFieldCodeGenerator(this);
+  final SceneEditorFieldManager fieldManager = new SceneEditorFieldManager(this);
+  private final SceneRenderTargetListener renderTargetListener = new SceneRenderTargetListener(this);
 
   private StorytellingSceneEditor() {
   }
@@ -134,13 +131,13 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
   private static Icon EXPAND_ICON = new FlatSVGIcon(Icons.class.getResource("images/expand.svg")).derive(24, 24);
   private static Icon CONTRACT_ICON = new FlatSVGIcon(Icons.class.getResource("images/contract.svg")).derive(24, 24);
 
-  private AutomaticDisplayListener automaticDisplayListener = new AutomaticDisplayListener() {
+  AutomaticDisplayListener automaticDisplayListener = new AutomaticDisplayListener() {
     @Override
     public void automaticDisplayCompleted(AutomaticDisplayEvent e) {
       StorytellingSceneEditor.this.animator.update();
     }
   };
-  private OnscreenRenderTarget onscreenRenderTarget = GlrRenderFactory.getInstance().createOnscreenRenderTarget(new RenderCapabilities.Builder().stencilBits(0).build());
+  OnscreenRenderTarget onscreenRenderTarget = GlrRenderFactory.getInstance().createOnscreenRenderTarget(new RenderCapabilities.Builder().stencilBits(0).build());
 
   private boolean isInitialized = false;
 
@@ -149,17 +146,17 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
   GlobalDragAdapter globalDragAdapter;
   final SceneEditorListeners listeners = new SceneEditorListeners(this);
   // The location of the Camera or VR user ground. Same as sceneCameraImp for non VR scenes.
-  private TransformableImp movableSceneCameraImp;
+  TransformableImp movableSceneCameraImp;
   // The camera or VR headset. Same as movableSceneCameraImp for non VR scenes.
-  private CameraImp<SymmetricPerspectiveCamera> sceneCameraImp;
-  private CameraNavigatorWidget mainCameraNavigatorWidget = null;
+  CameraImp<SymmetricPerspectiveCamera> sceneCameraImp;
+  CameraNavigatorWidget mainCameraNavigatorWidget = null;
   private Button expandButton;
   private Button contractButton;
   private InstanceFactorySelectionPanel instanceFactorySelectionPanel = null;
 
   private final Button runButton = IsToolBarShowing.getValue() ? null : RunComposite.getInstance().getLaunchOperation().createButton();
 
-  private OrthographicCameraImp orthographicCameraImp = null;
+  OrthographicCameraImp orthographicCameraImp = null;
   private final SymmetricPerspectiveCameraImp layoutCameraImp = new SymmetricPerspectiveCameraImp(null);
 
   private ComboBox<CameraOption> mainCameraViewSelector;
@@ -198,61 +195,15 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     return super.createProgramInstance();
   }
 
-  private void setSelectedFieldOnManipulator(UserField field) {
-    if (this.globalDragAdapter != null) {
-      SThing selectedEntity = this.getInstanceInJavaVMForField(field, SThing.class);
-      TransformableImp transImp = null;
-      if (selectedEntity != null) {
-        EntityImp imp = selectedEntity.getImplementation();
-        if (imp instanceof TransformableImp transformableImp) {
-          transImp = transformableImp;
-        }
-      }
-      this.globalDragAdapter.setSelectedImplementation(transImp);
-    }
-  }
-
-  private void setSelectedExpressionOnManipulator(Expression expression) {
-    if (this.globalDragAdapter != null) {
-      SThing selectedEntity = this.getInstanceInJavaVMForExpression(expression, SThing.class);
-      AbstractTransformableImp transImp = null;
-      if (selectedEntity != null) {
-        EntityImp imp = selectedEntity.getImplementation();
-        if (imp instanceof AbstractTransformableImp transformableImp) {
-          transImp = transformableImp;
-        }
-      }
-      this.globalDragAdapter.setSelectedImplementation(transImp);
-    }
-  }
-
   void setSelectedInstance(InstanceFactory instanceFactory) {
-    Expression expression = instanceFactory != null ? instanceFactory.createExpression() : null;
-    if (expression instanceof FieldAccess fa) {
-      AbstractField field = fa.field.getValue();
-      if (field instanceof UserField uf) {
-        setSelectedField(uf.getDeclaringType(), uf);
-      }
-    } else if (expression instanceof MethodInvocation) {
-      setSelectedExpression(expression);
-    } else if (expression instanceof ArrayAccess) {
-      setSelectedExpression(expression);
-    } else if (expression instanceof ThisExpression) {
-      UserField uf = getActiveSceneField();
-      if (uf != null) {
-        setSelectedField(uf.getDeclaringType(), uf);
-      } else {
-        return;
-      }
-    }
-    getPropertyPanel().setSelectedInstance(instanceFactory);
+    fieldManager.setSelectedInstance(instanceFactory);
   }
 
   public void setSelectedExpression(Expression expression) {
     if (!this.selectionIsFromMain) {
       this.selectionIsFromMain = true;
       if (this.globalDragAdapter != null) {
-        setSelectedExpressionOnManipulator(expression);
+        fieldManager.setSelectedExpressionOnManipulator(expression);
       }
       this.selectionIsFromMain = false;
     }
@@ -285,7 +236,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
           }
         }
       }
-      setSelectedFieldOnManipulator(field);
+      fieldManager.setSelectedFieldOnManipulator(field);
       this.selectionIsFromMain = false;
     }
 
@@ -339,18 +290,6 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     snapGrid.setCurrentCamera(mainCamera);
   }
 
-  private void showLookingGlassPanel() {
-    synchronized (this.getTreeLock()) {
-      this.addCenterComponent(this.lookingGlassPanel);
-    }
-  }
-
-  private void hideLookingGlassPanel() {
-    synchronized (this.getTreeLock()) {
-      this.removeComponent(this.lookingGlassPanel);
-    }
-  }
-
   @Override
   protected void handleExpandContractChange(boolean isExpanded) {
     //todo
@@ -380,107 +319,32 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     }
   }
 
-  private SceneObjectPropertyManagerPanel getPropertyPanel() {
+  SceneObjectPropertyManagerPanel getPropertyPanel() {
     return SideComposite.getInstance().getObjectPropertiesTab().getView();
   }
 
   void handleCameraMarkerFieldSelection(UserField cameraMarkerField) {
-    CameraMarkerImp newMarker = (CameraMarkerImp) this.getMarkerForField(cameraMarkerField);
-    this.globalDragAdapter.setSelectedCameraMarker(newMarker);
-    MoveActiveCameraToMarkerActionOperation.getInstance().setMarkerField(cameraMarkerField);
-    MoveMarkerToActiveCameraActionOperation.getInstance().setMarkerField(cameraMarkerField);
+    fieldManager.handleCameraMarkerFieldSelection(cameraMarkerField);
   }
 
   void handleObjectMarkerFieldSelection(UserField objectMarkerField) {
-    ObjectMarkerImp newMarker = (ObjectMarkerImp) this.getMarkerForField(objectMarkerField);
-    this.globalDragAdapter.setSelectedObjectMarker(newMarker);
-    MoveSelectedObjectToMarkerActionOperation.getInstance().setMarkerField(objectMarkerField);
-    MoveMarkerToSelectedObjectActionOperation.getInstance().setMarkerField(objectMarkerField);
+    fieldManager.handleObjectMarkerFieldSelection(objectMarkerField);
   }
 
   public void setSelectedObjectMarker(UserField objectMarkerField) {
-    RefreshableDataSingleSelectListState<UserField> markerList = SideComposite.getInstance().getObjectMarkersTab().getMarkerListState();
-    markerList.setSelectedIndex(markerList.indexOf(objectMarkerField));
-  }
-
- private void setSelectedCameraMarker(UserField cameraMarkerField) {
-    RefreshableDataSingleSelectListState<UserField> markerList = SideComposite.getInstance().getCameraMarkersTab().getMarkerListState();
-    markerList.setSelectedIndex(markerList.indexOf(cameraMarkerField));
-  }
-
-  private void handleManipulatorSelection(SelectionEvent e) {
-    EntityImp imp = e.getTransformable();
-    if (imp != null) {
-      UserField field = this.getFieldForInstanceInJavaVM(imp.getAbstraction());
-      if (field != null) {
-        if (field.getValueType().isAssignableFrom(SCameraMarker.class)) {
-          this.setSelectedCameraMarker(field);
-        } else if (field.getValueType().isAssignableFrom(SThingMarker.class)) {
-          this.setSelectedObjectMarker(field);
-        } else {
-          this.setSelectedField(field.getDeclaringType(), field);
-        }
-      }
-      if (imp instanceof PerspectiveCameraMarkerImp markerImp) {
-        globalDragAdapter.setSelectedImplementation(markerImp);
-      }
-    } else {
-      UserField uf = getActiveSceneField();
-      setSelectedField(uf.getDeclaringType(), uf);
-    }
-  }
-
-  private void showRightClickMenuForModel(InputState clickInput) {
-    Element element = clickInput.getClickPickedTransformable(true);
-    if (element != null) {
-      EntityImp entityImp = EntityImp.getInstance(element);
-      SThing entity = entityImp.getAbstraction();
-      UserField field;
-      if (entity != null) {
-        field = this.getFieldForInstanceInJavaVM(entity);
-      } else {
-        //todo: handle camera
-        field = null;
-      }
-      if (field != null) {
-        InstanceFactory instanceFactory = ThisFieldAccessFactory.getInstance(field);
-
-        DynamicOneShotMenuModel.getInstance().getPopupPrepModel().fire(InputEventTrigger.createUserActivity(clickInput.getInputEvent()));
-      } else {
-        Logger.severe(entityImp);
-      }
-    }
+    fieldManager.setSelectedObjectMarker(objectMarkerField);
   }
 
   void handleMainCameraViewSelection() {
-    StageIDE ide = StageIDE.getActiveInstance();
-    InstanceFactoryState instanceFactoryState = ide.getDocumentFrame().getInstanceFactoryState();
-    UserField field = getSelectedField();
-    if (field != this.getActiveSceneField()) {
-      instanceFactoryState.setValueTransactionlessly(ide.getInstanceFactoryForSceneField(field));
-    }
-  }
-
-  private void switchToCamera(AbstractCamera camera) {
-    if (onscreenRenderTarget.getSgCameraCount() != 1
-            || onscreenRenderTarget.getSgCameraAt(0) != camera) {
-      onscreenRenderTarget.clearSgCameras();
-      onscreenRenderTarget.addSgCamera(camera);
-    }
-    snapGrid.setCurrentCamera(camera);
-    globalDragAdapter.makeCameraActive(camera);
-    onscreenRenderTarget.repaint();
-    revalidateAndRepaint();
+    fieldManager.handleMainCameraViewSelection();
   }
 
   public void switchToOrthographicCamera() {
-    switchToCamera(orthographicCameraImp.getSgCamera());
-    mainCameraNavigatorWidget.setToOrthographicMode();
+    fieldManager.switchToOrthographicCamera();
   }
 
   public void switchToPerspectiveCamera(AbstractCamera sgCamera) {
-    switchToCamera(sgCamera);
-    mainCameraNavigatorWidget.setToPerspectiveMode();
+    fieldManager.switchToPerspectiveCamera(sgCamera);
   }
 
   @Override
@@ -498,10 +362,10 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
 
     this.globalDragAdapter = new GlobalDragAdapter(this);
     this.globalDragAdapter.setOnscreenRenderTarget(onscreenRenderTarget);
-    this.onscreenRenderTarget.addRenderTargetListener(this);
+    this.onscreenRenderTarget.addRenderTargetListener(this.renderTargetListener);
     this.globalDragAdapter.setAnimator(animator);
     if (this.getSelectedField() != null) {
-      setSelectedFieldOnManipulator(this.getSelectedField());
+      fieldManager.setSelectedFieldOnManipulator(this.getSelectedField());
     }
 
     this.mainCameraNavigatorWidget = new CameraNavigatorWidget(this.globalDragAdapter, CameraView.MAIN);
@@ -522,7 +386,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
 
       @Override
       public void selected(SelectionEvent e) {
-        StorytellingSceneEditor.this.handleManipulatorSelection(e);
+        StorytellingSceneEditor.this.fieldManager.handleManipulatorSelection(e);
       }
     });
 
@@ -530,8 +394,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     ManipulatorClickAdapter rightClickAdapter = new ManipulatorClickAdapter() {
       @Override
       public void onClick(InputState clickInput) {
-        showRightClickMenuForModel(clickInput);
-
+        fieldManager.showRightClickMenuForModel(clickInput);
       }
     };
     this.globalDragAdapter.addClickAdapter(rightClickAdapter, rightMouseAndInteractive);
@@ -560,10 +423,10 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
       markerImp.setShowing(true);
 
       if (field.getValueType().isAssignableTo(CameraMarker.class)) {
-        this.setSelectedCameraMarker(field);
+        fieldManager.setSelectedCameraMarker(field);
         ((PerspectiveCameraMarkerImp) markerImp).setVrActive(isVrActive());
       } else if (field.getValueType().isAssignableTo(SThingMarker.class)) {
-        this.setSelectedObjectMarker(field);
+        fieldManager.setSelectedObjectMarker(field);
       }
     }
     setInitialCodeStateForField(field, getCurrentStateCodeForField(field));
@@ -653,8 +516,8 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
       mainCameraViewTracker.trackStartingCameraView();
       mainCameraViewSelector.refreshModel();
 
-      this.setSelectedCameraMarker(null);
-      this.setSelectedObjectMarker(null);
+      this.fieldManager.setSelectedCameraMarker(null);
+      this.fieldManager.setSelectedObjectMarker(null);
 
       for (AbstractField field : sceneField.getValueType().getDeclaredFields()) {
         // Turn markers on, so they're visible in the scene editor (note: markers are hidden by default so that when a world runs they aren't seen.
@@ -693,26 +556,22 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
 
   @Override
   public void enableRendering(ReasonToDisableSomeAmountOfRendering reasonToDisableSomeAmountOfRendering) {
-    if ((reasonToDisableSomeAmountOfRendering == ReasonToDisableSomeAmountOfRendering.MODAL_DIALOG_WITH_RENDER_WINDOW_OF_ITS_OWN) || (reasonToDisableSomeAmountOfRendering == ReasonToDisableSomeAmountOfRendering.CLICK_AND_CLACK)) {
-      this.onscreenRenderTarget.setRenderingEnabled(true);
-    }
+    fieldManager.enableRendering(reasonToDisableSomeAmountOfRendering);
   }
 
   @Override
   public void disableRendering(ReasonToDisableSomeAmountOfRendering reasonToDisableSomeAmountOfRendering) {
-    if ((reasonToDisableSomeAmountOfRendering == ReasonToDisableSomeAmountOfRendering.MODAL_DIALOG_WITH_RENDER_WINDOW_OF_ITS_OWN) || (reasonToDisableSomeAmountOfRendering == ReasonToDisableSomeAmountOfRendering.CLICK_AND_CLACK)) {
-      this.onscreenRenderTarget.setRenderingEnabled(false);
-    }
+    fieldManager.disableRendering(reasonToDisableSomeAmountOfRendering);
   }
 
   @Override
   public void preScreenCapture() {
-    this.globalDragAdapter.setHandleVisibility(false);
+    fieldManager.preScreenCapture();
   }
 
   @Override
   public void postScreenCapture() {
-    this.globalDragAdapter.setHandleVisibility(true);
+    fieldManager.postScreenCapture();
   }
 
   @Override
@@ -727,41 +586,41 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
 
   @Override
   public Statement getCurrentStateCodeForField(UserField field) {
-    return codeGenerator.getCurrentStateCodeForField(field);
+    return fieldManager.getCurrentStateCodeForField(field);
   }
 
   @Override
   public void generateCodeForSetUp(StatementListProperty bodyStatementsProperty) {
-    codeGenerator.generateCodeForSetUp(bodyStatementsProperty);
+    fieldManager.generateCodeForSetUp(bodyStatementsProperty);
   }
 
   @Override
   public Statement[] getDoStatementsForCopyField(UserField fieldToCopy, UserField newField, AffineMatrix4x4 initialTransform) {
-    return codeGenerator.getDoStatementsForCopyField(fieldToCopy, newField, initialTransform);
+    return fieldManager.getDoStatementsForCopyField(fieldToCopy, newField, initialTransform);
   }
 
   @Override
   public Statement[] getDoStatementsForAddField(UserField field, AffineMatrix4x4 initialTransform) {
-    return codeGenerator.getDoStatementsForAddField(field, initialTransform);
+    return fieldManager.getDoStatementsForAddField(field, initialTransform);
   }
 
   @Override
   public Statement[] getUndoStatementsForAddField(UserField field) {
-    return codeGenerator.getUndoStatementsForAddField(field);
+    return fieldManager.getUndoStatementsForAddField(field);
   }
 
   public Map<AbstractField, Statement> getRiders(UserField vehicle) {
-    return codeGenerator.getRiders(vehicle);
+    return fieldManager.getRiders(vehicle);
   }
 
   @Override
   public Statement[] getDoStatementsForRemoveField(UserField field, Map<AbstractField, Statement> riders) {
-    return codeGenerator.getDoStatementsForRemoveField(field, riders);
+    return fieldManager.getDoStatementsForRemoveField(field, riders);
   }
 
   @Override
   public Statement[] getUndoStatementsForRemoveField(UserField field, Map<AbstractField, Statement> riders) {
-    return codeGenerator.getUndoStatementsForRemoveField(field, riders);
+    return fieldManager.getUndoStatementsForRemoveField(field, riders);
   }
 
   @Override
@@ -779,114 +638,43 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
   }
 
   public void handleShowing() {
-    GlrRenderFactory renderFactory = GlrRenderFactory.getInstance();
-    renderFactory.incrementAutomaticDisplayCount();
-    renderFactory.addAutomaticDisplayListener(this.automaticDisplayListener);
-    this.showLookingGlassPanel();
+    fieldManager.handleShowing();
   }
 
   public void handleHiding() {
-    this.hideLookingGlassPanel();
-    GlrRenderFactory renderFactory = GlrRenderFactory.getInstance();
-    renderFactory.removeAutomaticDisplayListener(this.automaticDisplayListener);
-    renderFactory.decrementAutomaticDisplayCount();
+    fieldManager.handleHiding();
   }
-
-  private void paintHorizonLine(Graphics graphics, OnscreenRenderTarget renderTarget, OrthographicCamera camera) {
-    AffineMatrix4x4 cameraTransform = camera.getAbsoluteTransformation();
-    double dotProd = cameraTransform.orientation().up().dotProduct(Vector3.POSITIVE_Y_AXIS);
-    if ((dotProd == 1) || (dotProd == -1)) {
-      //TODO: Make this handle retina displays and the fact that surface size and screen size may be different
-      Dimension lookingGlassSize = renderTarget.getSurfaceSize();
-
-      Point3 cameraPosition = camera.getAbsoluteTransformation().translation();
-
-      ClippedZPlane dummyPlane = camera.picturePlane.getValue().completeFrom(renderTarget.getActualViewport(camera));
-
-      double lookingGlassHeight = lookingGlassSize.getHeight();
-
-      double yRatio = this.onscreenRenderTarget.getSurfaceHeight() / dummyPlane.getHeight();
-      double horizonInCameraSpace = 0.0d - cameraPosition.y();
-      double distanceFromMaxY = dummyPlane.getYMaximum() - horizonInCameraSpace;
-      int horizonLinePixelVal = (int) (yRatio * distanceFromMaxY);
-      if ((horizonLinePixelVal >= 0) && (horizonLinePixelVal <= lookingGlassHeight)) {
-        graphics.setColor(java.awt.Color.BLACK);
-        graphics.drawLine(0, horizonLinePixelVal, lookingGlassSize.width, horizonLinePixelVal);
-      }
-    }
-  }
-
-  // ######### Begin implementation of edu.cmu.cs.dennisc.lookingglass.event.LookingGlassAdapter
-  @Override
-  public void initialized(RenderTargetInitializeEvent e) {
-  }
-
-  @Override
-  public void cleared(RenderTargetRenderEvent e) {
-  }
-
-  @Override
-  public void rendered(RenderTargetRenderEvent e) {
-    if ((this.onscreenRenderTarget.getSgCameraCount() > 0) && (this.onscreenRenderTarget.getSgCameraAt(0) instanceof OrthographicCamera)) {
-      paintHorizonLine(e.getGraphics2D(), this.onscreenRenderTarget, (OrthographicCamera) this.onscreenRenderTarget.getSgCameraAt(0));
-    }
-  }
-
-  @Override
-  public void resized(RenderTargetResizeEvent e) {
-    // updateCameraMarkers();
-  }
-
-  @Override
-  public void displayChanged(RenderTargetDisplayChangeEvent e) {
-  }
-  // ######### End implementation of edu.cmu.cs.dennisc.lookingglass.event.LookingGlassAdapter
 
   public void setHandleVisibilityForObject(TransformableImp imp, boolean b) {
-    this.globalDragAdapter.setHandleShowingForSelectedImplementation(imp, b);
+    fieldManager.setHandleVisibilityForObject(imp, b);
   }
 
   public AffineMatrix4x4 getTransformForNewCameraMarker() {
-    return movableSceneCameraImp.getAbsoluteTransformation();
+    return fieldManager.getTransformForNewCameraMarker();
   }
 
   public AffineMatrix4x4 getTransformForNewObjectMarker() {
-    EntityImp selectedImp = this.getImplementation(this.getSelectedField());
-    AffineMatrix4x4 initialTransform = null;
-    if (selectedImp != null) {
-      initialTransform = selectedImp.getAbsoluteTransformation();
-    } else {
-      initialTransform = AffineMatrix4x4.IDENTITY;
-    }
-    return initialTransform;
+    return fieldManager.getTransformForNewObjectMarker();
   }
 
   public Color getColorForNewObjectMarker() {
-    return MarkerUtilities.getNewObjectMarkerColor();
+    return fieldManager.getColorForNewObjectMarker();
   }
 
   public Color getColorForNewCameraMarker() {
-    return MarkerUtilities.getNewCameraMarkerColor();
+    return fieldManager.getColorForNewCameraMarker();
   }
 
   public AffineMatrix4x4 getGoodPointOfViewInSceneForObject(AxisAlignedBox box) {
-    throw new RuntimeException("todo");
+    return fieldManager.getGoodPointOfViewInSceneForObject(box);
   }
 
   public MarkerImp getMarkerForField(UserField field) {
-    Object obj = this.getInstanceInJavaVMForField(field);
-    if (obj instanceof SMarker marker) {
-      return marker.getImplementation();
-    }
-    return null;
+    return fieldManager.getMarkerForField(field);
   }
 
   public AbstractCamera getSgCameraForCreatingThumbnails() {
-    if (this.sceneCameraImp != null) {
-      return this.sceneCameraImp.getSgCamera();
-    } else {
-      return null;
-    }
+    return fieldManager.getSgCameraForCreatingThumbnails();
   }
 
   public void setShowSnapGrid(boolean showSnapGrid) {

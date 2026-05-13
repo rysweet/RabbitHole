@@ -91,11 +91,11 @@ public class StorytellingSceneEditorCharacterizationTest {
   }
 
   @Test
-  public void implementsRenderTargetListener() {
+  public void renderTargetListener_delegatedToSeparateClass() {
     Set<String> ifaces = Arrays.stream(clazz.getInterfaces())
         .map(Class::getName)
         .collect(Collectors.toSet());
-    assertTrue("must implement RenderTargetListener",
+    assertFalse("RenderTargetListener must be delegated to SceneRenderTargetListener",
         ifaces.contains("edu.cmu.cs.dennisc.render.event.RenderTargetListener"));
   }
 
@@ -431,37 +431,7 @@ public class StorytellingSceneEditorCharacterizationTest {
     assertPublicMethod("getOnscreenRenderTarget");
   }
 
-  // ── 6. RenderTargetListener overrides ─────────────────────────────
-
-  @Test
-  public void renderTargetListener_initialized() {
-    assertPublicMethod("initialized",
-        resolve("edu.cmu.cs.dennisc.render.event.RenderTargetInitializeEvent"));
-  }
-
-  @Test
-  public void renderTargetListener_cleared() {
-    assertPublicMethod("cleared",
-        resolve("edu.cmu.cs.dennisc.render.event.RenderTargetRenderEvent"));
-  }
-
-  @Test
-  public void renderTargetListener_rendered() {
-    assertPublicMethod("rendered",
-        resolve("edu.cmu.cs.dennisc.render.event.RenderTargetRenderEvent"));
-  }
-
-  @Test
-  public void renderTargetListener_resized() {
-    assertPublicMethod("resized",
-        resolve("edu.cmu.cs.dennisc.render.event.RenderTargetResizeEvent"));
-  }
-
-  @Test
-  public void renderTargetListener_displayChanged() {
-    assertPublicMethod("displayChanged",
-        resolve("edu.cmu.cs.dennisc.render.event.RenderTargetDisplayChangeEvent"));
-  }
+  // ── 6. RenderTargetListener callbacks delegated to SceneRenderTargetListener ──
 
   // ── 7. Key field declarations ─────────────────────────────────────
 

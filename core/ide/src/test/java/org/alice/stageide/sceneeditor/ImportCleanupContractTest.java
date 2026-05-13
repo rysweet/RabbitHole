@@ -150,8 +150,10 @@ public class ImportCleanupContractTest {
 
   @Test
   public void editor_retains_RenderTargetListener() {
-    assertImportPresent(editorImports, "RenderTargetListener",
-        "StorytellingSceneEditor implements RenderTargetListener via wildcard");
+    // After SceneRenderTargetListener extraction, SSE no longer needs this import
+    // RenderTargetListener is now imported by SceneRenderTargetListener instead
+    assertImportPresent(editorImports, "AutomaticDisplayListener",
+        "StorytellingSceneEditor declares automaticDisplayListener field");
   }
 
   @Test

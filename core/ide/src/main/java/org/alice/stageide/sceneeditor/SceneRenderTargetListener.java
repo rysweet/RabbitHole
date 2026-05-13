@@ -42,45 +42,71 @@
  *******************************************************************************/
 package org.alice.stageide.sceneeditor;
 
-import org.alice.ide.instancefactory.InstanceFactory;
-import org.alice.stageide.sceneeditor.snap.SnapState;
-import org.lgna.croquet.event.ValueListener;
-import org.lgna.project.ast.UserField;
+import edu.cmu.cs.dennisc.render.OnscreenRenderTarget;
+import edu.cmu.cs.dennisc.render.event.*;
+import edu.cmu.cs.dennisc.scenegraph.OrthographicCamera;
+import org.alice.math.immutable.AffineMatrix4x4;
+import org.alice.math.immutable.Point3;
+import org.alice.math.immutable.Vector3;
+
+import java.awt.Dimension;
+import java.awt.Graphics;
 
 /**
- * Consolidates the ValueListener fields formerly inline in StorytellingSceneEditor.
+ * Encapsulates the RenderTargetListener callbacks and paintHorizonLine helper.
  * Extracted from StorytellingSceneEditor (issue #528).
  */
-class SceneEditorListeners {
-  final ValueListener<Boolean> showSnapGridListener;
-  final ValueListener<Boolean> snapEnabledListener;
-  final ValueListener<Double> snapGridSpacingListener;
-  final ValueListener<UserField> cameraMarkerFieldSelectionListener;
-  final ValueListener<UserField> objectMarkerFieldSelectionListener;
-  final ValueListener<InstanceFactory> instanceFactorySelectionListener;
-  final ValueListener<CameraOption> mainCameraViewSelectionObserver;
+class SceneRenderTargetListener implements RenderTargetListener {
 
-  SceneEditorListeners(StorytellingSceneEditor editor) {
-    this.showSnapGridListener = e -> editor.setShowSnapGrid(e.getNextValue());
+  final StorytellingSceneEditor editor;
 
-    this.snapEnabledListener = e -> {
-      if (SnapState.getInstance().isShowSnapGridEnabled()) {
-        editor.setShowSnapGrid(e.getNextValue());
+  SceneRenderTargetListener(StorytellingSceneEditor editor) {
+    this.editor = editor;
+  }
+
+  @Override
+  public void initialized(RenderTargetInitializeEvent e) {
+  }
+
+  @Override
+  public void cleared(RenderTargetRenderEvent e) {
+  }
+
+  @Override
+  public void rendered(RenderTargetRenderEvent e) {
+    if ((editor.onscreenRenderTarget.getSgCameraCount() > 0) && (editor.onscreenRenderTarget.getSgCameraAt(0) instanceof OrthographicCamera)) {
+      paintHorizonLine(e.getGraphics2D(), editor.onscreenRenderTarget, (OrthographicCamera) editor.onscreenRenderTarget.getSgCameraAt(0));
+    }
+  }
+
+  @Override
+  public void resized(RenderTargetResizeEvent e) {
+  }
+
+  @Override
+  public void displayChanged(RenderTargetDisplayChangeEvent e) {
+  }
+
+  private void paintHorizonLine(Graphics graphics, OnscreenRenderTarget renderTarget, OrthographicCamera camera) {
+    AffineMatrix4x4 cameraTransform = camera.getAbsoluteTransformation();
+    double dotProd = cameraTransform.orientation().up().dotProduct(Vector3.POSITIVE_Y_AXIS);
+    if ((dotProd == 1) || (dotProd == -1)) {
+      Dimension lookingGlassSize = renderTarget.getSurfaceSize();
+
+      Point3 cameraPosition = camera.getAbsoluteTransformation().translation();
+
+      var dummyPlane = camera.picturePlane.getValue().completeFrom(renderTarget.getActualViewport(camera));
+
+      double lookingGlassHeight = lookingGlassSize.getHeight();
+
+      double yRatio = editor.onscreenRenderTarget.getSurfaceHeight() / dummyPlane.getHeight();
+      double horizonInCameraSpace = 0.0d - cameraPosition.y();
+      double distanceFromMaxY = dummyPlane.getYMaximum() - horizonInCameraSpace;
+      int horizonLinePixelVal = (int) (yRatio * distanceFromMaxY);
+      if ((horizonLinePixelVal >= 0) && (horizonLinePixelVal <= lookingGlassHeight)) {
+        graphics.setColor(java.awt.Color.BLACK);
+        graphics.drawLine(0, horizonLinePixelVal, lookingGlassSize.width, horizonLinePixelVal);
       }
-    };
-
-    this.snapGridSpacingListener = e -> editor.setSnapGridSpacing(e.getNextValue());
-
-    this.cameraMarkerFieldSelectionListener = e -> editor.fieldManager.handleCameraMarkerFieldSelection(e.getNextValue());
-
-    this.objectMarkerFieldSelectionListener = e -> editor.fieldManager.handleObjectMarkerFieldSelection(e.getNextValue());
-
-    this.instanceFactorySelectionListener = e -> {
-      editor.selectionIsFromInstanceSelector = true;
-      editor.fieldManager.setSelectedInstance(e.getNextValue());
-      editor.selectionIsFromInstanceSelector = false;
-    };
-
-    this.mainCameraViewSelectionObserver = e -> editor.fieldManager.handleMainCameraViewSelection();
+    }
   }
 }

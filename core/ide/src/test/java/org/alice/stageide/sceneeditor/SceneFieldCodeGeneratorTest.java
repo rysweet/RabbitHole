@@ -124,21 +124,27 @@ public class SceneFieldCodeGeneratorTest {
   // ── StorytellingSceneEditor has a 'codeGenerator' field ──────────
 
   @Test
-  public void sseHasCodeGeneratorField() {
+  public void fieldManagerHasCodeGeneratorField() {
     try {
-      Field f = sseClazz.getDeclaredField("codeGenerator");
+      Class<?> fmClazz = Class.forName("org.alice.stageide.sceneeditor.SceneEditorFieldManager");
+      Field f = fmClazz.getDeclaredField("codeGenerator");
       assertEquals("codeGenerator must be of type SceneFieldCodeGenerator",
           FQCN, f.getType().getName());
+    } catch (ClassNotFoundException e) {
+      fail("SceneEditorFieldManager not found: " + e.getMessage());
     } catch (NoSuchFieldException e) {
-      fail("StorytellingSceneEditor must have a 'codeGenerator' field");
+      fail("SceneEditorFieldManager must have a 'codeGenerator' field");
     }
   }
 
   @Test
   public void codeGeneratorFieldIsFinal() {
     try {
-      Field f = sseClazz.getDeclaredField("codeGenerator");
+      Class<?> fmClazz = Class.forName("org.alice.stageide.sceneeditor.SceneEditorFieldManager");
+      Field f = fmClazz.getDeclaredField("codeGenerator");
       assertTrue("codeGenerator must be final", Modifier.isFinal(f.getModifiers()));
+    } catch (ClassNotFoundException e) {
+      fail("SceneEditorFieldManager not found: " + e.getMessage());
     } catch (NoSuchFieldException e) {
       fail("Missing 'codeGenerator' field");
     }
