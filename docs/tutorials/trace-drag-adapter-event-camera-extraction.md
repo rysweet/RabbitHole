@@ -109,11 +109,29 @@ Only the _private_ `handle*` methods move to DragEventHandler:
 `handleMouseDragged`, `handleMouseWheelMoved`, `handleKeyPressed`,
 `handleKeyReleased`. These are never overridden by subclasses.
 
+Several helper methods also move: `pickIntoScene`,
+`pickIntoSceneSuppressingErrors`, `getHandleForComponent`,
+`stopMouseWheel`, `shouldStopMouseWheel`, `isMouseWheelActive`, and
+`isComponentListener`. The first five of these become **package-private**
+(not private) on DragEventHandler because they are called by
+`handleMouseEntered` and `handleMouseMoved` which stay on DragAdapter.
+
 `handleMouseEntered` and `handleMouseMoved` stay on DragAdapter as
 `protected` methods because `RuntimeDragAdapter` and
 `SingleViewerDragAdapter` override them. The AWT listeners in
 DragEventHandler route through `dragAdapter.handleMouseEntered(e)` and
 `dragAdapter.handleMouseMoved(e)` for polymorphic dispatch.
+
+**Bidirectional delegation:** This creates a two-way relationship:
+- DragEventHandler → DragAdapter: AWT listeners call
+  `dragAdapter.handleMouseEntered(e)` and `dragAdapter.handleMouseMoved(e)`
+  for polymorphic dispatch; private `handle*` methods call
+  `dragAdapter.fireStateChange()` and read `dragAdapter.currentInputState`.
+- DragAdapter → DragEventHandler: `handleMouseEntered` and
+  `handleMouseMoved` call `eventHandler.pickIntoSceneSuppressingErrors()`,
+  `eventHandler.getHandleForComponent()`,
+  `eventHandler.shouldStopMouseWheel()`, and `eventHandler.stopMouseWheel()`
+  for event-handling helpers that moved with the mouse wheel and pick state.
 
 **Trace the listener routing pattern:**
 
@@ -205,7 +223,7 @@ DragAdapter for this purpose.
 
 ## 4. Trace the subclass override routing
 
-This is the most critical design decision. Eight subclasses exist in the
+This is the most critical design decision. Nine subclasses exist in the
 hierarchy, and two override the protected methods that the extraction
 must preserve:
 
@@ -239,6 +257,13 @@ in the skeleton viewer). Same routing pattern preserves this override.
 `dragEntered`, and `dragExited` methods that call `fireStateChange()`
 directly for drag-and-drop event handling. Since `fireStateChange()`
 stays on DragAdapter, this works unchanged.
+
+**NiceDragAdapter** (in `test.ik` package) extends
+`OnscreenLookingGlassDragAdapter` and overrides only methods defined on
+that intermediate class (`handleMousePress`, `handleMouseDrag`,
+`handleMouseRelease`, `updateTranslation`). It does not override any
+DragAdapter methods relevant to this extraction, so it compiles
+unchanged.
 
 ## 5. Trace the field ownership decisions
 
@@ -301,6 +326,35 @@ protected void update(double timeDelta) {
 The mouse wheel timeout portion delegates to the event handler. The
 manipulator time-update loop stays because it reads `manipulators`,
 `currentInputState`, and `previousInputState` — all owned by DragAdapter.
+
+The `handleMouseEntered` and `handleMouseMoved` methods also call into
+`eventHandler` for helper methods that moved:
+
+```java
+protected void handleMouseEntered(MouseEvent e) {
+    this.currentRolloverComponent = e.getComponent();
+    if (!this.currentInputState.isAnyMouseButtonDown()) {
+        this.currentInputState.setMouseLocation(e.getPoint());
+        if (e.getComponent() == this.lookingGlassComponent) {
+            eventHandler.pickIntoSceneSuppressingErrors(
+                e.getPoint(), currentInputState::setRolloverPickResult);
+        } else {
+            this.currentInputState.setRolloverHandle(
+                eventHandler.getHandleForComponent(e.getComponent()));
+        }
+        this.currentInputState.setTimeCaptured();
+        this.currentInputState.setInputEvent(e);
+        this.fireStateChange();
+    }
+}
+```
+
+These five package-private methods on DragEventHandler
+(`pickIntoScene`, `pickIntoSceneSuppressingErrors`,
+`getHandleForComponent`, `shouldStopMouseWheel`, `stopMouseWheel`)
+form the reverse direction of the bidirectional delegation: DragAdapter
+calls them on `eventHandler`, while `DragEventHandler` calls back to
+`dragAdapter` for polymorphic hooks and state.
 
 ## 7. Run the characterization tests
 

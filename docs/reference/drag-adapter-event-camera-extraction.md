@@ -86,8 +86,8 @@ DragAdapter (~485 lines, abstract)
     ├── Public API: addManipulationListener, triggerManipulationEvent,
     │   setAnimator, getAnimator, setOnscreenRenderTarget,
     │   clearMouseAndKeyboardState, shouldSnap*, getGridSpacing,
-    │   getRotationSnapAngle, addCameraMouseControl
-    ├── Protected hooks: update(double), setSGCamera, hasSceneEditor
+    │   getRotationSnapAngle, setSGCamera, hasSceneEditor
+    ├── Protected hooks: update(double), addCameraMouseControl
     └── State: currentInputState, previousInputState, selectedObject,
         currentRolloverComponent, isInStageChange, manipulators list
 ```
@@ -140,13 +140,22 @@ to `DragEventHandler` but accesses it via `dragAdapter.currentRolloverComponent`
 | `handleMouseWheelMoved(MouseWheelEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleKeyPressed(KeyEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleKeyReleased(KeyEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
-| `pickIntoScene(Point, PickFrontMostObserver)` | private | No — uses `dragAdapter.getOnscreenRenderTarget()` |
-| `pickIntoSceneSuppressingErrors(Point, PickFrontMostObserver)` | private | No — wraps `pickIntoScene` |
-| `getHandleForComponent(Component)` | private | No — recursive Component walk |
-| `stopMouseWheel()` | private | No — mutates own state + `currentInputState` |
-| `isMouseWheelActive()` | private | No — reads own state |
-| `shouldStopMouseWheel(Point)` | private | No — reads own state |
+| `pickIntoScene(Point, PickFrontMostObserver)` | private | Yes — called by `handleMouseEntered`/`handleMouseMoved` on DragAdapter via `eventHandler.pickIntoScene()` |
+| `pickIntoSceneSuppressingErrors(Point, PickFrontMostObserver)` | private | Yes — called by `handleMouseEntered`/`handleMouseMoved` on DragAdapter via `eventHandler.pickIntoSceneSuppressingErrors()` |
+| `getHandleForComponent(Component)` | private | Yes — called by `handleMouseEntered`/`handleMouseMoved` on DragAdapter via `eventHandler.getHandleForComponent()` |
+| `stopMouseWheel()` | private | Yes — called by `handleMouseMoved` on DragAdapter via `eventHandler.stopMouseWheel()` |
+| `isMouseWheelActive()` | private | No — internal to DragEventHandler |
+| `shouldStopMouseWheel(Point)` | private | Yes — called by `handleMouseMoved` on DragAdapter via `eventHandler.shouldStopMouseWheel()` |
 | `updateMouseWheelTimeout(double, Runnable)` | package-private | No — new method combining wheel timeout from `update()` |
+
+**Visibility upgrade for shared helpers:** Five methods originally `private` on
+DragAdapter become **package-private** on `DragEventHandler`:
+`pickIntoScene`, `pickIntoSceneSuppressingErrors`, `getHandleForComponent`,
+`stopMouseWheel`, and `shouldStopMouseWheel`. They must be package-private
+because `handleMouseEntered` and `handleMouseMoved` stay on DragAdapter
+and call them via the `eventHandler` reference. The remaining moved methods
+(`handle*`, `isComponentListener`, `isMouseWheelActive`) stay `private` on
+DragEventHandler since they are only called internally.
 
 **Methods that stay on DragAdapter:** `handleMouseEntered(MouseEvent)` and
 `handleMouseMoved(MouseEvent)` remain as `protected` methods on
@@ -250,7 +259,7 @@ Similarly, `DragCameraController` only registers its
 
 ## Subclass override preservation
 
-Eight subclasses (6 direct, 2 indirect) exist in the hierarchy. The
+Nine subclasses (6 direct, 3 indirect) exist in the hierarchy. The
 table below focuses on overrides relevant to this extraction:
 
 | Subclass | Relevant overrides | Preserved how |
@@ -262,6 +271,7 @@ table below focuses on overrides relevant to this extraction:
 | `CreateAPersonDragAdapter` | `setSGCamera` | Stays on DragAdapter |
 | `PoserAnimatorDragAdapter` | `setOnscreenRenderTarget`, `setHandleVisibility` | Both stay on DragAdapter; unrelated to extraction |
 | `OnscreenLookingGlassDragAdapter` | (abstract intermediate class) | No relevant overrides; base class for `NiceDragAdapter` and `CameraNavigationDragAdapter` |
+| `NiceDragAdapter` | (none on DragAdapter — overrides only `OnscreenLookingGlassDragAdapter` methods) | No DragAdapter methods affected; compiles unchanged in `core/ide` (`test.ik` package) |
 | `CameraNavigationDragAdapter` | `update(double)` (public widening) | `update` stays as protected hook on DragAdapter; widened override still dispatches correctly |
 
 **Critical invariant:** `handleMouseEntered` and `handleMouseMoved` remain
@@ -409,7 +419,7 @@ Tests verify:
 
 1. `DragAdapter.java` is under 500 lines.
 2. `mvn -pl core/story-api -am -DfailIfNoTests=false -Dcheckstyle.skip test` passes.
-3. All eight known subclasses compile without modification (verified by
+3. All nine known subclasses compile without modification (verified by
    `-am` flag pulling in dependent modules).
 4. No `public` or `protected` method signature on `DragAdapter` changes.
 5. `DragAdapter.CameraView` and `DragAdapter.ObjectType` remain accessible

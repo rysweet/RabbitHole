@@ -63,13 +63,15 @@ explicitly verify all subclasses compile:
 mvn -pl core/story-api,core/ide,core-nonfree/ide-nonfree -am compile
 ```
 
-These modules contain:
+These modules contain all nine subclasses:
 - `RuntimeDragAdapter` (core/story-api)
 - `GlobalDragAdapter` (core/ide) — extends CroquetSupportingDragAdapter
 - `CroquetSupportingDragAdapter` (core/ide)
 - `SingleViewerDragAdapter` (core/ide)
 - `PoserAnimatorDragAdapter` (core/ide)
 - `OnscreenLookingGlassDragAdapter` (core/ide) — abstract; extended by NiceDragAdapter, CameraNavigationDragAdapter
+- `NiceDragAdapter` (core/ide, `test.ik` package)
+- `CameraNavigationDragAdapter` (core/ide)
 - `CreateAPersonDragAdapter` (core-nonfree/ide-nonfree)
 
 ## Step 4: Run characterization tests
