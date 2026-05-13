@@ -49,11 +49,11 @@ desktop Run execution evidence feature:
 | File | Lines | Visibility | Role |
 | --- | --- | --- | --- |
 | `EatmeDesktopRunExecutionEvidence.java` | ≤350 | `public final` | Coordinator: public API, Recorder inner class, constants, forwarding delegates |
-| `EatmeEvidenceWriter.java` | ~200 | `final` (package-private) | All JSON artifact writing, validation, atomic I/O |
+| `EatmeEvidenceWriter.java` | ~200 | `final` (package-private) | All JSON artifact writing, validation, atomic I/O, gap report builders |
 | `EatmeWindowDetector.java` | ~120 | `final` (package-private) | Component readiness checks, pure functions |
 | `EatmeScreenshotCapture.java` | ~140 | `final` (package-private) | Robot screen capture, PNG write, headless gate |
 | `PixelObservation.java` | ~80 | `final` (package-private) | Pixel result record + factory methods for `observed`/`blocked` |
-| `BlockerDetail.java` | ~15 | `final` (package-private) | Immutable data record: code, observed, required |
+| `BlockerDetail.java` | ~30 | `final` (package-private) | Immutable data record: code, observed, required + blocker list JSON formatting |
 
 Total line count across all six files is comparable to the original 1103 lines.
 The coordinator is under 350 lines; each extracted class is under 250 lines.
@@ -74,8 +74,6 @@ The coordinator retains:
   `validateDesktopRunExecutionGapReport(...)`.
 - **`writeRenderTargetAttached(...)`**: orchestrates the full render-target
   attachment flow by delegating to the extracted classes.
-- **Utility forwarders**: `componentClassName(...)`, `componentName(...)`,
-  `childComponentCount(...)` forward to `EatmeWindowDetector`.
 
 The coordinator does not contain JSON string building, screenshot capture logic,
 or component readiness analysis. It delegates to the appropriate extracted class
@@ -99,9 +97,12 @@ Owns all JSON artifact I/O and artifact validation:
 | `writeStringAtomically(...)` | Atomic write via temp file + `ATOMIC_MOVE` |
 | `requireNonEmptyArtifact(...)` | Post-write non-empty check |
 | `runtimeLog(...)` | Builds the `desktop-run-runtime.log` content |
-| `blockerCodesJson(...)` | JSON array of blocker codes |
-| `blockerDetailsJson(...)` | JSON array of blocker detail objects |
-| `jsonArray(...)` | Generic JSON string array builder |
+| `desktopRunExecutionGapReportJson(...)` | Builds the gap report JSON string |
+| `executionGapEvidenceArtifactsJson(...)` | Builds the evidence artifacts JSON array for the gap report |
+| `executionGapEvidenceDescription(...)` | Per-artifact evidence description (switch expression) |
+| `executionGapClaimLimit(...)` | Per-artifact claim limit text (switch expression) |
+| `pixelObservationSummary(...)` | Text summary of pixel observation status |
+| `pixelObservationReportingNote(...)` | Reporting-note text for the status summary |
 
 All file system writes go through `writeStringAtomically(...)` or
 `writePngAtomically(...)` (the PNG variant is in `EatmeScreenshotCapture`). All
@@ -178,7 +179,7 @@ the component metadata before constructing the observation. The caller uses
 ## BlockerDetail
 
 Promoted from a private inner class to a top-level package-private class.
-Immutable data record:
+Immutable data record with static list-formatting utilities:
 
 ```java
 final class BlockerDetail {
@@ -187,10 +188,21 @@ final class BlockerDetail {
   final String required;
 
   BlockerDetail(String code, String observed, String required) { ... }
+
+  static String blockerCodesJson(List<BlockerDetail> blockers) { ... }
+  static String blockerDetailsJson(List<BlockerDetail> blockers) { ... }
+  static String jsonArray(List<String> values) { ... }
 }
 ```
 
-Used by `EatmeWindowDetector`, `EatmeScreenshotCapture`, and
+The `blockerCodesJson(...)`, `blockerDetailsJson(...)`, and `jsonArray(...)` static
+methods are promoted from the original class to `BlockerDetail` because they
+operate on `List<BlockerDetail>` and are needed by both `PixelObservation`
+(inside the `blocked(...)` factory) and `EatmeEvidenceWriter`. Placing them here
+avoids a `PixelObservation → EatmeEvidenceWriter` dependency that would create a
+circular import (since the writer already depends on `PixelObservation`).
+
+Used by `EatmeWindowDetector`, `EatmeScreenshotCapture`, `PixelObservation`, and
 `EatmeEvidenceWriter`. It is a leaf class with no dependencies on other
 extracted classes.
 
@@ -210,15 +222,17 @@ EatmeDesktopRunExecutionEvidence (coordinator)
   │     ├── BlockerDetail
   │     └── EatmeRunWindowEvidence (existing)
   ├── PixelObservation
-  │     ├── BlockerDetail
+  │     ├── BlockerDetail (blockerCodesJson, blockerDetailsJson)
   │     └── EatmeRunWindowEvidence (existing)
-  └── BlockerDetail (leaf)
+  └── BlockerDetail (leaf — data record + blocker list formatting)
 ```
 
 There are no circular dependencies. All arrows point downward.
 `EatmeWindowDetector` does not depend on `EatmeScreenshotCapture`.
-`PixelObservation` does not depend on `EatmeScreenshotCapture` or
-`EatmeWindowDetector`.
+`PixelObservation` does not depend on `EatmeScreenshotCapture`,
+`EatmeWindowDetector`, or `EatmeEvidenceWriter`. The `blockerCodesJson` and
+`blockerDetailsJson` utilities live on `BlockerDetail` (not `EatmeEvidenceWriter`)
+specifically to prevent a `PixelObservation → EatmeEvidenceWriter` circular edge.
 
 ## API compatibility
 

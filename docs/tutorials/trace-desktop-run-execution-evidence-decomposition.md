@@ -33,7 +33,12 @@ instead of through the coordinator.
 
 **What changed:** The access modifier on the class and constructor widened from
 `private` to package-private. The field access widened from `private` to
-package-private. Nothing else changed.
+package-private. The `blockerCodesJson(...)`, `blockerDetailsJson(...)`, and
+`jsonArray(...)` static methods moved here from the enclosing class because they
+operate on `List<BlockerDetail>` and are needed by both `PixelObservation`
+(inside its `blocked(...)` factory) and `EatmeEvidenceWriter`. Placing them on
+`BlockerDetail` avoids a `PixelObservation → EatmeEvidenceWriter` edge that
+would create a circular dependency.
 
 ## 2. PixelObservation — the result record
 
@@ -86,8 +91,10 @@ Trace the original locations:
 | `firstNonBlank(...)` | Lines 910–918 | `EatmeWindowDetector` |
 
 The coordinator has one-line forwarding methods for `componentClassName`,
-`componentName`, and `childComponentCount` because the coordinator's JSON
-building (in the render affordance delegate) still calls them.
+`componentName`, and `childComponentCount` only if future callers outside the
+coordinator need them. Currently, the coordinator's `writeRenderTargetAttached`
+can call `EatmeWindowDetector` directly for these, so forwarding delegates are
+not strictly needed for these three methods.
 
 ## 4. EatmeScreenshotCapture — Robot and PNG isolation
 
@@ -129,8 +136,6 @@ Open `EatmeEvidenceWriter.java`. This is the largest extracted class. It owns:
 - `validateDesktopRunExecutionGapReport(...)` — the fail-closed validation.
 - `writeStringAtomically(...)` — the atomic text file write.
 - `requireNonEmptyArtifact(...)` — post-write existence check.
-- `blockerCodesJson(...)`, `blockerDetailsJson(...)`, `jsonArray(...)` — JSON
-  formatting utilities.
 - `runtimeLog(...)` — builds the runtime log content.
 - `pixelObservationSummary(...)`, `pixelObservationReportingNote(...)` — text
   summaries used by `writeRunStatusSummary(...)`.
@@ -138,6 +143,10 @@ Open `EatmeEvidenceWriter.java`. This is the largest extracted class. It owns:
   expressions for the gap report's per-artifact evidence descriptions.
 - `desktopRunExecutionGapReportJson(...)`,
   `executionGapEvidenceArtifactsJson(...)` — the gap report JSON builder.
+
+Note: `blockerCodesJson(...)`, `blockerDetailsJson(...)`, and `jsonArray(...)`
+do NOT go here — they live on `BlockerDetail` because `PixelObservation.blocked()`
+needs them, and the writer already depends on `PixelObservation`.
 
 **Why everything JSON goes here:** The original class interleaved JSON building,
 file I/O, validation, and component analysis. By consolidating all string-to-file
@@ -244,4 +253,4 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 | 960–974 | `componentClassName`, `componentName`, `childComponentCount` | `EatmeWindowDetector` |
 | 976–1053 | `PixelObservation` inner class | `PixelObservation.java` top-level |
 | 1055–1065 | `BlockerDetail` inner class | `BlockerDetail.java` top-level |
-| 1067–1102 | `blockerCodesJson`, `blockerDetailsJson`, `jsonArray` | `EatmeEvidenceWriter` |
+| 1067–1102 | `blockerCodesJson`, `blockerDetailsJson`, `jsonArray` | `BlockerDetail` (static utilities on the data record) |

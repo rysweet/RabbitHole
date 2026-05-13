@@ -45,7 +45,7 @@ Expected:
 | `EatmeWindowDetector.java` | ≤150 lines |
 | `EatmeScreenshotCapture.java` | ≤200 lines |
 | `PixelObservation.java` | ≤100 lines |
-| `BlockerDetail.java` | ≤25 lines |
+| `BlockerDetail.java` | ≤50 lines |
 
 The coordinator must be under 500 lines (hard limit). Under 350 is the design
 target.
