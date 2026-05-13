@@ -61,12 +61,14 @@ import org.lgna.story.SlithererPose;
 import org.lgna.story.SlithererPoseBuilder;
 import org.lgna.story.SwimmerPose;
 import org.lgna.story.SwimmerPoseBuilder;
+import org.lgna.story.implementation.alice.AliceResourceClassUtilities;
 import org.lgna.story.implementation.alice.AliceResourceUtilities;
 import org.lgna.story.resources.BipedResource;
 import org.lgna.story.resources.FlyerResource;
 import org.lgna.story.resources.ImplementationAndVisualType;
 import org.lgna.story.resources.JointArrayId;
 import org.lgna.story.resources.JointId;
+import org.lgna.story.resources.JointedModelResource;
 import org.lgna.story.resources.QuadrupedResource;
 import org.lgna.story.resources.SlithererResource;
 import org.lgna.story.resources.SwimmerResource;
@@ -284,7 +286,7 @@ final class ModelResourceJavaGenerator {
       StringBuilder sb = new StringBuilder();
 
       ModelResourceJavaGenerator.appendPreambleAndEnumConstants(sb, exporter);
-      List<String> existingIds = ModelResourceExporter.getExistingJointIds(exporter.getClassData().superClass);
+      List<String> existingIds = getExistingJointIds(exporter.getClassData().superClass);
       boolean addedRoots = false;
       List<Tuple2<String, String>> trimmedSkeleton = exporter.makeCodeReadyTree(exporter.getJointList());
       if (trimmedSkeleton != null) {
@@ -480,5 +482,43 @@ final class ModelResourceJavaGenerator {
       sb.append("}" + JavaCodeUtilities.LINE_RETURN);
 
       return sb.toString();
+  }
+
+  static List<String> getExistingJointIds(Class<?> resourceClass) {
+    List<String> ids = new LinkedList<String>();
+    Field[] fields = resourceClass.getDeclaredFields();
+    for (Field f : fields) {
+      if (JointId.class.isAssignableFrom(f.getType())) {
+        String fieldName = f.getName();
+        ids.add(fieldName);
+      }
+    }
+    Class<?>[] interfaces = resourceClass.getInterfaces();
+    for (Class<?> i : interfaces) {
+      ids.addAll(getExistingJointIds(i));
+    }
+    return ids;
+  }
+
+  static String getAccessorMethodsForResourceClass(Class<? extends JointedModelResource> resourceClass) {
+    StringBuilder sb = new StringBuilder();
+    List<String> jointIds = getExistingJointIds(resourceClass);
+    for (String id : jointIds) {
+      sb.append("public Joint get" + AliceResourceClassUtilities.getAliceMethodNameForEnum(id) + "() {\n");
+      sb.append("\t return org.lgna.story.Joint.getJoint( this, " + resourceClass.getCanonicalName() + "." + id + ");\n");
+      sb.append("}\n");
+    }
+    return sb.toString();
+  }
+
+  static String getJointAccessCodeForClass(Class<?> resourceClass) {
+    List<String> ids = getExistingJointIds(resourceClass);
+    StringBuilder sb = new StringBuilder();
+    for (String id : ids) {
+      sb.append("public org.lgna.story.Joint get" + AliceResourceClassUtilities.getAliceMethodNameForEnum(id) + "() {\n");
+      sb.append("\treturn org.lgna.story.Joint.getJoint( this, " + resourceClass.getName() + "." + id + " );\n");
+      sb.append("}\n");
+    }
+    return sb.toString();
   }
 }

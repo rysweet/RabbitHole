@@ -682,7 +682,7 @@ public class ModelExportTest {
 
   @Test
   public void getExistingJointIdsReturnsBipedJointNames() {
-    List<String> ids = ModelResourceExporter.getExistingJointIds(BipedResource.class);
+    List<String> ids = ModelResourceJavaGenerator.getExistingJointIds(BipedResource.class);
     assertNotNull(ids);
     assertTrue("BipedResource should have many joint IDs", ids.size() > 20);
     assertTrue("Should include ROOT", ids.contains("ROOT"));
@@ -696,7 +696,7 @@ public class ModelExportTest {
 
   @Test
   public void getExistingJointIdsReturnsEmptyForPropResource() {
-    List<String> ids = ModelResourceExporter.getExistingJointIds(PropResource.class);
+    List<String> ids = ModelResourceJavaGenerator.getExistingJointIds(PropResource.class);
     assertNotNull(ids);
     assertTrue("PropResource (no joints defined directly) should return empty or inherited IDs only",
         ids.isEmpty());
@@ -706,7 +706,7 @@ public class ModelExportTest {
   public void getExistingJointIdsIncludesInterfaceJointIds() {
     // BasicResource extends JointedModelResource; PropResource extends BasicResource.
     // BipedResource declares all its own joints — verify interface traversal picks them up.
-    List<String> bipedIds = ModelResourceExporter.getExistingJointIds(BipedResource.class);
+    List<String> bipedIds = ModelResourceJavaGenerator.getExistingJointIds(BipedResource.class);
     assertTrue("Should contain PELVIS_LOWER_BODY from BipedResource",
         bipedIds.contains("PELVIS_LOWER_BODY"));
     assertTrue("Should contain SPINE_BASE from BipedResource",
@@ -715,7 +715,7 @@ public class ModelExportTest {
 
   @Test
   public void getAccessorMethodsForResourceClassContainsGetterForKnownJoint() {
-    String code = ModelResourceExporter.getAccessorMethodsForResourceClass(BipedResource.class);
+    String code = ModelResourceJavaGenerator.getAccessorMethodsForResourceClass(BipedResource.class);
     assertNotNull(code);
     // Should contain accessor methods like "public Joint getRightWrist()"
     assertTrue("Should contain getRightWrist accessor",
@@ -731,14 +731,14 @@ public class ModelExportTest {
 
   @Test
   public void getAccessorMethodsForResourceClassReturnsEmptyForNoJoints() {
-    String code = ModelResourceExporter.getAccessorMethodsForResourceClass(PropResource.class);
+    String code = ModelResourceJavaGenerator.getAccessorMethodsForResourceClass(PropResource.class);
     assertNotNull(code);
     assertEquals("PropResource has no joints, so accessor code should be empty", "", code);
   }
 
   @Test
   public void getJointAccessCodeForClassContainsFullyQualifiedTypes() {
-    String code = ModelResourceExporter.getJointAccessCodeForClass(BipedResource.class);
+    String code = ModelResourceJavaGenerator.getJointAccessCodeForClass(BipedResource.class);
     assertNotNull(code);
     // Uses fully-qualified type names
     assertTrue("Should use fully-qualified org.lgna.story.Joint type",
@@ -751,7 +751,7 @@ public class ModelExportTest {
 
   @Test
   public void getJointAccessCodeForClassReturnsEmptyForNoJoints() {
-    String code = ModelResourceExporter.getJointAccessCodeForClass(PropResource.class);
+    String code = ModelResourceJavaGenerator.getJointAccessCodeForClass(PropResource.class);
     assertNotNull(code);
     assertEquals("PropResource has no joints, so accessor code should be empty", "", code);
   }
@@ -759,8 +759,8 @@ public class ModelExportTest {
   @Test
   public void getJointAccessCodeAndAccessorMethodsProduceSameJointSet() {
     // Both methods generate getters for the same set of joints, just with different type qualification.
-    String shortCode = ModelResourceExporter.getAccessorMethodsForResourceClass(BipedResource.class);
-    String fullCode = ModelResourceExporter.getJointAccessCodeForClass(BipedResource.class);
+    String shortCode = ModelResourceJavaGenerator.getAccessorMethodsForResourceClass(BipedResource.class);
+    String fullCode = ModelResourceJavaGenerator.getJointAccessCodeForClass(BipedResource.class);
 
     // Count the number of "get" method declarations in each — they should match.
     long shortCount = shortCode.lines().filter(l -> l.contains("public") && l.contains("get")).count();
