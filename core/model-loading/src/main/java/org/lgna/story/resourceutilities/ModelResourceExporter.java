@@ -450,11 +450,6 @@ public class ModelResourceExporter {
     return superBox;
   }
 
-  //  public void addThumbnail( String modelName, String textureName, String resourceType, String attributionName, String attributionYear, Image thumbnail )
-  //  {
-  //    this.thumbnails.put( new ModelSubResourceExporter( modelName, textureName, resourceType, attributionName, attributionYear ), thumbnail );
-  //  }
-
   public void addExistingThumbnail(String name, File thumbnailFile) {
     if ((thumbnailFile != null) && thumbnailFile.exists()) {
       if (this.existingThumbnails == null) {
@@ -586,12 +581,6 @@ public class ModelResourceExporter {
     return ModelResourceJavaGenerator.getAccessorMethodName(arrayName);
   }
 
-  //If a parent interface has declared an accessor for a given field, return true
-  // otherwisse return false
-  private boolean needsAccessorMethodForFieldName(ModelClassData classData, String fieldName) {
-    return ModelResourceJavaGenerator.needsAccessorMethodForFieldName(classData, fieldName);
-  }
-
   public String createJavaCode() throws DataFormatException {
     return ModelResourceJavaGenerator.buildJavaCodeBody(this);
   }
@@ -651,11 +640,6 @@ public class ModelResourceExporter {
       FileUtilities.copyFile(this.xmlFile, outputFile);
       return outputFile;
     } else {
-      //This path does not indent the xml
-      //            Document doc = this.createXMLDocument();
-      //            XMLUtilities.write(doc, outputFile);
-
-      //This path does indenting
       String xmlString = this.createXMLString();
       try (FileWriter fw = new FileWriter(outputFile)) {
         fw.write(xmlString);
