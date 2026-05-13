@@ -62,12 +62,23 @@ final class EatmeScreenshotCapture {
       return PixelObservation.blocked(blockers, "");
     }
 
+    Robot robot;
+    try {
+      robot = new Robot();
+    } catch (AWTException ex) {
+      return PixelObservation.blocked(List.of(new BlockerDetail(
+          "java_awt_robot_unavailable",
+          exceptionObserved(ex),
+          "java.awt.Robot screen capture available")), ex.getClass().getSimpleName());
+    }
+
     PixelObservation renderTargetObservation = observeComponentPixel(
         evidenceDir,
         renderTargetComponent,
         "render_target",
         "renderTarget",
-        "render_target_component");
+        "render_target_component",
+        robot);
     if (renderTargetObservation.isObserved() || renderTargetComponent == renderPanelComponent) {
       return renderTargetObservation;
     }
@@ -77,7 +88,8 @@ final class EatmeScreenshotCapture {
         renderPanelComponent,
         "render_panel",
         "renderPanel",
-        "render_panel_component");
+        "render_panel_component",
+        robot);
     if (renderPanelObservation.isObserved()) {
       return renderPanelObservation;
     }
@@ -95,6 +107,16 @@ final class EatmeScreenshotCapture {
       String blockerPrefix,
       String statePrefix,
       String captureRole) {
+    return observeComponentPixel(evidenceDir, component, blockerPrefix, statePrefix, captureRole, null);
+  }
+
+  private static PixelObservation observeComponentPixel(
+      Path evidenceDir,
+      Component component,
+      String blockerPrefix,
+      String statePrefix,
+      String captureRole,
+      Robot robot) {
     List<BlockerDetail> blockers = EatmeWindowDetector.componentReadinessBlockers(
         component, blockerPrefix, statePrefix);
     Point screenLocation = null;
@@ -124,7 +146,10 @@ final class EatmeScreenshotCapture {
           screenLocation.y,
           component.getWidth(),
           component.getHeight());
-      BufferedImage screenshot = new Robot().createScreenCapture(captureArea);
+      if (robot == null) {
+        robot = new Robot();
+      }
+      BufferedImage screenshot = robot.createScreenCapture(captureArea);
       if (screenshot.getWidth() <= 0 || screenshot.getHeight() <= 0) {
         return PixelObservation.blocked(List.of(new BlockerDetail(
             blockerPrefix + "_screenshot_has_no_positive_size",

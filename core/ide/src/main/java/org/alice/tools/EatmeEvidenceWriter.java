@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,6 +37,7 @@ final class EatmeEvidenceWriter {
       "grading",
       "Save completion",
       "full UI automation");
+  private static final Path VALIDATION_DIR = Path.of("evidence");
 
   private EatmeEvidenceWriter() {
   }
@@ -87,15 +87,20 @@ final class EatmeEvidenceWriter {
   }
 
   static String blockerCodesJson(List<BlockerDetail> blockers) {
-    List<String> values = new ArrayList<>();
-    for (BlockerDetail blocker : blockers) {
-      values.add(blocker.code);
+    StringBuilder builder = new StringBuilder("[");
+    for (int i = 0; i < blockers.size(); i++) {
+      if (i > 0) {
+        builder.append(", ");
+      }
+      builder.append('"').append(EatmeRunWindowEvidence.escapeJson(blockers.get(i).code)).append('"');
     }
-    return jsonArray(values);
+    builder.append(']');
+    return builder.toString();
   }
 
   static String blockerDetailsJson(List<BlockerDetail> blockers) {
-    StringBuilder builder = new StringBuilder("[\n");
+    StringBuilder builder = new StringBuilder(blockers.size() * 160 + 16);
+    builder.append("[\n");
     for (int i = 0; i < blockers.size(); i++) {
       BlockerDetail blocker = blockers.get(i);
       if (i > 0) {
@@ -377,7 +382,7 @@ final class EatmeEvidenceWriter {
       }
     }
     for (String evidenceArtifact : evidenceArtifacts) {
-      EatmeRunWindowEvidence.artifactPath(Path.of("evidence"), evidenceArtifact);
+      EatmeRunWindowEvidence.artifactPath(VALIDATION_DIR, evidenceArtifact);
       if (SUPPORTING_VM_LISTENER_EVIDENCE_ARTIFACT_SET.contains(evidenceArtifact)) {
         throw new IllegalArgumentException(
             "execution gap report executableToday payload must not include VM-listener support artifact: "
@@ -437,7 +442,8 @@ final class EatmeEvidenceWriter {
   }
 
   private static String executionGapEvidenceArtifactsJson(List<String> evidenceArtifacts) {
-    StringBuilder builder = new StringBuilder("[\n");
+    StringBuilder builder = new StringBuilder(evidenceArtifacts.size() * 200 + 16);
+    builder.append("[\n");
     for (int i = 0; i < evidenceArtifacts.size(); i++) {
       String evidenceArtifact = evidenceArtifacts.get(i);
       if (i > 0) {

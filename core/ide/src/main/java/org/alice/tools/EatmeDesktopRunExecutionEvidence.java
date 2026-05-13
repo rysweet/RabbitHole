@@ -142,6 +142,7 @@ public final class EatmeDesktopRunExecutionEvidence {
     private boolean activeSceneInvokeStarted;
     private boolean activeSceneInvokeReturned;
     private boolean disabled;
+    private boolean eventRecordingComplete;
 
     private Recorder(Path evidenceDir, String programTypeName) {
       this.evidenceDir = evidenceDir;
@@ -177,13 +178,17 @@ public final class EatmeDesktopRunExecutionEvidence {
     @Override
     public synchronized void statementExecuting(StatementExecutionEvent statementExecutionEvent) {
       executingStatementCount++;
-      recordStatement("executing", statementExecutionEvent);
+      if (!eventRecordingComplete) {
+        recordStatement("executing", statementExecutionEvent);
+      }
     }
 
     @Override
     public synchronized void statementExecuted(StatementExecutionEvent statementExecutionEvent) {
       executedStatementCount++;
-      recordStatement("executed", statementExecutionEvent);
+      if (!eventRecordingComplete) {
+        recordStatement("executed", statementExecutionEvent);
+      }
     }
 
     @Override
@@ -236,6 +241,10 @@ public final class EatmeDesktopRunExecutionEvidence {
       recordEvent(latestEvent);
       if (executingStatementCount == 1 || executedStatementCount == 1) {
         writeArtifacts();
+      }
+      if (executingStatementCount > 1 && executedStatementCount > 1
+          && events.size() > MAX_RECORDED_EVENTS) {
+        eventRecordingComplete = true;
       }
     }
 
