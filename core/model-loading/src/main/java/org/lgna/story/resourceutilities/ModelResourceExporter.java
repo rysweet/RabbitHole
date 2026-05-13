@@ -85,18 +85,18 @@ public class ModelResourceExporter {
 
   private String resourceName;
   private String className;
-  private List<String> tags = new LinkedList<String>();
-  private List<String> groupTags = new LinkedList<String>();
-  private List<String> themeTags = new LinkedList<String>();
-  private Map<String, AxisAlignedBox> boundingBoxes = new HashMap<String, AxisAlignedBox>();
+  private List<String> tags = new ArrayList<>();
+  private List<String> groupTags = new ArrayList<>();
+  private List<String> themeTags = new ArrayList<>();
+  private Map<String, AxisAlignedBox> boundingBoxes = new HashMap<>();
   private File xmlFile;
   private File javaFile;
-  private List<String> jointIdsToSuppress = new ArrayList<String>();
-  private List<String> arraysToExposeFirstElementOf = new ArrayList<String>();
-  private List<String> arraysToHideElementsOf = new ArrayList<String>();
-  private Map<ModelSubResourceExporter, Image> thumbnails = new HashMap<ModelSubResourceExporter, Image>();
+  private List<String> jointIdsToSuppress = new ArrayList<>();
+  private List<String> arraysToExposeFirstElementOf = new ArrayList<>();
+  private List<String> arraysToHideElementsOf = new ArrayList<>();
+  private Map<ModelSubResourceExporter, Image> thumbnails = new HashMap<>();
   private Map<String, File> existingThumbnails = null;
-  private List<ModelSubResourceExporter> subResources = new LinkedList<ModelSubResourceExporter>();
+  private List<ModelSubResourceExporter> subResources = new ArrayList<>();
   private boolean isSims = false;
   private boolean hasNewData = false;
   private boolean forceRebuildCode = false;
@@ -105,10 +105,10 @@ public class ModelResourceExporter {
   private boolean shouldRecenter = false;
   private boolean recenterXZ = false;
   private boolean moveCenterToBottom = true;
-  private List<String> forcedOverridingEnumNames = new ArrayList<String>();
-  private Map<String, List<String>> forcedEnumNamesMap = new HashMap<String, List<String>>();
-  private Map<String, String> customArrayNameMap = new HashMap<String, String>();
-  private Map<String, Map<String, AffineMatrix4x4>> poses = new HashMap<String, Map<String, AffineMatrix4x4>>();
+  private List<String> forcedOverridingEnumNames = new ArrayList<>();
+  private Map<String, List<String>> forcedEnumNamesMap = new HashMap<>();
+  private Map<String, String> customArrayNameMap = new HashMap<>();
+  private Map<String, Map<String, AffineMatrix4x4>> poses = new HashMap<>();
   private String[] arrayNamesToSkip = null;
   private boolean exportGalleryResources = true;
   private boolean isDeprecated = false;
@@ -453,7 +453,7 @@ public class ModelResourceExporter {
   public void addExistingThumbnail(String name, File thumbnailFile) {
     if ((thumbnailFile != null) && thumbnailFile.exists()) {
       if (this.existingThumbnails == null) {
-        this.existingThumbnails = new HashMap<String, File>();
+        this.existingThumbnails = new HashMap<>();
       }
       this.existingThumbnails.put(name, thumbnailFile);
     } else {
@@ -619,11 +619,7 @@ public class ModelResourceExporter {
 
 
   private File createJavaCode(String root) throws DataFormatException {
-    String packageDirectory = JavaCodeUtilities.getDirectoryStringForPackage(this.classData.packageString);
-    System.out.println(packageDirectory);
     String javaCode = createJavaCode();
-    System.out.println(javaCode);
-    System.out.println(System.getProperty("java.class.path"));
     File javaFile = ModelResourceFileUtilities.getJavaFile(root, this.classData.packageString, getJavaClassName());
     TextFileUtilities.write(javaFile, javaCode);
     return javaFile;
@@ -713,7 +709,7 @@ public class ModelResourceExporter {
       } else {
         List<String> nameList;
         if (!this.forcedEnumNamesMap.containsKey(resourceName)) {
-          nameList = new ArrayList<String>();
+          nameList = new ArrayList<>();
           this.forcedEnumNamesMap.put(resourceName, nameList);
         } else {
           nameList = this.forcedEnumNamesMap.get(resourceName);
