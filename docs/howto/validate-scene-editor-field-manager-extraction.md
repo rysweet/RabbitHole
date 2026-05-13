@@ -101,8 +101,8 @@ grep -c 'fieldManager\.' \
   core/ide/src/main/java/org/alice/stageide/sceneeditor/StorytellingSceneEditor.java
 ```
 
-Expected: at least 15 delegation calls. Each thin stub method calls
-`fieldManager.xxx()`.
+Expected: at least 23 delegation calls. Each thin stub method calls
+`fieldManager.xxx()`, plus 8 code generation redirects.
 
 Verify no stale `codeGenerator` references remain on SSE:
 

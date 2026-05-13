@@ -336,7 +336,7 @@ The three snap grid listeners are unchanged — they call methods
 
 ## Methods that move entirely
 
-These 11 private/package-private methods move from SSE to
+These 12 private/package-private methods move from SSE to
 `SceneEditorFieldManager` with no stub left on SSE. Callers within the
 `sceneeditor` package update to use `fieldManager.xxx()` or
 `editor.fieldManager.xxx()`.
@@ -360,7 +360,7 @@ Total: ~134 lines removed (no stubs).
 
 ## Methods that become thin stubs
 
-These 15 public/override methods remain on SSE as one-line delegation
+These 16 public/override methods remain on SSE as one-line delegation
 stubs. The method body moves to `SceneEditorFieldManager`.
 
 | Method | Lines saved | SSE stub body |
@@ -478,7 +478,7 @@ grep 'fieldManager\.' \
   core/ide/src/main/java/org/alice/stageide/sceneeditor/StorytellingSceneEditor.java | wc -l
 ```
 
-Expected: at least 15 delegation calls (one per thin stub + code generation
+Expected: at least 23 delegation calls (one per thin stub + code generation
 delegates).
 
 ## Compatibility rules
@@ -514,38 +514,54 @@ delegates).
    to `this.onscreenRenderTarget.addRenderTargetListener(this.renderTargetListener)`.
    The registration site remains in SSE's `initializeComponents()`.
 
-7. **The anonymous `SelectionListener` and `ManipulatorClickAdapter` in
-   `initializeComponents()` update.** These anonymous inner classes call
+7. **Three call sites in `initializeComponents()` update.** The anonymous
+   `SelectionListener` and `ManipulatorClickAdapter` inner classes call
    `handleManipulatorSelection` and `showRightClickMenuForModel`, which
-   are now on `fieldManager`:
+   are now on `fieldManager`. Additionally, the direct call to
+   `setSelectedFieldOnManipulator(this.getSelectedField())` updates:
 
    ```java
    // Before:
    StorytellingSceneEditor.this.handleManipulatorSelection(e);
+   showRightClickMenuForModel(clickInput);
+   setSelectedFieldOnManipulator(this.getSelectedField());
+
    // After:
    StorytellingSceneEditor.this.fieldManager.handleManipulatorSelection(e);
+   fieldManager.showRightClickMenuForModel(clickInput);
+   fieldManager.setSelectedFieldOnManipulator(this.getSelectedField());
    ```
 
 8. **The `selectionIsFromInstanceSelector` flag remains on SSE.** It is
    set by `SceneEditorListeners` and read by `setSelectedField` (which
    stays on SSE). The flag is not moved to `SceneEditorFieldManager`.
 
-9. **`setSelectedField` override stays on SSE.** It is a public override
-   of `AbstractSceneEditor.setSelectedField()` that interacts with the
+9. **`setSelectedField` and `setSelectedExpression` overrides stay on SSE.**
+   `setSelectedField` is a public override of
+   `AbstractSceneEditor.setSelectedField()` that interacts with the
    instance factory state, selection flags, and UI refresh. It calls
    `fieldManager.setSelectedFieldOnManipulator(field)` for the
-   drag-adapter wiring.
+   drag-adapter wiring. `setSelectedExpression` is a public method that
+   uses the `selectionIsFromMain` flag (SSE state). Its internal call
+   to `setSelectedExpressionOnManipulator(expression)` updates to
+   `fieldManager.setSelectedExpressionOnManipulator(expression)`.
 
 10. **`setActiveScene` stays on SSE.** It is a 95-line protected override
     tightly coupled to SSE's initialization state (`sceneCameraImp`,
     `movableSceneCameraImp`, `orthographicCameraImp`, `globalDragAdapter`,
     `snapGrid`, `mainCameraViewTracker`). Extracting it would require
-    exposing too many SSE internals. It calls helpers on `fieldManager`
-    for marker-related operations.
+    exposing too many SSE internals. Its calls to `setSelectedCameraMarker`
+    and `setSelectedObjectMarker` update:
+    `this.setSelectedCameraMarker(null)` becomes
+    `this.fieldManager.setSelectedCameraMarker(null)` (method moved entirely);
+    `this.setSelectedObjectMarker(null)` remains unchanged (thin stub on SSE).
 
 11. **`addField` override stays on SSE.** It calls `super.addField()` and
     interacts with SSE state (marker display, VR flag, code state
-    initialization). It remains on SSE.
+    initialization). Its call to `setSelectedCameraMarker(field)` becomes
+    `fieldManager.setSelectedCameraMarker(field)` (method moved entirely);
+    the call to `setSelectedObjectMarker(field)` remains unchanged
+    (thin stub on SSE).
 
 12. **The singleton pattern is unchanged.** `SingletonHolder` remains a
     private static inner class. `getInstance()` continues to use the lazy
