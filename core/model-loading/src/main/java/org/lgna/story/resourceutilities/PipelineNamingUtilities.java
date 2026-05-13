@@ -333,7 +333,7 @@ public class PipelineNamingUtilities {
     if (arrayName != null) {
       return arrayName + "_" + suffix;
     } else {
-      String baseName = ModelResourceExporter.getArrayNameForJoint(jointName, null, null);
+      String baseName = ModelResourceArrayUtilities.getArrayNameForJoint(jointName, null, null);
       return baseName + "_" + suffix;
     }
   }

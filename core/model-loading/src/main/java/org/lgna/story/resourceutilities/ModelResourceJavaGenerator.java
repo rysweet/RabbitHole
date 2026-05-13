@@ -290,7 +290,7 @@ final class ModelResourceJavaGenerator {
       if (trimmedSkeleton != null) {
         Map<String, List<String>> arrayEntries;
         if (exporter.isEnableArraySupport()) {
-          arrayEntries = ModelResourceExporter.getArrayEntriesFromJointList(trimmedSkeleton, exporter.getCustomArrayNameMap(), exporter.getJointIdsToSuppress(), exporter.getArrayNamesToSkip());
+          arrayEntries = ModelResourceArrayUtilities.getArrayEntriesFromJointList(trimmedSkeleton, exporter.getCustomArrayNameMap(), exporter.getJointIdsToSuppress(), exporter.getArrayNamesToSkip());
         } else {
           arrayEntries = new HashMap<String, List<String>>();
         }

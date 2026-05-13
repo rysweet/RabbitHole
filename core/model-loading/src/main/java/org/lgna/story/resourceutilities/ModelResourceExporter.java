@@ -348,25 +348,10 @@ public class ModelResourceExporter {
     }
   }
 
-  public static int getArrayIndexForJoint(String jointName) {
-    return ModelResourceArrayUtilities.getArrayIndexForJoint(jointName);
-  }
 
-  public static boolean hasArray(String arrayName, List<Tuple2<String, String>> jointList) {
-    return ModelResourceArrayUtilities.hasArray(arrayName, jointList);
-  }
 
-  public static String getArrayNameForJoint(String jointName, Map<String, String> customArrayNameMap, String[] namesToSkip) {
-    return ModelResourceArrayUtilities.getArrayNameForJoint(jointName, customArrayNameMap, namesToSkip);
-  }
 
-  public static Map<String, List<String>> getArrayEntriesFromJointList(List<Tuple2<String, String>> jointList, Map<String, String> customArrayNameMap, List<String> jointsToSuppress, String[] arrayNamesToSkip) throws DataFormatException {
-    return ModelResourceArrayUtilities.getArrayEntriesFromJointList(jointList, customArrayNameMap, jointsToSuppress, arrayNamesToSkip);
-  }
 
-  public static Map<String, List<String>> getArrayEntries(List<String> jointNames, Map<String, String> customArrayNameMap, List<String> jointsToSuppress, String[] arrayNamesToSkip) throws DataFormatException {
-    return ModelResourceArrayUtilities.getArrayEntries(jointNames, customArrayNameMap, jointsToSuppress, arrayNamesToSkip);
-  }
 
   List<Tuple2<String, String>> makeCodeReadyTree(List<Tuple2<String, String>> sourceList) {
     return ModelResourceJointTreeUtilities.makeCodeReadyTree(sourceList, REMOVE_ROOT_JOINTS);
@@ -715,7 +700,7 @@ public class ModelResourceExporter {
   }
 
   String getJointAccessMethodNameForArrayJoint(String jointName) {
-    String arrayName = getArrayNameForJoint(jointName, null, null);
+    String arrayName = ModelResourceArrayUtilities.getArrayNameForJoint(jointName, null, null);
     return ModelResourceJavaGenerator.getAccessorMethodName(arrayName);
   }
 
