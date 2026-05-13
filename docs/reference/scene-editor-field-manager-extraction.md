@@ -276,29 +276,33 @@ public class StorytellingSceneEditor extends AbstractSceneEditor
 
 ## Visibility changes
 
-Six additional members of `StorytellingSceneEditor` are widened from
+Eight additional members of `StorytellingSceneEditor` are widened from
 `private` to package-private to allow cross-file access. These are in
 addition to the 7 members widened in PR #534.
 
-### Fields (3 additional)
+### Fields (5 additional)
 
 | Field | Type | Accessed by |
 | --- | --- | --- |
 | `onscreenRenderTarget` | `OnscreenRenderTarget` | `SceneEditorFieldManager` (for rendering control), `SceneRenderTargetListener` (for horizon line painting) |
 | `mainCameraNavigatorWidget` | `CameraNavigatorWidget` | `SceneEditorFieldManager` (for camera mode switching) |
 | `orthographicCameraImp` | `OrthographicCameraImp` | `SceneEditorFieldManager` (for camera switching) |
+| `automaticDisplayListener` | `AutomaticDisplayListener` | `SceneEditorFieldManager` (for `handleShowing`/`handleHiding` — registers/unregisters with `GlrRenderFactory`) |
+| `movableSceneCameraImp` | `TransformableImp` | `SceneEditorFieldManager` (for `getTransformForNewCameraMarker` — reads absolute transformation) |
 
 ### Methods (3 additional)
 
-| Method | Signature | Accessed by |
+| Method | Signature | Change |
 | --- | --- | --- |
-| `getSelectedField` | `UserField getSelectedField()` | `SceneEditorFieldManager` (inherited from `AbstractSceneEditor`, already protected — no change needed) |
-| `getImplementation` | `<T extends EntityImp> T getImplementation(AbstractField)` | `SceneEditorFieldManager` (inherited from `AbstractSceneEditor`, already protected — no change needed) |
-| `revalidateAndRepaint` | `void revalidateAndRepaint()` | `SceneEditorFieldManager` (inherited from `AwtComponentView`, already public — no change needed) |
+| `getPropertyPanel` | `SceneObjectPropertyManagerPanel getPropertyPanel()` | Widened from `private` to package-private. Called from `setSelectedInstance` (moves to `SceneEditorFieldManager`) and `setActiveScene` (stays on SSE). |
+| `getSelectedField` | `UserField getSelectedField()` | No change needed — inherited from `AbstractSceneEditor`, already protected. |
+| `getImplementation` | `<T extends EntityImp> T getImplementation(AbstractField)` | No change needed — inherited from `AbstractSceneEditor`, already protected. |
+| `revalidateAndRepaint` | `void revalidateAndRepaint()` | No change needed — inherited from `AwtComponentView`, already public. |
 
 **Note:** Most methods that `SceneEditorFieldManager` calls on the editor
-are already public or protected on `AbstractSceneEditor`. The 3 field
-visibility widenings are the only new package-private exposures.
+are already public or protected on `AbstractSceneEditor`. The 5 field
+widenings and 1 method widening (`getPropertyPanel`) are the only new
+package-private exposures.
 
 No member is widened beyond package-private. All extracted classes are in
 the same package (`org.alice.stageide.sceneeditor`).
@@ -383,6 +387,23 @@ stubs. The method body moves to `SceneEditorFieldManager`.
 | `getMarkerForField(UserField)` | ~6 | `fieldManager.getMarkerForField(field)` |
 
 Total: ~60 lines saved via thinning.
+
+### Code generation methods (redirect only)
+
+These 8 `@Override`/public methods on SSE are already one-line delegation
+stubs — they currently call `codeGenerator.xxx()`. After extraction, they
+change to call `fieldManager.xxx()`. No method body logic changes.
+
+| Method | Before | After |
+| --- | --- | --- |
+| `getCurrentStateCodeForField(UserField)` | `codeGenerator.getCurrentStateCodeForField(field)` | `fieldManager.getCurrentStateCodeForField(field)` |
+| `generateCodeForSetUp(StatementListProperty)` | `codeGenerator.generateCodeForSetUp(bodyStatementsProperty)` | `fieldManager.generateCodeForSetUp(bodyStatementsProperty)` |
+| `getDoStatementsForCopyField(...)` | `codeGenerator.getDoStatementsForCopyField(...)` | `fieldManager.getDoStatementsForCopyField(...)` |
+| `getDoStatementsForAddField(...)` | `codeGenerator.getDoStatementsForAddField(...)` | `fieldManager.getDoStatementsForAddField(...)` |
+| `getUndoStatementsForAddField(UserField)` | `codeGenerator.getUndoStatementsForAddField(field)` | `fieldManager.getUndoStatementsForAddField(field)` |
+| `getRiders(UserField)` | `codeGenerator.getRiders(vehicle)` | `fieldManager.getRiders(vehicle)` |
+| `getDoStatementsForRemoveField(...)` | `codeGenerator.getDoStatementsForRemoveField(...)` | `fieldManager.getDoStatementsForRemoveField(...)` |
+| `getUndoStatementsForRemoveField(...)` | `codeGenerator.getUndoStatementsForRemoveField(...)` | `fieldManager.getUndoStatementsForRemoveField(...)` |
 
 Additionally, the `RenderTargetListener` callbacks (~19 lines) and the
 `paintHorizonLine` helper (~23 lines) move to `SceneRenderTargetListener`,
@@ -478,8 +499,9 @@ grep 'fieldManager\.' \
   core/ide/src/main/java/org/alice/stageide/sceneeditor/StorytellingSceneEditor.java | wc -l
 ```
 
-Expected: at least 23 delegation calls (one per thin stub + code generation
-delegates).
+Expected: at least 28 delegation calls (16 thin stubs + 8 code generation
+redirects + call-site updates in `initializeComponents`, `setSelectedField`,
+`setSelectedExpression`, `setActiveScene`, and `addField`).
 
 ## Compatibility rules
 
@@ -535,6 +557,14 @@ delegates).
 8. **The `selectionIsFromInstanceSelector` flag remains on SSE.** It is
    set by `SceneEditorListeners` and read by `setSelectedField` (which
    stays on SSE). The flag is not moved to `SceneEditorFieldManager`.
+
+8a. **`setSelectedInstance` calls back to SSE.** After moving to
+    `SceneEditorFieldManager`, `setSelectedInstance` calls
+    `editor.setSelectedField(...)`, `editor.setSelectedExpression(...)`,
+    `editor.getActiveSceneField()`, and `editor.getPropertyPanel()`.
+    These callbacks are necessary because the public selection API
+    (`setSelectedField`, `setSelectedExpression`) must stay on SSE
+    where they interact with framework overrides and selection flags.
 
 9. **`setSelectedField` and `setSelectedExpression` overrides stay on SSE.**
    `setSelectedField` is a public override of

@@ -101,8 +101,10 @@ grep -c 'fieldManager\.' \
   core/ide/src/main/java/org/alice/stageide/sceneeditor/StorytellingSceneEditor.java
 ```
 
-Expected: at least 23 delegation calls. Each thin stub method calls
-`fieldManager.xxx()`, plus 8 code generation redirects.
+Expected: at least 28 delegation calls. The 16 thin stub methods each call
+`fieldManager.xxx()`, plus 8 code generation redirects, plus call-site
+updates in `initializeComponents`, `setSelectedField`, `setSelectedExpression`,
+`setActiveScene`, and `addField`.
 
 Verify no stale `codeGenerator` references remain on SSE:
 
@@ -198,6 +200,9 @@ still `private`. Members that must be widened to package-private:
 | `onscreenRenderTarget` | field | `SceneEditorFieldManager`, `SceneRenderTargetListener` |
 | `mainCameraNavigatorWidget` | field | `SceneEditorFieldManager` |
 | `orthographicCameraImp` | field | `SceneEditorFieldManager` |
+| `automaticDisplayListener` | field | `SceneEditorFieldManager` (`handleShowing`/`handleHiding`) |
+| `movableSceneCameraImp` | field | `SceneEditorFieldManager` (`getTransformForNewCameraMarker`) |
+| `getPropertyPanel()` | method | `SceneEditorFieldManager` (`setSelectedInstance`) |
 | `lookingGlassPanel` | field | `SceneEditorFieldManager` (also needed by `SceneEditorDropReceptor` from PR #534) |
 | `globalDragAdapter` | field | `SceneEditorFieldManager` (also needed by `SceneEditorDropReceptor` from PR #534) |
 | `selectionIsFromInstanceSelector` | field | `SceneEditorListeners` (unchanged from PR #534) |
