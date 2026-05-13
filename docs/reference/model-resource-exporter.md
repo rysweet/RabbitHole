@@ -11,6 +11,13 @@ XML, and thumbnail output. Those helpers are implementation details. The
 supported contract remains the behavior exposed through `ModelResourceExporter`
 and protected by `ModelExportTest`.
 
+The exporter delegates joint-suppression and array-visibility decisions to
+static utility methods on `ModelResourceJavaGenerator`. It exposes the relevant
+private lists through package-private getters (`getJointIdsToSuppress()`,
+`getArraysToHideElementsOf()`, `getArraysToExposeFirstElementOf()`) so that
+the generator can call its own static methods directly without intermediate
+wrappers.
+
 ## Basic usage
 
 Create an exporter with the model class name and the Alice resource class data,
@@ -248,7 +255,11 @@ Behavior-preserving refactors must keep these outputs stable:
 `ModelResourceFileUtilities`, `ModelResourceJavaGenerator`,
 `ModelResourceXmlGenerator`, and `ModelResourceThumbnailWriter` are
 package-private helpers. Callers use `ModelResourceExporter`; they do not
-depend on the helper classes directly.
+depend on the helper classes directly. The exporter exposes private list fields
+through package-private getters (`getJointIdsToSuppress()`,
+`getArraysToHideElementsOf()`, `getArraysToExposeFirstElementOf()`) so that
+`ModelResourceJavaGenerator.buildJavaCodeBody()` can call its own static utility
+methods directly without intermediate wrappers on the exporter.
 
 `ModelResourceFileUtilities` owns file-path resolution and JAR-entry
 creation. See the

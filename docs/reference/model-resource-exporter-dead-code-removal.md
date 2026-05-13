@@ -45,11 +45,15 @@ alongside the other Java source generation logic. This reduces
 ## Architecture
 
 ```text
-ModelResourceExporter (export orchestrator, ~750 lines)
+ModelResourceExporter (export orchestrator, ~707 lines)
 ├── Configures model metadata (joints, tags, thumbnails, poses)
 ├── Manages XML resource file output
 ├── Delegates Java code generation to ModelResourceJavaGenerator
-└── Provides joint tree manipulation (makeCodeReadyTree, etc.)
+├── Provides joint tree manipulation (makeCodeReadyTree, etc.)
+└── Exposes private state through package-private getters
+    ├── getJointIdsToSuppress()
+    ├── getArraysToHideElementsOf()
+    └── getArraysToExposeFirstElementOf()
 
 ModelResourceJavaGenerator (Java source generator, ~530 lines after extraction)
 ├── buildJavaCodeBody — assembles full enum Java source
