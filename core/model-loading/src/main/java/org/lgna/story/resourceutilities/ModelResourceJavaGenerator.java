@@ -351,49 +351,6 @@ final class ModelResourceJavaGenerator {
     }
   }
 
-  static boolean shouldSuppressJoint(String jointString, List<String> jointIdsToSuppress) {
-    if (jointIdsToSuppress.contains(jointString)) {
-      return true;
-    }
-    return ModelResourceJointTreeUtilities.isRootJoint(jointString);
-  }
-
-  static String getArrayNameFromMapForJoint(String jointString, Map<String, List<String>> arrayEntries) {
-    for (Map.Entry<String, List<String>> entry : arrayEntries.entrySet()) {
-      if (entry.getValue().contains(jointString)) {
-        return entry.getKey();
-      }
-    }
-    return null;
-  }
-
-  static boolean shouldSuppressJointInArray(String jointString,
-      Map<String, List<String>> arrayEntries, List<String> arraysToExposeFirstElementOf) {
-    for (Map.Entry<String, List<String>> entry : arrayEntries.entrySet()) {
-      if (entry.getValue().contains(jointString)) {
-        if (arraysToExposeFirstElementOf.contains(entry.getKey())
-            && (ModelResourceArrayUtilities.getArrayIndexForJoint(jointString) == 0)) {
-          return false;
-        } else {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  static boolean shouldHideJointInArray(String jointString,
-      Map<String, List<String>> arrayEntries, List<String> arraysToHideElementsOf) {
-    for (Map.Entry<String, List<String>> entry : arrayEntries.entrySet()) {
-      if (entry.getValue().contains(jointString)) {
-        if (arraysToHideElementsOf.contains(entry.getKey())) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   static String buildJavaCodeBody(ModelResourceExporter exporter) throws java.util.zip.DataFormatException {
       StringBuilder sb = new StringBuilder();
 
@@ -409,6 +366,17 @@ final class ModelResourceJavaGenerator {
           arrayEntries = new HashMap<>();
         }
 
+        // Pre-compute reverse lookup: joint name → array name (O(1) instead of O(n) per query)
+        Map<String, String> jointToArrayName = new HashMap<>();
+        for (Map.Entry<String, List<String>> ae : arrayEntries.entrySet()) {
+          for (String joint : ae.getValue()) {
+            jointToArrayName.put(joint, ae.getKey());
+          }
+        }
+        Set<String> suppressJointIds = new HashSet<>(exporter.getJointIdsToSuppress());
+        Set<String> hideElementArrays = new HashSet<>(exporter.getArraysToHideElementsOf());
+        Set<String> exposeFirstArrays = new HashSet<>(exporter.getArraysToExposeFirstElementOf());
+
         Map<String, Map<String, AffineMatrix4x4>> poseEntries = new HashMap<>(exporter.getPoses());
         List<String> rootJoints = new ArrayList<>();
         sb.append(JavaCodeUtilities.LINE_RETURN);
@@ -418,22 +386,25 @@ final class ModelResourceJavaGenerator {
           if (existingIds.contains(jointString)) {
             continue;
           }
-          if (!shouldHideJointInArray(jointString, arrayEntries, exporter.getArraysToHideElementsOf())) {
+          String arrayNameForJoint = jointToArrayName.get(jointString);
+          boolean hiddenInArray = (arrayNameForJoint != null) && hideElementArrays.contains(arrayNameForJoint);
+          if (!hiddenInArray) {
             if ((parentString == null) || (parentString.length() == 0)) {
               parentString = "null";
               rootJoints.add(jointString);
               addedRoots = true;
             }
-            if (shouldSuppressJoint(jointString, exporter.getJointIdsToSuppress()) || shouldSuppressJointInArray(jointString, arrayEntries, exporter.getArraysToExposeFirstElementOf())) {
+            boolean suppressJoint = suppressJointIds.contains(jointString) || ModelResourceJointTreeUtilities.isRootJoint(jointString);
+            boolean suppressInArray = (arrayNameForJoint != null)
+                && !(exposeFirstArrays.contains(arrayNameForJoint) && ModelResourceArrayUtilities.getArrayIndexForJoint(jointString) == 0);
+            if (suppressJoint || suppressInArray) {
               sb.append("@FieldTemplate(visibility=Visibility.COMPLETELY_HIDDEN)" + JavaCodeUtilities.LINE_RETURN);
             } else {
-              String arrayName = ModelResourceJavaGenerator.getArrayNameFromMapForJoint(jointString, arrayEntries);
-              if (arrayName != null) {
+              if (arrayNameForJoint != null) {
                 sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME, methodNameHint=\"" + getJointAccessMethodNameForArrayJoint(jointString) + "\")" + JavaCodeUtilities.LINE_RETURN);
               } else {
                 sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME)" + JavaCodeUtilities.LINE_RETURN);
               }
-
             }
             sb.append("\tpublic static final org.lgna.story.resources.JointId " + jointString + " = new org.lgna.story.resources.JointId( " + parentString + ", " + getJavaClassName(exporter) + ".class );" + JavaCodeUtilities.LINE_RETURN);
           }
@@ -533,7 +504,7 @@ final class ModelResourceJavaGenerator {
             }
 
             //If the array is one in the "hide all the elements of this array" list, then declare it as an arrayId rather than an array of joint ids
-            if (exporter.getArraysToHideElementsOf().contains(fullArrayName) || exporter.getArraysToHideElementsOf().contains(arrayEntry.getKey())) {
+            if (hideElementArrays.contains(fullArrayName) || hideElementArrays.contains(arrayEntry.getKey())) {
               String firstEntry = arrayElements.getFirst();
               String parentString = "null";
               for (Tuple2<String, String> entry : trimmedSkeleton) {

@@ -236,8 +236,9 @@ public class ModelResourceExporter {
   }
 
   private static void addAllUnique(List<String> target, List<String> source) {
+    Set<String> existing = new HashSet<>(target);
     for (String item : source) {
-      if (!target.contains(item)) {
+      if (existing.add(item)) {
         target.add(item);
       }
     }
