@@ -268,8 +268,7 @@ class ASGEncoder {
           if (edu.cmu.cs.dennisc.scenegraph.Element.class.isAssignableFrom(propertyValueClass)) {
             String key = Integer.toString(value.hashCode());
             xmlProperty.setAttribute("key", key);
-            if (Component.class.isAssignableFrom(propertyValueClass)) {
-            } else {
+            if (!Component.class.isAssignableFrom(propertyValueClass)) {
               keyToElementToBeEncodedMap.put(key, (edu.cmu.cs.dennisc.scenegraph.Element) value);
             }
           } else {
@@ -423,11 +422,11 @@ class ASGEncoder {
     try {
       DocumentBuilder builder = factory.newDocumentBuilder();
       Document document = builder.newDocument();
-      HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementToBeEncodedMap = new HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element>();
+      HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementToBeEncodedMap = new HashMap<>();
       Element rootNode = encodeComponent(component, document, "root", filenameToStreamMap, keyToElementToBeEncodedMap, isTextAlwaysDesired);
       rootNode.setAttribute("version", Double.toString(ASG.VERSION));
       while (keyToElementToBeEncodedMap.size() > 0) {
-        HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element> tempCopy = new HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element>(keyToElementToBeEncodedMap);
+        HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element> tempCopy = new HashMap<>(keyToElementToBeEncodedMap);
         for (String key : tempCopy.keySet()) {
           edu.cmu.cs.dennisc.scenegraph.Element element = tempCopy.get(key);
           rootNode.appendChild(encodeElement(element, document, "element", filenameToStreamMap, keyToElementToBeEncodedMap, isTextAlwaysDesired));
@@ -449,7 +448,7 @@ class ASGEncoder {
   }
 
   static void encode(Component component, OutputStream os) {
-    HashMap<String, ByteArrayOutputStream> filenameToStreamMap = new HashMap<String, ByteArrayOutputStream>();
+    HashMap<String, ByteArrayOutputStream> filenameToStreamMap = new HashMap<>();
     ByteArrayOutputStream rootBAOS = new ByteArrayOutputStream();
     encodeInternal(component, rootBAOS, filenameToStreamMap, false);
     filenameToStreamMap.put(ASG.ROOT_FILENAME, rootBAOS);

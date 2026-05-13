@@ -73,10 +73,10 @@ import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.Vector;
 import java.util.zip.*;
 
 /**
@@ -130,22 +130,13 @@ class ASGDecoder {
     }
   }
 
-  private static Set<String> s_deadProperties = null;
+  private static final Set<String> DEAD_PROPERTIES = Set.of(
+      "IsFirstClass", "OpacityMap", "EmissiveColorMap", "SpecularHighlightColorMap",
+      "BumpMap", "DetailMap", "Format", "VertexLowerBound", "VertexUpperBound"
+  );
 
   private static boolean isDeadProperty(String property) {
-    if (s_deadProperties == null) {
-      s_deadProperties = new HashSet<String>();
-      s_deadProperties.add("IsFirstClass");
-      s_deadProperties.add("OpacityMap");
-      s_deadProperties.add("EmissiveColorMap");
-      s_deadProperties.add("SpecularHighlightColorMap");
-      s_deadProperties.add("BumpMap");
-      s_deadProperties.add("DetailMap");
-      s_deadProperties.add("Format");
-      s_deadProperties.add("VertexLowerBound");
-      s_deadProperties.add("VertexUpperBound");
-    }
-    return s_deadProperties.contains(property);
+    return DEAD_PROPERTIES.contains(property);
   }
 
   private static String convertPropertyIfNecessary(String property) {
@@ -161,12 +152,10 @@ class ASGDecoder {
   private static final String OLD_PACKAGE = "edu.cmu.cs.stage3.";
 
   private static String convertClassnameIfNecessary(String className) {
-    // System.err.print( className + " " );
     if (className.equals("edu.cmu.cs.stage3.alice.scenegraph.Color")) {
       className = "edu.cmu.cs.dennisc.color.Color4f";
     }
     if (className.startsWith(OLD_PACKAGE)) {
-      //todo
       className = "edu.cmu.cs.dennisc." + className.substring(OLD_PACKAGE.length());
     }
     if (className.startsWith("[L" + OLD_PACKAGE)) {
@@ -226,8 +215,6 @@ class ASGDecoder {
             diffuseColor = new Color4f(red, green, blue, alpha);
           } else {
             diffuseColor = null;
-          }
-          if ((format & Vertex.FORMAT_SPECULAR_HIGHLIGHT_COLOR) != 0) {
           }
           final TextureCoordinate2f textureCoordinate0;
           if ((format & Vertex.FORMAT_TEXTURE_COORDINATE_0) != 0) {
@@ -460,19 +447,17 @@ class ASGDecoder {
   }
 
   private static Element[] getChildren(Node node, String tag) {
-    Vector<Element> vector = new Vector<Element>();
+    List<Element> list = new ArrayList<>();
     Node childNode = node.getFirstChild();
     while (childNode != null) {
       if (childNode instanceof Element element) {
         if (childNode.getNodeName().equals(tag)) {
-          vector.addElement(element);
+          list.add(element);
         }
       }
       childNode = childNode.getNextSibling();
     }
-    Element[] array = new Element[vector.size()];
-    vector.copyInto(array);
-    return array;
+    return list.toArray(new Element[0]);
   }
 
   private static String getNodeText(Node node) {
@@ -513,7 +498,7 @@ class ASGDecoder {
     }
   }
 
-  private static edu.cmu.cs.dennisc.scenegraph.Element decodeElement(Element xmlElement, HashMap<String, InputStream> filenameToStreamMap, HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementMap, Vector<AbstractPropertyReference> referencesToBeResolved) {
+  private static edu.cmu.cs.dennisc.scenegraph.Element decodeElement(Element xmlElement, HashMap<String, InputStream> filenameToStreamMap, HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementMap, List<AbstractPropertyReference> referencesToBeResolved) {
     String className = xmlElement.getAttribute("class");
     Integer elementKey = Integer.parseInt(xmlElement.getAttribute("key"));
     String elementName = xmlElement.getAttribute("name");
@@ -663,7 +648,7 @@ class ASGDecoder {
         property.setValue(value);
       } else if (xmlProperty.hasAttribute("key")) {
         Integer key = Integer.parseInt(xmlProperty.getAttribute("key"));
-        referencesToBeResolved.addElement(new PropertyReferenceToElement(sgElement, property, key));
+        referencesToBeResolved.add(new PropertyReferenceToElement(sgElement, property, key));
       } else {
         property.setValue(null);
       }
@@ -671,7 +656,7 @@ class ASGDecoder {
     return sgElement;
   }
 
-  private static Component decodeComponent(Element xmlComponent, HashMap<String, InputStream> filenameToStreamMap, HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementMap, Vector<AbstractPropertyReference> referencesToBeResolved) {
+  private static Component decodeComponent(Element xmlComponent, HashMap<String, InputStream> filenameToStreamMap, HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementMap, List<AbstractPropertyReference> referencesToBeResolved) {
     Component sgComponent = (Component) decodeElement(xmlComponent, filenameToStreamMap, keyToElementMap, referencesToBeResolved);
     Element[] xmlChildren = getChildren(xmlComponent, "child");
     for (Element element : xmlChildren) {
@@ -686,10 +671,8 @@ class ASGDecoder {
       DocumentBuilder builder = factory.newDocumentBuilder();
       Document document = builder.parse(is);
       Element xmlRoot = document.getDocumentElement();
-      // double version = Double.parseDouble( elementNode.getAttribute(
-      // "version" ) );
-      HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementMap = new HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element>();
-      Vector<AbstractPropertyReference> referencesToBeResolved = new Vector<AbstractPropertyReference>();
+      HashMap<Integer, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementMap = new HashMap<>();
+      List<AbstractPropertyReference> referencesToBeResolved = new ArrayList<>();
       Component sgRoot = decodeComponent(xmlRoot, filenameToStreamMap, keyToElementMap, referencesToBeResolved);
       Element[] xmlElements = getChildren(xmlRoot, "element");
       for (Element xmlElement : xmlElements) {
@@ -725,7 +708,7 @@ class ASGDecoder {
     } else {
       zis = new ZipInputStream(is);
     }
-    HashMap<String, InputStream> filenameToStreamMap = new HashMap<String, InputStream>();
+    HashMap<String, InputStream> filenameToStreamMap = new HashMap<>();
     ZipEntry zipEntry;
     try {
       while ((zipEntry = zis.getNextEntry()) != null) {
@@ -763,9 +746,7 @@ class ASGDecoder {
         zipFile.close();
         return decodeZip(new ZipInputStream(new FileInputStream(file)));
       } catch (ZipException ze) {
-        // empty map
-        // todo: use null instead?
-        HashMap<String, InputStream> filenameToStreamMap = new HashMap<String, InputStream>();
+        HashMap<String, InputStream> filenameToStreamMap = new HashMap<>();
         return decode(new FileInputStream(file), filenameToStreamMap);
       }
     } catch (FileNotFoundException fnfe) {
