@@ -53,7 +53,7 @@ import org.lgna.croquet.State;
 import org.lgna.ik.core.IkConstants;
 import org.lgna.ik.core.enforcer.JointedModelIkEnforcer;
 import org.lgna.ik.core.enforcer.TightPositionalIkEnforcer;
-import org.lgna.ik.core.enforcer.TightPositionalIkEnforcer.PositionConstraint;
+import org.lgna.ik.core.enforcer.PositionConstraint;
 import org.lgna.ik.core.solver.Bone;
 import org.lgna.story.Color;
 import org.lgna.story.MoveDirection;

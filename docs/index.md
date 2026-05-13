@@ -207,6 +207,11 @@ repository.
 - [Validate the TweedleEncoder Extraction](./howto/validate-tweedle-encoder-extraction.md) - step-by-step validation for the TweedleEncoder extraction: delegate visibility, line counts, core AST tests, story-api-migration tests, silver-thread round-trip, and stale reference checks.
 - [Tutorial: Trace the Encoder Delegate Decomposition](./tutorials/trace-encoder-delegate-decomposition.md) - guided walkthrough of a Tweedle encode request flowing through TweedleEncoder, StatementEncoder, ExpressionEncoder, EncoderMappings, and ResourceStructureEncoder.
 
+## IK enforcer decomposition
+
+- [TightPositionalIkEnforcer Inner Class Extraction](./reference/tight-positional-ik-enforcer-decomposition.md) - Reference for extraction of all 14 inner classes from `TightPositionalIkEnforcer` (1328 lines) into top-level files in `org.lgna.ik.core.enforcer`, with `IkEnforcerContext` interface replacing implicit outer-class references.
+- [IK Enforcer Downstream Import Fixups](./reference/ik-enforcer-downstream-import-fixups.md) - Reference for mechanical import fixups in `IKCore.java` and `IkProgram.java` after inner classes were promoted to top-level classes (issue #557).
+
 ## Formal specification lane
 
 The formal-spec lane documents Alice project archive and backup-recovery

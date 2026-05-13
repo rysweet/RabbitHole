@@ -337,7 +337,7 @@ PositionConstraint positionConstraint = new PositionConstraint(chain, endPositio
 | `Displacement` | `public static class` inner | `public class` top-level | Referenced by PriorityLevel, Constraint (public) |
 | `PriorityLevel` | `public class` inner | `public class` top-level | Fields/methods accessed by enforcer |
 | `Constraint` | `public abstract class` inner | `public abstract class` top-level | Extended by PositionConstraint, OrientationConstraint |
-| `PositionConstraint` | `public class` inner | `public class` top-level | Referenced by IKCore.java |
+| `PositionConstraint` | `public class` inner | `public class` top-level | Referenced by IKCore.java, IkProgram.java |
 | `OrientationConstraint` | `public class` inner | `public class` top-level | Referenced by enforcer |
 | `JacobianAxis` | `class` (package-private inner) | `class` (package-private top-level) | No external references |
 | `NullspaceProjector` | `class` (package-private inner) | `class` (package-private top-level) | No external references |
@@ -354,9 +354,12 @@ are limited to:
 
 ## Import fixups
 
-### IKCore.java (line 50)
+Two files outside `org.lgna.ik.core.enforcer` imported an inner class by
+qualified name and required a mechanical import update. See
+[IK Enforcer Downstream Import Fixups](./ik-enforcer-downstream-import-fixups.md)
+for the complete downstream fixup reference.
 
-The only external reference to an inner class:
+### IKCore.java (line 50) — fixed in PR #558
 
 ```java
 // Before
@@ -366,8 +369,18 @@ import org.lgna.ik.core.enforcer.TightPositionalIkEnforcer.PositionConstraint;
 import org.lgna.ik.core.enforcer.PositionConstraint;
 ```
 
-This is a mechanical import change. The `PositionConstraint` type is the same
-class; only its FQN has changed from an inner class to a top-level class.
+### IkProgram.java (line 56) — fixed in issue #557
+
+```java
+// Before
+import org.lgna.ik.core.enforcer.TightPositionalIkEnforcer.PositionConstraint;
+
+// After
+import org.lgna.ik.core.enforcer.PositionConstraint;
+```
+
+This downstream consumer in `core/ide` was missed by PR #558 because it
+resides in a different module. The import is the same mechanical change.
 
 ### TightPositionalIkEnforcer.java
 
