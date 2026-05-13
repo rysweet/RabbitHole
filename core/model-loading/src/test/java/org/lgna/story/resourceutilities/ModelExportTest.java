@@ -775,4 +775,133 @@ public class ModelExportTest {
     assertTrue("ModelResourceExporter should be under 750 lines after refactoring, actual: " + lineCount,
         lineCount < 750);
   }
+
+  // ── Dead inner class removal contract (#524) ────────────────────
+  // NamedFile is never referenced anywhere in the module.
+
+  @Test
+  public void exporterDoesNotContainNamedFileInnerClass() {
+    for (Class<?> inner : ModelResourceExporter.class.getDeclaredClasses()) {
+      assertFalse("NamedFile inner class is dead code and must be removed",
+          "NamedFile".equals(inner.getSimpleName()));
+    }
+  }
+
+  // ── Wrapper removal contracts (#524) ────────────────────────────
+  // shouldSuppressJoint, shouldSuppressJointInArray, shouldHideJointInArray
+  // are thin wrappers that delegate to static methods on ModelResourceJavaGenerator.
+  // After inlining the static calls in buildJavaCodeBody, remove the wrappers.
+
+  @Test
+  public void exporterDoesNotContainShouldSuppressJoint() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("shouldSuppressJoint wrapper is dead after inlining and must be removed",
+          "shouldSuppressJoint".equals(m.getName()));
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainShouldSuppressJointInArray() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("shouldSuppressJointInArray wrapper is dead after inlining and must be removed",
+          "shouldSuppressJointInArray".equals(m.getName()));
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainShouldHideJointInArray() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("shouldHideJointInArray wrapper is dead after inlining and must be removed",
+          "shouldHideJointInArray".equals(m.getName()));
+    }
+  }
+
+  // ── New getter contract (#524) ──────────────────────────────────
+  // buildJavaCodeBody needs access to arraysToExposeFirstElementOf after
+  // wrapper removal. A package-private getter must be added.
+
+  @Test
+  public void exporterProvidesArraysToExposeFirstElementOfGetter() throws NoSuchMethodException {
+    Method m = ModelResourceExporter.class.getDeclaredMethod("getArraysToExposeFirstElementOf");
+    assertNotNull("getArraysToExposeFirstElementOf getter must exist", m);
+    assertEquals(List.class, m.getReturnType());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void getArraysToExposeFirstElementOfReturnsRegisteredArrayNames() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestBiped", ModelClassData.BIPED_CLASS_DATA);
+    exporter.addArrayNamesToExposeFirstElementOf(Arrays.asList("LEFT_FINGER", "RIGHT_FINGER"));
+
+    Method getter = ModelResourceExporter.class.getDeclaredMethod("getArraysToExposeFirstElementOf");
+    getter.setAccessible(true);
+    List<String> result = (List<String>) getter.invoke(exporter);
+
+    assertEquals(2, result.size());
+    assertTrue(result.contains("LEFT_FINGER"));
+    assertTrue(result.contains("RIGHT_FINGER"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void getArraysToExposeFirstElementOfReturnsEmptyByDefault() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+
+    Method getter = ModelResourceExporter.class.getDeclaredMethod("getArraysToExposeFirstElementOf");
+    getter.setAccessible(true);
+    List<String> result = (List<String>) getter.invoke(exporter);
+
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+  }
+
+  // ── Behavioral preservation after wrapper inlining (#524) ───────
+  // The generated Java code must be identical whether wrappers exist or not.
+  // This test captures the exact code output from a joint-suppression scenario
+  // so any regression in buildJavaCodeBody is detected.
+
+  @Test
+  public void jointSuppressionBehaviorPreservedAfterWrapperInlining() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestProp", ModelClassData.PROP_CLASS_DATA);
+    exporter.addAttribution("Alice Test", "2026");
+    exporter.addResource("TestProp", "Default", "ALICE", null, null);
+    exporter.addJointIdsToSuppress(Collections.singletonList("SPINE_UPPER"));
+    exporter.setJointMap(Arrays.asList(
+        Tuple2.createInstance("ROOT", null),
+        Tuple2.createInstance("SPINE_BASE", "ROOT"),
+        Tuple2.createInstance("SPINE_UPPER", "SPINE_BASE"),
+        Tuple2.createInstance("HEAD", "SPINE_UPPER")));
+
+    String javaCode = exporter.createJavaCode();
+
+    // SPINE_UPPER exists but is hidden
+    assertTrue("SPINE_UPPER should be COMPLETELY_HIDDEN",
+        javaCode.contains("@FieldTemplate(visibility=Visibility.COMPLETELY_HIDDEN)")
+        && javaCode.contains("SPINE_UPPER"));
+    // HEAD and SPINE_BASE are visible
+    assertTrue("HEAD should appear as PRIME_TIME", javaCode.contains("HEAD"));
+    assertTrue("SPINE_BASE should appear as PRIME_TIME", javaCode.contains("SPINE_BASE"));
+    assertCompiles("org/lgna/story/resources/prop/TestPropResource.java", javaCode);
+  }
+
+  @Test
+  public void arrayHidingBehaviorPreservedAfterWrapperInlining() throws Exception {
+    ModelResourceExporter exporter = new ModelResourceExporter("TestBiped", "TestBiped", ModelClassData.BIPED_CLASS_DATA);
+    exporter.addAttribution("Alice Test", "2026");
+    exporter.addResource("TestBiped", "Default", "ALICE", null, null);
+    exporter.addArrayNamesToHideElementsOf(Collections.singletonList("TAIL"));
+    exporter.setJointMap(Arrays.asList(
+        Tuple2.createInstance("ROOT", null),
+        Tuple2.createInstance("PELVIS", "ROOT"),
+        Tuple2.createInstance("TAIL_0", "PELVIS"),
+        Tuple2.createInstance("TAIL_1", "TAIL_0")));
+
+    String javaCode = exporter.createJavaCode();
+
+    // TAIL array joints should be completely hidden (not present as JointId fields)
+    assertFalse("TAIL_0 should be hidden from generated code", javaCode.contains("JointId TAIL_0"));
+    assertFalse("TAIL_1 should be hidden from generated code", javaCode.contains("JointId TAIL_1"));
+    // Non-array joints are still present
+    assertTrue("PELVIS should be present", javaCode.contains("PELVIS"));
+  }
 }
