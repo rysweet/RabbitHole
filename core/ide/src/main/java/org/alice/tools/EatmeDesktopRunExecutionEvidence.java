@@ -277,10 +277,7 @@ public final class EatmeDesktopRunExecutionEvidence {
       Component renderPanelComponent,
       Component runViewComponent,
       boolean controlPanelAttached) throws IOException {
-    Objects.requireNonNull(renderTargetComponent, "renderTargetComponent");
-    Objects.requireNonNull(renderPanelComponent, "renderPanelComponent");
-    Objects.requireNonNull(runViewComponent, "runViewComponent");
-
+    // Null checks performed by the public recordRenderTargetAttached entry point.
     Files.createDirectories(evidenceDir);
     Path artifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_RENDER_AFFORDANCE_ARTIFACT);
     Path pixelBoundaryArtifact = EatmeRunWindowEvidence.artifactPath(evidenceDir, DESKTOP_RUN_PIXEL_BOUNDARY_ARTIFACT);
