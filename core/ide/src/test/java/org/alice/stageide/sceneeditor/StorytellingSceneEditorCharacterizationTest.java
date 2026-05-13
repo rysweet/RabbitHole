@@ -146,29 +146,37 @@ public class StorytellingSceneEditorCharacterizationTest {
   }
 
   @Test
-  public void innerClass_SceneEditorDropReceptor_exists() {
-    assertNotNull("SceneEditorDropReceptor must exist", findInner("SceneEditorDropReceptor"));
+  public void innerClass_SceneEditorDropReceptor_extractedToTopLevel() {
+    assertNull("SceneEditorDropReceptor must be extracted (no longer inner class)", findInner("SceneEditorDropReceptor"));
+    assertNotNull("SceneEditorDropReceptor must exist as top-level class", resolve("org.alice.stageide.sceneeditor.SceneEditorDropReceptor"));
   }
 
   @Test
-  public void innerClass_SceneEditorDropReceptor_isPrivate() {
-    Class<?> c = findInner("SceneEditorDropReceptor");
+  public void innerClass_SceneEditorDropReceptor_isPackagePrivateTopLevel() {
+    Class<?> c = resolve("org.alice.stageide.sceneeditor.SceneEditorDropReceptor");
     assertNotNull(c);
-    assertTrue("SceneEditorDropReceptor must be private", Modifier.isPrivate(c.getModifiers()));
-    assertFalse("SceneEditorDropReceptor must not be static", Modifier.isStatic(c.getModifiers()));
+    int mods = c.getModifiers();
+    assertFalse("SceneEditorDropReceptor must not be public", Modifier.isPublic(mods));
+    assertFalse("SceneEditorDropReceptor must not be private", Modifier.isPrivate(mods));
+    assertFalse("SceneEditorDropReceptor must not be protected", Modifier.isProtected(mods));
+    assertNull("SceneEditorDropReceptor must be top-level (no enclosing class)", c.getEnclosingClass());
   }
 
   @Test
-  public void innerClass_LookingGlassPanel_exists() {
-    assertNotNull("LookingGlassPanel must exist", findInner("LookingGlassPanel"));
+  public void innerClass_LookingGlassPanel_extractedToTopLevel() {
+    assertNull("LookingGlassPanel must be extracted (no longer inner class)", findInner("LookingGlassPanel"));
+    assertNotNull("LookingGlassPanel must exist as top-level class", resolve("org.alice.stageide.sceneeditor.LookingGlassPanel"));
   }
 
   @Test
-  public void innerClass_LookingGlassPanel_isPrivate() {
-    Class<?> c = findInner("LookingGlassPanel");
+  public void innerClass_LookingGlassPanel_isPackagePrivateTopLevel() {
+    Class<?> c = resolve("org.alice.stageide.sceneeditor.LookingGlassPanel");
     assertNotNull(c);
-    assertTrue("LookingGlassPanel must be private", Modifier.isPrivate(c.getModifiers()));
-    assertFalse("LookingGlassPanel must not be static", Modifier.isStatic(c.getModifiers()));
+    int mods = c.getModifiers();
+    assertFalse("LookingGlassPanel must not be public", Modifier.isPublic(mods));
+    assertFalse("LookingGlassPanel must not be private", Modifier.isPrivate(mods));
+    assertFalse("LookingGlassPanel must not be protected", Modifier.isProtected(mods));
+    assertNull("LookingGlassPanel must be top-level (no enclosing class)", c.getEnclosingClass());
   }
 
   @Test
@@ -186,8 +194,8 @@ public class StorytellingSceneEditorCharacterizationTest {
   }
 
   @Test
-  public void innerClassCount_exactly4() {
-    assertEquals("must have exactly 4 inner classes", 4, innerClasses().length);
+  public void innerClassCount_exactly2() {
+    assertEquals("must have exactly 2 inner classes (SingletonHolder + SceneEditorProgramImp)", 2, innerClasses().length);
   }
 
   // ── 4. SceneEditorProgramImp key override ─────────────────────────

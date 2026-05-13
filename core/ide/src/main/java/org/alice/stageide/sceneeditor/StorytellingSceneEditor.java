@@ -126,77 +126,6 @@ import java.util.List;
 public class StorytellingSceneEditor extends AbstractSceneEditor implements RenderTargetListener {
   private boolean isVrScene;
 
-  private class SceneEditorDropReceptor extends AbstractDropReceptor {
-    @Override
-    public boolean isPotentiallyAcceptingOf(DragModel dragModel) {
-      return dragModel instanceof GalleryDragModel;
-    }
-
-    @Override
-    public void dragStarted(DragStep step) {
-      DragComponent dragSource = step.getDragSource();
-      dragSource.showDragProxy();
-    }
-
-    @Override
-    public void dragEntered(DragStep dragAndDropContext) {
-    }
-
-    private boolean isDropLocationOverLookingGlass(DragStep dragAndDropContext) {
-      MouseEvent eSource = dragAndDropContext.getLatestMouseEvent();
-      Point pointInLookingGlass = SwingUtilities.convertPoint(eSource.getComponent(), eSource.getPoint(), lookingGlassPanel.getAwtComponent());
-      return lookingGlassPanel.getAwtComponent().contains(pointInLookingGlass);
-    }
-
-    private boolean overLookingGlass = false;
-
-    @Override
-    public DropSite dragUpdated(DragStep dragStep) {
-      if (isDropLocationOverLookingGlass(dragStep)) {
-        if (!overLookingGlass) {
-          overLookingGlass = true;
-          globalDragAdapter.dragEntered(dragStep);
-        }
-        globalDragAdapter.dragUpdated(dragStep);
-      } else {
-        if (overLookingGlass) {
-          overLookingGlass = false;
-          globalDragAdapter.dragExited(dragStep);
-        }
-      }
-      AffineMatrix4x4 t = globalDragAdapter.getDropTargetTransformation();
-      return t != null ? new SceneDropSite(t) : null;
-    }
-
-    @Override
-    protected Triggerable dragDroppedPostRejectorCheck(DragStep dragStep) {
-      if (isDropLocationOverLookingGlass(dragStep)) {
-        DropSite dropSite = new SceneDropSite(globalDragAdapter.getDropTargetTransformation());
-        return dragStep.getModel().getDropOperation(dragStep, dropSite);
-      }
-      return null;
-    }
-
-    @Override
-    public void dragExited(DragStep dragAndDropContext, boolean isDropRecipient) {
-    }
-
-    @Override
-    public void dragStopped(DragStep dragStep) {
-      globalDragAdapter.dragExited(dragStep);
-    }
-
-    @Override
-    public TrackableShape getTrackableShape(DropSite potentialDropSite) {
-      return StorytellingSceneEditor.this;
-    }
-
-    @Override
-    public SwingComponentView<?> getViewController() {
-      return StorytellingSceneEditor.this;
-    }
-  }
-
   private static final String SHOW_JOINTED_MODEL_VISUALIZATIONS_KEY = StorytellingSceneEditor.class.getName() + ".showJointedModelVisualizations";
 
   private static class SingletonHolder {
@@ -207,7 +136,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     return SingletonHolder.instance;
   }
 
-  private final SceneEditorDropReceptor dropReceptor = new SceneEditorDropReceptor();
+  private final SceneEditorDropReceptor dropReceptor = new SceneEditorDropReceptor(this);
 
   private StorytellingSceneEditor() {
   }
@@ -227,76 +156,12 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
   };
   private OnscreenRenderTarget onscreenRenderTarget = GlrRenderFactory.getInstance().createOnscreenRenderTarget(new RenderCapabilities.Builder().stencilBits(0).build());
 
-  private class LookingGlassPanel extends CompassPointSpringPanel {
-    @Override
-    protected JPanel createJPanel() {
-      return StorytellingSceneEditor.this.onscreenRenderTarget.getAwtComponent();
-    }
-
-    @Override
-    public void setNorthWestComponent(AwtComponentView<?> northWestComponent) {
-      super.setNorthWestComponent(northWestComponent);
-      if (northWestComponent != null) {
-        SpringLayout springLayout = (SpringLayout) this.getAwtComponent().getLayout();
-        springLayout.putConstraint(SpringLayout.SOUTH, northWestComponent.getAwtComponent(), -this.getPad(), SpringLayout.SOUTH, this.getAwtComponent());
-      }
-    }
-  }
-
-  private final ValueListener<Boolean> showSnapGridListener = new ValueListener<Boolean>() {
-    @Override
-    public void valueChanged(ValueEvent<Boolean> e) {
-      StorytellingSceneEditor.this.setShowSnapGrid(e.getNextValue());
-    }
-  };
-
-  private final ValueListener<Boolean> snapEnabledListener = new ValueListener<Boolean>() {
-    @Override
-    public void valueChanged(ValueEvent<Boolean> e) {
-      if (SnapState.getInstance().isShowSnapGridEnabled()) {
-        StorytellingSceneEditor.this.setShowSnapGrid(e.getNextValue());
-      }
-    }
-  };
-
-  private final ValueListener<Double> snapGridSpacingListener = new ValueListener<Double>() {
-    @Override
-    public void valueChanged(ValueEvent<Double> e) {
-      StorytellingSceneEditor.this.setSnapGridSpacing(e.getNextValue());
-    }
-  };
-
-  private final ValueListener<UserField> cameraMarkerFieldSelectionListener = new ValueListener<UserField>() {
-    @Override
-    public void valueChanged(ValueEvent<UserField> e) {
-      StorytellingSceneEditor.this.handleCameraMarkerFieldSelection(e.getNextValue());
-    }
-  };
-
-  private final ValueListener<UserField> objectMarkerFieldSelectionListener = new ValueListener<UserField>() {
-    @Override
-    public void valueChanged(ValueEvent<UserField> e) {
-      StorytellingSceneEditor.this.handleObjectMarkerFieldSelection(e.getNextValue());
-    }
-  };
-
-  private final ValueListener<InstanceFactory> instanceFactorySelectionListener = new ValueListener<InstanceFactory>() {
-    @Override
-    public void valueChanged(ValueEvent<InstanceFactory> e) {
-      StorytellingSceneEditor.this.selectionIsFromInstanceSelector = true;
-      StorytellingSceneEditor.this.setSelectedInstance(e.getNextValue());
-      StorytellingSceneEditor.this.selectionIsFromInstanceSelector = false;
-    }
-  };
-
-  private final ValueListener<CameraOption> mainCameraViewSelectionObserver =
-      e -> StorytellingSceneEditor.this.handleMainCameraViewSelection();
-
   private boolean isInitialized = false;
 
   private ClockBasedAnimator animator = new ClockBasedAnimator();
-  private LookingGlassPanel lookingGlassPanel = new LookingGlassPanel();
-  private GlobalDragAdapter globalDragAdapter;
+  LookingGlassPanel lookingGlassPanel = new LookingGlassPanel(onscreenRenderTarget);
+  GlobalDragAdapter globalDragAdapter;
+  final SceneEditorListeners listeners = new SceneEditorListeners(this);
   // The location of the Camera or VR user ground. Same as sceneCameraImp for non VR scenes.
   private TransformableImp movableSceneCameraImp;
   // The camera or VR headset. Same as movableSceneCameraImp for non VR scenes.
@@ -317,7 +182,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
 
   private ImmutableDataSingleSelectListState<CameraOption> mainCameraMarkerList = ViewListSelectionState.getInstance();
 
-  private boolean selectionIsFromInstanceSelector = false;
+  boolean selectionIsFromInstanceSelector = false;
   private boolean selectionIsFromMain = false;
 
   protected SnapGrid snapGrid;
@@ -375,7 +240,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     }
   }
 
-  private void setSelectedInstance(InstanceFactory instanceFactory) {
+  void setSelectedInstance(InstanceFactory instanceFactory) {
     Expression expression = instanceFactory != null ? instanceFactory.createExpression() : null;
     if (expression instanceof FieldAccess fa) {
       AbstractField field = fa.field.getValue();
@@ -533,14 +398,14 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     return SideComposite.getInstance().getObjectPropertiesTab().getView();
   }
 
-  private void handleCameraMarkerFieldSelection(UserField cameraMarkerField) {
+  void handleCameraMarkerFieldSelection(UserField cameraMarkerField) {
     CameraMarkerImp newMarker = (CameraMarkerImp) this.getMarkerForField(cameraMarkerField);
     this.globalDragAdapter.setSelectedCameraMarker(newMarker);
     MoveActiveCameraToMarkerActionOperation.getInstance().setMarkerField(cameraMarkerField);
     MoveMarkerToActiveCameraActionOperation.getInstance().setMarkerField(cameraMarkerField);
   }
 
-  private void handleObjectMarkerFieldSelection(UserField objectMarkerField) {
+  void handleObjectMarkerFieldSelection(UserField objectMarkerField) {
     ObjectMarkerImp newMarker = (ObjectMarkerImp) this.getMarkerForField(objectMarkerField);
     this.globalDragAdapter.setSelectedObjectMarker(newMarker);
     MoveSelectedObjectToMarkerActionOperation.getInstance().setMarkerField(objectMarkerField);
@@ -601,7 +466,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     }
   }
 
-  private void handleMainCameraViewSelection() {
+  void handleMainCameraViewSelection() {
     StageIDE ide = StageIDE.getActiveInstance();
     InstanceFactoryState instanceFactoryState = ide.getDocumentFrame().getInstanceFactoryState();
     UserField field = getSelectedField();
@@ -638,12 +503,12 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
       return;
     }
     this.snapGrid = new SnapGrid();
-    SnapState.getInstance().getShowSnapGridState().addAndInvokeNewSchoolValueListener(this.showSnapGridListener);
-    SnapState.getInstance().getIsSnapEnabledState().addAndInvokeNewSchoolValueListener(this.snapEnabledListener);
-    SnapState.getInstance().getSnapGridSpacingState().addAndInvokeNewSchoolValueListener(this.snapGridSpacingListener);
+    SnapState.getInstance().getShowSnapGridState().addAndInvokeNewSchoolValueListener(this.listeners.showSnapGridListener);
+    SnapState.getInstance().getIsSnapEnabledState().addAndInvokeNewSchoolValueListener(this.listeners.snapEnabledListener);
+    SnapState.getInstance().getSnapGridSpacingState().addAndInvokeNewSchoolValueListener(this.listeners.snapGridSpacingListener);
 
     ProjectDocumentFrame docFrame = IDE.getActiveInstance().getDocumentFrame();
-    docFrame.getInstanceFactoryState().addAndInvokeNewSchoolValueListener(this.instanceFactorySelectionListener);
+    docFrame.getInstanceFactoryState().addAndInvokeNewSchoolValueListener(this.listeners.instanceFactorySelectionListener);
 
     this.globalDragAdapter = new GlobalDragAdapter(this);
     this.globalDragAdapter.setOnscreenRenderTarget(onscreenRenderTarget);
@@ -690,11 +555,11 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     this.mainCameraViewSelector.setRenderer(new CameraViewCellRenderer());
     this.mainCameraViewSelector.setFontSize(15);
     this.mainCameraMarkerList.addAndInvokeNewSchoolValueListener(this.mainCameraViewTracker);
-    this.mainCameraMarkerList.addAndInvokeNewSchoolValueListener(this.mainCameraViewSelectionObserver);
+    this.mainCameraMarkerList.addAndInvokeNewSchoolValueListener(this.listeners.mainCameraViewSelectionObserver);
     this.lookingGlassPanel.addComponent(this.mainCameraViewSelector, Horizontal.CENTER, 0, Vertical.NORTH, 20);
 
-    SideComposite.getInstance().getCameraMarkersTab().getMarkerListState().addAndInvokeNewSchoolValueListener(this.cameraMarkerFieldSelectionListener);
-    SideComposite.getInstance().getObjectMarkersTab().getMarkerListState().addAndInvokeNewSchoolValueListener(this.objectMarkerFieldSelectionListener);
+    SideComposite.getInstance().getCameraMarkersTab().getMarkerListState().addAndInvokeNewSchoolValueListener(this.listeners.cameraMarkerFieldSelectionListener);
+    SideComposite.getInstance().getObjectMarkersTab().getMarkerListState().addAndInvokeNewSchoolValueListener(this.listeners.objectMarkerFieldSelectionListener);
 
     this.isInitialized = true;
   }
