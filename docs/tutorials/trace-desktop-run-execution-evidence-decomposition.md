@@ -22,8 +22,9 @@ core/ide/src/test/java/org/alice/tools/EatmeDesktopRunExecutionEvidenceTest.java
 ## 1. Start at BlockerDetail — the leaf
 
 `BlockerDetail` was a `private static final class` nested inside the original.
-It holds three immutable fields: `code`, `observed`, `required`. It has zero
-dependencies on any other extracted class.
+It holds three immutable fields: `code`, `observed`, `required`. It has no
+dependencies on other extracted classes, though it depends on
+`EatmeRunWindowEvidence` (for `escapeJson` in its list-formatting methods).
 
 **Why extract it first?** It is a leaf in the dependency graph. Every other
 extracted class (`EatmeWindowDetector`, `EatmeScreenshotCapture`,

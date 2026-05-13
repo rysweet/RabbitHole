@@ -137,10 +137,11 @@ Check that JSON escaping is used at interpolation sites:
 ```bash
 grep -c 'escapeJson' \
   core/ide/src/main/java/org/alice/tools/EatmeEvidenceWriter.java \
-  core/ide/src/main/java/org/alice/tools/PixelObservation.java
+  core/ide/src/main/java/org/alice/tools/PixelObservation.java \
+  core/ide/src/main/java/org/alice/tools/BlockerDetail.java
 ```
 
-Both files must have multiple escapeJson calls.
+All three files must have escapeJson calls.
 
 ## Reviewing the decomposition in a PR
 

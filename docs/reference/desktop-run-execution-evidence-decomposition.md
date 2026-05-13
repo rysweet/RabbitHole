@@ -162,6 +162,12 @@ Immutable data record holding the pixel observation result:
 | `blockers` | `List<BlockerDetail>` | Blocker details (empty when observed) |
 | `exceptionType` | `String` | Exception class name when blocked by exception |
 
+Instance methods:
+
+| Method | Purpose |
+| --- | --- |
+| `isObserved()` | Returns `true` when `status` is `"observed"` |
+
 Factory methods:
 
 | Factory | Purpose |
@@ -203,8 +209,9 @@ avoids a `PixelObservation → EatmeEvidenceWriter` dependency that would create
 circular import (since the writer already depends on `PixelObservation`).
 
 Used by `EatmeWindowDetector`, `EatmeScreenshotCapture`, `PixelObservation`, and
-`EatmeEvidenceWriter`. It is a leaf class with no dependencies on other
-extracted classes.
+`EatmeEvidenceWriter`. Its only external dependency is `EatmeRunWindowEvidence`
+(for `escapeJson` in `blockerDetailsJson` and `jsonArray`). It has no
+dependencies on other extracted classes.
 
 ## Dependency graph
 
@@ -215,7 +222,8 @@ EatmeDesktopRunExecutionEvidence (coordinator)
   │     ├── BlockerDetail
   │     └── EatmeRunWindowEvidence (existing)
   ├── EatmeWindowDetector
-  │     └── BlockerDetail
+  │     ├── BlockerDetail
+  │     └── EatmeRunWindowEvidence (existing, escapeJson in componentClassName)
   ├── EatmeScreenshotCapture
   │     ├── EatmeWindowDetector
   │     ├── PixelObservation
@@ -224,7 +232,8 @@ EatmeDesktopRunExecutionEvidence (coordinator)
   ├── PixelObservation
   │     ├── BlockerDetail (blockerCodesJson, blockerDetailsJson)
   │     └── EatmeRunWindowEvidence (existing)
-  └── BlockerDetail (leaf — data record + blocker list formatting)
+  └── BlockerDetail (data record + blocker list formatting)
+        └── EatmeRunWindowEvidence (existing, escapeJson in blockerDetailsJson/jsonArray)
 ```
 
 There are no circular dependencies. All arrows point downward.
@@ -233,6 +242,8 @@ There are no circular dependencies. All arrows point downward.
 `EatmeWindowDetector`, or `EatmeEvidenceWriter`. The `blockerCodesJson` and
 `blockerDetailsJson` utilities live on `BlockerDetail` (not `EatmeEvidenceWriter`)
 specifically to prevent a `PixelObservation → EatmeEvidenceWriter` circular edge.
+`BlockerDetail` depends only on `EatmeRunWindowEvidence` (for `escapeJson` in its
+list-formatting methods); it has no dependencies on other extracted classes.
 
 ## API compatibility
 
@@ -277,7 +288,7 @@ All pre-existing security properties are preserved:
 | --- | --- |
 | All file I/O goes through atomic write | `EatmeEvidenceWriter.writeStringAtomically(...)` and `EatmeScreenshotCapture.writePngAtomically(...)` |
 | All artifact paths validated via `EatmeRunWindowEvidence.artifactPath(...)` | Called at write sites in `EatmeEvidenceWriter` |
-| All strings JSON-escaped via `EatmeRunWindowEvidence.escapeJson(...)` | Called at interpolation sites in `EatmeEvidenceWriter`, `PixelObservation`, and `EatmeWindowDetector` |
+| All strings JSON-escaped via `EatmeRunWindowEvidence.escapeJson(...)` | Called at interpolation sites in `EatmeEvidenceWriter`, `PixelObservation`, `EatmeWindowDetector`, and `BlockerDetail` |
 | Headless gate before Robot construction | `EatmeScreenshotCapture.observePixel(...)` checks `GraphicsEnvironment.isHeadless()` first |
 | System property reads only in coordinator | `evidenceDirProperty()` stays in `EatmeDesktopRunExecutionEvidence` |
 | `validateDesktopRunExecutionGapReport(...)` stays as a single unit | Moved to `EatmeEvidenceWriter` as one method; fail-closed behavior unchanged |
