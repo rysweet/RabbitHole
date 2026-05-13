@@ -2,7 +2,11 @@ package org.lgna.story.resourceutilities;
 
 import edu.cmu.cs.dennisc.pattern.Tuple2;
 import org.alice.math.immutable.AxisAlignedBox;
+import org.lgna.story.implementation.alice.AliceResourceClassUtilities;
 import org.lgna.story.implementation.alice.AliceResourceUtilities;
+import org.lgna.story.resources.BipedResource;
+import org.lgna.story.resources.JointedModelResource;
+import org.lgna.story.resources.PropResource;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -19,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,6 +31,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -35,6 +41,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ModelExportTest {
 
@@ -571,5 +578,205 @@ public class ModelExportTest {
     ModelResourceExporter exporter = new ModelResourceExporter("TestModel", ModelClassData.PROP_CLASS_DATA);
     String result = exporter.createResourceEnumName("TestModel", "BLUE");
     assertEquals("BLUE", result);
+  }
+
+  // ── Dead code removal contracts (#524) ───────────────────────────
+  // These tests verify that dead code has been removed from ModelResourceExporter.
+  // They FAIL until the dead code is actually removed.
+
+  @Test
+  public void exporterDoesNotContainIsMoreRecentThanDateFile() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      if ("isMoreRecentThan".equals(m.getName())
+          && m.getParameterCount() == 2
+          && m.getParameterTypes()[0] == Date.class
+          && m.getParameterTypes()[1] == File.class) {
+        fail("isMoreRecentThan(Date, File) is dead code and must be removed");
+      }
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainIsMoreRecentThanDateDate() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      if ("isMoreRecentThan".equals(m.getName())
+          && m.getParameterCount() == 2
+          && m.getParameterTypes()[0] == Date.class
+          && m.getParameterTypes()[1] == Date.class) {
+        fail("isMoreRecentThan(Date, Date) is dead code and must be removed");
+      }
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainGetBestClassDataForJointList() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("getBestClassDataForJointList is dead code and must be removed",
+          "getBestClassDataForJointList".equals(m.getName()));
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainPotentialModelClassDataOptionsField() {
+    for (Field f : ModelResourceExporter.class.getDeclaredFields()) {
+      assertFalse("POTENTIAL_MODEL_CLASS_DATA_OPTIONS is dead code and must be removed",
+          "POTENTIAL_MODEL_CLASS_DATA_OPTIONS".equals(f.getName()));
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainGetExistingJointIdPairs() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("getExistingJointIdPairs is dead code and must be removed",
+          "getExistingJointIdPairs".equals(m.getName()));
+    }
+  }
+
+  // ── Extraction contracts (#524) ──────────────────────────────────
+  // These tests verify methods have been extracted to ModelResourceJavaGenerator.
+  // They FAIL until the extraction is complete.
+
+  @Test
+  public void generatorContainsGetExistingJointIds() throws NoSuchMethodException {
+    Method m = ModelResourceJavaGenerator.class.getDeclaredMethod("getExistingJointIds", Class.class);
+    assertNotNull("getExistingJointIds should exist on ModelResourceJavaGenerator", m);
+    assertEquals(List.class, m.getReturnType());
+  }
+
+  @Test
+  public void generatorContainsGetAccessorMethodsForResourceClass() throws NoSuchMethodException {
+    Method m = ModelResourceJavaGenerator.class.getDeclaredMethod(
+        "getAccessorMethodsForResourceClass", Class.class);
+    assertNotNull("getAccessorMethodsForResourceClass should exist on ModelResourceJavaGenerator", m);
+    assertEquals(String.class, m.getReturnType());
+  }
+
+  @Test
+  public void generatorContainsGetJointAccessCodeForClass() throws NoSuchMethodException {
+    Method m = ModelResourceJavaGenerator.class.getDeclaredMethod(
+        "getJointAccessCodeForClass", Class.class);
+    assertNotNull("getJointAccessCodeForClass should exist on ModelResourceJavaGenerator", m);
+    assertEquals(String.class, m.getReturnType());
+  }
+
+  @Test
+  public void exporterDoesNotContainGetJointAccessCodeForClass() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("getJointAccessCodeForClass should be extracted to ModelResourceJavaGenerator",
+          "getJointAccessCodeForClass".equals(m.getName()));
+    }
+  }
+
+  @Test
+  public void exporterDoesNotContainGetAccessorMethodsForResourceClass() {
+    for (Method m : ModelResourceExporter.class.getDeclaredMethods()) {
+      assertFalse("getAccessorMethodsForResourceClass should be extracted to ModelResourceJavaGenerator",
+          "getAccessorMethodsForResourceClass".equals(m.getName()));
+    }
+  }
+
+  // ── Behavioral characterization for extracted methods (#524) ─────
+  // These test the behavior of methods that will live on ModelResourceJavaGenerator.
+  // Currently they call ModelResourceExporter (pre-extraction).
+  // After extraction, update call sites to ModelResourceJavaGenerator.
+
+  @Test
+  public void getExistingJointIdsReturnsBipedJointNames() {
+    List<String> ids = ModelResourceExporter.getExistingJointIds(BipedResource.class);
+    assertNotNull(ids);
+    assertTrue("BipedResource should have many joint IDs", ids.size() > 20);
+    assertTrue("Should include ROOT", ids.contains("ROOT"));
+    assertTrue("Should include LEFT_KNEE", ids.contains("LEFT_KNEE"));
+    assertTrue("Should include RIGHT_WRIST", ids.contains("RIGHT_WRIST"));
+    assertTrue("Should include HEAD", ids.contains("HEAD"));
+    // JOINT_ID_ROOTS is JointId[] (array), not JointId — getExistingJointIds correctly skips it
+    assertFalse("Should NOT include JOINT_ID_ROOTS (it is JointId[], not JointId)",
+        ids.contains("JOINT_ID_ROOTS"));
+  }
+
+  @Test
+  public void getExistingJointIdsReturnsEmptyForPropResource() {
+    List<String> ids = ModelResourceExporter.getExistingJointIds(PropResource.class);
+    assertNotNull(ids);
+    assertTrue("PropResource (no joints defined directly) should return empty or inherited IDs only",
+        ids.isEmpty());
+  }
+
+  @Test
+  public void getExistingJointIdsIncludesInterfaceJointIds() {
+    // BasicResource extends JointedModelResource; PropResource extends BasicResource.
+    // BipedResource declares all its own joints — verify interface traversal picks them up.
+    List<String> bipedIds = ModelResourceExporter.getExistingJointIds(BipedResource.class);
+    assertTrue("Should contain PELVIS_LOWER_BODY from BipedResource",
+        bipedIds.contains("PELVIS_LOWER_BODY"));
+    assertTrue("Should contain SPINE_BASE from BipedResource",
+        bipedIds.contains("SPINE_BASE"));
+  }
+
+  @Test
+  public void getAccessorMethodsForResourceClassContainsGetterForKnownJoint() {
+    String code = ModelResourceExporter.getAccessorMethodsForResourceClass(BipedResource.class);
+    assertNotNull(code);
+    // Should contain accessor methods like "public Joint getRightWrist()"
+    assertTrue("Should contain getRightWrist accessor",
+        code.contains("getRightWrist"));
+    assertTrue("Should contain getHead accessor",
+        code.contains("getHead"));
+    assertTrue("Should contain getLeftKnee accessor",
+        code.contains("getLeftKnee"));
+    // Uses short "Joint" type name
+    assertTrue("Should use short Joint type name",
+        code.contains("public Joint get"));
+  }
+
+  @Test
+  public void getAccessorMethodsForResourceClassReturnsEmptyForNoJoints() {
+    String code = ModelResourceExporter.getAccessorMethodsForResourceClass(PropResource.class);
+    assertNotNull(code);
+    assertEquals("PropResource has no joints, so accessor code should be empty", "", code);
+  }
+
+  @Test
+  public void getJointAccessCodeForClassContainsFullyQualifiedTypes() {
+    String code = ModelResourceExporter.getJointAccessCodeForClass(BipedResource.class);
+    assertNotNull(code);
+    // Uses fully-qualified type names
+    assertTrue("Should use fully-qualified org.lgna.story.Joint type",
+        code.contains("public org.lgna.story.Joint get"));
+    assertTrue("Should reference BipedResource class",
+        code.contains("BipedResource"));
+    assertTrue("Should contain getRightWrist accessor",
+        code.contains("getRightWrist"));
+  }
+
+  @Test
+  public void getJointAccessCodeForClassReturnsEmptyForNoJoints() {
+    String code = ModelResourceExporter.getJointAccessCodeForClass(PropResource.class);
+    assertNotNull(code);
+    assertEquals("PropResource has no joints, so accessor code should be empty", "", code);
+  }
+
+  @Test
+  public void getJointAccessCodeAndAccessorMethodsProduceSameJointSet() {
+    // Both methods generate getters for the same set of joints, just with different type qualification.
+    String shortCode = ModelResourceExporter.getAccessorMethodsForResourceClass(BipedResource.class);
+    String fullCode = ModelResourceExporter.getJointAccessCodeForClass(BipedResource.class);
+
+    // Count the number of "get" method declarations in each — they should match.
+    long shortCount = shortCode.lines().filter(l -> l.contains("public") && l.contains("get")).count();
+    long fullCount = fullCode.lines().filter(l -> l.contains("public") && l.contains("get")).count();
+    assertEquals("Both methods should produce the same number of accessors",
+        shortCount, fullCount);
+  }
+
+  @Test
+  public void exporterLineCountIsUnder750AfterRefactoring() throws IOException {
+    Path exporterPath = Path.of("core/model-loading/src/main/java/org/lgna/story/resourceutilities/ModelResourceExporter.java");
+    if (Files.exists(exporterPath)) {
+      long lineCount = Files.lines(exporterPath).count();
+      assertTrue("ModelResourceExporter should be under 750 lines after refactoring, actual: " + lineCount,
+          lineCount < 750);
+    }
+    // If file doesn't exist at relative path, the test is inconclusive — skip silently
   }
 }
