@@ -87,7 +87,7 @@ import java.util.zip.*;
  */
 class ASGDecoder {
 
-  static abstract class AbstractPropertyReference {
+  abstract static class AbstractPropertyReference {
     private edu.cmu.cs.dennisc.scenegraph.Element m_element;
     private InstanceProperty m_property;
 
@@ -153,18 +153,15 @@ class ASGDecoder {
 
   private static String convertClassnameIfNecessary(String className) {
     if (className.equals("edu.cmu.cs.stage3.alice.scenegraph.Color")) {
-      className = "edu.cmu.cs.dennisc.color.Color4f";
-    }
-    if (className.startsWith(OLD_PACKAGE)) {
+      return "edu.cmu.cs.dennisc.color.Color4f";
+    } else if (className.startsWith(OLD_PACKAGE)) {
       className = "edu.cmu.cs.dennisc." + className.substring(OLD_PACKAGE.length());
-    }
-    if (className.startsWith("[L" + OLD_PACKAGE)) {
+    } else if (className.startsWith("[L" + OLD_PACKAGE)) {
       className = "[Lorg." + className.substring(2 + OLD_PACKAGE.length());
     }
     if (className.endsWith("Vertex3d;")) {
       className = className.substring(0, className.length() - 3) + ';';
-    }
-    if (className.endsWith("Vertex3d")) {
+    } else if (className.endsWith("Vertex3d")) {
       className = className.substring(0, className.length() - 2);
     }
     if (className.endsWith("TextureMap")) {
@@ -461,9 +458,13 @@ class ASGDecoder {
   }
 
   private static String getNodeText(Node node) {
-    StringBuilder propertyTextBuffer = new StringBuilder();
     NodeList children = node.getChildNodes();
-    for (int j = 0; j < children.getLength(); j++) {
+    int length = children.getLength();
+    if (length == 1) {
+      return ((Text) children.item(0)).getData().trim();
+    }
+    StringBuilder propertyTextBuffer = new StringBuilder();
+    for (int j = 0; j < length; j++) {
       Text textNode = (Text) children.item(j);
       propertyTextBuffer.append(textNode.getData().trim());
     }
@@ -716,7 +717,7 @@ class ASGDecoder {
         if (zipEntry.isDirectory()) {
           // pass
         } else {
-          final int BUFFER_SIZE = 2048;
+          final int BUFFER_SIZE = 8192;
           byte[] buffer = new byte[BUFFER_SIZE];
           ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_SIZE);
           int count;
@@ -741,16 +742,18 @@ class ASGDecoder {
 
   static Component decode(File file) {
     try {
-      try {
-        ZipFile zipFile = new ZipFile(file);
-        zipFile.close();
-        return decodeZip(new ZipInputStream(new FileInputStream(file)));
-      } catch (ZipException ze) {
-        HashMap<String, InputStream> filenameToStreamMap = new HashMap<>();
-        return decode(new FileInputStream(file), filenameToStreamMap);
+      try (ZipFile zipFile = new ZipFile(file)) {
+        // Valid zip — decode as zip stream
       }
-    } catch (FileNotFoundException fnfe) {
-      throw new RuntimeException(fnfe);
+      try (FileInputStream fis = new FileInputStream(file)) {
+        return decodeZip(new ZipInputStream(fis));
+      }
+    } catch (ZipException ze) {
+      try (FileInputStream fis = new FileInputStream(file)) {
+        return decode(fis, new HashMap<>());
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }

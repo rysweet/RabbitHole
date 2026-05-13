@@ -194,7 +194,8 @@ class ASGEncoder {
   }
 
   private static String encodeIntArray(int[] array, int offset, int length, boolean isHexadecimal) {
-    StringBuilder buffer = new StringBuilder();
+    // Pre-size: hex ints ~8 chars + separator, decimal ~6 chars + separator
+    StringBuilder buffer = new StringBuilder(length * (isHexadecimal ? 9 : 7));
     int index = offset;
     for (int lcv = 0; lcv < length; lcv++) {
       String s;
@@ -217,7 +218,8 @@ class ASGEncoder {
   }
 
   private static String encodeDoubleArray(double[] array, int offset, int length) {
-    StringBuilder buffer = new StringBuilder();
+    // Pre-size: doubles average ~12 chars + separator
+    StringBuilder buffer = new StringBuilder(length * 13);
     int index = offset;
     for (int lcv = 0; lcv < length; lcv++) {
       buffer.append(array[index++]);
@@ -425,12 +427,11 @@ class ASGEncoder {
       HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element> keyToElementToBeEncodedMap = new HashMap<>();
       Element rootNode = encodeComponent(component, document, "root", filenameToStreamMap, keyToElementToBeEncodedMap, isTextAlwaysDesired);
       rootNode.setAttribute("version", Double.toString(ASG.VERSION));
-      while (keyToElementToBeEncodedMap.size() > 0) {
+      while (!keyToElementToBeEncodedMap.isEmpty()) {
         HashMap<String, edu.cmu.cs.dennisc.scenegraph.Element> tempCopy = new HashMap<>(keyToElementToBeEncodedMap);
-        for (String key : tempCopy.keySet()) {
-          edu.cmu.cs.dennisc.scenegraph.Element element = tempCopy.get(key);
-          rootNode.appendChild(encodeElement(element, document, "element", filenameToStreamMap, keyToElementToBeEncodedMap, isTextAlwaysDesired));
-          keyToElementToBeEncodedMap.remove(key);
+        for (var entry : tempCopy.entrySet()) {
+          rootNode.appendChild(encodeElement(entry.getValue(), document, "element", filenameToStreamMap, keyToElementToBeEncodedMap, isTextAlwaysDesired));
+          keyToElementToBeEncodedMap.remove(entry.getKey());
         }
       }
       document.appendChild(rootNode);
@@ -460,8 +461,9 @@ class ASGEncoder {
     }
     CRC32 crc32 = new CRC32();
     try {
-      for (String filename : filenameToStreamMap.keySet()) {
-        ByteArrayOutputStream baos = filenameToStreamMap.get(filename);
+      for (var entry : filenameToStreamMap.entrySet()) {
+        String filename = entry.getKey();
+        ByteArrayOutputStream baos = entry.getValue();
         baos.flush();
         byte[] ba = baos.toByteArray();
         ZipEntry zipEntry = new ZipEntry(filename);
@@ -488,12 +490,8 @@ class ASGEncoder {
   }
 
   static void encode(Component component, File file) {
-    try {
-      OutputStream os = new FileOutputStream(file);
+    try (OutputStream os = new FileOutputStream(file)) {
       encode(component, os);
-      os.close();
-    } catch (FileNotFoundException fnfe) {
-      throw new RuntimeException(fnfe);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
