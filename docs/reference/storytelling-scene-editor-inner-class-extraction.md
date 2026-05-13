@@ -13,6 +13,7 @@ package-private files in `org.alice.stageide.sceneeditor` (issue #528).
 - [Visibility changes](#visibility-changes)
 - [Listener registration site changes](#listener-registration-site-changes)
 - [Test updates](#test-updates)
+- [Import cleanup](#import-cleanup)
 - [Validation commands](#validation-commands)
 - [Compatibility rules](#compatibility-rules)
 - [Examples](#examples)
@@ -31,7 +32,7 @@ for further decomposition:
 | `SceneEditorListeners` (new helper) | ~48 | Consolidates 7 `ValueListener` fields for snap grid, markers, instance factory, and camera view. |
 
 After extraction, `StorytellingSceneEditor.java` drops from 1259 to
-approximately 1126 lines. Two inner classes remain: `SingletonHolder`
+approximately 1116 lines. Two inner classes remain: `SingletonHolder`
 (private static, singleton pattern) and `SceneEditorProgramImp` (public
 static, animation engine bridge).
 
@@ -131,11 +132,11 @@ accessible as `this.listeners.showSnapGridListener` at registration sites.
 
 | File | Role | Approx lines |
 | --- | --- | --- |
-| `StorytellingSceneEditor.java` | Parent class — 2 inner classes remain (`SingletonHolder`, `SceneEditorProgramImp`). Owns field declarations, constructor, and all public API. | ~1126 |
-| `SceneEditorDropReceptor.java` | Extracted drop receptor. Package-private. | ~80 |
-| `LookingGlassPanel.java` | Extracted looking glass panel. Package-private. | ~25 |
-| `SceneEditorListeners.java` | Extracted listener helper. Package-private. | ~55 |
-| `StorytellingSceneEditorCharacterizationTest.java` | Characterization test suite (81 tests after adding `field_listeners`). Updated for extraction. | ~590 |
+| `StorytellingSceneEditor.java` | Parent class — 2 inner classes remain (`SingletonHolder`, `SceneEditorProgramImp`). Owns field declarations, constructor, and all public API. | ~1116 |
+| `SceneEditorDropReceptor.java` | Extracted drop receptor. Package-private. | ~139 |
+| `LookingGlassPanel.java` | Extracted looking glass panel. Package-private. | ~76 |
+| `SceneEditorListeners.java` | Extracted listener helper. Package-private. | ~86 |
+| `StorytellingSceneEditorCharacterizationTest.java` | Characterization test suite (80 tests). Updated for extraction. | ~588 |
 
 All source files reside in:
 
@@ -226,17 +227,17 @@ No listener registration logic changes. Only the field access path changes.
 ## Test updates
 
 The characterization test suite (`StorytellingSceneEditorCharacterizationTest`)
-requires 5 test updates and 1 new test. All 81 tests pass.
+requires 5 test updates. All 80 tests pass.
 
 ### Tests that change
 
 | Test | Before | After | Reason |
 | --- | --- | --- | --- |
-| `innerClassCount_exactly4` | `assertEquals(4, ...)` | `assertEquals(2, ...)` | 2 inner classes extracted to top-level. |
-| `innerClass_SceneEditorDropReceptor_exists` | `findInner("SceneEditorDropReceptor")` | `Class.forName("org.alice.stageide.sceneeditor.SceneEditorDropReceptor")` | Now a top-level class. |
-| `innerClass_SceneEditorDropReceptor_isPrivate` | Asserts private, non-static | Asserts package-private (not public, not private, not protected) | Top-level package-private class. |
-| `innerClass_LookingGlassPanel_exists` | `findInner("LookingGlassPanel")` | `Class.forName("org.alice.stageide.sceneeditor.LookingGlassPanel")` | Now a top-level class. |
-| `innerClass_LookingGlassPanel_isPrivate` | Asserts private, non-static | Asserts package-private | Top-level package-private class. |
+| `innerClassCount_exactly2` (renamed from `_exactly4`) | `assertEquals(4, ...)` | `assertEquals(2, ...)` | 2 inner classes extracted to top-level. Test renamed to match new count. |
+| `innerClass_SceneEditorDropReceptor_extractedToTopLevel` | `findInner("SceneEditorDropReceptor")` | Asserts inner is `null` and `Class.forName(...)` resolves the top-level class | Now a top-level class. |
+| `innerClass_SceneEditorDropReceptor_isPackagePrivateTopLevel` | Asserts private, non-static | Asserts package-private (not public, not private, not protected) and no enclosing class | Top-level package-private class. |
+| `innerClass_LookingGlassPanel_extractedToTopLevel` | `findInner("LookingGlassPanel")` | Asserts inner is `null` and `Class.forName(...)` resolves the top-level class | Now a top-level class. |
+| `innerClass_LookingGlassPanel_isPackagePrivateTopLevel` | Asserts private, non-static | Asserts package-private and no enclosing class | Top-level package-private class. |
 
 ### Tests that do NOT change
 
@@ -250,13 +251,38 @@ requires 5 test updates and 1 new test. All 81 tests pass.
 - `declaredFieldCount_atLeast20` — field count ~25, still ≥ 20.
 - `SingletonHolder` and `SceneEditorProgramImp` inner class tests — unchanged.
 
-### New test added
+## Import cleanup
 
-| Test | Assertion |
+After extraction, 8 imports in `StorytellingSceneEditor.java` become
+unused because the types they reference are now used only by the extracted
+classes (which have their own import sections):
+
+| Import | Was used by |
 | --- | --- |
-| `field_listeners` | `assertDeclaredField("listeners")` — verifies the `SceneEditorListeners` helper field exists. |
+| `org.alice.stageide.gallerydnd.GalleryDragModel` | `SceneEditorDropReceptor.isPotentiallyAcceptingOf()` |
+| `org.alice.stageide.sceneeditor.interact.croquet.SceneDropSite` | `SceneEditorDropReceptor.dragDroppedPostRejectorCheck()` |
+| `org.lgna.croquet.event.ValueEvent` | All 7 `ValueListener` anonymous classes |
+| `org.lgna.croquet.event.ValueListener` | All 7 listener field declarations |
+| `org.lgna.croquet.DragModel.DragStep` | `SceneEditorDropReceptor` drag lifecycle methods |
+| `javax.swing.JPanel` | `LookingGlassPanel.createJPanel()` return type |
+| `javax.swing.SpringLayout` | `LookingGlassPanel.setNorthWestComponent()` |
+| `java.awt.Point` | `SceneEditorDropReceptor.isDropLocationOverLookingGlass()` |
+
+These imports are removed as part of the extraction to keep the file
+checkstyle-clean. If you add new code to `StorytellingSceneEditor` that
+uses any of these types, re-add the import at that time.
 
 ## Validation commands
+
+### Run checkstyle
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml -pl core/ide
+```
+
+The import cleanup ensures `StorytellingSceneEditor.java` has no unused
+import violations. This check covers the entire `core/ide` module.
 
 ### Run the full characterization suite
 
@@ -272,9 +298,8 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-Expected outcome: 81 test methods (80 original + 1 new `field_listeners`).
-5 existing tests are updated, not removed.
-All pass. 0 failures, 0 errors, 0 skipped. BUILD SUCCESS.
+Expected outcome: 80 test methods. 5 existing tests are updated, not
+removed. All pass. 0 failures, 0 errors, 0 skipped. BUILD SUCCESS.
 
 ### Run alongside all core/ide tests
 
@@ -360,7 +385,7 @@ with "has private access in StorytellingSceneEditor". See the
 2. Initialize it in the constructor, delegating to the editor method.
 3. Update the registration site in `StorytellingSceneEditor.initializeComponents()`:
    `this.listeners.newListener`.
-4. Run the characterization suite — all 81 tests pass (additive change).
+4. Run the characterization suite — all 80 tests pass (additive change).
 5. Optionally add a `field_*` test for the new listener.
 
 ### Understand why LookingGlassPanel takes OnscreenRenderTarget, not the editor

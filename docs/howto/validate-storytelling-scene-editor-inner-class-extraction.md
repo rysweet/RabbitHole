@@ -48,7 +48,18 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 All 4 files (`StorytellingSceneEditor.java` plus the 3 extracted class
 files) must compile without errors.
 
-## Step 2: Verify new file existence
+## Step 2: Verify checkstyle passes
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml -pl core/ide
+```
+
+After extraction, 8 imports that were only used by the extracted inner
+classes are removed from `StorytellingSceneEditor.java`. This step
+verifies no unused-import violations remain.
+
+## Step 3: Verify new file existence
 
 ```bash
 ls core/ide/src/main/java/org/alice/stageide/sceneeditor/{SceneEditorDropReceptor,LookingGlassPanel,SceneEditorListeners}.java
@@ -56,7 +67,7 @@ ls core/ide/src/main/java/org/alice/stageide/sceneeditor/{SceneEditorDropRecepto
 
 All 3 files must exist.
 
-## Step 3: Run the characterization suite
+## Step 4: Run the characterization suite
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -69,7 +80,7 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-Expected: 81 test methods (80 original + 1 new `field_listeners`). All pass. 0 failures, 0 errors, 0 skipped.
+Expected: 80 test methods. All pass. 0 failures, 0 errors, 0 skipped.
 BUILD SUCCESS.
 
 This verifies:
@@ -77,7 +88,6 @@ This verifies:
 - Inner class count is exactly 2 (`SingletonHolder`, `SceneEditorProgramImp`)
 - `SceneEditorDropReceptor` exists as a top-level package-private class
 - `LookingGlassPanel` exists as a top-level package-private class
-- The `listeners` field exists on `StorytellingSceneEditor`
 - All 37 public API methods are unchanged
 - All 5 `RenderTargetListener` overrides are unchanged
 - All 21 key fields still exist (minus 7 listeners, plus 1 `listeners`
@@ -85,7 +95,7 @@ This verifies:
 - `SceneEditorProgramImp.getAnimator()` is unchanged
 - Singleton pattern is unchanged
 
-## Step 4: Run the full module test suite
+## Step 5: Run the full module test suite
 
 ```bash
 NODE_OPTIONS=--max-old-space-size=32768 \
@@ -96,7 +106,7 @@ mvn -DincludeSims=false -Dinstall4j.skip \
 This catches any compilation or linking errors that affect other tests
 in `core/ide`.
 
-## Step 5: Verify inner class count
+## Step 6: Verify inner class count
 
 ```bash
 grep -c 'private class\|private static class\|public static class' \
@@ -105,7 +115,7 @@ grep -c 'private class\|private static class\|public static class' \
 
 Expected: 2 (`SingletonHolder` and `SceneEditorProgramImp`).
 
-## Step 6: Verify extracted class visibility
+## Step 7: Verify extracted class visibility
 
 ```bash
 grep 'class SceneEditorDropReceptor' \
@@ -119,7 +129,7 @@ grep 'class SceneEditorListeners' \
 All 3 must show `class` without `public`, `private`, or `protected`
 prefix — confirming package-private visibility. No new public API surface.
 
-## Step 7: Verify enclosing instance pattern
+## Step 8: Verify enclosing instance pattern
 
 ```bash
 grep -n 'this.editor' \
@@ -138,7 +148,7 @@ grep -n 'this.onscreenRenderTarget' \
 `LookingGlassPanel` should reference `this.onscreenRenderTarget` (not
 `this.editor`).
 
-## Step 8: Verify listener registration path
+## Step 9: Verify listener registration path
 
 ```bash
 grep 'this.listeners\.' \
@@ -149,6 +159,20 @@ Expected: 7 matches (one per listener registration). Each should be of the
 form `this.listeners.showSnapGridListener`, etc.
 
 ## Troubleshooting
+
+### Checkstyle fails with unused imports
+
+After extraction, 8 imports in `StorytellingSceneEditor.java` become
+unused (the types are now referenced only in the extracted files). Remove
+them:
+
+- `GalleryDragModel`, `SceneDropSite`, `ValueEvent`, `ValueListener`,
+  `DragStep` (moved to extracted classes)
+- `JPanel`, `SpringLayout` (moved to `LookingGlassPanel`)
+- `Point` (moved to `SceneEditorDropReceptor`)
+
+Run `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml -pl core/ide`
+to verify.
 
 ### Compilation fails with "has private access"
 
@@ -167,8 +191,9 @@ still `private`. Seven members must be widened to package-private:
 
 ### Inner class count test fails
 
-If `innerClassCount_exactly4` still expects 4, the test was not updated.
-After extraction, the expected count is 2.
+If the inner class count test still expects 4, the test was not updated.
+After extraction, the test is renamed to `innerClassCount_exactly2` and
+expects 2.
 
 ### Field count test fails
 

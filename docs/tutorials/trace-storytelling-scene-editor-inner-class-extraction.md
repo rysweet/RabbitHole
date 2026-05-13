@@ -20,9 +20,10 @@ For validation steps, see the [Validation how-to](../howto/validate-storytelling
 - [3. Trace the LookingGlassPanel extraction](#3-trace-the-lookingglasspanel-extraction)
 - [4. Trace the SceneEditorListeners extraction](#4-trace-the-sceneeditorlisteners-extraction)
 - [5. Trace the visibility changes](#5-trace-the-visibility-changes)
-- [6. Trace the test updates](#6-trace-the-test-updates)
-- [7. Run the tests](#7-run-the-tests)
-- [8. Understand the boundaries](#8-understand-the-boundaries)
+- [6. Trace the import cleanup](#6-trace-the-import-cleanup)
+- [7. Trace the test updates](#7-trace-the-test-updates)
+- [8. Run the tests](#8-run-the-tests)
+- [9. Understand the boundaries](#9-understand-the-boundaries)
 
 ## Goal
 
@@ -257,7 +258,33 @@ compiler reports "has private access in StorytellingSceneEditor". The fix
 is to remove the `private` keyword (making it package-private, the Java
 default).
 
-## 6. Trace the test updates
+## 6. Trace the import cleanup
+
+After the extracted classes move to their own files, 8 imports in
+`StorytellingSceneEditor.java` are no longer referenced:
+
+| Import | Why orphaned |
+| --- | --- |
+| `GalleryDragModel` | Used only in `SceneEditorDropReceptor.isPotentiallyAcceptingOf()` |
+| `SceneDropSite` | Used only in `SceneEditorDropReceptor.dragDroppedPostRejectorCheck()` |
+| `ValueEvent` | Used only in listener `valueChanged()` signatures |
+| `ValueListener` | Used only in listener field declarations |
+| `DragStep` | Used only in `SceneEditorDropReceptor` drag methods |
+| `JPanel` | Used only in `LookingGlassPanel.createJPanel()` |
+| `SpringLayout` | Used only in `LookingGlassPanel.setNorthWestComponent()` |
+| `Point` | Used only in `SceneEditorDropReceptor.isDropLocationOverLookingGlass()` |
+
+Each extracted file adds the imports it needs. The parent file's import
+section becomes shorter and accurately reflects its own dependencies.
+
+Verify with:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=32768 \
+mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml -pl core/ide
+```
+
+## 7. Trace the test updates
 
 Open `StorytellingSceneEditorCharacterizationTest.java`. Five tests change:
 
@@ -298,18 +325,6 @@ assertFalse(Modifier.isProtected(c.getModifiers()));
 
 Same pattern for `LookingGlassPanel`.
 
-### New field test: `listeners`
-
-```java
-@Test
-public void field_listeners() {
-  assertDeclaredField("listeners");
-}
-```
-
-This verifies the `SceneEditorListeners` helper field exists on the outer
-class.
-
 ### What does NOT change
 
 - All 37 `api_*` tests — the public API is identical.
@@ -321,7 +336,7 @@ class.
 - Aggregate guardrails — method count ≥ 35 (unchanged), field count ≥ 20
   (drops from ~31 to ~25, still passes).
 
-## 7. Run the tests
+## 8. Run the tests
 
 From the repository root:
 
@@ -337,10 +352,10 @@ mvn -DincludeSims=false -Dinstall4j.skip \
   test
 ```
 
-All 81 test methods pass. No display server, render target, or network
+All 80 test methods pass. No display server, render target, or network
 access required.
 
-## 8. Understand the boundaries
+## 9. Understand the boundaries
 
 | Question | Answer |
 | --- | --- |
@@ -349,5 +364,5 @@ access required.
 | Does this affect drag-and-drop behavior? | No. `SceneEditorDropReceptor` has the same logic — only its location (inner → top-level) and dependency injection mechanism (implicit `this` → explicit constructor) change. |
 | Does this affect the render target? | No. `LookingGlassPanel.createJPanel()` returns the same AWT component. The only change is how it accesses the render target (stored field vs. enclosing instance reference). |
 | Does this affect listener behavior? | No. Each listener delegates to the same editor method with the same arguments. The access path changes from `StorytellingSceneEditor.this.setShowSnapGrid(v)` to `editor.setShowSnapGrid(v)`. |
-| Does this reduce the line count? | Yes. `StorytellingSceneEditor` drops from ~1259 to ~1126 lines (~133 lines removed, net of added constructor calls and field declarations). |
-| Can I further decompose `StorytellingSceneEditor`? | Yes. The remaining ~1126 lines include method groups for camera management, field management, markers, and rendering control that are candidates for future extraction. The characterization tests will catch any structural changes. |
+| Does this reduce the line count? | Yes. `StorytellingSceneEditor` drops from ~1259 to ~1116 lines (~143 lines removed, net of added constructor calls and field declarations). |
+| Can I further decompose `StorytellingSceneEditor`? | Yes. The remaining ~1116 lines include method groups for camera management, field management, markers, and rendering control that are candidates for future extraction. The characterization tests will catch any structural changes. |
