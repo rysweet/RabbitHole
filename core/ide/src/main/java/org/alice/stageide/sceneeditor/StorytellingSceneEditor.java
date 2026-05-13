@@ -48,7 +48,6 @@ import edu.cmu.cs.dennisc.animation.ClockBasedAnimator;
 import edu.cmu.cs.dennisc.java.lang.ArrayUtilities;
 import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
 import edu.cmu.cs.dennisc.java.util.Lists;
-import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.pattern.IsInstanceCrawler;
 import edu.cmu.cs.dennisc.render.OnscreenRenderTarget;
@@ -796,7 +795,6 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     IsInstanceCrawler<FieldAccess> crawler = IsInstanceCrawler.createInstance(FieldAccess.class);
     statement.crawl(crawler, CrawlPolicy.COMPLETE, null);
 
-    Map<AbstractField, AbstractField> map = Maps.newHashMap();
     for (FieldAccess fieldAccess : crawler.getList()) {
       AbstractField field = fieldAccess.field.getValue();
       if (field == fieldToReplace) {
@@ -862,9 +860,7 @@ public class StorytellingSceneEditor extends AbstractSceneEditor implements Rend
     }
     Statement[] initializeStatements = SetUpMethodGenerator.getSetupStatementsForField(false, newField, this.getActiveSceneInstance(), toCopyVehicleField, initialTransform);
     Statement[] statementsToReturn = new Statement[initializeStatements.length + 1];
-    for (int i = 0; i < initializeStatements.length; i++) {
-      statementsToReturn[i] = initializeStatements[i];
-    }
+    System.arraycopy(initializeStatements, 0, statementsToReturn, 0, initializeStatements.length);
     statementsToReturn[initializeStatements.length] = stateCodeStatement;
     return statementsToReturn;
   }
