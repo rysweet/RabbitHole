@@ -676,9 +676,7 @@ public class ModelExportTest {
   }
 
   // ── Behavioral characterization for extracted methods (#524) ─────
-  // These test the behavior of methods that will live on ModelResourceJavaGenerator.
-  // Currently they call ModelResourceExporter (pre-extraction).
-  // After extraction, update call sites to ModelResourceJavaGenerator.
+  // These test the behavior of methods extracted to ModelResourceJavaGenerator.
 
   @Test
   public void getExistingJointIdsReturnsBipedJointNames() {
@@ -771,12 +769,10 @@ public class ModelExportTest {
 
   @Test
   public void exporterLineCountIsUnder750AfterRefactoring() throws IOException {
-    Path exporterPath = Path.of("core/model-loading/src/main/java/org/lgna/story/resourceutilities/ModelResourceExporter.java");
-    if (Files.exists(exporterPath)) {
-      long lineCount = Files.lines(exporterPath).count();
-      assertTrue("ModelResourceExporter should be under 750 lines after refactoring, actual: " + lineCount,
-          lineCount < 750);
-    }
-    // If file doesn't exist at relative path, the test is inconclusive — skip silently
+    Path exporterPath = Path.of("src/main/java/org/lgna/story/resourceutilities/ModelResourceExporter.java");
+    assertTrue("ModelResourceExporter.java must exist at " + exporterPath, Files.exists(exporterPath));
+    long lineCount = Files.lines(exporterPath).count();
+    assertTrue("ModelResourceExporter should be under 750 lines after refactoring, actual: " + lineCount,
+        lineCount < 750);
   }
 }
