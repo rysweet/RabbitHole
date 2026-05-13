@@ -86,36 +86,6 @@ final class EatmeEvidenceWriter {
     return builder.toString();
   }
 
-  static String blockerCodesJson(List<BlockerDetail> blockers) {
-    StringBuilder builder = new StringBuilder("[");
-    for (int i = 0; i < blockers.size(); i++) {
-      if (i > 0) {
-        builder.append(", ");
-      }
-      builder.append('"').append(EatmeRunWindowEvidence.escapeJson(blockers.get(i).code)).append('"');
-    }
-    builder.append(']');
-    return builder.toString();
-  }
-
-  static String blockerDetailsJson(List<BlockerDetail> blockers) {
-    StringBuilder builder = new StringBuilder(blockers.size() * 160 + 16);
-    builder.append("[\n");
-    for (int i = 0; i < blockers.size(); i++) {
-      BlockerDetail blocker = blockers.get(i);
-      if (i > 0) {
-        builder.append(",\n");
-      }
-      builder.append("      {\n")
-          .append("        \"code\": \"").append(EatmeRunWindowEvidence.escapeJson(blocker.code)).append("\",\n")
-          .append("        \"observed\": \"").append(EatmeRunWindowEvidence.escapeJson(blocker.observed)).append("\",\n")
-          .append("        \"required\": \"").append(EatmeRunWindowEvidence.escapeJson(blocker.required)).append("\"\n")
-          .append("      }");
-    }
-    builder.append("\n    ]");
-    return builder.toString();
-  }
-
   static String pixelObservationSummary(PixelObservation pixelObservation) {
     return pixelObservation.isObserved()
         ? "desktop pixel sample observed; inspect the screenshot and sample details before reporting"

@@ -248,4 +248,76 @@ public class PixelObservationTest {
     assertTrue(observation.detailJson,
         observation.detailJson.contains("name\\\\backslash"));
   }
+
+  // --- blockerCodesJson (moved from EatmeEvidenceWriter) ---
+
+  @Test
+  public void blockerCodesJsonProducesCorrectArray() {
+    List<BlockerDetail> blockers = List.of(
+        new BlockerDetail("code_a", "obs_a", "req_a"),
+        new BlockerDetail("code_b", "obs_b", "req_b"));
+    String result = PixelObservation.blockerCodesJson(blockers);
+    assertEquals("[\"code_a\", \"code_b\"]", result);
+  }
+
+  @Test
+  public void blockerCodesJsonProducesEmptyArrayForEmptyList() {
+    String result = PixelObservation.blockerCodesJson(List.of());
+    assertEquals("[]", result);
+  }
+
+  @Test
+  public void blockerCodesJsonEscapesSpecialCharactersInCodes() {
+    List<BlockerDetail> blockers = List.of(
+        new BlockerDetail("code_with_\"quotes\"", "obs", "req"));
+    String result = PixelObservation.blockerCodesJson(blockers);
+    assertTrue(result, result.contains("code_with_\\\"quotes\\\""));
+  }
+
+  // --- blockerDetailsJson (moved from EatmeEvidenceWriter) ---
+
+  @Test
+  public void blockerDetailsJsonProducesCorrectJsonArray() {
+    List<BlockerDetail> blockers = List.of(
+        new BlockerDetail("render_target_not_displayable",
+            "renderTargetDisplayable=false",
+            "renderTargetDisplayable=true"));
+    String result = PixelObservation.blockerDetailsJson(blockers);
+    assertTrue(result, result.contains(
+        "\"code\": \"render_target_not_displayable\""));
+    assertTrue(result, result.contains(
+        "\"observed\": \"renderTargetDisplayable=false\""));
+    assertTrue(result, result.contains(
+        "\"required\": \"renderTargetDisplayable=true\""));
+  }
+
+  @Test
+  public void blockerDetailsJsonHandlesMultipleBlockers() {
+    List<BlockerDetail> blockers = List.of(
+        new BlockerDetail("code1", "obs1", "req1"),
+        new BlockerDetail("code2", "obs2", "req2"));
+    String result = PixelObservation.blockerDetailsJson(blockers);
+    assertTrue(result, result.contains("\"code\": \"code1\""));
+    assertTrue(result, result.contains("\"code\": \"code2\""));
+    assertTrue(result, result.contains("\"observed\": \"obs1\""));
+    assertTrue(result, result.contains("\"observed\": \"obs2\""));
+  }
+
+  @Test
+  public void blockerDetailsJsonEscapesSpecialCharacters() {
+    List<BlockerDetail> blockers = List.of(
+        new BlockerDetail("code",
+            "value\"with quotes",
+            "required\nnewline"));
+    String result = PixelObservation.blockerDetailsJson(blockers);
+    assertTrue(result, result.contains("value\\\"with quotes"));
+    assertTrue(result, result.contains("required\\nnewline"));
+  }
+
+  @Test
+  public void blockerDetailsJsonProducesEmptyArrayForEmptyList() {
+    String result = PixelObservation.blockerDetailsJson(List.of());
+    assertTrue(result.startsWith("["));
+    assertTrue(result.endsWith("]"));
+  }
 }
