@@ -768,12 +768,12 @@ public class ModelExportTest {
   }
 
   @Test
-  public void exporterLineCountIsUnder750AfterRefactoring() throws IOException {
+  public void exporterLineCountIsUnder550AfterRefactoring() throws IOException {
     Path exporterPath = Path.of("src/main/java/org/lgna/story/resourceutilities/ModelResourceExporter.java");
     assertTrue("ModelResourceExporter.java must exist at " + exporterPath, Files.exists(exporterPath));
     long lineCount = Files.lines(exporterPath).count();
-    assertTrue("ModelResourceExporter should be under 750 lines after refactoring, actual: " + lineCount,
-        lineCount < 750);
+    assertTrue("ModelResourceExporter should be under 550 lines after extraction, actual: " + lineCount,
+        lineCount < 550);
   }
 
   // ── Dead inner class removal contract (#524) ────────────────────
