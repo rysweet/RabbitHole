@@ -55,7 +55,9 @@ DragAdapter (~485 lines, abstract)
 │   │   keyListener, mouseWheelListener)
 │   ├── addListeners / removeListeners
 │   ├── pickIntoScene / pickIntoSceneSuppressingErrors
-│   ├── handle* methods (7 event handlers)
+│   ├── Private handle* methods (7: mouseExited, mousePressed,
+│   │   mouseReleased, mouseDragged, mouseWheelMoved, keyPressed,
+│   │   keyReleased)
 │   ├── Mouse wheel timeout state
 │   ├── getHandleForComponent
 │   └── isComponentListener
@@ -71,6 +73,8 @@ DragAdapter (~485 lines, abstract)
 │
 └── Retained on DragAdapter
     ├── Enums: ObjectType, CameraView
+    ├── Protected event hooks: handleMouseEntered, handleMouseMoved
+    │   (stay for subclass override polymorphism)
     ├── Selection: setSelectedImplementation,
     │   setSelectedSceneObjectImplementation,
     │   setSelectedCameraMarker, setSelectedObjectMarker
@@ -85,7 +89,7 @@ DragAdapter (~485 lines, abstract)
     │   getRotationSnapAngle, addCameraMouseControl
     ├── Protected hooks: update(double), setSGCamera, hasSceneEditor
     └── State: currentInputState, previousInputState, selectedObject,
-        isInStageChange, manipulators list
+        currentRolloverComponent, isInStageChange, manipulators list
 ```
 
 ## Extracted classes
@@ -114,9 +118,13 @@ and `handleMouseMoved` continue to fire.
 | `mouseWheelListener` | private final | private final |
 | `mouseWheelTimeoutTime` | private | private |
 | `mouseWheelStartLocation` | private | private |
-| `currentRolloverComponent` | private | private |
 | `MOUSE_WHEEL_TIMEOUT_TIME` | private static final | package-private static final |
 | `CANCEL_MOUSE_WHEEL_DISTANCE` | private static final | package-private static final |
+
+**Fields that stay on DragAdapter:** `currentRolloverComponent` remains on
+`DragAdapter` because it is used by `handleMouseEntered` (which stays for
+subclass override reasons) and by `handleMouseReleased` (private, moves
+to `DragEventHandler` but accesses it via `dragAdapter.currentRolloverComponent`).
 
 **Moved methods:**
 
@@ -125,12 +133,10 @@ and `handleMouseMoved` continue to fire.
 | `addListeners(Component)` | public | No — self-contained |
 | `removeListeners(Component)` | public | No — self-contained |
 | `isComponentListener(Component)` | private | No — checks own listener refs |
-| `handleMouseEntered(MouseEvent)` | protected | Yes — `dragAdapter.handleMouseEntered(e)` |
 | `handleMouseExited(MouseEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleMousePressed(MouseEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleMouseReleased(MouseEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleMouseDragged(MouseEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
-| `handleMouseMoved(MouseEvent)` | protected | Yes — `dragAdapter.handleMouseMoved(e)` |
 | `handleMouseWheelMoved(MouseWheelEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleKeyPressed(KeyEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
 | `handleKeyReleased(KeyEvent)` | private | Yes — calls `dragAdapter.fireStateChange()` |
@@ -142,12 +148,21 @@ and `handleMouseMoved` continue to fire.
 | `shouldStopMouseWheel(Point)` | private | No — reads own state |
 | `updateMouseWheelTimeout(double, Runnable)` | package-private | No — new method combining wheel timeout from `update()` |
 
+**Methods that stay on DragAdapter:** `handleMouseEntered(MouseEvent)` and
+`handleMouseMoved(MouseEvent)` remain as `protected` methods on
+`DragAdapter` because subclasses override them (see
+[Subclass override preservation](#subclass-override-preservation)). Their
+method bodies stay on DragAdapter. The private `handle*` methods above
+move because they are never overridden.
+
 **Listener routing detail:** The `mouseMotionListener` and `mouseListener`
-anonymous classes call `dragAdapter.handleMouseEntered(e)` and
-`dragAdapter.handleMouseMoved(e)` rather than calling the local private
-methods directly. This ensures that subclass overrides in
-`RuntimeDragAdapter`, `SingleViewerDragAdapter`, and
-`CroquetSupportingDragAdapter` continue to intercept these events.
+anonymous classes in `DragEventHandler` call
+`dragAdapter.handleMouseEntered(e)` and `dragAdapter.handleMouseMoved(e)`.
+This ensures polymorphic dispatch so subclass overrides in
+`RuntimeDragAdapter` and `SingleViewerDragAdapter` continue to intercept
+these events. The remaining private handle methods
+(`handleMouseExited`, `handleMousePressed`, etc.) are called directly
+within `DragEventHandler` since no subclass overrides them.
 
 ### DragCameraController
 
@@ -235,20 +250,28 @@ Similarly, `DragCameraController` only registers its
 
 ## Subclass override preservation
 
-Five known subclasses override methods on DragAdapter:
+Eight subclasses (6 direct, 2 indirect) exist in the hierarchy. The
+table below focuses on overrides relevant to this extraction:
 
-| Subclass | Overrides | Preserved how |
+| Subclass | Relevant overrides | Preserved how |
 | --- | --- | --- |
-| `RuntimeDragAdapter` | `handleMouseEntered` (no-op override), `update` | Overrides stay on DragAdapter; `handleMouseEntered` is still `protected` on DragAdapter and called by `eventHandler` via `dragAdapter.handleMouseEntered(e)` |
-| `SingleViewerDragAdapter` | `handleMouseEntered`, `handleMouseMoved` | Same pattern — listener routes through DragAdapter protected methods |
-| `CroquetSupportingDragAdapter` | `handleMouseMoved` | Same pattern |
-| `GlobalDragAdapter` | `addCameraMouseControl`, `update` | `addCameraMouseControl` stays on DragAdapter; `update` stays as protected hook, calls `eventHandler.updateMouseWheelTimeout()` then iterates manipulators |
-| `CreateAPersonDragAdapter` | `addCameraMouseControl` | Stays on DragAdapter |
+| `RuntimeDragAdapter` | `handleMouseEntered` (no-op), `handleMouseMoved` (simplified — no picking) | Both stay as `protected` methods on DragAdapter; AWT listeners in `DragEventHandler` call `dragAdapter.handleMouseEntered(e)` / `dragAdapter.handleMouseMoved(e)` for polymorphic dispatch |
+| `SingleViewerDragAdapter` | `handleMouseMoved` (simplified — no picking) | Same pattern — listener routes through DragAdapter protected method |
+| `CroquetSupportingDragAdapter` | `setHandleSelectionState`; calls `fireStateChange()` from `dragUpdated`, `dragEntered`, `dragExited` | Unrelated to event handler extraction — `fireStateChange()` stays on DragAdapter |
+| `GlobalDragAdapter` | `hasSceneEditor`, `shouldSnapToRotation`, `shouldSnapToGrid`, `shouldSnapToGround`, `getGridSpacing`, `getRotationSnapAngle`, `undoRedoEndManipulation` | All stay on DragAdapter; none are affected by extraction |
+| `CreateAPersonDragAdapter` | `setSGCamera` | Stays on DragAdapter |
+| `PoserAnimatorDragAdapter` | `setOnscreenRenderTarget`, `setHandleVisibility` | Both stay on DragAdapter; unrelated to extraction |
+| `OnscreenLookingGlassDragAdapter` | (abstract intermediate class) | No relevant overrides; base class for `NiceDragAdapter` and `CameraNavigationDragAdapter` |
+| `CameraNavigationDragAdapter` | `update(double)` (public widening) | `update` stays as protected hook on DragAdapter; widened override still dispatches correctly |
 
 **Critical invariant:** `handleMouseEntered` and `handleMouseMoved` remain
-as `protected` methods on `DragAdapter`. The AWT listeners in
+as `protected` methods on `DragAdapter` with their full method bodies
+intact. They are NOT moved to `DragEventHandler`. The AWT listeners in
 `DragEventHandler` call these methods on the `dragAdapter` reference,
 which dispatches polymorphically to the correct subclass override.
+Only the private `handle*` methods (handleMouseExited, handleMousePressed,
+handleMouseReleased, handleMouseDragged, handleMouseWheelMoved,
+handleKeyPressed, handleKeyReleased) move to `DragEventHandler`.
 
 ## Visibility rules
 
@@ -276,7 +299,7 @@ which dispatches polymorphically to the correct subclass override.
 | `previousInputState` | DragAdapter |
 | `onscreenRenderTarget` | DragAdapter |
 | `lookingGlassComponent` | DragAdapter (package-private accessor added) |
-| `currentRolloverComponent` | DragEventHandler |
+| `currentRolloverComponent` | DragAdapter (used by `handleMouseEntered` and `handleMouseReleased`) |
 | `mouseWheelTimeoutTime` | DragEventHandler |
 | `mouseWheelStartLocation` | DragEventHandler |
 | `cameraMap` | DragCameraController |
@@ -386,7 +409,7 @@ Tests verify:
 
 1. `DragAdapter.java` is under 500 lines.
 2. `mvn -pl core/story-api -am -DfailIfNoTests=false -Dcheckstyle.skip test` passes.
-3. All five known subclasses compile without modification (verified by
+3. All eight known subclasses compile without modification (verified by
    `-am` flag pulling in dependent modules).
 4. No `public` or `protected` method signature on `DragAdapter` changes.
 5. `DragAdapter.CameraView` and `DragAdapter.ObjectType` remain accessible

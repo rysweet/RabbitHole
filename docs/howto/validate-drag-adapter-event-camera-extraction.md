@@ -57,7 +57,7 @@ Expected: under 500 lines. The extraction target is ~485 lines.
 ## Step 3: Verify subclass compilation
 
 The `-am` flag in Step 1 compiles all upstream modules, but to
-explicitly verify all five known subclasses compile:
+explicitly verify all subclasses compile:
 
 ```bash
 mvn -pl core/story-api,core/ide,core-nonfree/ide-nonfree -am compile
@@ -65,9 +65,11 @@ mvn -pl core/story-api,core/ide,core-nonfree/ide-nonfree -am compile
 
 These modules contain:
 - `RuntimeDragAdapter` (core/story-api)
-- `GlobalDragAdapter` (core/ide)
+- `GlobalDragAdapter` (core/ide) — extends CroquetSupportingDragAdapter
 - `CroquetSupportingDragAdapter` (core/ide)
 - `SingleViewerDragAdapter` (core/ide)
+- `PoserAnimatorDragAdapter` (core/ide)
+- `OnscreenLookingGlassDragAdapter` (core/ide) — abstract; extended by NiceDragAdapter, CameraNavigationDragAdapter
 - `CreateAPersonDragAdapter` (core-nonfree/ide-nonfree)
 
 ## Step 4: Run characterization tests

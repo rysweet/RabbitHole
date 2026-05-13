@@ -90,16 +90,30 @@ constructor and stores it as a final field.
 
 **Why a back-reference to the full DragAdapter?** The event handler needs:
 - `dragAdapter.currentInputState` — to mutate input state on every event
+- `dragAdapter.currentRolloverComponent` — read by `handleMouseReleased`
 - `dragAdapter.fireStateChange()` — to trigger manipulator evaluation
 - `dragAdapter.getOnscreenRenderTarget()` — for pick-into-scene
 - `dragAdapter.handleMouseEntered(e)` — polymorphic dispatch for subclasses
 - `dragAdapter.handleMouseMoved(e)` — polymorphic dispatch for subclasses
 - `dragAdapter.getLookingGlassComponent()` — to compare event sources
 
-That's 6 different touchpoints across the DragAdapter API. Passing them
-individually would create a 6+ parameter constructor or require a custom
+That's 7 different touchpoints across the DragAdapter API. Passing them
+individually would create a 7+ parameter constructor or require a custom
 interface. Since both classes are package-private in the same package,
 the back-reference is simpler and equally safe.
+
+**What moves vs. what stays:**
+
+Only the _private_ `handle*` methods move to DragEventHandler:
+`handleMouseExited`, `handleMousePressed`, `handleMouseReleased`,
+`handleMouseDragged`, `handleMouseWheelMoved`, `handleKeyPressed`,
+`handleKeyReleased`. These are never overridden by subclasses.
+
+`handleMouseEntered` and `handleMouseMoved` stay on DragAdapter as
+`protected` methods because `RuntimeDragAdapter` and
+`SingleViewerDragAdapter` override them. The AWT listeners in
+DragEventHandler route through `dragAdapter.handleMouseEntered(e)` and
+`dragAdapter.handleMouseMoved(e)` for polymorphic dispatch.
 
 **Trace the listener routing pattern:**
 
@@ -115,9 +129,10 @@ private final MouseListener mouseListener = new MouseListener() {
 };
 ```
 
-This is critical. If the listener called `this.handleMouseEntered(e)`
-directly, subclass overrides on `DragAdapter.handleMouseEntered` would
-never fire. The indirection through `dragAdapter` ensures polymorphic
+This is critical. If the listener called a local `handleMouseEntered`
+method on DragEventHandler, subclass overrides on
+`DragAdapter.handleMouseEntered` would never fire. The indirection
+through `dragAdapter` ensures polymorphic
 dispatch.
 
 **Trace the mouse wheel timeout:**
@@ -190,29 +205,40 @@ DragAdapter for this purpose.
 
 ## 4. Trace the subclass override routing
 
-This is the most critical design decision. Five subclasses override
-methods that were on DragAdapter:
+This is the most critical design decision. Eight subclasses exist in the
+hierarchy, and two override the protected methods that the extraction
+must preserve:
 
-**RuntimeDragAdapter** overrides `handleMouseEntered` as a no-op:
+**RuntimeDragAdapter** overrides both `handleMouseEntered` (no-op) and
+`handleMouseMoved` (simplified — no picking):
 ```java
 @Override
 protected void handleMouseEntered(MouseEvent e) {
     // intentionally empty — runtime doesn't need rollover picking
 }
+
+@Override
+protected void handleMouseMoved(MouseEvent e) {
+    // simplified — no picking, just update location and fire
+    this.currentInputState.setMouseLocation(e.getPoint());
+    this.fireStateChange();
+}
 ```
 
-If `DragEventHandler` called its own local method, this override would
+If `DragEventHandler` called its own local method, these overrides would
 never fire. Because the AWT listener calls `dragAdapter.handleMouseEntered(e)`,
 the JVM dispatches to `RuntimeDragAdapter.handleMouseEntered`, preserving
 the no-op behavior.
 
-**SingleViewerDragAdapter** overrides both `handleMouseEntered` and
-`handleMouseMoved` with custom first-person camera logic. Same routing
-pattern preserves those overrides.
+**SingleViewerDragAdapter** overrides `handleMouseMoved` with a simplified
+version that skips scene picking (there is no need for rollover events
+in the skeleton viewer). Same routing pattern preserves this override.
 
-**CroquetSupportingDragAdapter** overrides `handleMouseMoved` to add
-network synchronization. The routing pattern ensures this fires on every
-mouse move event in the scene editor.
+**CroquetSupportingDragAdapter** does NOT override `handleMouseMoved` or
+`handleMouseEntered`. Instead, it has its own `dragUpdated`,
+`dragEntered`, and `dragExited` methods that call `fireStateChange()`
+directly for drag-and-drop event handling. Since `fireStateChange()`
+stays on DragAdapter, this works unchanged.
 
 ## 5. Trace the field ownership decisions
 
@@ -220,13 +246,23 @@ mouse move event in the scene editor.
 
 `currentInputState` is `protected final` and accessed directly by:
 - `RuntimeDragAdapter` — reads mouse state for runtime event dispatch
-- All `handle*` methods (now in DragEventHandler) — mutates on every event
+- `handleMouseEntered`, `handleMouseMoved` (stay on DragAdapter) — mutates on every event
+- Private `handle*` methods (move to DragEventHandler) — mutates via `dragAdapter.currentInputState`
 - `handleStateChange` (stays on DragAdapter) — reads for manipulator evaluation
 - `setCameraOnManipulator` (moves to DragCameraController) — reads pick camera
 
 Moving it to either extracted class would require the other two consumers
 to use a getter. Keeping it on DragAdapter with package-private access
 means all three locations access it naturally.
+
+**Why does `currentRolloverComponent` stay on DragAdapter?**
+
+`currentRolloverComponent` is used by `handleMouseEntered` (which stays
+on DragAdapter for subclass override reasons) and by `handleMouseReleased`
+(which moves to DragEventHandler but accesses it via
+`dragAdapter.currentRolloverComponent`). Since the field is mutated by
+a staying method and read by a moving method, it stays on DragAdapter
+as package-private.
 
 **Why does `lookingGlassComponent` stay on DragAdapter?**
 
