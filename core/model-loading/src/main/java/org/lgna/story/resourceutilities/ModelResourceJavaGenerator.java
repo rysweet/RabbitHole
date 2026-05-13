@@ -44,6 +44,10 @@
 package org.lgna.story.resourceutilities;
 
 import edu.cmu.cs.dennisc.java.lang.reflect.ReflectionUtilities;
+import edu.cmu.cs.dennisc.pattern.Tuple2;
+import org.alice.math.immutable.AffineMatrix4x4;
+import org.alice.math.immutable.Point3;
+import org.alice.math.immutable.UnitQuaternion;
 import org.lgna.story.BipedPose;
 import org.lgna.story.BipedPoseBuilder;
 import org.lgna.story.FlyerPose;
@@ -71,6 +75,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map.Entry;
+import java.util.zip.DataFormatException;
 import java.util.Map;
 
 final class ModelResourceJavaGenerator {
@@ -271,5 +278,207 @@ final class ModelResourceJavaGenerator {
       }
     }
     return false;
+  }
+
+  static String buildJavaCodeBody(ModelResourceExporter exporter) throws java.util.zip.DataFormatException {
+      StringBuilder sb = new StringBuilder();
+
+      ModelResourceJavaGenerator.appendPreambleAndEnumConstants(sb, exporter);
+      List<String> existingIds = ModelResourceExporter.getExistingJointIds(exporter.getClassData().superClass);
+      boolean addedRoots = false;
+      List<Tuple2<String, String>> trimmedSkeleton = exporter.makeCodeReadyTree(exporter.getJointList());
+      if (trimmedSkeleton != null) {
+        Map<String, List<String>> arrayEntries;
+        if (exporter.isEnableArraySupport()) {
+          arrayEntries = ModelResourceExporter.getArrayEntriesFromJointList(trimmedSkeleton, exporter.getCustomArrayNameMap(), exporter.getJointIdsToSuppress(), exporter.getArrayNamesToSkip());
+        } else {
+          arrayEntries = new HashMap<String, List<String>>();
+        }
+
+        Map<String, Map<String, AffineMatrix4x4>> poseEntries = new HashMap<String, Map<String, AffineMatrix4x4>>(exporter.getPoses());
+        List<String> rootJoints = new LinkedList<String>();
+        sb.append(JavaCodeUtilities.LINE_RETURN);
+        for (Tuple2<String, String> entry : trimmedSkeleton) {
+          String jointString = entry.getA();
+          String parentString = entry.getB();
+          if (existingIds.contains(jointString)) {
+            continue;
+          }
+          if (!exporter.shouldHideJointInArray(jointString, arrayEntries)) {
+            if ((parentString == null) || (parentString.length() == 0)) {
+              parentString = "null";
+              rootJoints.add(jointString);
+              addedRoots = true;
+            }
+            if (exporter.shouldSuppressJoint(jointString) || exporter.shouldSuppressJointInArray(jointString, arrayEntries)) {
+              sb.append("@FieldTemplate(visibility=Visibility.COMPLETELY_HIDDEN)" + JavaCodeUtilities.LINE_RETURN);
+            } else {
+              String arrayName = ModelResourceJavaGenerator.getArrayNameFromMapForJoint(jointString, arrayEntries);
+              if (arrayName != null) {
+                sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME, methodNameHint=\"" + exporter.getJointAccessMethodNameForArrayJoint(jointString) + "\")" + JavaCodeUtilities.LINE_RETURN);
+              } else {
+                sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME)" + JavaCodeUtilities.LINE_RETURN);
+              }
+
+            }
+            sb.append("\tpublic static final org.lgna.story.resources.JointId " + jointString + " = new org.lgna.story.resources.JointId( " + parentString + ", " + exporter.getJavaClassName() + ".class );" + JavaCodeUtilities.LINE_RETURN);
+          }
+        }
+
+        if (addedRoots) {
+          sb.append("\n@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
+          sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] " + ModelResourceExporter.ROOT_IDS_FIELD_NAME + " = { ");
+          for (int i = 0; i < rootJoints.size(); i++) {
+            sb.append(rootJoints.get(i));
+            if (i < (rootJoints.size() - 1)) {
+              sb.append(", ");
+            }
+          }
+          sb.append(" };" + JavaCodeUtilities.LINE_RETURN);
+        }
+        //Handle pose code
+        List<String> mandatoryPoseNames = ModelResourceJavaGenerator.getMandatoryPoseNames(exporter.getClassData().superClass);
+        if (!poseEntries.isEmpty() || (!mandatoryPoseNames.isEmpty())) {
+          for (String mandatoryPose : mandatoryPoseNames) {
+            if (!poseEntries.containsKey(mandatoryPose)) {
+              throw new DataFormatException("Missing pose definition for " + mandatoryPose + " on class " + exporter.getClassData().superClass);
+            }
+          }
+          for (Entry<String, Map<String, AffineMatrix4x4>> poseEntry : poseEntries.entrySet()) {
+            Map<String, AffineMatrix4x4> poseData = poseEntry.getValue();
+            if (poseData.isEmpty()) {
+              throw new DataFormatException("No pose data for " + poseEntry.getKey() + " on class " + exporter.getClassData().superClass);
+            }
+            String fullPoseName = poseEntry.getKey() + "_POSE";
+
+            boolean needsAccessor = ModelResourceJavaGenerator.needsAccessorMethodForFieldName(exporter.getClassData(), fullPoseName);
+
+            //If an accessor is needed, add a "COMPLETELY_HIDDEN" annotation.
+            // The accessor is used to retrieve the pose via a parent class and therefore the pose itself is essentially already handled
+            // If there is no accessor, then we want the code generation system to create an Alice level accessor at runtime (which this annotation prevents)
+            if (needsAccessor) {
+              sb.append("\n\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
+            }
+
+            //          Class poseType = ModelResourceJavaGenerator.getPoseTypeForSuperClass( exporter.getClassData().superClass );
+            Class poseType = JointedModelPose.class;
+            Class poseBuilderType = ModelResourceJavaGenerator.getPoseBuilderTypeForSuperClass(exporter.getClassData().superClass);
+            String poseTypeString = poseType.getName();
+            sb.append("\n\tpublic static final " + poseTypeString + " " + fullPoseName + " = new " + poseTypeString + "( ");
+            sb.append(JavaCodeUtilities.LINE_RETURN);
+            int count = 0;
+            for (Entry<String, AffineMatrix4x4> poseDataEntry : poseData.entrySet()) {
+              count++;
+              UnitQuaternion quat = poseDataEntry.getValue().orientation().asUnitQuaternion();
+              Point3 pos = poseDataEntry.getValue().translation();
+              sb.append("\t\tnew JointIdTransformationPair( " + poseDataEntry.getKey() + ", new Orientation(" + quat.x() + ", " + quat.y() + ", " + quat.z() + ", " + quat.w() + "), new Position(" + pos.x() + ", " + pos.y() + ", " + pos.z() + ") )");
+              if (count != poseData.size()) {
+                sb.append(",");
+              }
+              sb.append(JavaCodeUtilities.LINE_RETURN);
+            }
+            sb.append("\t);" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
+            if (needsAccessor) {
+              String poseAccessorName = ModelResourceJavaGenerator.getAccessorMethodName(fullPoseName);
+              sb.append("\tpublic " + poseType.getName() + " " + poseAccessorName + "(){" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\t\treturn " + exporter.getJavaClassName() + "." + fullPoseName + ";" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
+            }
+          }
+        }
+        //Handle array code
+        List<String> mandatoryArrayNames = ModelResourceJavaGenerator.getMandatoryJointArrayNames(exporter.getClassData().superClass);
+        List<String> declaredArrays = ModelResourceJavaGenerator.getAlreadyDeclaredJointArrayNames(exporter.getClassData().superClass);
+        if (!arrayEntries.isEmpty() || (!mandatoryArrayNames.isEmpty())) {
+          //Loop through and remove any existing arrays from the mandatory array list
+          // This should leave only the mandatory arrays that need an empty list defined
+          for (Entry<String, List<String>> arrayEntry : arrayEntries.entrySet()) {
+            if (mandatoryArrayNames.contains(arrayEntry.getKey())) {
+              mandatoryArrayNames.remove(arrayEntry.getKey());
+            }
+          }
+          for (String mandatoryArray : mandatoryArrayNames) {
+            arrayEntries.put(mandatoryArray, new LinkedList<String>());
+          }
+          for (Entry<String, List<String>> arrayEntry : arrayEntries.entrySet()) {
+            List<String> arrayElements = arrayEntry.getValue();
+            String fullArrayName = arrayEntry.getKey() + "_ARRAY";
+
+            if (declaredArrays.contains(fullArrayName) || declaredArrays.contains(arrayEntry.getKey())) {
+              //If the array is already declared, skip it and trust that the previous declaration will capture the data
+              continue;
+            }
+
+            boolean needsAccessor = ModelResourceJavaGenerator.needsAccessorMethodForFieldName(exporter.getClassData(), fullArrayName);
+
+            //If an accessor is needed, add a "COMPLETELY_HIDDEN" annotation.
+            // The accessor is used to retrieve the array via a parent class and therefore the array itself is essentially already handled
+            // If there is no accessor, then we want the code generation system to create an Alice level accessor at runtime (which this annotation prevents)
+            if (needsAccessor) {
+              sb.append("\n\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
+            }
+
+            //If the array is one in the "hide all the elements of this array" list, then declare it as an arrayId rather than an array of joint ids
+            if (exporter.getArraysToHideElementsOf().contains(fullArrayName) || exporter.getArraysToHideElementsOf().contains(arrayEntry.getKey())) {
+              String firstEntry = arrayElements.getFirst();
+              String parentString = "null";
+              for (Tuple2<String, String> entry : trimmedSkeleton) {
+                if (entry.getA().equals(firstEntry)) {
+                  parentString = entry.getB();
+                  break;
+                }
+              }
+              sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME)" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\tpublic static final org.lgna.story.resources.JointArrayId " + fullArrayName + " = new org.lgna.story.resources.JointArrayId( \"" + arrayEntry.getKey() + "\", " + parentString + ", " + exporter.getJavaClassName() + ".class );" + JavaCodeUtilities.LINE_RETURN);
+            } else {
+              sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] " + fullArrayName + " = { ");
+              for (int i = 0; i < arrayElements.size(); i++) {
+                sb.append(arrayElements.get(i));
+                if (i < (arrayElements.size() - 1)) {
+                  sb.append(", ");
+                }
+              }
+              sb.append(" };" + JavaCodeUtilities.LINE_RETURN);
+            }
+            if (needsAccessor) {
+              String arrayAccessorName = ModelResourceJavaGenerator.getAccessorMethodName(fullArrayName);
+              sb.append("\tpublic org.lgna.story.resources.JointId[] " + arrayAccessorName + "(){" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\t\treturn " + exporter.getJavaClassName() + "." + fullArrayName + ";" + JavaCodeUtilities.LINE_RETURN);
+              sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
+            }
+          }
+        }
+      }
+      sb.append(JavaCodeUtilities.LINE_RETURN);
+      sb.append("\tprivate final ImplementationAndVisualType resourceType;" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\tprivate " + exporter.getJavaClassName() + "() {" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t\tthis( ImplementationAndVisualType.ALICE );" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t}" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\tprivate " + exporter.getJavaClassName() + "( ImplementationAndVisualType resourceType ) {" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t\tthis.resourceType = resourceType;" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t}" + JavaCodeUtilities.LINE_RETURN + JavaCodeUtilities.LINE_RETURN);
+      if (exporter.needsToDefineRootsMethod(exporter.getClassData().superClass)) {
+        sb.append("\tpublic org.lgna.story.resources.JointId[] " + ModelResourceExporter.ROOT_IDS_METHOD_NAME + "(){" + JavaCodeUtilities.LINE_RETURN);
+        if (addedRoots) {
+          sb.append("\t\treturn " + exporter.getJavaClassName() + "." + ModelResourceExporter.ROOT_IDS_FIELD_NAME + ";" + JavaCodeUtilities.LINE_RETURN);
+        } else {
+          Field rootsField = exporter.getJointRootsField(exporter.getClassData().superClass);
+          if (rootsField != null) {
+            sb.append("\t\treturn " + rootsField.getDeclaringClass().getCanonicalName() + "." + rootsField.getName() + ";" + JavaCodeUtilities.LINE_RETURN);
+          } else {
+            sb.append("\t\treturn new org.lgna.story.resources.JointId[0];" + JavaCodeUtilities.LINE_RETURN);
+          }
+        }
+        sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
+      }
+      sb.append("\n\tpublic org.lgna.story.implementation.JointedModelImp.JointImplementationAndVisualDataFactory<org.lgna.story.resources.JointedModelResource> getImplementationAndVisualFactory() {" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t\treturn this.resourceType.getFactory( this );" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\tpublic " + exporter.getClassData().implementationClass.getCanonicalName() + " createImplementation( " + exporter.getClassData().abstractionClass.getCanonicalName() + " abstraction ) {" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t\treturn new " + exporter.getClassData().implementationClass.getCanonicalName() + "( abstraction, this.resourceType.getFactory( this ) );" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("\t}" + JavaCodeUtilities.LINE_RETURN);
+      sb.append("}" + JavaCodeUtilities.LINE_RETURN);
+
+      return sb.toString();
   }
 }
