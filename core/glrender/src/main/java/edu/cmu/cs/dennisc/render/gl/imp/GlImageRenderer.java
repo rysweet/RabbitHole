@@ -61,11 +61,11 @@ import static com.jogamp.opengl.GL2ES1.GL_ALPHA_SCALE;
  */
 /*package-private*/ final class GlImageRenderer {
 
-  final Graphics2D graphics2D;
+  private final Graphics2D graphics2D;
 
-  Map<Image, ImageGenerator> imageToImageGeneratorMap = new HashMap<Image, ImageGenerator>();
-  Map<ImageGenerator, ReferencedObject<Pixels>> activeImageGeneratorToPixelsMap = new HashMap<ImageGenerator, ReferencedObject<Pixels>>();
-  Map<ImageGenerator, ReferencedObject<Pixels>> forgottenImageGeneratorToPixelsMap = new HashMap<ImageGenerator, ReferencedObject<Pixels>>();
+  private final Map<Image, ImageGenerator> imageToImageGeneratorMap = new HashMap<Image, ImageGenerator>();
+  private final Map<ImageGenerator, ReferencedObject<Pixels>> activeImageGeneratorToPixelsMap = new HashMap<ImageGenerator, ReferencedObject<Pixels>>();
+  private final Map<ImageGenerator, ReferencedObject<Pixels>> forgottenImageGeneratorToPixelsMap = new HashMap<ImageGenerator, ReferencedObject<Pixels>>();
 
   GlImageRenderer(Graphics2D graphics2D) {
     assert graphics2D != null;

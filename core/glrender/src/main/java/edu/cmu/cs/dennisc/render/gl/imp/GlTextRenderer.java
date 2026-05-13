@@ -90,10 +90,10 @@ import java.util.Map;
     }
   }
 
-  final Graphics2D graphics2D;
+  private final Graphics2D graphics2D;
 
-  final Map<Font, ReferencedObject<TextRendererHolder>> activeFontToTextRendererMap = Maps.newHashMap();
-  final Map<Font, ReferencedObject<TextRendererHolder>> forgottenFontToTextRendererMap = Maps.newHashMap();
+  private final Map<Font, ReferencedObject<TextRendererHolder>> activeFontToTextRendererMap = Maps.newHashMap();
+  private final Map<Font, ReferencedObject<TextRendererHolder>> forgottenFontToTextRendererMap = Maps.newHashMap();
 
   GlTextRenderer(Graphics2D graphics2D) {
     assert graphics2D != null;

@@ -62,7 +62,7 @@ import static com.jogamp.opengl.GL2.GL_LINE_STIPPLE;
   static final double FLATNESS = 0.01;
   static final Stroke LINE_STROKE = new BasicStroke(0);
 
-  final Graphics2D graphics2D;
+  private final Graphics2D graphics2D;
 
   GlTessellationRenderer(Graphics2D graphics2D) {
     assert graphics2D != null;

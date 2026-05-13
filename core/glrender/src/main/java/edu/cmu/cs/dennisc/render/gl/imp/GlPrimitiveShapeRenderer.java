@@ -57,7 +57,7 @@ import static com.jogamp.opengl.GL2.GL_POLYGON;
 /*package-private*/ final class GlPrimitiveShapeRenderer {
   private static SineCosineCache s_sineCosineCache = new SineCosineCache(8);
 
-  final Graphics2D graphics2D;
+  private final Graphics2D graphics2D;
 
   GlPrimitiveShapeRenderer(Graphics2D graphics2D) {
     assert graphics2D != null;
