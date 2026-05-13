@@ -702,54 +702,19 @@ public class ModelResourceExporter {
   }
 
   private boolean shouldSuppressJoint(String jointString) {
-    if (this.jointIdsToSuppress.contains(jointString)) {
-      return true;
-    }
-    if (ModelResourceJointTreeUtilities.isRootJoint(jointString)) {
-      return true;
-    }
-    return false;
-  }
-
-  private String getArrayNameFromMapForJoint(String jointString, Map<String, List<String>> arrayEntries) {
-    for (Entry<String, List<String>> entry : arrayEntries.entrySet()) {
-      if (entry.getValue().contains(jointString)) {
-        return entry.getKey();
-      }
-    }
-    return null;
+    return ModelResourceJavaGenerator.shouldSuppressJoint(jointString, this.jointIdsToSuppress);
   }
 
   private boolean shouldSuppressJointInArray(String jointString, Map<String, List<String>> arrayEntries) {
-    for (Entry<String, List<String>> entry : arrayEntries.entrySet()) {
-      //We don't suppress the first element in the array so we can generate an accessor for it in Alice
-      if (entry.getValue().contains(jointString)) {
-        if (this.arraysToExposeFirstElementOf.contains(entry.getKey()) && (getArrayIndexForJoint(jointString) == 0)) {
-          return false;
-        } else {
-          return true;
-        }
-      }
-    }
-    return false;
+    return ModelResourceJavaGenerator.shouldSuppressJointInArray(jointString, arrayEntries, this.arraysToExposeFirstElementOf);
   }
 
   private boolean shouldHideJointInArray(String jointString, Map<String, List<String>> arrayEntries) {
-    for (Entry<String, List<String>> entry : arrayEntries.entrySet()) {
-      if (entry.getValue().contains(jointString)) {
-        if (this.arraysToHideElementsOf.contains(entry.getKey())) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return ModelResourceJavaGenerator.shouldHideJointInArray(jointString, arrayEntries, this.arraysToHideElementsOf);
   }
 
   public boolean shouldHideJointsOfArray(String arrayName) {
-    if (this.arraysToHideElementsOf.contains(arrayName)) {
-      return true;
-    }
-    return false;
+    return this.arraysToHideElementsOf.contains(arrayName);
   }
 
   private String getJointAccessMethodNameForArrayJoint(String jointName) {
@@ -800,7 +765,7 @@ public class ModelResourceExporter {
           if (shouldSuppressJoint(jointString) || shouldSuppressJointInArray(jointString, arrayEntries)) {
             sb.append("@FieldTemplate(visibility=Visibility.COMPLETELY_HIDDEN)" + JavaCodeUtilities.LINE_RETURN);
           } else {
-            String arrayName = getArrayNameFromMapForJoint(jointString, arrayEntries);
+            String arrayName = ModelResourceJavaGenerator.getArrayNameFromMapForJoint(jointString, arrayEntries);
             if (arrayName != null) {
               sb.append("@FieldTemplate(visibility=Visibility.PRIME_TIME, methodNameHint=\"" + getJointAccessMethodNameForArrayJoint(jointString) + "\")" + JavaCodeUtilities.LINE_RETURN);
             } else {

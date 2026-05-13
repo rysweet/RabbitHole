@@ -71,6 +71,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 final class ModelResourceJavaGenerator {
   private ModelResourceJavaGenerator() {
@@ -227,5 +228,48 @@ final class ModelResourceJavaGenerator {
         System.out.println("SKIPPING ENUM NAME: " + resourceEnumName);
       }
     }
+  }
+
+  static boolean shouldSuppressJoint(String jointString, List<String> jointIdsToSuppress) {
+    if (jointIdsToSuppress.contains(jointString)) {
+      return true;
+    }
+    return ModelResourceJointTreeUtilities.isRootJoint(jointString);
+  }
+
+  static String getArrayNameFromMapForJoint(String jointString, Map<String, List<String>> arrayEntries) {
+    for (Map.Entry<String, List<String>> entry : arrayEntries.entrySet()) {
+      if (entry.getValue().contains(jointString)) {
+        return entry.getKey();
+      }
+    }
+    return null;
+  }
+
+  static boolean shouldSuppressJointInArray(String jointString,
+      Map<String, List<String>> arrayEntries, List<String> arraysToExposeFirstElementOf) {
+    for (Map.Entry<String, List<String>> entry : arrayEntries.entrySet()) {
+      if (entry.getValue().contains(jointString)) {
+        if (arraysToExposeFirstElementOf.contains(entry.getKey())
+            && (ModelResourceArrayUtilities.getArrayIndexForJoint(jointString) == 0)) {
+          return false;
+        } else {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  static boolean shouldHideJointInArray(String jointString,
+      Map<String, List<String>> arrayEntries, List<String> arraysToHideElementsOf) {
+    for (Map.Entry<String, List<String>> entry : arrayEntries.entrySet()) {
+      if (entry.getValue().contains(jointString)) {
+        if (arraysToHideElementsOf.contains(entry.getKey())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
