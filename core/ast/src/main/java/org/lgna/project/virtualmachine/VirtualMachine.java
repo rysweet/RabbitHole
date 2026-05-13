@@ -42,17 +42,11 @@
  *******************************************************************************/
 package org.lgna.project.virtualmachine;
 
-import edu.cmu.cs.dennisc.java.lang.ArrayUtilities;
-import edu.cmu.cs.dennisc.java.lang.IterableUtilities;
 import edu.cmu.cs.dennisc.java.lang.reflect.ReflectionUtilities;
-import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
-import edu.cmu.cs.dennisc.print.PrintUtilities;
-import org.lgna.common.EachInTogetherRunnable;
-import org.lgna.common.ThreadUtilities;
 import org.lgna.project.ast.*;
-import org.lgna.project.virtualmachine.events.*;
+import org.lgna.project.virtualmachine.events.VirtualMachineListener;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -62,6 +56,7 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author Dennis Cosgrove
@@ -177,7 +172,7 @@ public abstract class VirtualMachine {
     //}
   }
 
-  private final Map<Class<?>, Class<?>> mapAbstractClsToAdapterCls = Maps.newHashMap();
+  final Map<Class<?>, Class<?>> mapAbstractClsToAdapterCls = Maps.newHashMap();
 
   public void registerAbstractClassAdapter(Class<?> abstractCls, Class<?> adapterCls) {
     if (!ReflectionUtilities.isAbstract(abstractCls)) {
@@ -234,82 +229,8 @@ public abstract class VirtualMachine {
     }
   }
 
-  private Object evaluateArgument(AbstractArgument argument) {
-    assert argument != null;
-    Expression expression = argument.expression.getValue();
-    assert expression != null;
-    if (expression instanceof LambdaExpression lambdaExpression) {
-      return this.EPIC_HACK_evaluateLambdaExpression(lambdaExpression, argument);
-    } else {
-      return this.evaluate(expression);
-    }
-  }
-
   public Object[] evaluateArguments(AbstractCode code, NodeListProperty<SimpleArgument> arguments, NodeListProperty<SimpleArgument> variableArguments, NodeListProperty<JavaKeyedArgument> keyedArguments) {
-    //todo: when variable length and keyed parameters are offered in the IDE (User) this code will need to be updated
-    List<? extends AbstractParameter> requiredParameters = code.getRequiredParameters();
-    AbstractParameter variableParameter = code.getVariableLengthParameter();
-    AbstractParameter keyedParameter = code.getKeyedParameter();
-
-    final int REQUIRED_N = arguments.size();
-    assert requiredParameters.size() == REQUIRED_N : code.getName() + " " + requiredParameters.size() + " " + arguments.size();
-
-    int length = REQUIRED_N;
-    if (variableParameter != null) {
-      length += 1;
-    }
-    if (keyedParameter != null) {
-      length += 1;
-    }
-    Object[] rv = new Object[length];
-    int rvIndex;
-    for (rvIndex = 0; rvIndex < REQUIRED_N; rvIndex++) {
-      rv[rvIndex] = this.evaluateArgument(arguments.get(rvIndex));
-    }
-    if (variableParameter != null) {
-      final int VARIABLE_N = variableArguments.size();
-      JavaType variableArrayType = variableParameter.getValueType().getFirstEncounteredJavaType();
-      assert variableArrayType.isArray();
-      Class<?> componentCls = variableArrayType.getComponentType().getClassReflectionProxy().getReification();
-      Object array = Array.newInstance(componentCls, VARIABLE_N);
-      for (int i = 0; i < VARIABLE_N; i++) {
-        //todo: support primitive types
-        Array.set(array, i, this.evaluateArgument(variableArguments.get(rvIndex)));
-      }
-      rv[rvIndex] = array;
-    }
-    if (keyedParameter != null) {
-      final int KEYED_N = keyedArguments.size();
-      JavaType keyedArrayType = keyedParameter.getValueType().getFirstEncounteredJavaType();
-      assert keyedArrayType.isArray();
-      Class<?> componentCls = keyedArrayType.getComponentType().getClassReflectionProxy().getReification();
-      Object array = Array.newInstance(componentCls, KEYED_N);
-      for (int i = 0; i < KEYED_N; i++) {
-        //todo: support primitive types
-        Array.set(array, i, this.evaluateArgument(keyedArguments.get(i)));
-      }
-      rv[rvIndex] = array;
-      //
-      //
-      //      org.lgna.project.ast.AbstractParameter paramLast = requiredParameters.get( N-1 );
-      //      if( paramLast.isVariableLength() ) {
-      //        Class<?> arrayCls =  paramLast.getValueType().getFirstTypeEncounteredDeclaredInJava().getClassReflectionProxy().getReification();
-      //        assert arrayCls != null;
-      //        Class<?> componentCls = arrayCls.getComponentType();
-      //        assert componentCls != null;
-      //        rv[ N-1 ] = java.lang.reflect.Array.newInstance( componentCls, M );
-      //        for( int j=0; j<( M - (N-1) ); j++ ) {
-      //          org.lgna.project.ast.AbstractArgument argumentJ = arguments.get( (N-1) + j );
-      //          assert argumentJ != null;
-      //          Object valueJ = this.evaluate( argumentJ );
-      //          assert valueJ != null;
-      //          java.lang.reflect.Array.set( rv[ N-1 ], j, valueJ );
-      //        }
-      //      } else {
-      //        rv[ N-1 ] = this.evaluate( arguments.get( N-1 ) );
-      //      }
-    }
-    return rv;
+    return expressionEvaluator.evaluateArguments(code, arguments, variableArguments, keyedArguments);
   }
 
   protected Integer getArrayLength(Object array) {
@@ -380,7 +301,7 @@ public abstract class VirtualMachine {
     }
   }
 
-  private void checkNotNull(Object value, String message) {
+  void checkNotNull(Object value, String message) {
     if (value == null) {
       throw new LgnaVmNullPointerException(message, this);
     }
@@ -419,9 +340,14 @@ public abstract class VirtualMachine {
       assert instance instanceof UserInstance : instance;
     }
     UserInstance userInstance = (UserInstance) instance;
-    Map<AbstractParameter, Object> map = Maps.newHashMap();
-    for (int i = 0; i < arguments.length; i++) {
-      map.put(method.requiredParameters.get(i), arguments[i]);
+    Map<AbstractParameter, Object> map;
+    if (arguments.length == 0) {
+      map = Collections.emptyMap();
+    } else {
+      map = Maps.newHashMap();
+      for (int i = 0; i < arguments.length; i++) {
+        map.put(method.requiredParameters.get(i), arguments[i]);
+      }
     }
     this.pushMethodFrame(userInstance, method, map);
     try {
@@ -510,651 +436,16 @@ public abstract class VirtualMachine {
     return method.invoke(this, instance, arguments);
   }
 
-  protected Object evaluateAssignmentExpression(AssignmentExpression assignmentExpression) {
-    Expression leftHandExpression = assignmentExpression.leftHandSide.getValue();
-    Expression rightHandExpression = assignmentExpression.rightHandSide.getValue();
-    Object rightHandValue = this.evaluate(rightHandExpression);
-    if (assignmentExpression.operator.getValue() == AssignmentExpression.Operator.ASSIGN) {
-      if (leftHandExpression instanceof FieldAccess fieldAccess) {
-        this.set(fieldAccess.field.getValue(), this.evaluate(fieldAccess.expression.getValue()), rightHandValue);
-      } else if (leftHandExpression instanceof LocalAccess localAccess) {
-        this.setLocal(localAccess.local.getValue(), rightHandValue);
-      } else if (leftHandExpression instanceof ArrayAccess arrayAccess) {
-        this.setItemAtIndex(arrayAccess.arrayType.getValue(), this.evaluate(arrayAccess.array.getValue()), this.evaluateInt(arrayAccess.index.getValue(), "array index is null"), rightHandValue);
-      } else {
-        PrintUtilities.println("todo: evaluateActual", assignmentExpression.leftHandSide.getValue(), rightHandValue);
-      }
-    } else {
-      PrintUtilities.println("todo: evaluateActual", assignmentExpression);
-    }
-    return null;
-  }
-
-  protected Object evaluateBooleanLiteral(BooleanLiteral booleanLiteral) {
-    return booleanLiteral.value.getValue();
-  }
-
-  protected Object evaluateArrayInstanceCreation(ArrayInstanceCreation arrayInstanceCreation) {
-    Object[] values = new Object[arrayInstanceCreation.expressions.size()];
-    for (int i = 0; i < values.length; i++) {
-      values[i] = this.evaluate(arrayInstanceCreation.expressions.get(i));
-    }
-    int[] lengths = new int[arrayInstanceCreation.lengths.size()];
-    for (int i = 0; i < lengths.length; i++) {
-      lengths[i] = arrayInstanceCreation.lengths.get(i);
-    }
-    return this.createArrayInstance(arrayInstanceCreation.arrayType.getValue(), lengths, values);
-  }
-
-  protected Object evaluateArrayAccess(ArrayAccess arrayAccess) {
-    return this.getItemAtIndex(arrayAccess.arrayType.getValue(), this.evaluate(arrayAccess.array.getValue()), this.evaluateInt(arrayAccess.index.getValue(), "array index is null"));
-  }
-
-  protected Integer evaluateArrayLength(ArrayLength arrayLength) {
-    return this.getArrayLength(this.evaluate(arrayLength.array.getValue()));
-  }
-
-  protected Object evaluateFieldAccess(FieldAccess fieldAccess) {
-    Object o = fieldAccess.field.getValue();
-    if (o instanceof AbstractField) {
-      AbstractField field = fieldAccess.field.getValue();
-      Expression expression = fieldAccess.expression.getValue();
-      Object value = this.evaluate(expression);
-      return this.get(field, value);
-    } else {
-      Logger.errln("field access field is not a field", o);
-      Node node = fieldAccess;
-      while (node != null) {
-        Logger.errln("   ", node);
-        node = node.getParent();
-      }
-      return null;
-    }
-  }
-
-  protected Object evaluateLocalAccess(LocalAccess localAccess) {
-    return this.getLocal(localAccess.local.getValue());
-  }
-
-  protected Object evaluateArithmeticInfixExpression(ArithmeticInfixExpression arithmeticInfixExpression) {
-    Number leftOperand = (Number) this.evaluate(arithmeticInfixExpression.leftOperand.getValue());
-    Number rightOperand = (Number) this.evaluate(arithmeticInfixExpression.rightOperand.getValue());
-    return arithmeticInfixExpression.operator.getValue().operate(leftOperand, rightOperand);
-  }
-
-  protected Object evaluateBitwiseInfixExpression(BitwiseInfixExpression bitwiseInfixExpression) {
-    Object leftOperand = this.evaluate(bitwiseInfixExpression.leftOperand.getValue());
-    Object rightOperand = this.evaluate(bitwiseInfixExpression.rightOperand.getValue());
-    return bitwiseInfixExpression.operator.getValue().operate(leftOperand, rightOperand);
-  }
-
-  protected Boolean evaluateConditionalInfixExpression(ConditionalInfixExpression conditionalInfixExpression) {
-    ConditionalInfixExpression.Operator operator = conditionalInfixExpression.operator.getValue();
-    Boolean leftOperand = (Boolean) this.evaluate(conditionalInfixExpression.leftOperand.getValue());
-    if (operator == ConditionalInfixExpression.Operator.AND) {
-      if (leftOperand) {
-        return (Boolean) this.evaluate(conditionalInfixExpression.rightOperand.getValue());
-      } else {
-        return false;
-      }
-    } else if (operator == ConditionalInfixExpression.Operator.OR) {
-      if (leftOperand) {
-        return true;
-      } else {
-        return (Boolean) this.evaluate(conditionalInfixExpression.rightOperand.getValue());
-      }
-    } else {
-
-      return false;
-    }
-  }
-
-  protected Boolean evaluateRelationalInfixExpression(RelationalInfixExpression relationalInfixExpression) {
-    Object leftOperand = UserInstance.getJavaInstanceIfNecessary(this.evaluate(relationalInfixExpression.leftOperand.getValue()));
-    Object rightOperand = UserInstance.getJavaInstanceIfNecessary(this.evaluate(relationalInfixExpression.rightOperand.getValue()));
-    if (leftOperand != null) {
-      if (rightOperand != null) {
-        return relationalInfixExpression.operator.getValue().operate(leftOperand, rightOperand);
-      } else {
-        throw new LgnaVmNullPointerException("right operand is null.", this);
-      }
-    } else {
-      if (rightOperand != null) {
-        throw new LgnaVmNullPointerException("left operand is null.", this);
-      } else {
-        throw new LgnaVmNullPointerException("left and right operands are both null.", this);
-      }
-    }
-  }
-
-  protected Object evaluateShiftInfixExpression(ShiftInfixExpression shiftInfixExpression) {
-    Object leftOperand = this.evaluate(shiftInfixExpression.leftOperand.getValue());
-    Object rightOperand = this.evaluate(shiftInfixExpression.rightOperand.getValue());
-    return shiftInfixExpression.operator.getValue().operate(leftOperand, rightOperand);
-  }
-
-  protected Object evaluateLogicalComplement(LogicalComplement logicalComplement) {
-    Boolean operand = this.evaluateBoolean(logicalComplement.operand.getValue(), "logical complement expression is null");
-    return !operand;
-  }
-
-  protected String evaluateStringConcatenation(StringConcatenation stringConcatenation) {
-    Object leftOperand = this.evaluate(stringConcatenation.leftOperand.getValue());
-    Object rightOperand = this.evaluate(stringConcatenation.rightOperand.getValue());
-    return String.valueOf(leftOperand) + rightOperand;
-  }
-
-  protected Object evaluateMethodInvocation(MethodInvocation methodInvocation) {
-    if (methodInvocation.isValid()) {
-      Object[] allArguments = this.evaluateArguments(methodInvocation.method.getValue(), methodInvocation.requiredArguments, methodInvocation.variableArguments, methodInvocation.keyedArguments);
-      int parameterCount = methodInvocation.method.getValue().getRequiredParameters().size();
-      if (methodInvocation.method.getValue().getVariableLengthParameter() != null) {
-        parameterCount += 1;
-      }
-      if (methodInvocation.method.getValue().getKeyedParameter() != null) {
-        parameterCount += 1;
-      }
-      assert parameterCount == allArguments.length : methodInvocation.method.getValue().getName();
-      Expression targetExpression = methodInvocation.expression.getValue();
-      Object target = this.evaluate(targetExpression);
-
-      try {
-        return invoke(target, methodInvocation.method.getValue(), allArguments);
-      } catch (Throwable e) {
-        if (!isStopped) {
-          Logger.severe("The method invocation threw an error. Continuing past.", methodInvocation.method.getValue(), e);
-        }
-        return null;
-      }
-    } else {
-      Logger.severe("The method invocation is not valid. Continuing past.", methodInvocation.method.getValue());
-      return null;
-    }
-  }
-
-  protected Object evaluateNullLiteral(NullLiteral nullLiteral) {
-    return null;
-  }
-
-  protected Object evaluateDoubleLiteral(DoubleLiteral doubleLiteral) {
-    return doubleLiteral.value.getValue();
-  }
-
-  protected Object evaluateFloatLiteral(FloatLiteral floatLiteral) {
-    return floatLiteral.value.getValue();
-  }
-
-  protected Object evaluateIntegerLiteral(IntegerLiteral integerLiteral) {
-    return integerLiteral.value.getValue();
-  }
-
-  protected Object evaluateParameterAccess(ParameterAccess parameterAccess) {
-    return this.lookup(parameterAccess.parameter.getValue());
-  }
-
-  protected Object evaluateStringLiteral(StringLiteral stringLiteral) {
-    return stringLiteral.value.getValue();
-  }
-
-  protected Object evaluateThisExpression(ThisExpression thisExpression) {
-    Object rv = this.getThis();
-    assert rv != null;
-    return rv;
-  }
-
-  protected Object evaluateTypeExpression(TypeExpression typeExpression) {
-    return typeExpression.value.getValue();
-  }
-
-  protected Object evaluateTypeLiteral(TypeLiteral typeLiteral) {
-    return typeLiteral.value.getValue();
-  }
-
-  protected Object evaluateResourceExpression(ResourceExpression resourceExpression) {
-    return resourceExpression.resource.getValue();
-  }
-
-  protected Object EPIC_HACK_evaluateLambdaExpression(LambdaExpression lambdaExpression, AbstractArgument argument) {
-    Lambda lambda = lambdaExpression.value.getValue();
-
-    AbstractType<?, ?, ?> type = argument.parameter.getValue().getValueType();
-    if (type instanceof JavaType javaType) {
-
-      UserInstance thisInstance = this.getThis();
-      assert thisInstance != null;
-      Class<?> interfaceCls = javaType.getClassReflectionProxy().getReification();
-      Class<?> adapterCls = this.mapAbstractClsToAdapterCls.get(interfaceCls);
-      assert adapterCls != null : interfaceCls;
-      Class<?>[] parameterTypes = {LambdaContext.class, Lambda.class, UserInstance.class};
-      Object[] arguments = {new LambdaContext() {
-        @Override
-        public void invokeEntryPoint(Lambda lambda, AbstractMethod singleAbstractMethod, UserInstance thisInstance, Object... arguments) {
-          assert thisInstance != null;
-          if (lambda instanceof UserLambda userLambda) {
-            Map<AbstractParameter, Object> map = Maps.newHashMap();
-            for (int i = 0; i < arguments.length; i++) {
-              map.put(userLambda.requiredParameters.get(i), arguments[i]);
-            }
-            pushLambdaFrame(thisInstance, userLambda, singleAbstractMethod, map);
-            try {
-              execute(userLambda.body.getValue());
-            } catch (ReturnException re) {
-              Logger.todo("handle return");
-              assert false : re;
-            } finally {
-              popFrame();
-            }
-          }
-        }
-      }, lambda, thisInstance};
-      try {
-        Constructor<?> cnstrctr = adapterCls.getDeclaredConstructor(parameterTypes);
-        return cnstrctr.newInstance(arguments);
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      throw new RuntimeException("todo");
-    }
-  }
-
-  protected Object evaluateLambdaExpression(LambdaExpression lambdaExpression) {
-    throw new RuntimeException("todo");
-  }
-
   protected Object evaluate(Expression expression) {
-    if (expression == null) {
-      throw new NullPointerException();
-    }
-    Object rv = switch (expression) {
-      case AssignmentExpression assignmentExpression -> evaluateAssignmentExpression(assignmentExpression);
-      case BooleanLiteral bool -> evaluateBooleanLiteral(bool);
-      case InstanceCreation creation -> creation.evaluate(this);
-      case ArrayInstanceCreation arrayCreation -> evaluateArrayInstanceCreation(arrayCreation);
-      case ArrayLength length -> evaluateArrayLength(length);
-      case ArrayAccess array -> evaluateArrayAccess(array);
-      case FieldAccess field -> evaluateFieldAccess(field);
-      case LocalAccess local -> evaluateLocalAccess(local);
-      case ArithmeticInfixExpression math -> evaluateArithmeticInfixExpression(math);
-      case BitwiseInfixExpression bitwise -> evaluateBitwiseInfixExpression(bitwise);
-      case ConditionalInfixExpression conditional -> evaluateConditionalInfixExpression(conditional);
-      case RelationalInfixExpression relational -> evaluateRelationalInfixExpression(relational);
-      case ShiftInfixExpression infixExpression -> evaluateShiftInfixExpression(infixExpression);
-      case LogicalComplement complement -> evaluateLogicalComplement(complement);
-      case MethodInvocation invocation -> evaluateMethodInvocation(invocation);
-      case NullLiteral nullLiteral -> evaluateNullLiteral(nullLiteral);
-      case StringConcatenation concatenation -> evaluateStringConcatenation(concatenation);
-      case DoubleLiteral doubleLiteral -> evaluateDoubleLiteral(doubleLiteral);
-      case FloatLiteral floatLiteral -> evaluateFloatLiteral(floatLiteral);
-      case IntegerLiteral integerLiteral -> evaluateIntegerLiteral(integerLiteral);
-      case ParameterAccess access -> evaluateParameterAccess(access);
-      case StringLiteral stringLiteral -> evaluateStringLiteral(stringLiteral);
-      case ThisExpression thisExpression -> evaluateThisExpression(thisExpression);
-      case TypeExpression typeExpression -> evaluateTypeExpression(typeExpression);
-      case TypeLiteral typeLiteral -> evaluateTypeLiteral(typeLiteral);
-      case ResourceExpression resourceExpression -> evaluateResourceExpression(resourceExpression);
-      case LambdaExpression lambdaExpression -> evaluateLambdaExpression(lambdaExpression);
-      default -> throw new RuntimeException(expression.getClass().getName());
-    };
-    synchronized (virtualMachineListeners) {
-      if (!virtualMachineListeners.isEmpty()) {
-        ExpressionEvaluationEvent expressionEvaluationEvent = new ExpressionEvaluationEvent(this, expression, rv);
-        for (VirtualMachineListener virtualMachineListener : virtualMachineListeners) {
-          virtualMachineListener.expressionEvaluated(expressionEvaluationEvent);
-        }
-      }
-    }
-    return rv;
+    return expressionEvaluator.evaluate(expression);
   }
 
   protected final <E> E evaluate(Expression expression, Class<E> cls) {
-    //in order to support python...
-    //if( result instanceof Integer ) {
-    //  condition = ((Integer)result) != 0;
-    //} else {
-    //  condition = (Boolean)result;
-    //}
-    Object value = this.evaluate(expression);
-    if (cls.isArray()) {
-      if (value instanceof UserArrayInstance userArrayInstance) {
-        //todo
-        value = userArrayInstance.getValues();
-      }
-    }
-    return cls.cast(value);
-  }
-
-  private boolean evaluateBoolean(Expression expression, String nullExceptionMessage) {
-    Object value = this.evaluate(expression);
-    this.checkNotNull(value, nullExceptionMessage);
-    if (value instanceof Boolean b) {
-      return b;
-    } else {
-      throw new LgnaVmClassCastException(this, Boolean.class, value.getClass());
-    }
-  }
-
-  private int evaluateInt(Expression expression, String nullExceptionMessage) {
-    Object value = this.evaluate(expression);
-    this.checkNotNull(value, nullExceptionMessage);
-    if (value instanceof Integer integer) {
-      return integer;
-    } else {
-      throw new LgnaVmClassCastException(this, Integer.class, value.getClass());
-    }
-  }
-
-  protected void executeBlockStatement(BlockStatement blockStatement, VirtualMachineListener[] listeners) throws ReturnException {
-    //todo?
-    Statement[] array = new Statement[blockStatement.statements.size()];
-    blockStatement.statements.toArray(array);
-    for (Statement statement : array) {
-      this.execute(statement);
-    }
-  }
-
-  protected void executeConditionalStatement(ConditionalStatement conditionalStatement, VirtualMachineListener[] listeners) throws ReturnException {
-    for (BooleanExpressionBodyPair booleanExpressionBodyPair : conditionalStatement.booleanExpressionBodyPairs) {
-      if (this.evaluateBoolean(booleanExpressionBodyPair.expression.getValue(), "if condition is null")) {
-        this.execute(booleanExpressionBodyPair.body.getValue());
-        return;
-      }
-    }
-    this.execute(conditionalStatement.elseBody.getValue());
-  }
-
-  protected void executeComment(Comment comment, VirtualMachineListener[] listeners) {
-  }
-
-  protected void executeCountLoop(CountLoop countLoop, VirtualMachineListener[] listeners) throws ReturnException {
-    UserLocal variable = countLoop.variable.getValue();
-    UserLocal constant = countLoop.constant.getValue();
-    this.pushLocal(variable, -1);
-    try {
-      final int n = this.evaluateInt(countLoop.count.getValue(), "count expression is null");
-      this.pushLocal(constant, n);
-      try {
-        for (int i = 0; i < n; i++) {
-          if (isStopped) {
-            return;
-          }
-          CountLoopIterationEvent countLoopIterationEvent;
-          if (listeners != null) {
-            countLoopIterationEvent = new CountLoopIterationEvent(this, countLoop, i, n);
-            for (VirtualMachineListener virtualMachineListener : listeners) {
-              virtualMachineListener.countLoopIterating(countLoopIterationEvent);
-            }
-          } else {
-            countLoopIterationEvent = null;
-          }
-          this.setLocal(variable, i);
-          this.execute(countLoop.body.getValue());
-          if (listeners != null) {
-            for (VirtualMachineListener virtualMachineListener : listeners) {
-              virtualMachineListener.countLoopIterated(countLoopIterationEvent);
-            }
-          }
-        }
-      } finally {
-        this.popLocal(constant);
-      }
-    } finally {
-      this.popLocal(variable);
-    }
-  }
-
-  protected void executeDoInOrder(DoInOrder doInOrder, VirtualMachineListener[] listeners) throws ReturnException {
-    execute(doInOrder.body.getValue());
-  }
-
-  protected void executeDoTogether(DoTogether doTogether, VirtualMachineListener[] listeners) throws ReturnException {
-    BlockStatement blockStatement = doTogether.body.getValue();
-    //todo?
-    switch (blockStatement.statements.size()) {
-    case 0:
-      break;
-    case 1:
-      execute(blockStatement.statements.get(0));
-      break;
-    default:
-      final Frame owner = this.getFrameForThread(Thread.currentThread());
-      Runnable[] runnables = new Runnable[blockStatement.statements.size()];
-      for (int i = 0; i < runnables.length; i++) {
-        final Statement statementI = blockStatement.statements.get(i);
-        runnables[i] = new Runnable() {
-          @Override
-          public void run() {
-            //edu.cmu.cs.dennisc.print.PrintUtilities.println( statementI );
-            pushCurrentThread(owner);
-            try {
-              execute(statementI);
-            } catch (ReturnException re) {
-              //todo
-            } finally {
-              popCurrentThread();
-            }
-          }
-        };
-      }
-      ThreadUtilities.doTogether(runnables);
-    }
-  }
-
-  protected void executeExpressionStatement(ExpressionStatement expressionStatement, VirtualMachineListener[] listeners) {
-    @SuppressWarnings("unused") Object unused = this.evaluate(expressionStatement.expression.getValue());
-  }
-
-  protected void excecuteForEachLoop(AbstractForEachLoop forEachInLoop, Object[] array, VirtualMachineListener[] listeners) throws ReturnException {
-    UserLocal item = forEachInLoop.item.getValue();
-    BlockStatement blockStatement = forEachInLoop.body.getValue();
-    this.pushLocal(item, -1);
-    try {
-      int index = 0;
-      for (Object o : array) {
-        if (isStopped) {
-          return;
-        }
-        ForEachLoopIterationEvent forEachLoopIterationEvent;
-        if (listeners != null) {
-          forEachLoopIterationEvent = new ForEachLoopIterationEvent(this, forEachInLoop, o, array, index);
-          for (VirtualMachineListener virtualMachineListener : listeners) {
-            virtualMachineListener.forEachLoopIterating(forEachLoopIterationEvent);
-          }
-        } else {
-          forEachLoopIterationEvent = null;
-        }
-
-        this.setLocal(item, o);
-        this.execute(blockStatement);
-        if (listeners != null) {
-          for (VirtualMachineListener virtualMachineListener : listeners) {
-            virtualMachineListener.forEachLoopIterated(forEachLoopIterationEvent);
-          }
-        }
-        index++;
-      }
-    } finally {
-      this.popLocal(item);
-    }
-  }
-
-  protected final void executeForEachInArrayLoop(ForEachInArrayLoop forEachInArrayLoop, VirtualMachineListener[] listeners) throws ReturnException {
-    Object[] array = this.evaluate(forEachInArrayLoop.array.getValue(), Object[].class);
-    this.checkNotNull(array, "for each array is null");
-    excecuteForEachLoop(forEachInArrayLoop, array, listeners);
-  }
-
-  protected final void executeForEachInIterableLoop(ForEachInIterableLoop forEachInIterableLoop, VirtualMachineListener[] listeners) throws ReturnException {
-    Iterable<?> iterable = this.evaluate(forEachInIterableLoop.iterable.getValue(), Iterable.class);
-    this.checkNotNull(iterable, "for each iterable is null");
-    excecuteForEachLoop(forEachInIterableLoop, IterableUtilities.toArray(iterable), listeners);
-  }
-
-  protected void excecuteEachInTogether(final AbstractEachInTogether eachInTogether, final Object[] array, final VirtualMachineListener[] listeners) throws ReturnException {
-    final UserLocal item = eachInTogether.item.getValue();
-    final BlockStatement blockStatement = eachInTogether.body.getValue();
-
-    switch (array.length) {
-    case 0:
-      break;
-    case 1:
-      Object value = array[0];
-      VirtualMachine.this.pushLocal(item, value);
-      try {
-        EachInTogetherItemEvent eachInTogetherEvent;
-        if (listeners != null) {
-          eachInTogetherEvent = new EachInTogetherItemEvent(this, eachInTogether, value, array);
-          for (VirtualMachineListener virtualMachineListener : listeners) {
-            virtualMachineListener.eachInTogetherItemExecuting(eachInTogetherEvent);
-          }
-        } else {
-          eachInTogetherEvent = null;
-        }
-        VirtualMachine.this.execute(blockStatement);
-        if (listeners != null) {
-          for (VirtualMachineListener virtualMachineListener : listeners) {
-            virtualMachineListener.eachInTogetherItemExecuted(eachInTogetherEvent);
-          }
-        }
-      } finally {
-        VirtualMachine.this.popLocal(item);
-      }
-      break;
-    default:
-      final Frame owner = this.getFrameForThread(Thread.currentThread());
-      ThreadUtilities.eachInTogether(new EachInTogetherRunnable<Object>() {
-        @Override
-        public void run(Object value) {
-          pushCurrentThread(owner);
-          try {
-            VirtualMachine.this.pushLocal(item, value);
-            try {
-              EachInTogetherItemEvent eachInTogetherEvent;
-              if (listeners != null) {
-                eachInTogetherEvent = new EachInTogetherItemEvent(VirtualMachine.this, eachInTogether, value, array);
-                for (VirtualMachineListener virtualMachineListener : listeners) {
-                  virtualMachineListener.eachInTogetherItemExecuting(eachInTogetherEvent);
-                }
-              } else {
-                eachInTogetherEvent = null;
-              }
-              VirtualMachine.this.execute(blockStatement);
-              if (listeners != null) {
-                for (VirtualMachineListener virtualMachineListener : listeners) {
-                  virtualMachineListener.eachInTogetherItemExecuted(eachInTogetherEvent);
-                }
-              }
-            } catch (ReturnException re) {
-              //todo
-            } finally {
-              VirtualMachine.this.popLocal(item);
-            }
-          } finally {
-            popCurrentThread();
-          }
-        }
-      }, array);
-    }
-  }
-
-  protected final void executeEachInArrayTogether(EachInArrayTogether eachInArrayTogether, VirtualMachineListener[] listeners) throws ReturnException {
-    Object[] array = this.evaluate(eachInArrayTogether.array.getValue(), Object[].class);
-    this.checkNotNull(array, "each in together array is null");
-    excecuteEachInTogether(eachInArrayTogether, array, listeners);
-  }
-
-  protected final void executeEachInIterableTogether(EachInIterableTogether eachInIterableTogether, VirtualMachineListener[] listeners) throws ReturnException {
-    Iterable<?> iterable = this.evaluate(eachInIterableTogether.iterable.getValue(), Iterable.class);
-    this.checkNotNull(iterable, "each in together iterable is null");
-    excecuteEachInTogether(eachInIterableTogether, IterableUtilities.toArray(iterable), listeners);
-  }
-
-  protected void executeReturnStatement(ReturnStatement returnStatement, VirtualMachineListener[] listeners) throws ReturnException {
-    Object returnValue = this.evaluate(returnStatement.expression.getValue());
-    //setReturnValue( returnValue );
-    throw new ReturnException(returnValue);
-  }
-
-  protected void executeWhileLoop(WhileLoop whileLoop, VirtualMachineListener[] listeners) throws ReturnException {
-    int i = 0;
-    while (!isStopped && evaluateBoolean(whileLoop.conditional.getValue(), "while condition is null")) {
-      WhileLoopIterationEvent whileLoopIterationEvent;
-      if (listeners != null) {
-        whileLoopIterationEvent = new WhileLoopIterationEvent(this, whileLoop, i);
-        for (VirtualMachineListener virtualMachineListener : listeners) {
-          virtualMachineListener.whileLoopIterating(whileLoopIterationEvent);
-        }
-      } else {
-        whileLoopIterationEvent = null;
-      }
-      this.execute(whileLoop.body.getValue());
-      if (listeners != null) {
-        for (VirtualMachineListener virtualMachineListener : listeners) {
-          virtualMachineListener.whileLoopIterated(whileLoopIterationEvent);
-        }
-      }
-      i++;
-    }
-  }
-
-  protected void executeLocalDeclarationStatement(LocalDeclarationStatement localDeclarationStatement, VirtualMachineListener[] listeners) {
-    this.pushLocal(localDeclarationStatement.local.getValue(), this.evaluate(localDeclarationStatement.initializer.getValue()));
-    //handle pop on exit of owning block statement
+    return expressionEvaluator.evaluate(expression, cls);
   }
 
   protected void execute(Statement statement) throws ReturnException {
-    if (isStopped) {
-      return;
-    }
-    assert statement != null : this;
-    if (statement.isEnabled.getValue()) {
-      StatementExecutionEvent statementEvent;
-      VirtualMachineListener[] listeners;
-      synchronized (this.virtualMachineListeners) {
-        if (!this.virtualMachineListeners.isEmpty()) {
-          statementEvent = new StatementExecutionEvent(this, statement);
-          listeners = ArrayUtilities.createArray(this.virtualMachineListeners, VirtualMachineListener.class);
-        } else {
-          statementEvent = null;
-          listeners = null;
-        }
-      }
-      if ((statementEvent != null) && (listeners != null)) {
-        for (VirtualMachineListener virtualMachineListener : listeners) {
-          virtualMachineListener.statementExecuting(statementEvent);
-        }
-      }
-
-      try {
-        switch (statement) {
-          case BlockStatement blockStatement -> executeBlockStatement(blockStatement, listeners);
-          case ConditionalStatement conditional -> executeConditionalStatement(conditional, listeners);
-          case Comment comment -> executeComment(comment, listeners);
-          case CountLoop countLoop -> executeCountLoop(countLoop, listeners);
-          case DoTogether doTogether -> executeDoTogether(doTogether, listeners);
-          case DoInOrder order -> executeDoInOrder(order, listeners);
-          case ExpressionStatement exp -> executeExpressionStatement(exp, listeners);
-          case ForEachInArrayLoop iterableArray -> executeForEachInArrayLoop(iterableArray, listeners);
-          case ForEachInIterableLoop iterableEach -> executeForEachInIterableLoop(iterableEach, listeners);
-          case EachInArrayTogether arrayTogether -> executeEachInArrayTogether(arrayTogether, listeners);
-          case EachInIterableTogether iterableTogetherTogether ->
-              executeEachInIterableTogether(iterableTogetherTogether, listeners);
-          case WhileLoop loop -> executeWhileLoop(loop, listeners);
-          case LocalDeclarationStatement declarationStatement ->
-              executeLocalDeclarationStatement(declarationStatement, listeners);
-          case ReturnStatement returnStatement -> executeReturnStatement(returnStatement, listeners);
-
-          // note: does not return.  throws ReturnException.
-          default -> throw new RuntimeException();
-        }
-      } finally {
-        if ((statementEvent != null) && (listeners != null)) {
-          for (VirtualMachineListener virtualMachineListener : listeners) {
-            virtualMachineListener.statementExecuted(statementEvent);
-          }
-        }
-      }
-    }
+    statementExecutor.execute(statement);
   }
 
   public void stopExecution() {
@@ -1162,29 +453,25 @@ public abstract class VirtualMachine {
   }
 
   public void addVirtualMachineListener(VirtualMachineListener virtualMachineListener) {
-    synchronized (this.virtualMachineListeners) {
-      this.virtualMachineListeners.add(virtualMachineListener);
-    }
+    this.virtualMachineListeners.add(virtualMachineListener);
   }
 
   public void removeVirtualMachineListener(VirtualMachineListener virtualMachineListener) {
-    synchronized (this.virtualMachineListeners) {
-      this.virtualMachineListeners.remove(virtualMachineListener);
-    }
+    this.virtualMachineListeners.remove(virtualMachineListener);
   }
 
   public List<VirtualMachineListener> getVirtualMachineListeners() {
-    synchronized (this.virtualMachineListeners) {
-      return Collections.unmodifiableList(this.virtualMachineListeners);
-    }
+    return Collections.unmodifiableList(this.virtualMachineListeners);
   }
 
   public void setForSceneEditor() {
     isForRunning = false;
   }
 
-  private final List<VirtualMachineListener> virtualMachineListeners = Lists.newLinkedList();
-  private boolean isStopped = false;
+  final CopyOnWriteArrayList<VirtualMachineListener> virtualMachineListeners = new CopyOnWriteArrayList<>();
+  boolean isStopped = false;
+  final VmExpressionEvaluator expressionEvaluator = new VmExpressionEvaluator(this);
+  final VmStatementExecutor statementExecutor = new VmStatementExecutor(this);
 
   // Marks this VM for use in running worlds. When true it allows errors to be thrown that interrupt execution.
   // A value of false indicates this VM is used during scene loading or scene setup where thrown exceptions can
