@@ -308,13 +308,13 @@ final class ModelResourceJavaGenerator {
           if (existingIds.contains(jointString)) {
             continue;
           }
-          if (!exporter.shouldHideJointInArray(jointString, arrayEntries)) {
+          if (!shouldHideJointInArray(jointString, arrayEntries, exporter.getArraysToHideElementsOf())) {
             if ((parentString == null) || (parentString.length() == 0)) {
               parentString = "null";
               rootJoints.add(jointString);
               addedRoots = true;
             }
-            if (exporter.shouldSuppressJoint(jointString) || exporter.shouldSuppressJointInArray(jointString, arrayEntries)) {
+            if (shouldSuppressJoint(jointString, exporter.getJointIdsToSuppress()) || shouldSuppressJointInArray(jointString, arrayEntries, exporter.getArraysToExposeFirstElementOf())) {
               sb.append("@FieldTemplate(visibility=Visibility.COMPLETELY_HIDDEN)" + JavaCodeUtilities.LINE_RETURN);
             } else {
               String arrayName = ModelResourceJavaGenerator.getArrayNameFromMapForJoint(jointString, arrayEntries);

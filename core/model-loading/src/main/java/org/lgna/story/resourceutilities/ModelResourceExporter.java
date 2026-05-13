@@ -69,16 +69,6 @@ public class ModelResourceExporter {
   static final String ROOT_IDS_FIELD_NAME = "JOINT_ID_ROOTS";
   static final String ROOT_IDS_METHOD_NAME = "getRootJointIds";
 
-  private class NamedFile {
-    public String name;
-    public File file;
-
-    public NamedFile(String name, File file) {
-      this.name = name;
-      this.file = file;
-    }
-  }
-
   private interface SubResourceTagUpdater {
     void addTags(ModelSubResourceExporter subResource, String... tags);
   }
@@ -560,18 +550,6 @@ public class ModelResourceExporter {
     return createResourceEnumName(this, modelName, textureName);
   }
 
-  boolean shouldSuppressJoint(String jointString) {
-    return ModelResourceJavaGenerator.shouldSuppressJoint(jointString, this.jointIdsToSuppress);
-  }
-
-  boolean shouldSuppressJointInArray(String jointString, Map<String, List<String>> arrayEntries) {
-    return ModelResourceJavaGenerator.shouldSuppressJointInArray(jointString, arrayEntries, this.arraysToExposeFirstElementOf);
-  }
-
-  boolean shouldHideJointInArray(String jointString, Map<String, List<String>> arrayEntries) {
-    return ModelResourceJavaGenerator.shouldHideJointInArray(jointString, arrayEntries, this.arraysToHideElementsOf);
-  }
-
   public boolean shouldHideJointsOfArray(String arrayName) {
     return this.arraysToHideElementsOf.contains(arrayName);
   }
@@ -599,6 +577,10 @@ public class ModelResourceExporter {
 
   List<String> getArraysToHideElementsOf() {
     return this.arraysToHideElementsOf;
+  }
+
+  List<String> getArraysToExposeFirstElementOf() {
+    return this.arraysToExposeFirstElementOf;
   }
 
   List<Tuple2<String, String>> getJointList() {
