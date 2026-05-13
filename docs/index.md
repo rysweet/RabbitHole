@@ -6,6 +6,8 @@ repository.
 
 ## Project save, export, and migration characterization
 
+- [SaveOperationCompletionEvidence Extraction](./reference/save-operation-completion-evidence-extraction.md) - Reference for the extraction of JSON evidence builders and file-system guards from `SaveOperationCompletionEvidence` into `EvidenceJsonWriter` and `EvidenceFileOperations` delegate classes (issue #561).
+- [Validate SaveOperationCompletionEvidence Extraction](./howto/validate-save-operation-completion-evidence-extraction.md) - How to verify compilation, line counts, visibility rules, and test pass/fail after the `SaveOperationCompletionEvidence` extraction.
 - [Project Save and Export Operations](./reference/project-save-export-operations.md) - Reference for the `core/ide` Save, Save As, Export operation behavior, headless loaded-project bridge, and characterization seams.
 - [Save Menu Dialog Write/Readback Proof](./reference/save-menu-dialog-write-proof.md) - Implemented contract for the `save-menu-dialog-write-proof` QA scenario that runs the rendered File-menu Save, controlled Swing chooser, `.a3p` write, readback, and marker proof path without workflow timeout wiring.
 - [Save Proof Evidence](./reference/save-proof-evidence.md) - Canonical JSON artifact contract, fail-closed validation rules, and executable blocker semantics for the rendered Save proof path.
