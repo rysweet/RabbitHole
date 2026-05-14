@@ -303,7 +303,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
   }
 
   private List<JointId> resolveAllJointIds(JointedModelImp<?, R> owner) {
-    List<JointId> allJointIds = new ArrayList<>(resourceBinder.getAllJointIds());
+    List<JointId> allJointIds = resourceBinder.getAllJointIds();
     for (JointArrayId arrayId : resourceBinder.getJointArrayIds()) {
       JointId[] jointArrayIds = resourceBinder.getJointArrayIdsFromFactory(owner, arrayId);
       Collections.addAll(allJointIds, jointArrayIds);
@@ -339,7 +339,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
   }
 
   private void matchNewDataToExistingJoints(Map<JointId, JointImp> newJoints) {
-    List<JointId> toRemove = Lists.newLinkedList();
+    List<JointId> toRemove = new ArrayList<>();
     for (JointId oldJointId : mapIdToJoint.keySet()) {
       if (newJoints.containsKey(oldJointId)) {
         mapIdToJoint.get(oldJointId).replaceWithJoint(newJoints.get(oldJointId));
@@ -398,7 +398,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
           rootJoints.add(entry.getValue());
         }
       }
-      cachedRootJoints = rootJoints;
+      cachedRootJoints = Collections.unmodifiableList(rootJoints);
     }
     return cachedRootJoints;
   }
@@ -445,7 +445,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
         public void popJoint(JointImp joint) {
         }
       });
-      cachedJointsDfs = rv;
+      cachedJointsDfs = Collections.unmodifiableList(rv);
     }
     return cachedJointsDfs;
   }

@@ -456,7 +456,7 @@ public abstract class JointedModelImp<A extends SJointedModel, R extends Jointed
   // ════════════════════════════════════════════════════════════════════════════
 
   private final A abstraction;
-  final JointedModelResourceBinder<R> resourceBinder;
-  final JointHierarchyManager<R> hierarchyManager;
-  final JointedModelVisualManager<R> visualManager;
+  private final JointedModelResourceBinder<R> resourceBinder;
+  private final JointHierarchyManager<R> hierarchyManager;
+  private final JointedModelVisualManager<R> visualManager;
 }
