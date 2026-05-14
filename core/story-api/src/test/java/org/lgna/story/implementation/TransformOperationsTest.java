@@ -122,10 +122,10 @@ public class TransformOperationsTest {
     other.setLocalTransformation(AffineMatrix4x4.createTranslation(0, 5, 0));
     subject.setLocalTransformation(AffineMatrix4x4.IDENTITY);
 
-    // getDistanceAbove(other, asSeenBy) measures how far "other" is above "subject"
-    // For StandInImps (point entities), this is the Y difference
+    // For point entities (StandInImp), getMin==getMax==translation.
+    // getDistanceAbove computes getMin(subject).y - getMax(other).y = 0 - 5 = -5
     double dist = ops.getDistanceAbove(other, vehicle);
-    assertTrue("Distance above should be positive when other is higher", dist >= 0);
+    assertEquals("Point entity distance above", -5.0, dist, 1e-6);
   }
 
   @Test
@@ -135,8 +135,9 @@ public class TransformOperationsTest {
     other.setLocalTransformation(AffineMatrix4x4.createTranslation(0, -5, 0));
     subject.setLocalTransformation(AffineMatrix4x4.IDENTITY);
 
+    // For point entities: getMin(other).y - getMax(subject).y = -5 - 0 = -5
     double dist = ops.getDistanceBelow(other, vehicle);
-    assertTrue("Distance below should be positive when other is lower", dist >= 0);
+    assertEquals("Point entity distance below", -5.0, dist, 1e-6);
   }
 
   @Test
@@ -146,8 +147,9 @@ public class TransformOperationsTest {
     other.setLocalTransformation(AffineMatrix4x4.createTranslation(0, 0, 5));
     subject.setLocalTransformation(AffineMatrix4x4.IDENTITY);
 
+    // For point entities: getMin(subject).z - getMax(other).z = 0 - 5 = -5
     double dist = ops.getDistanceBehind(other, vehicle);
-    assertTrue("Distance behind should be non-negative when other is at +Z", dist >= 0);
+    assertEquals("Point entity distance behind", -5.0, dist, 1e-6);
   }
 
   @Test
@@ -157,8 +159,9 @@ public class TransformOperationsTest {
     other.setLocalTransformation(AffineMatrix4x4.createTranslation(0, 0, -5));
     subject.setLocalTransformation(AffineMatrix4x4.IDENTITY);
 
+    // For point entities: getMin(other).z - getMax(subject).z = -5 - 0 = -5
     double dist = ops.getDistanceInFrontOf(other, vehicle);
-    assertTrue("Distance in front should be non-negative when other is at -Z", dist >= 0);
+    assertEquals("Point entity distance in front", -5.0, dist, 1e-6);
   }
 
   @Test
@@ -168,8 +171,9 @@ public class TransformOperationsTest {
     other.setLocalTransformation(AffineMatrix4x4.createTranslation(-5, 0, 0));
     subject.setLocalTransformation(AffineMatrix4x4.IDENTITY);
 
+    // For point entities: getMin(other).x - getMax(subject).x = -5 - 0 = -5
     double dist = ops.getDistanceToTheLeftOf(other, vehicle);
-    assertTrue("Distance to left should be non-negative when other is at -X", dist >= 0);
+    assertEquals("Point entity distance to left", -5.0, dist, 1e-6);
   }
 
   @Test
@@ -179,8 +183,9 @@ public class TransformOperationsTest {
     other.setLocalTransformation(AffineMatrix4x4.createTranslation(5, 0, 0));
     subject.setLocalTransformation(AffineMatrix4x4.IDENTITY);
 
+    // For point entities: getMin(subject).x - getMax(other).x = 0 - 5 = -5
     double dist = ops.getDistanceToTheRightOf(other, vehicle);
-    assertTrue("Distance to right should be non-negative when other is at +X", dist >= 0);
+    assertEquals("Point entity distance to right", -5.0, dist, 1e-6);
   }
 
   // --- differenceToEpsilon ---
