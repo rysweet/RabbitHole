@@ -43,31 +43,15 @@
 
 package org.lgna.story.implementation.alice;
 
-import edu.cmu.cs.dennisc.codec.BinaryDecoder;
-import edu.cmu.cs.dennisc.codec.BinaryEncoder;
-import edu.cmu.cs.dennisc.codec.InputStreamBinaryDecoder;
-import edu.cmu.cs.dennisc.codec.OutputStreamBinaryEncoder;
-import edu.cmu.cs.dennisc.codec.ReferenceableBinaryEncodableAndDecodable;
-import edu.cmu.cs.dennisc.image.ImageUtilities;
-import edu.cmu.cs.dennisc.java.io.FileUtilities;
 import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.ResourceBundleUtilities;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
-import edu.cmu.cs.dennisc.scenegraph.Appearance;
-import edu.cmu.cs.dennisc.scenegraph.Geometry;
-import edu.cmu.cs.dennisc.scenegraph.Joint;
 import edu.cmu.cs.dennisc.scenegraph.SkeletonVisual;
 import edu.cmu.cs.dennisc.scenegraph.TexturedAppearance;
-import edu.cmu.cs.dennisc.scenegraph.WeightedMesh;
-import edu.cmu.cs.dennisc.scenegraph.qa.Problem;
-import edu.cmu.cs.dennisc.scenegraph.qa.QualityAssuranceUtilities;
-import edu.cmu.cs.dennisc.texture.BufferedImageTexture;
-import edu.cmu.cs.dennisc.texture.Texture;
 import edu.cmu.cs.dennisc.xml.XMLUtilities;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.alice.math.immutable.AxisAlignedBox;
-import org.alice.math.immutable.Matrix3x3;
 import org.alice.math.immutable.Point3;
 import org.alice.math.immutable.UnitQuaternion;
 import org.lgna.story.resources.*;
@@ -76,146 +60,28 @@ import org.lgna.story.resourceutilities.StorytellingResources;
 import org.w3c.dom.Document;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
-
 /**
+ * Facade for Alice model resource operations. Delegates to
+ * {@link ResourceEnumResolver}, {@link ResourceTextureManager}, and {@link ModelResourceLoader}.
+ *
  * @author Dennis Cosgrove
  */
 public class AliceResourceUtilities {
   public static final String MODEL_RESOURCE_EXTENSION = "a3r";
   public static final String TEXTURE_RESOURCE_EXTENSION = "a3t";
 
-  private static final Map<URL, SkeletonVisual> urlToVisualMap = Maps.newHashMap();
-  private static final Map<URL, TexturedAppearance[]> urlToTextureMap = Maps.newHashMap();
   private static final Map<String, ModelResourceInfo> classToInfoMap = Maps.newHashMap();
-  private static final Map<String, ResourceNames> resourceIdentifierToResourceNamesMap = Maps.newHashMap();
-
-  private static final class ResourceNames {
-    public final String visualName;
-    public final String textureName;
-
-    public ResourceNames(String visualName, String textureName) {
-      this.visualName = visualName;
-      this.textureName = textureName;
-    }
-  }
 
   /*private*/
   protected AliceResourceUtilities() {
     throw new AssertionError();
-  }
-
-  private static String findLocalizedText(String bundleName, String key, Locale locale) {
-    if ((bundleName != null) && (key != null)) {
-      try {
-        ResourceBundle resourceBundle = ResourceBundleUtilities.getUtf8Bundle(bundleName, locale);
-        String rv = resourceBundle.getString(key);
-        return rv;
-      } catch (MissingResourceException mre) {
-        //Logger.errln( bundleName, key );
-        return null;
-      }
-    } else {
-      return null;
-    }
-  }
-
-  private static String CLASS_NAME_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryNames";
-  private static String GROUP_TAGS_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryTags";
-  private static String THEME_TAGS_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryTags";
-  private static String TAGS_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryTags";
-
-  private static String getClassNameLocalizationBundleName() {
-    return CLASS_NAME_LOCALIZATION_BUNDLE;
-  }
-
-  private static String getGroupTagsLocalizationBundleName() {
-    return GROUP_TAGS_LOCALIZATION_BUNDLE;
-  }
-
-  private static String getThemeTagsLocalizationBundleName() {
-    return THEME_TAGS_LOCALIZATION_BUNDLE;
-  }
-
-  private static String getTagsLocalizationBundleName() {
-    return TAGS_LOCALIZATION_BUNDLE;
-  }
-
-  public static SkeletonVisual decodeVisual(URL url) {
-    try {
-      InputStream is = url.openStream();
-      BinaryDecoder decoder = new InputStreamBinaryDecoder(is);
-      return decoder.decodeReferenceableBinaryEncodableAndDecodable(new HashMap<Integer, ReferenceableBinaryEncodableAndDecodable>());
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    return null;
-  }
-
-  public static TexturedAppearance[] decodeTexture(URL url) {
-    try {
-      InputStream is = url.openStream();
-      BinaryDecoder decoder = new InputStreamBinaryDecoder(is);
-      TexturedAppearance[] rv = decoder.decodeReferenceableBinaryEncodableAndDecodableArray(TexturedAppearance.class, new HashMap<Integer, ReferenceableBinaryEncodableAndDecodable>());
-      for (TexturedAppearance ta : rv) {
-        correctDimensions(ta);
-        ((BufferedImageTexture) ta.diffuseColorTexture.getValue()).directSetMipMappingDesired(false);
-      }
-      return rv;
-    } catch (Exception e) {
-      e.printStackTrace();
-      return null;
-    }
-  }
-
-  // Stretch images to power of two to fix rendering on certain Mac graphics configurations.
-  // The problem was observed specifically with the Baby Penguin model.
-  private static void correctDimensions(TexturedAppearance ta) {
-    Texture texture = ta.diffuseColorTexture.getValue();
-    if (texture instanceof BufferedImageTexture buffTexture) {
-      buffTexture.setBufferedImage(ImageUtilities.stretchToPowersOfTwo(buffTexture.getBufferedImage()));
-    }
-  }
-
-  public static void encodeVisual(final SkeletonVisual toSave, OutputStream os) throws IOException {
-    BinaryEncoder encoder = new OutputStreamBinaryEncoder(os);
-    encoder.encode(toSave, new HashMap<ReferenceableBinaryEncodableAndDecodable, Integer>());
-    encoder.flush();
-  }
-
-  public static void encodeVisual(final SkeletonVisual toSave, File file) throws IOException {
-    FileUtilities.createParentDirectoriesIfNecessary(file);
-    if (!file.exists()) {
-      file.createNewFile();
-    }
-    FileOutputStream fos = new FileOutputStream(file);
-    encodeVisual(toSave, fos);
-    fos.close();
-  }
-
-  public static void encodeTexture(final TexturedAppearance[] toSave, OutputStream os) throws IOException {
-    BinaryEncoder encoder = new OutputStreamBinaryEncoder(os);
-    encoder.encode(toSave, new HashMap<ReferenceableBinaryEncodableAndDecodable, Integer>());
-    encoder.flush();
-  }
-
-  public static void encodeTexture(final TexturedAppearance[] toSave, File file) throws IOException {
-    FileUtilities.createParentDirectoriesIfNecessary(file);
-    if (!file.exists()) {
-      file.createNewFile();
-    }
-    FileOutputStream fos = new FileOutputStream(file);
-    encodeTexture(toSave, fos);
-    fos.close();
   }
 
   public static InputStream getAliceResourceAsStream(Class<?> cls, String resourceString) {
@@ -224,430 +90,6 @@ public class AliceResourceUtilities {
 
   public static URL getAliceResource(Class<?> cls, String resourceString) {
     return StorytellingResources.INSTANCE.getAliceResource(cls.getPackage().getName().replace(".", "/") + "/" + resourceString);
-  }
-
-  public static String enumToCamelCase(String enumName, boolean startWithLowerCase) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < enumName.length(); i++) {
-      if (i == 0) {
-        if (startWithLowerCase) {
-          sb.append(Character.toLowerCase(enumName.charAt(i)));
-        } else {
-          sb.append(Character.toUpperCase(enumName.charAt(i)));
-        }
-      } else if (enumName.charAt(i - 1) == '_') {
-        sb.append(Character.toUpperCase(enumName.charAt(i)));
-      } else if (enumName.charAt(i) != '_') {
-        sb.append(Character.toLowerCase(enumName.charAt(i)));
-      }
-    }
-    return sb.toString();
-  }
-
-  public static String enumToCamelCase(String enumName) {
-    return enumToCamelCase(enumName, false);
-  }
-
-  public static String camelCaseToEnum(String name) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < name.length(); i++) {
-      if ((i != 0) && Character.isUpperCase(name.charAt(i))) {
-        sb.append('_');
-      }
-      sb.append(Character.toUpperCase(name.charAt(i)));
-    }
-    return sb.toString();
-  }
-
-  public static boolean isEnumName(String name) {
-    for (int i = 0; i < name.length(); i++) {
-      char c = name.charAt(i);
-      if ((c != '_') && !(Character.isUpperCase(c) || Character.isDigit(c))) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  public static String makeEnumName(String name) {
-    if (isEnumName(name)) {
-      return name;
-    }
-    if (name.contains("_")) {
-      return name.toUpperCase();
-    } else {
-      return camelCaseToEnum(name);
-    }
-  }
-
-  public static String makeLocalizationKey(String key) {
-    return key.replace(' ', '_');
-  }
-
-  public static String arrayToEnum(String[] nameArray, int start, int end) {
-    StringBuilder sb = new StringBuilder();
-    boolean isFirst = true;
-    for (int i = start; i < end; i++) {
-      if (!nameArray[i].isEmpty()) {
-        if (isFirst) {
-          isFirst = false;
-        } else {
-          sb.append("_");
-        }
-        sb.append(nameArray[i].toUpperCase());
-      }
-    }
-    return sb.toString();
-  }
-
-  //Check to see if a thumbnail exists for the given visual name and texture name
-  private static boolean checkVisualAndTextureName(ModelResource resource, String visualName, String textureName) {
-    String thumbnailFileName = getThumbnailResourceFileName(visualName, textureName);
-    return getThumbnailURLInternalFromFilename(resource, thumbnailFileName) != null;
-  }
-
-  /**
-   * Visual and Texture info is encoded into the enumeration like this: public
-   * enum BaseVisualName { TEXTURE_NAME_1, TEXTURE_NAME_2,
-   * DIFFERENT_VISUAL_NAME_TEXTURE_NAME_1,
-   * DIFFERENT_VISUAL_NAME_TEXTURE_NAME_2 }
-   *
-   * Both 'BaseVisualName' and DIFFERENT_VISUAL_NAME are potentially the names
-   * of visual resources. If the resource uses the base visual, then the enum
-   * name is just the name of the texture (like the entries TEXTURE_NAME_1 and
-   * TEXTURE_NAME_2) If the resource uses a different visual resource, then
-   * the visual resource name is the first half of the enum constant (like the
-   * entries DIFFERENT_VISUAL_NAME_TEXTURE_NAME_1 and
-   * DIFFERENT_VISUAL_NAME_TEXTURE_NAME_2)
-   **/
-
-  private static void findAndStoreResourceNames(ModelResource resource, String resourceName) {
-    String[] splitName = resourceName.split("_");
-    StringBuilder modelName = new StringBuilder();
-    //Set up to try the simple approach first (that the visual is the class name and the texture is the resource name)
-    String visualName = AliceResourceClassUtilities.getAliceClassName(resource.getClass().getSimpleName());
-    String textureName = resourceName;
-
-    //Check the simple case (visual name is class name and texture name is resource name) and if it fails, iterate through the resource name to find a visual name that resolves to a valid url
-    //Use that as the visual name and the remaining name as the texture name
-    boolean found = false;
-    if (checkVisualAndTextureName(resource, visualName, textureName)) {
-      found = true;
-    } else if (checkVisualAndTextureName(resource, enumToCamelCase(resourceName), "")) {
-      //Try using the resourceName as the visual name and assume no specified texture
-      visualName = enumToCamelCase(resourceName);
-      textureName = "";
-      found = true;
-    } else {
-      for (int i = 0; i < splitName.length; i++) {
-        if (!splitName[i].isEmpty()) {
-          if (i != 0) {
-            modelName.append("_");
-          }
-          modelName.append(splitName[i]);
-          visualName = enumToCamelCase(modelName.toString());
-          textureName = arrayToEnum(splitName, i + 1, splitName.length);
-          if (checkVisualAndTextureName(resource, visualName, textureName)) {
-            checkVisualAndTextureName(resource, visualName, textureName);
-            found = true;
-            break;
-          }
-        }
-      }
-    }
-    if (!found) {
-      modelName = new StringBuilder();
-      for (int i = 0; i < splitName.length; i++) {
-        if (!splitName[i].isEmpty()) {
-          if (i != 0) {
-            modelName.append("_");
-          }
-          modelName.append(splitName[i]);
-          visualName = enumToCamelCase(modelName.toString());
-          textureName = arrayToEnum(splitName, i + 1, splitName.length);
-          if (checkVisualAndTextureName(resource, visualName, textureName)) {
-            Logger.warning("Initially failed to find resource names for '" + resource + "' and '" + resourceName + "' but did find for '" + modelName + "'");
-            break;
-          }
-        }
-      }
-      return;
-    }
-    String identifier = resource.identifierFor(resourceName);
-    resourceIdentifierToResourceNamesMap.put(identifier, new ResourceNames(visualName, textureName));
-  }
-
-  public static String getModelNameFromClassAndResource(ModelResource resource, String resourceName) {
-    //If we're just using the class as a lookup, return the class name directly
-    if (resourceName == null) {
-      return getName(resource.getClass());
-    }
-    String identifier = resource.identifierFor(resourceName);
-    if (!resourceIdentifierToResourceNamesMap.containsKey(identifier)) {
-      findAndStoreResourceNames(resource, resourceName);
-    }
-    if (resourceIdentifierToResourceNamesMap.get(identifier) != null) {
-      return resourceIdentifierToResourceNamesMap.get(identifier).visualName;
-    } else {
-      Logger.warning("Failed to find resource names for '" + resource + "' and '" + resourceName + "'");
-      return null;
-    }
-  }
-
-  public static String getTextureNameFromClassAndResource(ModelResource resource, String resourceName) {
-    //If we're just using the class as a lookup, return null since the class name only distinguishes visuals
-    if (resourceName == null) {
-      return null;
-    }
-    String identifier = resource.identifierFor(resourceName);
-    if (!resourceIdentifierToResourceNamesMap.containsKey(identifier)) {
-      findAndStoreResourceNames(resource, resourceName);
-    }
-    ResourceNames resourceNames = resourceIdentifierToResourceNamesMap.get(identifier);
-    if (resourceNames != null) {
-      return resourceNames.textureName;
-    } else {
-      Logger.severe(resource, resourceName, identifier);
-      return null;
-    }
-  }
-
-  public static String getTextureResourceFileName(ModelResource resource, String resourceName) {
-    String modelName = getModelNameFromClassAndResource(resource, resourceName);
-    String textureName = getTextureNameFromClassAndResource(resource, resourceName);
-    return getTextureResourceFileName(modelName, textureName);
-  }
-
-  public static String getTextureResourceFileName(ModelResource resource) {
-    return getTextureResourceFileName(resource, resource.toString());
-  }
-
-  public static String getVisualResourceFileName(ModelResource resource, String resourceName) {
-    String modelName = getModelNameFromClassAndResource(resource, resourceName);
-    return getVisualResourceFileNameFromModelName(modelName);
-  }
-
-  public static String getVisualResourceName(ModelResource resource) {
-    return getModelNameFromClassAndResource(resource, resource.toString());
-  }
-
-  public static String getTextureResourceName(ModelResource resource) {
-    return getTextureNameFromClassAndResource(resource, resource.toString());
-  }
-
-  private static String getVisualResourceFileName(ModelResource resource) {
-    return getVisualResourceFileName(resource, resource.toString());
-  }
-
-  public static String getThumbnailResourceFileName(ModelResource resource, String resourceName) {
-    String modelName = getModelNameFromClassAndResource(resource, resourceName);
-    if (modelName != null) {
-      String textureName = getTextureNameFromClassAndResource(resource, resourceName);
-      return getThumbnailResourceFileName(modelName, textureName);
-    } else {
-      return null;
-    }
-  }
-
-  public static String getDefaultTextureEnumName(String resourceName) {
-    return "DEFAULT";
-  }
-
-  private static String createTextureBaseName(String modelName, String textureName) {
-    if (modelName == null) {
-      return null;
-    }
-    if (textureName == null) {
-      textureName = "_cls";
-    } else if (textureName.equalsIgnoreCase(getDefaultTextureEnumName(modelName))
-        || modelName.equalsIgnoreCase(enumToCamelCase(textureName))
-        || textureName.equalsIgnoreCase(makeEnumName(modelName))) {
-      textureName = "";
-    } else if (!textureName.isEmpty()) {
-      textureName = "_" + makeEnumName(textureName);
-    }
-    return (modelName != null ? modelName.toLowerCase(Locale.ENGLISH) : null) + textureName;
-  }
-
-  public static String getThumbnailResourceFileName(String modelName, String textureName) {
-    return createTextureBaseName(modelName, textureName) + ".png";
-  }
-
-  public static String getTextureResourceFileName(String modelName, String textureName) {
-    return createTextureBaseName(modelName, textureName) + "." + TEXTURE_RESOURCE_EXTENSION;
-  }
-
-  public static String getVisualResourceFileNameFromModelName(String modelName, String extension) {
-    return modelName.toLowerCase(Locale.ENGLISH) + "." + extension;
-  }
-
-  public static String getVisualResourceFileNameFromModelName(String modelName) {
-    return getVisualResourceFileNameFromModelName(modelName, MODEL_RESOURCE_EXTENSION);
-  }
-
-  private static URL getThumbnailURLInternalFromFilename(ModelResource modelResource, String thumbnailFilename) {
-    return getAliceResource(modelResource.getClass(),
-                            getResourceSubDirWithSeparator(modelResource.getClass()) + thumbnailFilename);
-  }
-
-  private static String getResourceSubDirWithSeparator(Class<?> resource) {
-    return ModelResourceIoUtilities.getResourceSubDirWithSeparator(resource.getSimpleName());
-  }
-
-  public static URL getTextureURL(ModelResource resource) {
-    if (resource instanceof DynamicResource dynamicResource) {
-      final URI textureURI = dynamicResource.getTextureURI();
-      if (textureURI == null) {
-        return null;
-      }
-      try {
-        return textureURI.toURL();
-      } catch (MalformedURLException e) {
-        Logger.severe("Failed to get texture URL for " + textureURI, e);
-        return null;
-      }
-    }
-    return getUrl(resource, getTextureResourceFileName(resource));
-  }
-
-  public static URL getUrl(ModelResource resource, String visualResourceFileName) {
-    return getAliceResource(resource.getClass(), getResourceSubDirWithSeparator(resource.getClass()) + visualResourceFileName);
-  }
-
-  private static URL getVisualURL(ModelResource resource) {
-    if (resource instanceof DynamicResource dynamicResource) {
-      final URI visualURI = dynamicResource.getVisualURI();
-      if (visualURI == null) {
-        return null;
-      }
-      try {
-        return visualURI.toURL();
-      } catch (MalformedURLException e) {
-        Logger.severe("Failed to get visual URL for " + visualURI, e);
-        return null;
-      }
-    }
-    return getUrl(resource, getVisualResourceFileName(resource));
-  }
-
-  public static SkeletonVisual getVisual(ModelResource resource) {
-    URL resourceURL = getVisualURL(resource);
-    if (urlToVisualMap.containsKey(resourceURL)) {
-      return urlToVisualMap.get(resourceURL);
-    } else {
-      SkeletonVisual visual = decodeVisual(resourceURL);
-      List<Problem> problems = QualityAssuranceUtilities.inspect(visual);
-      if (!problems.isEmpty()) {
-        Logger.errln(resourceURL);
-        for (Problem problem : problems) {
-          Logger.errln(problem);
-        }
-      }
-      urlToVisualMap.put(resourceURL, visual);
-      return visual;
-    }
-  }
-
-  public static SkeletonVisual getVisualCopy(ModelResource resource) {
-    SkeletonVisual original = getVisual(resource);
-    return createCopy(original);
-  }
-
-  public static TexturedAppearance[] getTexturedAppearances(ModelResource resource) {
-    URL resourceURL = getTextureURL(resource);
-    if (urlToTextureMap.containsKey(resourceURL)) {
-      return urlToTextureMap.get(resourceURL);
-    } else {
-      TexturedAppearance[] texture = decodeTexture(resourceURL);
-      urlToTextureMap.put(resourceURL, texture);
-      return texture;
-    }
-  }
-
-  public static SkeletonVisual createCopy(SkeletonVisual sgOriginal) {
-    Geometry[] sgGeometries = sgOriginal.geometries.getValue();
-    TexturedAppearance[] sgTextureAppearances = sgOriginal.textures.getValue();
-    WeightedMesh[] sgWeightedMeshes = sgOriginal.weightedMeshes.getValue();
-    WeightedMesh[] sgDefaultPoseWeightedMeshes = sgOriginal.defaultPoseWeightedMeshes.getValue();
-    boolean hasDefaultPoseWeightedMeshes = sgOriginal.hasDefaultPoseWeightedMeshes.getValue();
-    Joint sgSkeletonRoot = sgOriginal.skeleton.getValue();
-    AxisAlignedBox bbox = sgOriginal.baseBoundingBox.getValue();
-    Matrix3x3 scaleCopy = sgOriginal.scale.getValue();
-    Appearance sgFrontAppearanceCopy;
-    if (sgOriginal.frontFacingAppearance.getValue() != null) {
-      sgFrontAppearanceCopy = (Appearance) sgOriginal.frontFacingAppearance.getValue().newCopy();
-    } else {
-      sgFrontAppearanceCopy = null;
-    }
-    Appearance sgBackAppearanceCopy;
-    if (sgOriginal.backFacingAppearance.getValue() != null) {
-      sgBackAppearanceCopy = (Appearance) sgOriginal.backFacingAppearance.getValue().newCopy();
-    } else {
-      sgBackAppearanceCopy = null;
-    }
-
-    SkeletonVisual rv = new SkeletonVisual();
-    final Joint sgSkeletonRootCopy;
-    if (sgSkeletonRoot != null) {
-      sgSkeletonRootCopy = (Joint) sgSkeletonRoot.newCopy();
-    } else {
-      sgSkeletonRootCopy = null;
-    }
-
-    rv.skeleton.setValue(sgSkeletonRootCopy);
-    rv.geometries.setValue(sgGeometries);
-    rv.weightedMeshes.setValue(sgWeightedMeshes);
-    rv.defaultPoseWeightedMeshes.setValue(sgDefaultPoseWeightedMeshes);
-    rv.hasDefaultPoseWeightedMeshes.setValue(hasDefaultPoseWeightedMeshes);
-    rv.textures.setValue(sgTextureAppearances);
-    rv.frontFacingAppearance.setValue(sgFrontAppearanceCopy);
-    rv.backFacingAppearance.setValue(sgBackAppearanceCopy);
-    rv.baseBoundingBox.setValue(bbox);
-    rv.isShowing.setValue(sgOriginal.isShowing.getValue());
-    rv.scale.setValue(scaleCopy);
-    return rv;
-  }
-
-  public static SkeletonVisual createReplaceVisualElements(SkeletonVisual sgOriginal, ModelResource resource) {
-    SkeletonVisual sgToReplaceWith = getVisual(resource);
-    Geometry[] sgGeometries = sgToReplaceWith.geometries.getValue();
-    WeightedMesh[] sgWeightedMeshes = sgToReplaceWith.weightedMeshes.getValue();
-    AxisAlignedBox bbox = sgToReplaceWith.baseBoundingBox.getValue();
-    Joint sgNewSkeletonRoot = sgToReplaceWith.skeleton.getValue();
-    final Joint sgNewSkeleton;
-    if (sgNewSkeletonRoot != null) {
-      sgNewSkeleton = (Joint) sgNewSkeletonRoot.newCopy();
-    } else {
-      sgNewSkeleton = null;
-    }
-    if (sgNewSkeleton != null) {
-      sgNewSkeleton.setParent(sgOriginal.getParent());
-    }
-
-    //      if (sgOriginal.skeleton.getValue() != null) {
-    //        sgOriginal.skeleton.getValue().setParent(null);
-    //      }
-    sgOriginal.skeleton.setValue(sgNewSkeleton);
-
-    sgOriginal.geometries.setValue(sgGeometries);
-    sgOriginal.weightedMeshes.setValue(sgWeightedMeshes);
-
-    sgOriginal.baseBoundingBox.setValue(bbox);
-    return sgOriginal;
-  }
-
-  public static AffineMatrix4x4 getOriginalJointTransformation(ModelResource resource, JointId jointId) {
-    SkeletonVisual sgOriginal = getVisual(resource);
-    Joint sgSkeletonRoot = sgOriginal.skeleton.getValue();
-    Joint sgJoint = sgSkeletonRoot.getJoint(jointId.toString());
-    return sgJoint.getLocalTransformation();
-  }
-
-  public static UnitQuaternion getOriginalJointOrientation(ModelResource resource, JointId jointId) {
-    SkeletonVisual sgOriginal = getVisual(resource);
-    Joint sgSkeletonRoot = sgOriginal.skeleton.getValue();
-    Joint sgJoint = sgSkeletonRoot.getJoint(jointId.toString());
-    return sgJoint.getLocalTransformation().orientation().asUnitQuaternion();
   }
 
   public static String getName(Class<?> modelResource) {
@@ -668,23 +110,161 @@ public class AliceResourceUtilities {
     return name;
   }
 
-  public static URL getThumbnailURL(ModelResource modelResource, String instanceName) {
-    String thumbnailName = getThumbnailResourceFileName(modelResource, instanceName);
-    return getThumbnailURLInternalFromFilename(modelResource, thumbnailName);
+  public static URL getUrl(ModelResource resource, String visualResourceFileName) {
+    return getAliceResource(resource.getClass(),
+        ModelResourceIoUtilities.getResourceSubDirWithSeparator(resource.getClass().getSimpleName()) + visualResourceFileName);
   }
 
-  public static URL getThumbnailURL(Class<?> modelResource) {
-    String thumbnailFilename =  getThumbnailResourceFileName(getName(modelResource), null);
-    return getAliceResource(modelResource, getResourceSubDirWithSeparator(modelResource) + thumbnailFilename);
-  }
-
-    /*private*/
+  /*private*/
   protected static String getKey(Class<?> modelResource, String resourceName) {
     if (resourceName != null) {
       return modelResource.getName() + resourceName;
     }
     return modelResource.getName();
   }
+
+  // ── Delegates → ResourceEnumResolver ──────────────────────
+
+  public static String enumToCamelCase(String enumName, boolean startWithLowerCase) {
+    return ResourceEnumResolver.enumToCamelCase(enumName, startWithLowerCase);
+  }
+  public static String enumToCamelCase(String enumName) {
+    return ResourceEnumResolver.enumToCamelCase(enumName);
+  }
+  public static String camelCaseToEnum(String name) {
+    return ResourceEnumResolver.camelCaseToEnum(name);
+  }
+  public static boolean isEnumName(String name) {
+    return ResourceEnumResolver.isEnumName(name);
+  }
+  public static String makeEnumName(String name) {
+    return ResourceEnumResolver.makeEnumName(name);
+  }
+  public static String makeLocalizationKey(String key) {
+    return ResourceEnumResolver.makeLocalizationKey(key);
+  }
+  public static String arrayToEnum(String[] nameArray, int start, int end) {
+    return ResourceEnumResolver.arrayToEnum(nameArray, start, end);
+  }
+  public static String getDefaultTextureEnumName(String resourceName) {
+    return ResourceEnumResolver.getDefaultTextureEnumName(resourceName);
+  }
+  public static String getModelNameFromClassAndResource(ModelResource resource, String resourceName) {
+    return ResourceEnumResolver.getModelNameFromClassAndResource(resource, resourceName);
+  }
+  public static String getTextureNameFromClassAndResource(ModelResource resource, String resourceName) {
+    return ResourceEnumResolver.getTextureNameFromClassAndResource(resource, resourceName);
+  }
+  public static String getVisualResourceName(ModelResource resource) {
+    return ResourceEnumResolver.getVisualResourceName(resource);
+  }
+  public static String getTextureResourceName(ModelResource resource) {
+    return ResourceEnumResolver.getTextureResourceName(resource);
+  }
+
+  // ── Delegates → ResourceTextureManager ───────────────────
+
+  public static String getThumbnailResourceFileName(String modelName, String textureName) {
+    return ResourceTextureManager.getThumbnailResourceFileName(modelName, textureName);
+  }
+  public static String getTextureResourceFileName(String modelName, String textureName) {
+    return ResourceTextureManager.getTextureResourceFileName(modelName, textureName);
+  }
+  public static String getVisualResourceFileNameFromModelName(String modelName, String extension) {
+    return ResourceTextureManager.getVisualResourceFileNameFromModelName(modelName, extension);
+  }
+  public static String getVisualResourceFileNameFromModelName(String modelName) {
+    return ResourceTextureManager.getVisualResourceFileNameFromModelName(modelName);
+  }
+  public static String getTextureResourceFileName(ModelResource resource, String resourceName) {
+    return ResourceTextureManager.getTextureResourceFileName(resource, resourceName);
+  }
+  public static String getTextureResourceFileName(ModelResource resource) {
+    return ResourceTextureManager.getTextureResourceFileName(resource);
+  }
+  public static String getVisualResourceFileName(ModelResource resource, String resourceName) {
+    return ResourceTextureManager.getVisualResourceFileName(resource, resourceName);
+  }
+  public static String getThumbnailResourceFileName(ModelResource resource, String resourceName) {
+    return ResourceTextureManager.getThumbnailResourceFileName(resource, resourceName);
+  }
+  public static URL getTextureURL(ModelResource resource) {
+    return ResourceTextureManager.getTextureURL(resource);
+  }
+  public static URL getThumbnailURL(ModelResource modelResource, String instanceName) {
+    return ResourceTextureManager.getThumbnailURL(modelResource, instanceName);
+  }
+  public static URL getThumbnailURL(Class<?> modelResource) {
+    return ResourceTextureManager.getThumbnailURL(modelResource);
+  }
+
+  // ── Delegates → ModelResourceLoader ──────────────────────
+
+  public static SkeletonVisual decodeVisual(URL url) {
+    return ModelResourceLoader.decodeVisual(url);
+  }
+  public static TexturedAppearance[] decodeTexture(URL url) {
+    return ModelResourceLoader.decodeTexture(url);
+  }
+  public static void encodeVisual(final SkeletonVisual toSave, OutputStream os) throws IOException {
+    ModelResourceLoader.encodeVisual(toSave, os);
+  }
+  public static void encodeVisual(final SkeletonVisual toSave, File file) throws IOException {
+    ModelResourceLoader.encodeVisual(toSave, file);
+  }
+  public static void encodeTexture(final TexturedAppearance[] toSave, OutputStream os) throws IOException {
+    ModelResourceLoader.encodeTexture(toSave, os);
+  }
+  public static void encodeTexture(final TexturedAppearance[] toSave, File file) throws IOException {
+    ModelResourceLoader.encodeTexture(toSave, file);
+  }
+  public static SkeletonVisual getVisual(ModelResource resource) {
+    return ModelResourceLoader.getVisual(resource);
+  }
+  public static SkeletonVisual getVisualCopy(ModelResource resource) {
+    return ModelResourceLoader.getVisualCopy(resource);
+  }
+  public static TexturedAppearance[] getTexturedAppearances(ModelResource resource) {
+    return ModelResourceLoader.getTexturedAppearances(resource);
+  }
+  public static SkeletonVisual createCopy(SkeletonVisual sgOriginal) {
+    return ModelResourceLoader.createCopy(sgOriginal);
+  }
+  public static SkeletonVisual createReplaceVisualElements(SkeletonVisual sgOriginal, ModelResource resource) {
+    return ModelResourceLoader.createReplaceVisualElements(sgOriginal, resource);
+  }
+  public static AffineMatrix4x4 getOriginalJointTransformation(ModelResource resource, JointId jointId) {
+    return ModelResourceLoader.getOriginalJointTransformation(resource, jointId);
+  }
+  public static UnitQuaternion getOriginalJointOrientation(ModelResource resource, JointId jointId) {
+    return ModelResourceLoader.getOriginalJointOrientation(resource, jointId);
+  }
+
+  // ── Localization (retained) ──────────────────────────────
+
+  private static String findLocalizedText(String bundleName, String key, Locale locale) {
+    if ((bundleName != null) && (key != null)) {
+      try {
+        ResourceBundle resourceBundle = ResourceBundleUtilities.getUtf8Bundle(bundleName, locale);
+        String rv = resourceBundle.getString(key);
+        return rv;
+      } catch (MissingResourceException mre) {
+        return null;
+      }
+    } else {
+      return null;
+    }
+  }
+
+  private static String CLASS_NAME_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryNames";
+  private static String GROUP_TAGS_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryTags";
+  private static String THEME_TAGS_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryTags";
+  private static String TAGS_LOCALIZATION_BUNDLE = ModelResource.class.getPackage().getName() + ".GalleryTags";
+
+  private static String getClassNameLocalizationBundleName() { return CLASS_NAME_LOCALIZATION_BUNDLE; }
+  private static String getGroupTagsLocalizationBundleName() { return GROUP_TAGS_LOCALIZATION_BUNDLE; }
+  private static String getThemeTagsLocalizationBundleName() { return THEME_TAGS_LOCALIZATION_BUNDLE; }
+  private static String getTagsLocalizationBundleName() { return TAGS_LOCALIZATION_BUNDLE; }
 
   public static ModelResourceInfo getModelResourceInfo(Class<?> modelResource, String resourceName) {
     if (modelResource == null) {

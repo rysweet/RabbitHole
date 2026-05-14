@@ -70,7 +70,7 @@ public class ResourceTextureManagerTest {
   @Test
   public void getThumbnailResourceFileName_nullModel_returnsNull() {
     // createTextureBaseName returns null when modelName is null
-    assertNull(ResourceTextureManager.getThumbnailResourceFileName(null, "RED"));
+    assertNull(ResourceTextureManager.getThumbnailResourceFileName((String) null, "RED"));
   }
 
   // ── getTextureResourceFileName(String, String) ──────────

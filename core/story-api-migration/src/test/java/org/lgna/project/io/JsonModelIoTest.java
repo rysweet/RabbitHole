@@ -215,12 +215,13 @@ public class JsonModelIoTest {
     classToInfoMap.put(resource.getClass().getName(), parentInfo);
     classToInfoMap.put(resource.getClass().getName() + resource, resourceInfo);
 
-    Class<?> resourceNamesClass = Class.forName(AliceResourceUtilities.class.getName() + "$ResourceNames");
+    Class<?> enumResolverClass = Class.forName("org.lgna.story.implementation.alice.ResourceEnumResolver");
+    Class<?> resourceNamesClass = Class.forName(enumResolverClass.getName() + "$ResourceNames");
     Constructor<?> resourceNamesConstructor = resourceNamesClass.getDeclaredConstructor(String.class, String.class);
     resourceNamesConstructor.setAccessible(true);
     Object resourceNames = resourceNamesConstructor.newInstance(modelName, textureName);
 
-    Field resourceNamesMapField = AliceResourceUtilities.class.getDeclaredField("resourceIdentifierToResourceNamesMap");
+    Field resourceNamesMapField = enumResolverClass.getDeclaredField("resourceIdentifierToResourceNamesMap");
     resourceNamesMapField.setAccessible(true);
     Map<String, Object> resourceNamesMap = (Map<String, Object>) resourceNamesMapField.get(null);
     resourceNamesMap.put(resource.identifierFor(resource.toString()), resourceNames);
