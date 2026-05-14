@@ -21,8 +21,8 @@ final class JsonProjectResourceEntries {
   }
 
   static void addResources(Manifest manifest, List<DataSource> dataSources, Set<Resource> resources) {
-    Set<String> usedEntryNames = new HashSet<>();
-    Map<String, Integer> nextDirectorySuffixByFileName = new HashMap<>();
+    Set<String> usedEntryNames = new HashSet<>(resources.size() * 2);
+    Map<String, Integer> nextDirectorySuffixByFileName = new HashMap<>(resources.size() * 2);
     for (Resource resource : resources) {
       String entryName = generateEntryName(resource, usedEntryNames, nextDirectorySuffixByFileName);
       usedEntryNames.add(entryName);

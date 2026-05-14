@@ -185,7 +185,7 @@ final class JsonResourceEntryWriter {
   }
 
   static List<DataSource> collectEntries(Manifest manifest, Set<Resource> resources, DataSource[] dataSources) {
-    List<DataSource> entries = new ArrayList<>();
+    List<DataSource> entries = new ArrayList<>(dataSources.length + 1 + resources.size());
     Collections.addAll(entries, dataSources);
     entries.add(JsonProjectManifest.versionDataSource());
     JsonProjectResourceEntries.addResources(manifest, entries, resources);
