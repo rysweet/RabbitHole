@@ -68,6 +68,7 @@ class JointedModelResourceBinder<R extends JointedModelResource> {
 
   private JointImplementationAndVisualDataFactory<R> factory;
   private JointArrayId[] jointArrayIds;
+  private List<JointId> cachedJointIds;
 
   JointedModelResourceBinder(JointImplementationAndVisualDataFactory<R> factory) {
     this.factory = Objects.requireNonNull(factory, "factory");
@@ -82,20 +83,23 @@ class JointedModelResourceBinder<R extends JointedModelResource> {
   }
 
   List<JointId> getAllJointIds() {
-    List<JointId> allJointIds = new ArrayList<>();
-    JointedModelResource resource = getResource();
-    for (Field jointField : ReflectionUtilities.getPublicStaticFinalFields(resource.getClass(), JointId.class)) {
-      try {
-        JointId jointId = (JointId) jointField.get(null);
-        allJointIds.add(jointId);
-      } catch (IllegalAccessException iae) {
-        Logger.throwable(iae, jointField);
+    if (cachedJointIds == null) {
+      List<JointId> allJointIds = new ArrayList<>();
+      JointedModelResource resource = getResource();
+      for (Field jointField : ReflectionUtilities.getPublicStaticFinalFields(resource.getClass(), JointId.class)) {
+        try {
+          JointId jointId = (JointId) jointField.get(null);
+          allJointIds.add(jointId);
+        } catch (IllegalAccessException iae) {
+          Logger.throwable(iae, jointField);
+        }
       }
+      if (resource instanceof DynamicResource dynamicResource) {
+        allJointIds.addAll(Arrays.asList(dynamicResource.getModelSpecificJoints()));
+      }
+      cachedJointIds = allJointIds;
     }
-    if (resource instanceof DynamicResource dynamicResource) {
-      allJointIds.addAll(Arrays.asList(dynamicResource.getModelSpecificJoints()));
-    }
-    return allJointIds;
+    return new ArrayList<>(cachedJointIds);
   }
 
   JointArrayId[] getJointArrayIds() {
@@ -118,6 +122,7 @@ class JointedModelResourceBinder<R extends JointedModelResource> {
   void updateFactory(JointImplementationAndVisualDataFactory<R> newFactory) {
     this.factory = Objects.requireNonNull(newFactory, "newFactory");
     this.jointArrayIds = null;
+    this.cachedJointIds = null;
   }
 
   JointImp createJointImplementation(JointedModelImp<?, R> owner, JointId jointId) {

@@ -69,9 +69,17 @@ class JointHierarchyManager<R extends JointedModelResource> {
   private final JointedModelResourceBinder<R> resourceBinder;
   private final Map<JointId, JointImpWrapper> mapIdToJoint = Maps.newHashMap();
   private final Map<JointArrayId, JointId[]> mapArrayIdToJointIdArray = Maps.newHashMap();
+  // Cached derived structures, invalidated on build/update
+  private List<JointImp> cachedRootJoints;
+  private List<JointImp> cachedJointsDfs;
 
   JointHierarchyManager(JointedModelResourceBinder<R> resourceBinder) {
     this.resourceBinder = Objects.requireNonNull(resourceBinder, "resourceBinder");
+  }
+
+  private void invalidateCaches() {
+    cachedRootJoints = null;
+    cachedJointsDfs = null;
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -274,6 +282,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
     for (Map.Entry<JointId, JointImpWrapper> entry : mapIdToJoint.entrySet()) {
       entry.getValue().setJointParent(mapIdToJoint.get(entry.getKey().getParent()));
     }
+    invalidateCaches();
   }
 
   private Map<JointId, JointImp> createJointImps(JointedModelImp<?, R> owner) {
@@ -326,6 +335,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
     }
     mapArrayIdToJointIdArray.clear();
     fillInJointArrays();
+    invalidateCaches();
   }
 
   private void matchNewDataToExistingJoints(Map<JointId, JointImp> newJoints) {
@@ -381,13 +391,16 @@ class JointHierarchyManager<R extends JointedModelResource> {
   }
 
   List<JointImp> getRootJointImps() {
-    List<JointImp> rootJoints = new ArrayList<>();
-    for (Map.Entry<JointId, JointImpWrapper> entry : mapIdToJoint.entrySet()) {
-      if (entry.getKey().getParent() == null) {
-        rootJoints.add(entry.getValue());
+    if (cachedRootJoints == null) {
+      List<JointImp> rootJoints = new ArrayList<>();
+      for (Map.Entry<JointId, JointImpWrapper> entry : mapIdToJoint.entrySet()) {
+        if (entry.getKey().getParent() == null) {
+          rootJoints.add(entry.getValue());
+        }
       }
+      cachedRootJoints = rootJoints;
     }
-    return rootJoints;
+    return cachedRootJoints;
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -416,22 +429,25 @@ class JointHierarchyManager<R extends JointedModelResource> {
   }
 
   Iterable<JointImp> getJoints() {
-    final List<JointImp> rv = Lists.newLinkedList();
-    this.treeWalk(new TreeWalkObserver() {
-      @Override
-      public void pushJoint(JointImp joint) {
-        rv.add(joint);
-      }
+    if (cachedJointsDfs == null) {
+      List<JointImp> rv = new ArrayList<>();
+      this.treeWalk(new TreeWalkObserver() {
+        @Override
+        public void pushJoint(JointImp joint) {
+          rv.add(joint);
+        }
 
-      @Override
-      public void handleBone(JointImp parent, JointImp child) {
-      }
+        @Override
+        public void handleBone(JointImp parent, JointImp child) {
+        }
 
-      @Override
-      public void popJoint(JointImp joint) {
-      }
-    });
-    return rv;
+        @Override
+        public void popJoint(JointImp joint) {
+        }
+      });
+      cachedJointsDfs = rv;
+    }
+    return cachedJointsDfs;
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -439,8 +455,8 @@ class JointHierarchyManager<R extends JointedModelResource> {
   // ════════════════════════════════════════════════════════════════════════════
 
   void setAllJointPivotsVisible(boolean isPivotVisible) {
-    for (Map.Entry<JointId, JointImpWrapper> jointEntry : this.mapIdToJoint.entrySet()) {
-      jointEntry.getValue().setPivotVisible(isPivotVisible);
+    for (JointImpWrapper joint : this.mapIdToJoint.values()) {
+      joint.setPivotVisible(isPivotVisible);
     }
   }
 
@@ -604,7 +620,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
   }
 
   private static class StraightenTreeWalkObserver implements TreeWalkObserver {
-    private List<JointData> list = Lists.newLinkedList();
+    private final List<JointData> list = new ArrayList<>();
 
     @Override
     public void pushJoint(JointImp jointImp) {
