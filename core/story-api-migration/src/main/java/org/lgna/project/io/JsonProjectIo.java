@@ -42,13 +42,9 @@
  *******************************************************************************/
 package org.lgna.project.io;
 
-import edu.cmu.cs.dennisc.java.util.zip.ByteArrayDataSource;
-import edu.cmu.cs.dennisc.java.util.zip.DataSource;
-import edu.cmu.cs.dennisc.pattern.IsInstanceCrawler;
-import edu.cmu.cs.dennisc.print.PrintUtilities;
 import edu.cmu.cs.dennisc.java.io.InputStreamUtilities;
+import edu.cmu.cs.dennisc.java.util.zip.DataSource;
 import org.alice.serialization.tweedle.TweedleEncoderDecoder;
-import org.alice.serialization.tweedle.UnsupportedTweedleDecodeException;
 import org.alice.tweedle.file.*;
 import org.lgna.common.Resource;
 import org.lgna.common.resources.AudioResource;
@@ -56,7 +52,6 @@ import org.lgna.common.resources.ImageResource;
 import org.lgna.project.Project;
 import org.lgna.project.ProjectVersion;
 import org.lgna.project.Version;
-import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.*;
 import org.lgna.story.resources.DynamicResource;
 import org.lgna.story.resources.JointedModelResource;
@@ -67,12 +62,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 //TODO add migration on read - ProjectMigrationManager, MigrationManager, and DecodedVersion
 public class JsonProjectIo extends DataSourceIo implements ProjectIo {
-  private static final String TWEEDLE_EXTENSION = "twe";
-  private static final String TWEEDLE_FORMAT = "tweedle";
   private static final String LEGACY_PROGRAM_TYPE_NAME = "Program";
   private static final String UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE =
       "Unsupported legacy JSON project archive: manifest-declared Program Tweedle decode is unsupported and no safe legacy resource recovery applies";
@@ -85,21 +77,20 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     return new JsonProjectWriter();
   }
 
-  private static class JsonProjectReader implements ProjectReader {
-    private static final int MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH = 512;
-
+  static class JsonProjectReader implements ProjectReader {
     private final ZipEntryContainer container;
-    private final TweedleEncoderDecoder coder = new TweedleEncoderDecoder();
+    private final JsonTypeResolver typeResolver;
 
     JsonProjectReader(ZipEntryContainer container) {
       this.container = container;
+      this.typeResolver = new JsonTypeResolver(container, new TweedleEncoderDecoder());
     }
 
     @Override
     public Project readProject(boolean makeVrReady) throws IOException {
-      ProjectManifest manifest = readManifest(ProjectManifest.class);
-      TypeReadResult decodedTypes = readTypes(manifest, true);
-      NamedUserType programType = decodedTypes.findByName(manifestName(manifest));
+      ProjectManifest manifest = JsonProjectManifest.readManifest(container, ProjectManifest.class);
+      JsonTypeResolver.TypeReadResult decodedTypes = typeResolver.readTypes(manifest, true);
+      NamedUserType programType = decodedTypes.findByName(JsonProjectManifest.manifestName(manifest));
       if ((programType == null) && isUnsupportedLegacyProgramArchive(manifest, decodedTypes)) {
         if (hasExactlyOneRecoverableImageReference(manifest)) {
           Set<Resource> resources;
@@ -109,34 +100,34 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
             throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes, e);
           }
           if (hasExactlyOneRecoveredImageResource(resources)) {
-            return new Project(null, new HashSet<>(decodedTypes.types), resources, sceneCameraType(manifest));
+            return new Project(null, new HashSet<>(decodedTypes.types), resources, JsonProjectManifest.sceneCameraType(manifest));
           }
         }
         throw unsupportedLegacyJsonProjectArchive(manifest, decodedTypes);
       }
       Set<Resource> resources = readResources(manifest);
       if (programType == null) {
-        verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
+        JsonTypeResolver.verifyProjectArchiveHasExpectedProgramType(manifest, decodedTypes);
       }
-      verifyArchiveHasNoUnsupportedManifestTypes("Project archive", decodedTypes);
+      JsonTypeResolver.verifyArchiveHasNoUnsupportedManifestTypes("Project archive", decodedTypes);
       Set<NamedUserType> namedUserTypes = new HashSet<>(decodedTypes.types);
       namedUserTypes.remove(programType);
-      return new Project(programType, namedUserTypes, resources, sceneCameraType(manifest));
+      return new Project(programType, namedUserTypes, resources, JsonProjectManifest.sceneCameraType(manifest));
     }
 
     @Override
     public TypeResourcesPair readType() throws IOException {
-      TypeManifest manifest = readManifest(TypeManifest.class);
+      TypeManifest manifest = JsonProjectManifest.readManifest(container, TypeManifest.class);
       Set<Resource> resources = readResources(manifest);
-      TypeReadResult decodedTypes = readTypes(manifest, false);
-      NamedUserType type = decodedTypes.findByName(manifestName(manifest));
+      JsonTypeResolver.TypeReadResult decodedTypes = typeResolver.readTypes(manifest, false);
+      NamedUserType type = decodedTypes.findByName(JsonProjectManifest.manifestName(manifest));
       if (type == null) {
-        type = fallbackTypeForUnnamedManifest(manifest, decodedTypes);
+        type = JsonTypeResolver.fallbackTypeForUnnamedManifest(manifest, decodedTypes);
       }
       if (type == null) {
-        verifyTypeArchiveHasExpectedType(manifest, decodedTypes);
+        JsonTypeResolver.verifyTypeArchiveHasExpectedType(manifest, decodedTypes);
       }
-      verifyArchiveHasNoUnsupportedManifestTypes("Type archive", decodedTypes);
+      JsonTypeResolver.verifyArchiveHasNoUnsupportedManifestTypes("Type archive", decodedTypes);
       return new TypeResourcesPair(type, resources);
     }
 
@@ -154,30 +145,6 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       // Ignored for now
     }
 
-    private <M extends Manifest> M readManifest(Class<M> manifestClass) throws IOException {
-      InputStream is = container.getInputStream(MANIFEST_ENTRY_NAME);
-      if (is == null) {
-        return null;
-      }
-      try (InputStream manifestStream = is) {
-        byte[] manifestBytes = InputStreamUtilities.getBytes(manifestStream);
-        try {
-          return ManifestEncoderDecoder.fromJsonOrThrow(
-              new String(manifestBytes, StandardCharsets.UTF_8),
-              manifestClass);
-        } catch (IOException e) {
-          throw new IOException("Unable to read " + MANIFEST_ENTRY_NAME, e);
-        }
-      }
-    }
-
-    private static Project.SceneCameraType sceneCameraType(ProjectManifest manifest) {
-      if ((manifest == null) || (manifest.projectStructure == null) || (manifest.projectStructure.sceneCameraType == null)) {
-        return Project.SceneCameraType.WindowCamera;
-      }
-      return manifest.projectStructure.sceneCameraType;
-    }
-
     private Version readSourceProgramVersion() throws IOException {
       InputStream is = container.getInputStream(VERSION_ENTRY_NAME);
       if (is == null) {
@@ -189,8 +156,6 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       }
     }
 
-    // On XML side this reads the resources.xml and files in the referenced files in the resource directory.
-    // It relies on further XML decoding inside Resource class as well.
     private Set<Resource> readResources(Manifest manifest) throws IOException {
       Set<Resource> resources = new HashSet<>();
       if (manifest == null) {
@@ -239,121 +204,12 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       return null;
     }
 
-    private TypeReadResult readTypes(
-        Manifest manifest,
-        boolean allowLiteralArithmeticFieldInitializers) throws IOException {
-      TypeReadResult result = new TypeReadResult();
-      if (manifest == null) {
-        return result;
-      }
-      TypeReadPlan typeReadPlan = typeReadPlan(manifest);
-      result.hasTypeReferences = !typeReadPlan.typeReferences.isEmpty();
-      for (TypeReference typeReference : typeReadPlan.typeReferences) {
-        try {
-          NamedUserType type = readTweedleType(
-              typeReference,
-              typeReadPlan.typeTerminals,
-              allowLiteralArithmeticFieldInitializers);
-          if (type != null) {
-            result.add(type);
-          }
-        } catch (UnsupportedTweedleDecodeException e) {
-          result.addUnsupportedTweedleType(typeReference, e);
-        }
-      }
-      return result;
-    }
-
-    private static TypeReadPlan typeReadPlan(Manifest manifest) {
-      List<TypeReference> typeReferences = new ArrayList<>();
-      Map<String, NamedUserType> terminalsByName = new LinkedHashMap<>();
-      for (ResourceReference resourceReference : manifest.resources) {
-        if (resourceReference instanceof TypeReference typeReference) {
-          typeReferences.add(typeReference);
-          if ((typeReference.name != null) && !typeReference.name.isEmpty()) {
-            terminalsByName.computeIfAbsent(typeReference.name, name -> {
-              NamedUserType terminal = new NamedUserType();
-              terminal.name.setValue(name);
-              return terminal;
-            });
-          }
-        }
-      }
-      return new TypeReadPlan(typeReferences, new LinkedHashSet<>(terminalsByName.values()));
-    }
-
-    private NamedUserType readTweedleType(
-        TypeReference typeReference,
-        Set<AbstractDeclaration> typeTerminals,
-        boolean allowLiteralArithmeticFieldInitializers) throws IOException {
-      if (!TWEEDLE_FORMAT.equals(typeReference.format)) {
-        throw new IOException(
-            "Unsupported type reference format '" + typeReference.format + "' for " + typeReferenceContext(typeReference));
-      }
-      if (typeReference.file == null) {
-        throw new IOException("Type " + typeReference.name + " does not specify archive entry");
-      }
-      if (!ResourceExportNames.isSourceEntryName(typeReference.file)) {
-        throw new IOException("Type " + typeReference.name + " references archive entry outside src directory: " + typeReference.file);
-      }
-      InputStream is = container.getInputStream(typeReference.file);
-      if (is == null) {
-        throw new IOException("Archive does not contain type entry " + typeReference.file);
-      }
-      try (InputStream typeStream = is) {
-        byte[] typeBytes = InputStreamUtilities.getBytes(typeStream);
-        AbstractNode decoded = coder.decode(
-            new String(typeBytes, StandardCharsets.UTF_8),
-            typeTerminals,
-            allowLiteralArithmeticFieldInitializers);
-        if (decoded == null) {
-          throw new IOException("Tweedle type entry " + typeReference.file + " decoded to null");
-        }
-        if (decoded instanceof NamedUserType namedUserType) {
-          return namedUserType;
-        }
-        throw new IOException("Tweedle type entry " + typeReference.file + " did not decode to a user type");
-      } catch (UnsupportedTweedleDecodeException e) {
-        throw e;
-      } catch (RuntimeException e) {
-        throw new IOException("Unable to decode Tweedle type entry " + typeReference.file, e);
-      } catch (VersionNotSupportedException e) {
-        throw new IOException("Unable to decode Tweedle type entry " + typeReference.file, e);
-      }
-    }
-
-    private static NamedUserType fallbackTypeForUnnamedManifest(Manifest manifest, TypeReadResult decodedTypes) {
-      if (hasNoManifestName(manifest) && !decodedTypes.types.isEmpty()) {
-        return decodedTypes.types.iterator().next();
-      }
-      return null;
-    }
-
-    private static void verifyTypeArchiveHasExpectedType(Manifest manifest, TypeReadResult decodedTypes) throws IOException {
-      verifyArchiveHasExpectedType(
-          "Type archive",
-          "",
-          "a type reference",
-          manifest,
-          decodedTypes);
-    }
-
-    private static void verifyProjectArchiveHasExpectedProgramType(Manifest manifest, TypeReadResult decodedTypes) throws IOException {
-      if (hasNoManifestName(manifest)) {
-        return;
-      }
-      verifyArchiveHasExpectedType(
-          "Project archive",
-          "program type ",
-          "a type reference for the program type",
-          manifest,
-          decodedTypes);
-    }
+    // --- Legacy recovery ---
 
     private static boolean isUnsupportedLegacyProgramArchive(
         ProjectManifest manifest,
-        TypeReadResult decodedTypes) {
-      String expectedProgramName = manifestName(manifest);
+        JsonTypeResolver.TypeReadResult decodedTypes) {
+      String expectedProgramName = JsonProjectManifest.manifestName(manifest);
       return isLegacyProgramArchive(manifest)
           && decodedTypes.hasUnsupportedTweedleDecodeFor(expectedProgramName);
     }
@@ -361,7 +217,7 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     private static boolean isLegacyProgramArchive(ProjectManifest manifest) {
       return (manifest != null)
           && (manifest.metadata != null)
-          && LEGACY_PROGRAM_TYPE_NAME.equals(manifestName(manifest))
+          && LEGACY_PROGRAM_TYPE_NAME.equals(JsonProjectManifest.manifestName(manifest))
           && IoUtilities.EXPORT_EXTENSION.equals(manifest.metadata.fileType);
     }
 
@@ -388,174 +244,20 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
 
     private static IOException unsupportedLegacyJsonProjectArchive(
         ProjectManifest manifest,
-        TypeReadResult decodedTypes) {
+        JsonTypeResolver.TypeReadResult decodedTypes) {
       return unsupportedLegacyJsonProjectArchive(manifest, decodedTypes, null);
     }
 
     private static IOException unsupportedLegacyJsonProjectArchive(
         ProjectManifest manifest,
-        TypeReadResult decodedTypes,
+        JsonTypeResolver.TypeReadResult decodedTypes,
         IOException resourceRecoveryFailure) {
-      String expectedProgramName = manifestName(manifest);
-      UnsupportedTweedleDecodeException cause = decodedTypes.unsupportedTweedleDecodeCauseFor(expectedProgramName);
+      String expectedProgramName = JsonProjectManifest.manifestName(manifest);
+      org.alice.serialization.tweedle.UnsupportedTweedleDecodeException cause = decodedTypes.unsupportedTweedleDecodeCauseFor(expectedProgramName);
       Throwable effectiveCause = (resourceRecoveryFailure == null) ? cause : resourceRecoveryFailure;
       return (effectiveCause == null)
           ? new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE)
           : new IOException(UNSUPPORTED_LEGACY_JSON_PROJECT_ARCHIVE_MESSAGE, effectiveCause);
-    }
-
-    private static void verifyArchiveHasExpectedType(
-        String archiveKind,
-        String expectedNameRole,
-        String missingReferenceDescription,
-        Manifest manifest,
-        TypeReadResult decodedTypes) throws IOException {
-      String expectedName = manifestName(manifest);
-      if (decodedTypes.hasTypeReferences) {
-        throw new IOException(
-            archiveKind + " manifest names " + expectedNameRole + "'" + expectedName
-                + "' but decoded type names are " + decodedTypeNames(decodedTypes.types)
-                + unsupportedTypeNamesClause(decodedTypes)
-                + unsupportedDecodeReasonsClause(decodedTypes));
-      }
-      throw new IOException(
-          archiveKind + " manifest for '" + expectedName + "' does not contain " + missingReferenceDescription);
-    }
-
-    private static void verifyArchiveHasNoUnsupportedManifestTypes(
-        String archiveKind,
-        TypeReadResult decodedTypes) throws IOException {
-      if (decodedTypes.hasUnsupportedTweedleTypes()) {
-        throw new IOException(
-            archiveKind + " contains unsupported manifest-declared Tweedle type names "
-                + decodedTypes.unsupportedTweedleTypeNames()
-                + unsupportedDecodeReasonsClause(decodedTypes));
-      }
-    }
-
-    private static boolean hasNoManifestName(Manifest manifest) {
-      String name = manifestName(manifest);
-      return (name == null) || name.isEmpty();
-    }
-
-    private static String decodedTypeNames(Set<NamedUserType> decodedTypes) {
-      return decodedTypes.stream()
-          .map(NamedUserType::getName)
-          .sorted()
-          .collect(Collectors.joining(", ", "[", "]"));
-    }
-
-    private static String unsupportedTypeNamesClause(TypeReadResult decodedTypes) {
-      if (!decodedTypes.hasUnsupportedTweedleTypes()) {
-        return "";
-      }
-      return "; unsupported manifest-declared Tweedle type names are " + decodedTypes.unsupportedTweedleTypeNames();
-    }
-
-    private static String unsupportedDecodeReasonsClause(TypeReadResult decodedTypes) {
-      if (!decodedTypes.hasUnsupportedTweedleTypes()) {
-        return "";
-      }
-      return "; unsupported Tweedle decode reasons are " + decodedTypes.unsupportedTweedleDecodeReasons();
-    }
-
-    private static String typeReferenceContext(TypeReference typeReference) {
-      StringBuilder sb = new StringBuilder("type reference");
-      if ((typeReference.name != null) && !typeReference.name.isEmpty()) {
-        sb.append(" '").append(typeReference.name).append("'");
-      }
-      if ((typeReference.file != null) && !typeReference.file.isEmpty()) {
-        sb.append(" at archive entry '").append(typeReference.file).append("'");
-      }
-      return sb.toString();
-    }
-
-    private static String manifestName(Manifest manifest) {
-      return (manifest == null) ? null : manifest.getName();
-    }
-
-    private static class TypeReadResult {
-      private final Set<NamedUserType> types = new LinkedHashSet<>();
-      private final Map<String, NamedUserType> typesByName = new HashMap<>();
-      private final Map<String, UnsupportedTweedleDecodeException> unsupportedTweedleDecodeCausesByTypeName = new HashMap<>();
-      private boolean hasTypeReferences;
-
-      private void add(NamedUserType type) {
-        types.add(type);
-        if (type.getName() != null) {
-          typesByName.putIfAbsent(type.getName(), type);
-        }
-      }
-
-      private NamedUserType findByName(String name) {
-        return (name == null) ? null : typesByName.get(name);
-      }
-
-      private void addUnsupportedTweedleType(TypeReference typeReference, UnsupportedTweedleDecodeException e) {
-        String typeName = unsupportedTweedleTypeName(typeReference);
-        unsupportedTweedleDecodeCausesByTypeName.putIfAbsent(typeName, e);
-      }
-
-      private static String unsupportedTweedleTypeName(TypeReference typeReference) {
-        if ((typeReference.name != null) && !typeReference.name.isEmpty()) {
-          return typeReference.name;
-        }
-        if ((typeReference.file != null) && !typeReference.file.isEmpty()) {
-          return typeReference.file;
-        }
-        return "<unnamed>";
-      }
-
-      private boolean hasUnsupportedTweedleDecodeFor(String name) {
-        return (name != null) && unsupportedTweedleDecodeCausesByTypeName.containsKey(name);
-      }
-
-      private UnsupportedTweedleDecodeException unsupportedTweedleDecodeCauseFor(String name) {
-        return (name == null) ? null : unsupportedTweedleDecodeCausesByTypeName.get(name);
-      }
-
-      private boolean hasUnsupportedTweedleTypes() {
-        return !unsupportedTweedleDecodeCausesByTypeName.isEmpty();
-      }
-
-      private String unsupportedTweedleTypeNames() {
-        return unsupportedTweedleDecodeCausesByTypeName.keySet().stream()
-            .sorted()
-            .collect(Collectors.joining(", ", "[", "]"));
-      }
-
-      private String unsupportedTweedleDecodeReasons() {
-        return unsupportedTweedleDecodeCausesByTypeName.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .map(entry -> entry.getKey() + ": " + unsupportedTweedleDecodeReason(entry.getValue()))
-            .collect(Collectors.joining(", ", "[", "]"));
-      }
-
-      private static String unsupportedTweedleDecodeReason(UnsupportedTweedleDecodeException e) {
-        String message = e.getMessage();
-        if ((message != null) && !message.isBlank()) {
-          return boundedSingleLineUnsupportedTweedleReason(message);
-        }
-        return e.getClass().getSimpleName();
-      }
-
-      private static String boundedSingleLineUnsupportedTweedleReason(String message) {
-        String singleLine = message.strip().replaceAll("\\s+", " ");
-        if (singleLine.length() <= MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH) {
-          return singleLine;
-        }
-        return singleLine.substring(0, MAX_UNSUPPORTED_TWEEDLE_REASON_LENGTH - 3) + "...";
-      }
-    }
-
-    private static class TypeReadPlan {
-      private final List<TypeReference> typeReferences;
-      private final Set<AbstractDeclaration> typeTerminals;
-
-      private TypeReadPlan(List<TypeReference> typeReferences, Set<AbstractDeclaration> typeTerminals) {
-        this.typeReferences = typeReferences;
-        this.typeTerminals = typeTerminals;
-      }
     }
 
     private static UUID requireUuid(
@@ -575,31 +277,22 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
     }
   }
 
-  private static class JsonProjectWriter implements ProjectWriter {
-    JsonProjectWriter() {
-    }
+  static class JsonProjectWriter implements ProjectWriter {
+    private final JsonResourceEntryWriter entryWriter;
 
-    private final TweedleEncoderDecoder coder = new TweedleEncoderDecoder();
+    JsonProjectWriter() {
+      this.entryWriter = new JsonResourceEntryWriter(new TweedleEncoderDecoder());
+    }
 
     @Override
     public void writeType(OutputStream os, NamedUserType type, DataSource... dataSources) throws IOException {
-      TypeManifest manifest = createTypeManifest(type);
-      Set<Resource> resources = getResources(type, CrawlPolicy.EXCLUDE_REFERENCES_ENTIRELY);
+      TypeManifest manifest = JsonResourceEntryWriter.createTypeManifest(type);
+      Set<Resource> resources = JsonResourceEntryWriter.getResources(type, CrawlPolicy.EXCLUDE_REFERENCES_ENTIRELY);
 
-      List<DataSource> entries = collectEntries(manifest, resources, dataSources);
-      entries.add(dataSourceForType(manifest, type));
-      entries.add(manifestDataSource(manifest));
+      List<DataSource> entries = JsonResourceEntryWriter.collectEntries(manifest, resources, dataSources);
+      entries.add(entryWriter.dataSourceForType(manifest, type));
+      entries.add(JsonProjectManifest.manifestDataSource(manifest));
       writeDataSources(os, entries);
-    }
-
-    private TypeManifest createTypeManifest(AbstractType<?, ?, ?> type) {
-      final TypeManifest manifest = new TypeManifest();
-      manifest.description.name = type.getName();
-      manifest.provenance.aliceVersion = ProjectVersion.getCurrentVersion().toString();
-      manifest.metadata.fileType = IoUtilities.TYPE_EXTENSION;
-      manifest.metadata.identifier.name = type.getId().toString();
-      manifest.metadata.identifier.type = Manifest.ProjectType.Library;
-      return manifest;
     }
 
     @Override
@@ -609,16 +302,16 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       ModelResourceCrawler crawler = new ModelResourceCrawler();
       project.getProgramType().crawl(crawler, CrawlPolicy.COMPLETE);
       Set<Resource> resources = crawler.resources;
-      compareResources(project.getResources(), resources);
+      JsonResourceEntryWriter.compareResources(project.getResources(), resources);
 
-      List<DataSource> entries = collectEntries(manifest, resources, dataSources);
-      Set<String> manifestResourceNames = manifestResourceNames(manifest);
-      entries.addAll(createEntriesForTypes(manifest, crawler.activeUserTypes, manifestResourceNames));
+      List<DataSource> entries = JsonResourceEntryWriter.collectEntries(manifest, resources, dataSources);
+      Set<String> manifestResourceNames = JsonResourceEntryWriter.manifestResourceNames(manifest);
+      entries.addAll(entryWriter.createEntriesForTypes(manifest, crawler.activeUserTypes, manifestResourceNames));
       Map<String, Set<JointedModelResource>> modelResources = crawler.modelResources;
       for (Set<JointedModelResource> resourceSet : modelResources.values()) {
         JsonModelIo modelIo = new JsonModelIo(resourceSet, format);
         entries.addAll(modelIo.createDataSources("models"));
-        entries.addAll(createEntriesForResourceTypes(manifest, resourceSet));
+        entries.addAll(entryWriter.createEntriesForResourceTypes(manifest, resourceSet));
         manifest.resources.add(modelIo.createModelReference("models"));
       }
       final Set<InstanceCreation> personResourceCreations = crawler.personCreations;
@@ -630,169 +323,11 @@ public class JsonProjectIo extends DataSourceIo implements ProjectIo {
       for (DynamicResource<?, ?> dynamicResource: crawler.dynamicResources) {
         JsonModelIo modelIo = new JsonModelIo(dynamicResource, format);
         entries.addAll(modelIo.createDataSources("models"));
-        entries.add(createEntryForResourceTypes(manifest, dynamicResource));
+        entries.add(entryWriter.createEntryForResourceTypes(manifest, dynamicResource));
         manifest.resources.add(modelIo.createModelReference("models"));
       }
-      entries.add(manifestDataSource(manifest));
+      entries.add(JsonProjectManifest.manifestDataSource(manifest));
       writeDataSources(os, entries);
-    }
-
-    private Collection<? extends DataSource> createEntriesForTypes(
-        Manifest manifest,
-        Set<NamedUserType> userTypes,
-        Set<String> manifestResourceNames) {
-      return userTypes.stream()
-          .sorted(Comparator.comparingInt(AbstractType::hierarchyDepth))
-          .map(ut -> dataSourceForType(manifest, ut, manifestResourceNames))
-          .filter(Objects::nonNull)
-          .collect(Collectors.toList());
-    }
-
-    private DataSource dataSourceForType(Manifest manifest, NamedUserType ut) {
-      return dataSourceForType(manifest, ut, manifestResourceNames(manifest));
-    }
-
-    private DataSource dataSourceForType(Manifest manifest, NamedUserType ut, Set<String> manifestResourceNames) {
-      // Special case to catch older models from starter worlds
-      String likelyTypeName = ut.getName();
-      String typeName = "SandDunes".equals(likelyTypeName) ? "Terrain" : likelyTypeName;
-
-      if (manifestResourceNames.add(typeName)) {
-        final String fileName = "src/" + typeName + '.' + TWEEDLE_EXTENSION;
-        manifest.resources.add(new TypeReference(typeName, fileName, TWEEDLE_FORMAT));
-        return new ByteArrayDataSource(fileName, serializedClass(ut));
-      }
-      return null;
-    }
-
-    private String serializedClass(NamedUserType userType) {
-      Map<Resource, ResourceNames> originalNames = temporarilySanitizeResourceNames(userType);
-      try {
-        return coder.encode(userType);
-      } finally {
-        restoreResourceNames(originalNames);
-      }
-    }
-
-    private Map<Resource, ResourceNames> temporarilySanitizeResourceNames(NamedUserType userType) {
-      IsInstanceCrawler<ResourceExpression> crawler = new IsInstanceCrawler<>(ResourceExpression.class) {
-        @Override
-        protected boolean isAcceptable(ResourceExpression resourceExpression) {
-          return true;
-        }
-      };
-      userType.crawl(crawler, CrawlPolicy.COMPLETE);
-      Map<Resource, ResourceNames> originalNames = new IdentityHashMap<>();
-      for (ResourceExpression resourceExpression : crawler.getList()) {
-        Resource resource = resourceExpression.resource.getValue();
-        if ((resource == null) || originalNames.containsKey(resource)) {
-          continue;
-        }
-        String fallbackName = ResourceExportNames.entryFileName(resource);
-        String safeName = ResourceExportNames.metadataName(resource.getName(), fallbackName);
-        String safeOriginalFileName = ResourceExportNames.metadataOriginalFileName(resource.getOriginalFileName(), fallbackName);
-        if (!Objects.equals(resource.getName(), safeName)
-            || !Objects.equals(resource.getOriginalFileName(), safeOriginalFileName)) {
-          originalNames.put(resource, new ResourceNames(resource.getName(), resource.getOriginalFileName()));
-          resource.setName(safeName);
-          resource.setOriginalFileName(safeOriginalFileName);
-        }
-      }
-      return originalNames;
-    }
-
-    private void restoreResourceNames(Map<Resource, ResourceNames> originalNames) {
-      for (Map.Entry<Resource, ResourceNames> entry : originalNames.entrySet()) {
-        Resource resource = entry.getKey();
-        ResourceNames names = entry.getValue();
-        resource.setName(names.name);
-        resource.setOriginalFileName(names.originalFileName);
-      }
-    }
-
-    private static class ResourceNames {
-      private final String name;
-      private final String originalFileName;
-
-      private ResourceNames(String name, String originalFileName) {
-        this.name = name;
-        this.originalFileName = originalFileName;
-      }
-    }
-
-    private Collection<? extends DataSource> createEntriesForResourceTypes(Manifest manifest, Set<JointedModelResource> resources) {
-      Set<Class<?>> distinctResources = new HashSet<>();
-      return resources.stream()
-                      .filter(resource -> distinctResources.add(resource.getClass()))
-                      .map(resource -> dataSourceForResource(manifest, resource))
-                      .collect(Collectors.toList());
-    }
-
-    private DataSource createEntryForResourceTypes(Manifest manifest, DynamicResource<?, ?> resource) {
-      String typeName = resource.getModelVariantName() + "Resource";
-      final String fileName = "src/" + typeName + '.' + TWEEDLE_EXTENSION;
-      manifest.resources.add(new TypeReference(typeName, fileName, TWEEDLE_FORMAT));
-      return new ByteArrayDataSource(fileName, coder.encodeProcessable(resource));
-    }
-
-    private DataSource dataSourceForResource(Manifest manifest, JointedModelResource resource) {
-      String typeName = resource.getClass().getSimpleName();
-      final String fileName = "src/" + typeName + '.' + TWEEDLE_EXTENSION;
-      manifest.resources.add(new TypeReference(typeName, fileName, TWEEDLE_FORMAT));
-      return new ByteArrayDataSource(fileName, coder.encodeProcessable(resource));
-    }
-
-    private void compareResources(Set<Resource> projectResources, Set<Resource> crawledResources) {
-      for (Resource crawledResource : crawledResources) {
-        if (!projectResources.contains(crawledResource)) {
-          PrintUtilities.println(
-              "WARNING: added missing resource",
-              ResourceExportNames.diagnosticName(crawledResource));
-        }
-      }
-    }
-
-    private List<DataSource> collectEntries(Manifest manifest, Set<Resource> resources, DataSource[] dataSources) {
-      List<DataSource> entries = new ArrayList<>();
-      Collections.addAll(entries, dataSources);
-      entries.add(versionDataSource());
-      JsonProjectResourceEntries.addResources(manifest, entries, resources);
-      return entries;
-    }
-
-    private static DataSource versionDataSource() {
-      return new ByteArrayDataSource(VERSION_ENTRY_NAME, ProjectVersion.getCurrentVersion().toString());
-    }
-
-    private static DataSource manifestDataSource(Manifest manifest) {
-      return new ByteArrayDataSource(MANIFEST_ENTRY_NAME, ManifestEncoderDecoder.toJson(manifest));
-    }
-
-    private Set<Resource> getResources(AbstractType<?, ?, ?> type, CrawlPolicy crawlPolicy) {
-      IsInstanceCrawler<ResourceExpression> crawler = new IsInstanceCrawler<>(ResourceExpression.class) {
-        @Override
-        protected boolean isAcceptable(ResourceExpression resourceExpression1) {
-          return true;
-        }
-      };
-
-      type.crawl(crawler, crawlPolicy);
-      Set<Resource> resources = new HashSet<>();
-      for (ResourceExpression resourceExpression : crawler.getList()) {
-        resources.add(resourceExpression.resource.getValue());
-      }
-      return resources;
-    }
-
-
-    private static Set<String> manifestResourceNames(Manifest manifest) {
-      Set<String> resourceNames = new HashSet<>();
-      for (ResourceReference resourceReference : manifest.resources) {
-        if (resourceReference.name != null) {
-          resourceNames.add(resourceReference.name);
-        }
-      }
-      return resourceNames;
     }
   }
 }
