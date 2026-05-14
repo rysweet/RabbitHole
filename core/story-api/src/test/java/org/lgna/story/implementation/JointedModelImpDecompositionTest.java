@@ -152,7 +152,15 @@ public class JointedModelImpDecompositionTest {
       createdJointIds.add(jointId);
       Joint sgJoint = new Joint();
       sgJoint.jointID.setValue(jointId.toString());
-      return new org.lgna.story.implementation.alice.JointImplementation(impl, jointId, sgJoint);
+      return new org.lgna.story.implementation.alice.JointImplementation(impl, jointId, sgJoint) {
+        @Override
+        protected void copyOnto(JointImp newJoint) {
+          // Override to avoid NPE when owner (impl) is null in tests
+          if (getJointedModelImplementation() != null) {
+            super.copyOnto(newJoint);
+          }
+        }
+      };
     }
 
     @Override
