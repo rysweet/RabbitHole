@@ -225,7 +225,6 @@ class JointHierarchyManager<R extends JointedModelResource> {
 
     @Override
     protected void postCheckSetVehicle(EntityImp vehicle) {
-      //todo?
       internalJointImp.postCheckSetVehicle(vehicle);
     }
 
@@ -361,7 +360,6 @@ class JointHierarchyManager<R extends JointedModelResource> {
 
   //String based lookup for DynamicJointIds
   JointImp getJointImplementation(String jointName) {
-    //TODO: Think about maintaining a map of names to joints. It would be double accounting and might be a pain though
     for (Map.Entry<JointId, JointImpWrapper> entry : this.mapIdToJoint.entrySet()) {
       if (entry.getKey().toString().equals(jointName)) {
         return entry.getValue();
@@ -399,7 +397,6 @@ class JointHierarchyManager<R extends JointedModelResource> {
   private void treeWalk(JointImp parentImp, TreeWalkObserver observer) {
     if (parentImp != null) {
       observer.pushJoint(parentImp);
-      R resource = resourceBinder.getResource();
       for (JointImp childImp : parentImp.getJointChildren()) {
         if (childImp != null) {
           observer.handleBone(parentImp, childImp);
@@ -504,10 +501,8 @@ class JointHierarchyManager<R extends JointedModelResource> {
     assert jointB != null : this;
     List<JointImp> rv = Lists.newLinkedList();
     if (jointA == jointB) {
-      //?
       rv.add(jointA);
       directions.add(Bone.Direction.DOWNSTREAM);
-      //      throw new RuntimeException( "To Gazi: Please ensure that direction is correct in this case." );
     } else {
       if (jointA.isDescendantOf(jointB)) {
         this.updateJointsBetween(rv, directions, jointA, jointB, AddOp.PREPEND);
@@ -562,7 +557,7 @@ class JointHierarchyManager<R extends JointedModelResource> {
     ListIterator<JointImp> pathBIterator = pathB.listIterator();
     ListIterator<Direction> directionsBIterator = directionsB.listIterator();
     for (; pathBIterator.hasNext(); ) {
-      JointImp jointImp = (JointImp) pathBIterator.next();
+      JointImp jointImp = pathBIterator.next();
       directionsBIterator.next();
 
       pathBIterator.remove();
@@ -595,28 +590,15 @@ class JointHierarchyManager<R extends JointedModelResource> {
       this.q1 = ((q == null) || this.q0.isAlignedWith(q)) ? null : q;
     }
 
-    //    public JointImp getJointImp() {
-    //      return this.jointImp;
-    //    }
-    //    public edu.cmu.cs.dennisc.math.UnitQuaternion getQ0() {
-    //      return this.q0;
-    //    }
-    //    public edu.cmu.cs.dennisc.math.UnitQuaternion getQ1() {
-    //      return this.q1;
-    //    }
     public void setPortion(double portion) {
       if (this.q1 != null) {
         this.jointImp.setLocalOrientationOnly(this.q0.interpolate(this.q1, portion).asMatrix3x3());
-      } else {
-        //System.err.println( "skipping: " + this.jointImp );
       }
     }
 
     public void epilogue() {
       if (this.q1 != null) {
         this.jointImp.setLocalOrientationOnly(this.q1.asMatrix3x3());
-      } else {
-        //System.err.println( "skipping: " + this.jointImp );
       }
     }
   }

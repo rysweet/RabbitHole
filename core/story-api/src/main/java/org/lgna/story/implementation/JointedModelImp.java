@@ -207,7 +207,6 @@ public abstract class JointedModelImp<A extends SJointedModel, R extends Jointed
     return this.resourceBinder.createJointImplementation(this, jointId);
   }
 
-  //TODO: Do we need this? Why do we need this.getJointArrayIds()?
   public JointArrayId[] getJointArrayIds() {
     return this.resourceBinder.getJointArrayIds();
   }
