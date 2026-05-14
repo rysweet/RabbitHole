@@ -43,15 +43,9 @@
 
 package org.lgna.croquet;
 
-import edu.cmu.cs.dennisc.java.awt.datatransfer.ClipboardUtilities;
-import edu.cmu.cs.dennisc.java.util.Lists;
-import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.Objects;
-import edu.cmu.cs.dennisc.java.util.Sets;
-import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.lgna.croquet.codecs.EnumCodec;
 import org.lgna.croquet.data.ListData;
-import org.lgna.croquet.data.MutableListData;
 import org.lgna.croquet.data.RefreshableListData;
 import org.lgna.croquet.edits.Edit;
 import org.lgna.croquet.history.UserActivity;
@@ -60,19 +54,18 @@ import org.lgna.croquet.preferences.PreferenceBooleanState;
 import org.lgna.croquet.preferences.PreferenceStringState;
 import org.lgna.croquet.views.CompositeView;
 import org.lgna.croquet.views.ScrollPane;
-import org.lgna.croquet.views.SplitPane;
 import org.lgna.croquet.views.SwingComponentView;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Dennis Cosgrove
  */
 public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends AbstractElement implements Composite<V> {
+
+  // ── Key (used by subclasses and all internal state classes) ────────
+
   protected static final class Key {
     private final AbstractComposite<?> composite;
     private final String localizationKey;
@@ -135,6 +128,8 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
     }
   }
 
+  // ── AbstractInternalStringValue (extended by subclasses) ──────────
+
   protected abstract static class AbstractInternalStringValue extends PlainStringValue {
     private final Key key;
 
@@ -165,318 +160,11 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
     }
   }
 
-  private static final class InternalStringValue extends AbstractInternalStringValue {
-    private InternalStringValue(Key key) {
-      super(UUID.fromString("142b66a2-0b95-42d0-8ea4-a22a79c8ff8c"), key);
-    }
-  }
-
-  private static final class InternalStringState extends StringState {
-    private final Key key;
-
-    private InternalStringState(String initialValue, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("ed65869f-8d26-48b1-8240-cf74ba403a2f"), initialValue);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalPreferenceStringState extends PreferenceStringState {
-    private final Key key;
-    private final BooleanState isStoringPreferenceDesiredState;
-
-    private InternalPreferenceStringState(String initialValue, Key key, BooleanState isStoringPreferenceDesiredState, UUID encryptionId) {
-      super(Application.INHERIT_GROUP, UUID.fromString("ad98acf0-db41-43a6-8619-269a7d8cbc2d"), initialValue, key.getPreferenceKey(), getEncryptionKey(encryptionId != null ? encryptionId.toString() : null));
-      this.key = key;
-      this.isStoringPreferenceDesiredState = isStoringPreferenceDesiredState;
-    }
-
-    @Override
-    protected boolean isStoringPreferenceDesired() {
-      return (this.isStoringPreferenceDesiredState == null) || this.isStoringPreferenceDesiredState.getValue();
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalBooleanState extends BooleanState {
-    private final Key key;
-
-    private InternalBooleanState(boolean initialValue, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("5053e40f-9561-41c8-835d-069bd106723c"), initialValue);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalPreferenceBooleanState extends PreferenceBooleanState {
-    private final Key key;
-
-    private InternalPreferenceBooleanState(boolean initialValue, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("034f99f7-74ec-4a89-8396-3c187d9684a2"), initialValue, key.getPreferenceKey());
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalSingleSelectListState<T> extends SingleSelectListState<T, ListData<T>> {
-    private final Key key;
-
-    private InternalSingleSelectListState(int selectionIndex, ListData<T> data, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("4f0640c9-eceb-4801-a8bb-bf8e282cef0f"), selectionIndex, data);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalImmutableDataSingleSelectListState<T> extends ImmutableDataSingleSelectListState<T> {
-    private final Key key;
-
-    private InternalImmutableDataSingleSelectListState(int selectionIndex, ItemCodec<T> codec, T[] values, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("091d5251-d278-4eb1-8214-a27c154f5378"), selectionIndex, codec, values);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalRefreshableDataSingleSelectListState<T> extends RefreshableDataSingleSelectListState<T> {
-    private final Key key;
-
-    private InternalRefreshableDataSingleSelectListState(int selectionIndex, RefreshableListData<T> data, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("4d7ef91c-a8ae-4b17-9d8a-91ffac4ba12e"), selectionIndex, data);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalMutableDataSingleSelectListState<T> extends MutableDataSingleSelectListState<T> {
-    private final Key key;
-
-    private InternalMutableDataSingleSelectListState(int selectionIndex, MutableListData<T> data, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("6cc16988-0fc8-476b-9026-b19fd15748ea"), selectionIndex, data);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
-  private static final class InternalTabState<T extends SimpleTabComposite<?>> extends SimpleTabState<T> {
-    private final Key key;
-
-    public InternalTabState(int selectionIndex, Class<T> cls, T[] values, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("bea99c2f-45ad-40a8-a99c-9c125a72f0be"), selectionIndex, cls, values);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
+  // ── Externally-referenced public types ────────────────────────────
 
   public static class BoundedIntegerDetails extends BoundedIntegerState.Details {
     public BoundedIntegerDetails() {
       super(Application.INHERIT_GROUP, UUID.fromString("3cb7dfc5-de8c-442c-9e9a-deab2eff38e8"));
-    }
-  }
-
-  private static final class InternalBoundedIntegerState extends BoundedIntegerState {
-    private final Key key;
-
-    private InternalBoundedIntegerState(BoundedIntegerState.Details details, Key key) {
-      super(details);
-      this.key = key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
     }
   }
 
@@ -486,35 +174,7 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
     }
   }
 
-  private static final class InternalBoundedDoubleState extends BoundedDoubleState {
-    private final Key key;
-
-    private InternalBoundedDoubleState(BoundedDoubleState.Details details, Key key) {
-      super(details);
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
+  // ── Protected interfaces (implemented by subclasses) ──────────────
 
   protected static interface Action {
     // TODO remove userActivity if possible. It is used by only two implementors
@@ -573,49 +233,6 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
     Edit createEdit(T[] values);
   }
 
-  protected static final class InternalCascadeWithInternalBlank<T> extends CascadeWithInternalBlank<T> {
-    private final CascadeCustomizer<T> customizer;
-    private final Key key;
-
-    private InternalCascadeWithInternalBlank(CascadeCustomizer<T> customizer, Class<T> componentType, Key key) {
-      super(Application.INHERIT_GROUP, UUID.fromString("165e65a4-fd9b-4a09-921d-ecc3cc808de0"), componentType);
-      this.customizer = customizer;
-      this.key = key;
-    }
-
-    public Key getKey() {
-      return this.key;
-    }
-
-    @Override
-    protected Class<? extends Element> getClassUsedForLocalization() {
-      return this.key.composite.getClass();
-    }
-
-    @Override
-    protected String getSubKeyForLocalization() {
-      return this.key.localizationKey;
-    }
-
-    @Override
-    protected Edit createEdit(UserActivity userActivity, T[] values) {
-      return this.customizer.createEdit(values);
-    }
-
-    @Override
-    protected List<CascadeBlankChild> updateBlankChildren(List<CascadeBlankChild> rv, BlankNode<T> blankNode) {
-      this.customizer.appendBlankChildren(rv, blankNode);
-      return rv;
-    }
-
-    @Override
-    protected void appendRepr(StringBuilder sb) {
-      super.appendRepr(sb);
-      sb.append(";key=");
-      sb.append(this.key);
-    }
-  }
-
   protected static interface ItemStateCustomizer<T> {
     public CascadeFillIn<T, ?> getFillInFor(T value);
 
@@ -669,54 +286,22 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
     }
   }
 
-  private static final class InternalSplitComposite extends SplitComposite {
-    private final boolean isHorizontal;
-    private final double resizeWeight;
+  // ── Managers ──────────────────────────────────────────────────────
 
-    private InternalSplitComposite(Composite<?> leadingComposite, Composite<?> trailingComposite, boolean isHorizontal, double resizeWeight) {
-      super(UUID.fromString("0a7dee81-a213-4168-b71c-99b9e364dcf3"), leadingComposite, trailingComposite);
-      this.isHorizontal = isHorizontal;
-      this.resizeWeight = resizeWeight;
-    }
-
-    @Override
-    protected SplitPane createView() {
-      SplitPane rv;
-      if (this.isHorizontal) {
-        rv = this.createHorizontalSplitPane();
-      } else {
-        rv = this.createVerticalSplitPane();
-      }
-      rv.setResizeWeight(this.resizeWeight);
-      return rv;
-    }
-  }
-
-  private static final class InternalCardOwnerComposite extends CardOwnerComposite {
-    private InternalCardOwnerComposite(Composite<?>... cards) {
-      super(UUID.fromString("3a6b3b22-9c35-473b-96cf-f69640176948"), cards);
-    }
-  }
-
-  private UUID cardId;
-
-  private V view;
-
-  private final ScrollPane scrollPane;
+  private final CompositeViewLifecycle<V> viewLifecycle;
+  final CompositeTabManager tabManager = new CompositeTabManager();
+  final CompositeResourceManager resourceManager = new CompositeResourceManager();
 
   public AbstractComposite(UUID id) {
     super(id);
-    this.scrollPane = this.createScrollPaneIfDesired();
+    this.viewLifecycle = new CompositeViewLifecycle<>(this.createScrollPaneIfDesired());
   }
+
+  // ── View lifecycle (delegates to CompositeViewLifecycle) ──────────
 
   @Override
   public synchronized UUID getCardId() {
-    if (this.cardId != null) {
-
-    } else {
-      this.cardId = UUID.randomUUID();
-    }
-    return this.cardId;
+    return this.viewLifecycle.getCardId();
   }
 
   protected abstract ScrollPane createScrollPaneIfDesired();
@@ -724,141 +309,61 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   protected abstract V createView();
 
   protected V peekView() {
-    return this.view;
+    return this.viewLifecycle.peekView();
   }
 
   @Override
   public final synchronized V getView() {
-    if (this.view == null) {
-      this.view = this.createView();
-      assert this.view != null : this;
-      if (this.scrollPane != null) {
-        this.scrollPane.setViewportView(this.view);
-      }
-    }
-    return this.view;
+    return this.viewLifecycle.initView(this::createView);
   }
 
   @Override
   public final ScrollPane getScrollPaneIfItExists() {
-    return this.scrollPane;
+    return this.viewLifecycle.getScrollPaneIfItExists();
   }
 
   @Override
   public final SwingComponentView<?> getRootComponent() {
-    V view = this.getView();
-    if (this.scrollPane != null) {
-      return this.scrollPane;
-    } else {
-      return view;
-    }
+    return this.viewLifecycle.getRootComponent(this::createView);
   }
 
   @Override
   public void releaseView() {
-    this.view = null;
+    this.viewLifecycle.releaseView();
   }
 
-  private final List<Composite<?>> subComposites = Lists.newCopyOnWriteArrayList();
+  // ── Tab/composite management (delegates to CompositeTabManager) ───
 
   protected <C extends Composite<?>> C registerSubComposite(C subComposite) {
-    this.subComposites.add(subComposite);
-    return subComposite;
+    return this.tabManager.registerSubComposite(subComposite);
   }
 
   protected void unregisterSubComposite(Composite<?> subComposite) {
-    this.subComposites.remove(subComposite);
+    this.tabManager.unregisterSubComposite(subComposite);
   }
 
   protected void registerTabState(TabState<?, ?> tabState) {
-    this.registeredTabStates.add(tabState);
+    this.tabManager.registerTabState(tabState);
   }
 
   protected void unregisterTabState(TabState<?, ?> tabState) {
-    this.registeredTabStates.remove(tabState);
+    this.tabManager.unregisterTabState(tabState);
   }
 
   @Override
   public void handlePreActivation() {
     this.initializeIfNecessary();
     this.getView().handleCompositePreActivation();
-    for (Composite<?> subComposite : this.subComposites) {
-      subComposite.handlePreActivation();
-    }
-    for (TabState<?, ?> tabSelectionState : this.mapKeyToTabState.values()) {
-      tabSelectionState.handlePreActivation();
-    }
-    for (TabState<?, ?> tabSelectionState : this.registeredTabStates) {
-      tabSelectionState.handlePreActivation();
-    }
+    this.tabManager.activateAll(this.resourceManager.getMapKeyToTabState().values());
   }
 
   @Override
   public void handlePostDeactivation() {
     this.getView().handleCompositePostDeactivation();
-    for (TabState<?, ?> tabSelectionState : this.registeredTabStates) {
-      tabSelectionState.handlePostDeactivation();
-    }
-    for (TabState<?, ?> tabSelectionState : this.mapKeyToTabState.values()) {
-      tabSelectionState.handlePostDeactivation();
-    }
-    for (Composite<?> subComposite : this.subComposites) {
-      subComposite.handlePostDeactivation();
-    }
+    this.tabManager.deactivateAll(this.resourceManager.getMapKeyToTabState().values());
   }
 
-  private final Map<Key, AbstractInternalStringValue> mapKeyToStringValue = Maps.newHashMap();
-  private final Map<Key, InternalBooleanState> mapKeyToBooleanState = Maps.newHashMap();
-  private final Map<Key, InternalPreferenceBooleanState> mapKeyToPreferenceBooleanState = Maps.newHashMap();
-  private final Map<Key, InternalStringState> mapKeyToStringState = Maps.newHashMap();
-  private final Map<Key, InternalPreferenceStringState> mapKeyToPreferenceStringState = Maps.newHashMap();
-  private final Map<Key, InternalSingleSelectListState> mapKeyToSingleSelectListState = Maps.newHashMap();
-  private final Map<Key, InternalImmutableDataSingleSelectListState> mapKeyToImmutableSingleSelectListState = Maps.newHashMap();
-  private final Map<Key, InternalRefreshableDataSingleSelectListState> mapKeyToRefreshableSingleSelectListState = Maps.newHashMap();
-  private final Map<Key, InternalMutableDataSingleSelectListState> mapKeyToMutableSingleSelectListState = Maps.newHashMap();
-  private final Map<Key, InternalTabState> mapKeyToTabState = Maps.newHashMap();
-  private final Map<Key, InternalBoundedIntegerState> mapKeyToBoundedIntegerState = Maps.newHashMap();
-  private final Map<Key, InternalBoundedDoubleState> mapKeyToBoundedDoubleState = Maps.newHashMap();
-  private final Map<Key, InternalActionOperation> mapKeyToActionOperation = Maps.newHashMap();
-  private final Map<Key, InternalCascadeWithInternalBlank> mapKeyToCascade = Maps.newHashMap();
-  private final Map<Key, InternalCustomItemState> mapKeyToItemState = Maps.newHashMap();
-
-  private final Set<TabState> registeredTabStates = Sets.newHashSet();
-
-  //  private java.util.Map<Key, InternalCardOwnerComposite> mapKeyToCardOwnerComposite = edu.cmu.cs.dennisc.java.util.Maps.newHashMap();
-
-  private static final String SIDEKICK_LABEL_EPILOGUE = ".sidekickLabel";
-
-  private void localizeSidekicks(Map<Key, ? extends CompletionModel>... maps) {
-    for (Map<Key, ? extends CompletionModel> map : maps) {
-      for (Key key : map.keySet()) {
-        CompletionModel model = map.get(key);
-        String text = this.findLocalizedText(key.getLocalizationKey() + SIDEKICK_LABEL_EPILOGUE);
-        if (text != null) {
-          StringValue sidekickLabel = model.getSidekickLabel();
-          text = this.modifyLocalizedText(sidekickLabel, text);
-          sidekickLabel.setText(text);
-        } else {
-          //todo: it is probably to early for this check as we don't know if it will be accessed by the composite's view later.  hmm...
-          if (model.hasSidekickLabel()) {
-            Class<?> cls = this.getClassUsedForLocalization();
-            String localizationKey = cls.getSimpleName() + "." + key.getLocalizationKey() + SIDEKICK_LABEL_EPILOGUE;
-            Logger.errln();
-            Logger.errln("WARNING: could not find localization for sidekick label");
-            Logger.errln("looking for:");
-            Logger.errln();
-            Logger.errln("   ", localizationKey);
-            Logger.errln();
-            Logger.errln("in croquet.properties file in package:", cls.getPackage().getName());
-            Logger.errln();
-            Logger.errln(localizationKey, "has been copied to the clipboard for your convenience.");
-            Logger.errln("if this does not solve your problem please feel free to ask dennis for help.");
-            ClipboardUtilities.setClipboardContents(localizationKey);
-          }
-        }
-      }
-    }
-  }
+  // ── Resource management (delegates to CompositeResourceManager) ───
 
   protected String modifyLocalizedText(Element element, String localizedText) {
     return localizedText;
@@ -866,98 +371,16 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
 
   @Override
   protected void localize() {
-    for (Key key : this.mapKeyToStringValue.keySet()) {
-      AbstractInternalStringValue stringValue = this.mapKeyToStringValue.get(key);
-      stringValue.setText(this.modifyLocalizedText(stringValue, this.findLocalizedText(key.getLocalizationKey())));
-    }
-    this.localizeSidekicks(this.mapKeyToActionOperation, this.mapKeyToBooleanState, this.mapKeyToPreferenceBooleanState, this.mapKeyToBoundedDoubleState, this.mapKeyToBoundedIntegerState, this.mapKeyToCascade, this.mapKeyToItemState, this.mapKeyToImmutableSingleSelectListState, this.mapKeyToRefreshableSingleSelectListState, this.mapKeyToMutableSingleSelectListState, this.mapKeyToTabState, this.mapKeyToPreferenceStringState, this.mapKeyToStringState);
+    this.resourceManager.localize(this);
   }
 
   @Override
   public boolean contains(Model model) {
-    for (Key key : this.mapKeyToBooleanState.keySet()) {
-      InternalBooleanState state = this.mapKeyToBooleanState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToPreferenceBooleanState.keySet()) {
-      InternalPreferenceBooleanState state = this.mapKeyToPreferenceBooleanState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToStringState.keySet()) {
-      InternalStringState state = this.mapKeyToStringState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToPreferenceStringState.keySet()) {
-      InternalPreferenceStringState state = this.mapKeyToPreferenceStringState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToImmutableSingleSelectListState.keySet()) {
-      InternalImmutableDataSingleSelectListState state = this.mapKeyToImmutableSingleSelectListState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToRefreshableSingleSelectListState.keySet()) {
-      InternalRefreshableDataSingleSelectListState state = this.mapKeyToRefreshableSingleSelectListState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToMutableSingleSelectListState.keySet()) {
-      InternalMutableDataSingleSelectListState state = this.mapKeyToMutableSingleSelectListState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToTabState.keySet()) {
-      InternalTabState state = this.mapKeyToTabState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToBoundedIntegerState.keySet()) {
-      InternalBoundedIntegerState state = this.mapKeyToBoundedIntegerState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToBoundedDoubleState.keySet()) {
-      InternalBoundedDoubleState state = this.mapKeyToBoundedDoubleState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToActionOperation.keySet()) {
-      InternalActionOperation operation = this.mapKeyToActionOperation.get(key);
-      if (model == operation) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToCascade.keySet()) {
-      InternalCascadeWithInternalBlank cascade = this.mapKeyToCascade.get(key);
-      if (model == cascade) {
-        return true;
-      }
-    }
-    for (Key key : this.mapKeyToItemState.keySet()) {
-      InternalCustomItemState itemState = this.mapKeyToItemState.get(key);
-      if (model == itemState) {
-        return true;
-      }
-    }
-    return false;
+    return this.resourceManager.contains(model);
   }
 
   protected void registerStringValue(AbstractInternalStringValue stringValue) {
-    this.mapKeyToStringValue.put(stringValue.getKey(), stringValue);
+    this.resourceManager.registerStringValue(stringValue);
   }
 
   protected Key createKey(String localizationKey) {
@@ -965,17 +388,11 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   }
 
   protected PlainStringValue createStringValue(String keyText) {
-    Key key = this.createKey(keyText);
-    InternalStringValue rv = new InternalStringValue(key);
-    this.registerStringValue(rv);
-    return rv;
+    return this.resourceManager.createStringValue(this.createKey(keyText));
   }
 
   protected StringState createStringState(String keyText, String initialValue) {
-    Key key = this.createKey(keyText);
-    InternalStringState rv = new InternalStringState(initialValue, key);
-    this.mapKeyToStringState.put(key, rv);
-    return rv;
+    return this.resourceManager.createStringState(this.createKey(keyText), initialValue);
   }
 
   protected StringState createStringState(String keyText) {
@@ -983,10 +400,7 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   }
 
   protected PreferenceStringState createPreferenceStringState(String keyText, String initialValue, BooleanState isStoringPreferenceDesiredState, UUID encryptionId) {
-    Key key = this.createKey(keyText);
-    InternalPreferenceStringState rv = new InternalPreferenceStringState(initialValue, key, isStoringPreferenceDesiredState, encryptionId);
-    this.mapKeyToPreferenceStringState.put(key, rv);
-    return rv;
+    return this.resourceManager.createPreferenceStringState(this.createKey(keyText), initialValue, isStoringPreferenceDesiredState, encryptionId);
   }
 
   protected PreferenceStringState createPreferenceStringState(String keyText, String initialValue, BooleanState isStoringPreferenceDesiredState) {
@@ -994,76 +408,49 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   }
 
   protected BooleanState createBooleanState(String keyText, boolean initialValue) {
-    Key key = this.createKey(keyText);
-    InternalBooleanState rv = new InternalBooleanState(initialValue, key);
-    this.mapKeyToBooleanState.put(key, rv);
-    return rv;
+    return this.resourceManager.createBooleanState(this.createKey(keyText), initialValue);
   }
 
   protected PreferenceBooleanState createPreferenceBooleanState(String keyText, boolean initialValue) {
-    Key key = this.createKey(keyText);
-    InternalPreferenceBooleanState rv = new InternalPreferenceBooleanState(initialValue, key);
-    this.mapKeyToPreferenceBooleanState.put(key, rv);
-    return rv;
+    return this.resourceManager.createPreferenceBooleanState(this.createKey(keyText), initialValue);
   }
 
   protected BoundedIntegerState createBoundedIntegerState(String keyText, BoundedIntegerState.Details details) {
-    Key key = this.createKey(keyText);
-    InternalBoundedIntegerState rv = new InternalBoundedIntegerState(details, key);
-    this.mapKeyToBoundedIntegerState.put(key, rv);
-    return rv;
+    return this.resourceManager.createBoundedIntegerState(this.createKey(keyText), details);
   }
 
   protected BoundedDoubleState createBoundedDoubleState(String keyText, BoundedDoubleState.Details details) {
-    Key key = this.createKey(keyText);
-    InternalBoundedDoubleState rv = new InternalBoundedDoubleState(details, key);
-    this.mapKeyToBoundedDoubleState.put(key, rv);
-    return rv;
+    return this.resourceManager.createBoundedDoubleState(this.createKey(keyText), details);
   }
 
   protected ActionOperation createActionOperation(String keyText, Action action) {
     Key key = this.createKey(keyText);
     InternalActionOperation rv = new InternalActionOperation(action, key);
-    this.mapKeyToActionOperation.put(key, rv);
+    this.resourceManager.registerActionOperation(key, rv);
     return rv;
   }
 
   protected <T> Cascade<T> createCascadeWithInternalBlank(String keyText, Class<T> cls, CascadeCustomizer<T> customizer) {
-    Key key = this.createKey(keyText);
-    InternalCascadeWithInternalBlank<T> rv = new InternalCascadeWithInternalBlank<T>(customizer, cls, key);
-    this.mapKeyToCascade.put(key, rv);
-    return rv;
+    return this.resourceManager.createCascadeWithInternalBlank(this.createKey(keyText), cls, customizer);
   }
 
   protected <T> CustomItemState<T> createCustomItemState(String keyText, ItemCodec<T> itemCodec, T initialValue, ItemStateCustomizer<T> customizer) {
     Key key = this.createKey(keyText);
     InternalCustomItemState<T> rv = new InternalCustomItemState<T>(customizer, itemCodec, initialValue, key);
-    this.mapKeyToItemState.put(key, rv);
+    this.resourceManager.registerCustomItemState(key, rv);
     return rv;
   }
 
   protected <T> SingleSelectListState<T, ListData<T>> createGenericListState(String keyText, ListData<T> data, int selectionIndex) {
-    Key key = this.createKey(keyText);
-    InternalSingleSelectListState<T> rv = new InternalSingleSelectListState<T>(selectionIndex, data, key);
-    this.mapKeyToSingleSelectListState.put(key, rv);
-    return rv;
+    return this.resourceManager.createGenericListState(this.createKey(keyText), data, selectionIndex);
   }
 
   protected <T> ImmutableDataSingleSelectListState<T> createImmutableListState(String keyText, Class<T> valueCls, ItemCodec<T> codec, int selectionIndex, T... values) {
-    Key key = this.createKey(keyText);
-    InternalImmutableDataSingleSelectListState<T> rv = new InternalImmutableDataSingleSelectListState<T>(selectionIndex, codec, values, key);
-    this.mapKeyToImmutableSingleSelectListState.put(key, rv);
-    return rv;
+    return this.resourceManager.createImmutableListState(this.createKey(keyText), selectionIndex, codec, values);
   }
 
   protected <T extends Enum<T>> ImmutableDataSingleSelectListState<T> createImmutableListStateForEnum(String keyText, Class<T> valueCls, EnumCodec.LocalizationCustomizer<T> localizationCustomizer, T initialValue) {
-    Key key = this.createKey(keyText);
-    T[] constants = valueCls.getEnumConstants();
-    int selectionIndex = Arrays.asList(constants).indexOf(initialValue);
-    EnumCodec<T> enumCodec = localizationCustomizer != null ? EnumCodec.createInstance(valueCls, localizationCustomizer) : EnumCodec.getInstance(valueCls);
-    InternalImmutableDataSingleSelectListState<T> rv = new InternalImmutableDataSingleSelectListState<T>(selectionIndex, enumCodec, constants, key);
-    this.mapKeyToImmutableSingleSelectListState.put(key, rv);
-    return rv;
+    return this.resourceManager.createImmutableListStateForEnum(this.createKey(keyText), valueCls, localizationCustomizer, initialValue);
   }
 
   protected <T extends Enum<T>> ImmutableDataSingleSelectListState<T> createImmutableListStateForEnum(String keyText, Class<T> valueCls, T initialValue) {
@@ -1071,24 +458,15 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   }
 
   protected <T> RefreshableDataSingleSelectListState<T> createRefreshableListState(String keyText, RefreshableListData<T> data, int selectionIndex) {
-    Key key = this.createKey(keyText);
-    InternalRefreshableDataSingleSelectListState<T> rv = new InternalRefreshableDataSingleSelectListState<T>(selectionIndex, data, key);
-    this.mapKeyToRefreshableSingleSelectListState.put(key, rv);
-    return rv;
+    return this.resourceManager.createRefreshableListState(this.createKey(keyText), data, selectionIndex);
   }
 
   protected <T> MutableDataSingleSelectListState<T> createMutableListState(String keyText, Class<T> valueCls, ItemCodec<T> codec, int selectionIndex, T... values) {
-    Key key = this.createKey(keyText);
-    InternalMutableDataSingleSelectListState<T> rv = new InternalMutableDataSingleSelectListState<T>(selectionIndex, new MutableListData<T>(codec, values), key);
-    this.mapKeyToMutableSingleSelectListState.put(key, rv);
-    return rv;
+    return this.resourceManager.createMutableListState(this.createKey(keyText), codec, selectionIndex, values);
   }
 
   protected <C extends SimpleTabComposite<?>> ImmutableDataTabState<C> createImmutableTabState(String keyText, int selectionIndex, Class<C> cls, C... tabComposites) {
-    Key key = this.createKey(keyText);
-    InternalTabState<C> rv = new InternalTabState<C>(selectionIndex, cls, tabComposites, key);
-    this.mapKeyToTabState.put(key, rv);
-    return rv;
+    return this.resourceManager.createImmutableTabState(this.createKey(keyText), selectionIndex, cls, tabComposites);
   }
 
   protected ImmutableDataTabState<SimpleTabComposite<?>> createImmutableTabState(String keyText, int selectionIndex, SimpleTabComposite<?>... tabComposites) {
@@ -1096,18 +474,18 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   }
 
   protected SplitComposite createHorizontalSplitComposite(Composite<?> leadingComposite, Composite<?> trailingComposite, double resizeWeight) {
-    return this.registerSubComposite(new InternalSplitComposite(leadingComposite, trailingComposite, true, resizeWeight));
+    return this.tabManager.createHorizontalSplitComposite(leadingComposite, trailingComposite, resizeWeight);
   }
 
   protected SplitComposite createVerticalSplitComposite(Composite<?> leadingComposite, Composite<?> trailingComposite, double resizeWeight) {
-    return this.registerSubComposite(new InternalSplitComposite(leadingComposite, trailingComposite, false, resizeWeight));
+    return this.tabManager.createVerticalSplitComposite(leadingComposite, trailingComposite, resizeWeight);
   }
 
   protected CardOwnerComposite createAndRegisterCardOwnerComposite(Composite<?>... cards) {
-    return this.registerSubComposite(this.createCardOwnerCompositeButDoNotRegister(cards));
+    return this.tabManager.createAndRegisterCardOwnerComposite(cards);
   }
 
   protected CardOwnerComposite createCardOwnerCompositeButDoNotRegister(Composite<?>... cards) {
-    return new InternalCardOwnerComposite(cards);
+    return this.tabManager.createCardOwnerCompositeButDoNotRegister(cards);
   }
 }

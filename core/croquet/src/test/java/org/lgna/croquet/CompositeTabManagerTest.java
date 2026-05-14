@@ -259,7 +259,7 @@ public class CompositeTabManagerTest {
    * CompositeTabManager will iterate TabState instances and call their
    * handlePreActivation/handlePostDeactivation. This double tracks those calls.
    */
-  static class RecordingTabState {
+  static class RecordingTabState implements CompositeTabManager.Activatable {
     private final String name;
     private final List<String> trace;
 

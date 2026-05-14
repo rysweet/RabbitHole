@@ -43,56 +43,63 @@
 
 package org.lgna.croquet;
 
-import org.lgna.croquet.data.ListData;
-import org.lgna.croquet.views.FolderTabbedPane;
+import org.lgna.croquet.views.CompositeView;
+import org.lgna.croquet.views.ScrollPane;
+import org.lgna.croquet.views.SwingComponentView;
 
-import javax.swing.Icon;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
- * @author Dennis Cosgrove
+ * Manages view lifecycle state (cardId, view, scrollPane) extracted from
+ * {@link AbstractComposite}. Thread-safe: getCardId() and initView() are
+ * synchronized on this instance.
  */
-public abstract class TabState<T extends TabComposite<?>, D extends ListData<T>> extends SingleSelectListState<T, D> implements CompositeTabManager.Activatable {
-  public TabState(Group group, UUID id, int selectionIndex, D data) {
-    super(group, id, selectionIndex, data);
+class CompositeViewLifecycle<V extends CompositeView<?, ?>> {
+  private UUID cardId;
+  private V view;
+  private final ScrollPane scrollPane;
+
+  CompositeViewLifecycle(ScrollPane scrollPane) {
+    this.scrollPane = scrollPane;
   }
 
-  public FolderTabbedPane<T> createFolderTabbedPane() {
-    return new FolderTabbedPane<T>(this);
-  }
-
-  public void setItemIconForBothTrueAndFalse(T item, Icon icon) {
-    this.getItemSelectedState(item).setIconForBothTrueAndFalse(icon);
-  }
-
-  @Override
-  protected void fireChanging(T prevValue, T nextValue) {
-    if (prevValue != null) {
-      prevValue.handlePostDeactivation();
+  synchronized UUID getCardId() {
+    if (this.cardId == null) {
+      this.cardId = UUID.randomUUID();
     }
-    super.fireChanging(prevValue, nextValue);
+    return this.cardId;
   }
 
-  @Override
-  protected void fireChanged(T prevValue, T nextValue, boolean isAdjusting) {
-    super.fireChanged(prevValue, nextValue, isAdjusting);
-    if (nextValue != null) {
-      nextValue.handlePreActivation();
+  V peekView() {
+    return this.view;
+  }
+
+  synchronized V initView(Supplier<V> viewFactory) {
+    if (this.view == null) {
+      this.view = viewFactory.get();
+      assert this.view != null;
+      if (this.scrollPane != null) {
+        this.scrollPane.setViewportView(this.view);
+      }
+    }
+    return this.view;
+  }
+
+  ScrollPane getScrollPaneIfItExists() {
+    return this.scrollPane;
+  }
+
+  SwingComponentView<?> getRootComponent(Supplier<V> viewFactory) {
+    V v = this.initView(viewFactory);
+    if (this.scrollPane != null) {
+      return this.scrollPane;
+    } else {
+      return v;
     }
   }
 
-  public void handlePreActivation() {
-    this.initializeIfNecessary();
-    TabComposite<?> selected = this.getValue();
-    if (selected != null) {
-      selected.handlePreActivation();
-    }
-  }
-
-  public void handlePostDeactivation() {
-    TabComposite<?> selected = this.getValue();
-    if (selected != null) {
-      selected.handlePostDeactivation();
-    }
+  void releaseView() {
+    this.view = null;
   }
 }
