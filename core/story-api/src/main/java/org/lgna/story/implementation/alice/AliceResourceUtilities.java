@@ -271,49 +271,43 @@ public class AliceResourceUtilities {
       return null;
     }
     String key = getKey(modelResource, resourceName);
-    //Return the info if we have it cached
-    if (classToInfoMap.containsKey(key)) {
-      return classToInfoMap.get(key);
-    } else {
-      String parentKey = getKey(modelResource, null);
-      //If we don't have the parent info cached, load it from disk
-      ModelResourceInfo parentInfo = null;
-      if (!classToInfoMap.containsKey(parentKey)) {
-        String name = getName(modelResource);
-        try {
-          //xml files are not referenced off the
-          InputStream is = getAliceResourceAsStream(modelResource, ModelResourceIoUtilities.getResourceSubDirWithSeparator("") + name + ".xml");
-          if (is != null) {
-            Document doc = XMLUtilities.read(is);
-            parentInfo = new ModelResourceInfo(doc);
-            classToInfoMap.put(parentKey, parentInfo);
-          } else {
-            //This is an acceptable case because classes like Biped don't have class infos
-            classToInfoMap.put(parentKey, null);
-          }
-        } catch (Exception e) {
-          Logger.severe("Failed to parse class info for " + name + ": " + e);
+    // Single get for the common cache-hit case (avoids double hash lookup)
+    ModelResourceInfo cachedInfo = classToInfoMap.get(key);
+    if (cachedInfo != null || classToInfoMap.containsKey(key)) {
+      return cachedInfo;
+    }
+
+    String parentKey = getKey(modelResource, null);
+    ModelResourceInfo parentInfo = classToInfoMap.get(parentKey);
+    if (parentInfo == null && !classToInfoMap.containsKey(parentKey)) {
+      String name = getName(modelResource);
+      try {
+        InputStream is = getAliceResourceAsStream(modelResource, ModelResourceIoUtilities.getResourceSubDirWithSeparator("") + name + ".xml");
+        if (is != null) {
+          Document doc = XMLUtilities.read(is);
+          parentInfo = new ModelResourceInfo(doc);
+          classToInfoMap.put(parentKey, parentInfo);
+        } else {
+          // Acceptable — classes like Biped don't have class infos
           classToInfoMap.put(parentKey, null);
         }
-      } else {
-        parentInfo = classToInfoMap.get(parentKey);
+      } catch (Exception e) {
+        Logger.severe("Failed to parse class info for " + name + ": " + e);
+        classToInfoMap.put(parentKey, null);
       }
-      if (parentInfo != null) {
-        //If the key we're looking for is the same as the parent key, then just return the parent info
-        if (parentKey.equals(key)) {
-          return parentInfo;
-        }
-        //Otherwise get the model and texture names and find the sub resource we're looking for
-        ModelResourceInfo subResource = parentInfo.getSubResource(resourceName);
-        if (subResource == null) {
-          Logger.severe("Failed to find a resource for " + modelResource + " : " + resourceName);
-        }
-        //Cache the sub resource under the original main key
-        classToInfoMap.put(key, subResource);
-        return subResource;
-      }
-      return null;
     }
+    if (parentInfo != null) {
+      if (parentKey.equals(key)) {
+        return parentInfo;
+      }
+      ModelResourceInfo subResource = parentInfo.getSubResource(resourceName);
+      if (subResource == null) {
+        Logger.severe("Failed to find a resource for " + modelResource + " : " + resourceName);
+      }
+      classToInfoMap.put(key, subResource);
+      return subResource;
+    }
+    return null;
   }
 
   public static AxisAlignedBox getBoundingBox(Class<?> modelResource, String resourceName) {

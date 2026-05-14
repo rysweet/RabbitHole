@@ -195,21 +195,6 @@ class ResourceEnumResolver {
       }
     }
     if (!found) {
-      modelName = new StringBuilder();
-      for (int i = 0; i < splitName.length; i++) {
-        if (!splitName[i].isEmpty()) {
-          if (i != 0) {
-            modelName.append("_");
-          }
-          modelName.append(splitName[i]);
-          visualName = enumToCamelCase(modelName.toString());
-          textureName = arrayToEnum(splitName, i + 1, splitName.length);
-          if (ResourceTextureManager.checkVisualAndTextureName(resource, visualName, textureName)) {
-            Logger.warning("Initially failed to find resource names for '" + resource + "' and '" + resourceName + "' but did find for '" + modelName + "'");
-            break;
-          }
-        }
-      }
       return;
     }
     String identifier = resource.identifierFor(resourceName);
@@ -221,11 +206,13 @@ class ResourceEnumResolver {
       return AliceResourceUtilities.getName(resource.getClass());
     }
     String identifier = resource.identifierFor(resourceName);
-    if (!resourceIdentifierToResourceNamesMap.containsKey(identifier)) {
+    ResourceNames names = resourceIdentifierToResourceNamesMap.get(identifier);
+    if (names == null) {
       findAndStoreResourceNames(resource, resourceName);
+      names = resourceIdentifierToResourceNamesMap.get(identifier);
     }
-    if (resourceIdentifierToResourceNamesMap.get(identifier) != null) {
-      return resourceIdentifierToResourceNamesMap.get(identifier).visualName;
+    if (names != null) {
+      return names.visualName;
     } else {
       Logger.warning("Failed to find resource names for '" + resource + "' and '" + resourceName + "'");
       return null;
@@ -237,10 +224,11 @@ class ResourceEnumResolver {
       return null;
     }
     String identifier = resource.identifierFor(resourceName);
-    if (!resourceIdentifierToResourceNamesMap.containsKey(identifier)) {
-      findAndStoreResourceNames(resource, resourceName);
-    }
     ResourceNames resourceNames = resourceIdentifierToResourceNamesMap.get(identifier);
+    if (resourceNames == null) {
+      findAndStoreResourceNames(resource, resourceName);
+      resourceNames = resourceIdentifierToResourceNamesMap.get(identifier);
+    }
     if (resourceNames != null) {
       return resourceNames.textureName;
     } else {

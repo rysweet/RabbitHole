@@ -91,8 +91,7 @@ class ModelResourceLoader {
   }
 
   static SkeletonVisual decodeVisual(URL url) {
-    try {
-      InputStream is = url.openStream();
+    try (InputStream is = url.openStream()) {
       BinaryDecoder decoder = new InputStreamBinaryDecoder(is);
       return decoder.decodeReferenceableBinaryEncodableAndDecodable(new HashMap<Integer, ReferenceableBinaryEncodableAndDecodable>());
     } catch (Exception e) {
@@ -102,8 +101,7 @@ class ModelResourceLoader {
   }
 
   static TexturedAppearance[] decodeTexture(URL url) {
-    try {
-      InputStream is = url.openStream();
+    try (InputStream is = url.openStream()) {
       BinaryDecoder decoder = new InputStreamBinaryDecoder(is);
       TexturedAppearance[] rv = decoder.decodeReferenceableBinaryEncodableAndDecodableArray(TexturedAppearance.class, new HashMap<Integer, ReferenceableBinaryEncodableAndDecodable>());
       for (TexturedAppearance ta : rv) {
@@ -136,9 +134,9 @@ class ModelResourceLoader {
     if (!file.exists()) {
       file.createNewFile();
     }
-    FileOutputStream fos = new FileOutputStream(file);
-    encodeVisual(toSave, fos);
-    fos.close();
+    try (FileOutputStream fos = new FileOutputStream(file)) {
+      encodeVisual(toSave, fos);
+    }
   }
 
   static void encodeTexture(final TexturedAppearance[] toSave, OutputStream os) throws IOException {
@@ -152,27 +150,27 @@ class ModelResourceLoader {
     if (!file.exists()) {
       file.createNewFile();
     }
-    FileOutputStream fos = new FileOutputStream(file);
-    encodeTexture(toSave, fos);
-    fos.close();
+    try (FileOutputStream fos = new FileOutputStream(file)) {
+      encodeTexture(toSave, fos);
+    }
   }
 
   static SkeletonVisual getVisual(ModelResource resource) {
     URL resourceURL = ResourceTextureManager.getVisualURL(resource);
-    if (urlToVisualMap.containsKey(resourceURL)) {
-      return urlToVisualMap.get(resourceURL);
-    } else {
-      SkeletonVisual visual = decodeVisual(resourceURL);
-      List<Problem> problems = QualityAssuranceUtilities.inspect(visual);
-      if (!problems.isEmpty()) {
-        Logger.errln(resourceURL);
-        for (Problem problem : problems) {
-          Logger.errln(problem);
-        }
-      }
-      urlToVisualMap.put(resourceURL, visual);
-      return visual;
+    SkeletonVisual cached = urlToVisualMap.get(resourceURL);
+    if (cached != null || urlToVisualMap.containsKey(resourceURL)) {
+      return cached;
     }
+    SkeletonVisual visual = decodeVisual(resourceURL);
+    List<Problem> problems = QualityAssuranceUtilities.inspect(visual);
+    if (!problems.isEmpty()) {
+      Logger.errln(resourceURL);
+      for (Problem problem : problems) {
+        Logger.errln(problem);
+      }
+    }
+    urlToVisualMap.put(resourceURL, visual);
+    return visual;
   }
 
   static SkeletonVisual getVisualCopy(ModelResource resource) {
@@ -182,13 +180,13 @@ class ModelResourceLoader {
 
   static TexturedAppearance[] getTexturedAppearances(ModelResource resource) {
     URL resourceURL = ResourceTextureManager.getTextureURL(resource);
-    if (urlToTextureMap.containsKey(resourceURL)) {
-      return urlToTextureMap.get(resourceURL);
-    } else {
-      TexturedAppearance[] texture = decodeTexture(resourceURL);
-      urlToTextureMap.put(resourceURL, texture);
-      return texture;
+    TexturedAppearance[] cached = urlToTextureMap.get(resourceURL);
+    if (cached != null || urlToTextureMap.containsKey(resourceURL)) {
+      return cached;
     }
+    TexturedAppearance[] texture = decodeTexture(resourceURL);
+    urlToTextureMap.put(resourceURL, texture);
+    return texture;
   }
 
   static SkeletonVisual createCopy(SkeletonVisual sgOriginal) {
