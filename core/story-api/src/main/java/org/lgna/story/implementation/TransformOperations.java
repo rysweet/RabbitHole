@@ -155,7 +155,6 @@ class TransformOperations {
 
     PlaceData(AbstractTransformableImp subject, SpatialRelationImp spatialRelation, EntityImp target, double alongAxisOffset, ReferenceFrame asSeenBy) {
       assert subject != null;
-      //assert target != null;
       assert asSeenBy != null;
       assert spatialRelation != null;
       assert !Double.isNaN(alongAxisOffset);

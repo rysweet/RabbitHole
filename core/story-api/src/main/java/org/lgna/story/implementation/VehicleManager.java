@@ -77,7 +77,7 @@ class VehicleManager {
       Vector3 targetPos = target.getTransformation(subject).translation().asVector();
       if (EpsilonUtilities.isWithinReasonableEpsilon(targetPos.x(), 0.0)
           && EpsilonUtilities.isWithinReasonableEpsilon(targetPos.z(), 0.0)) {
-        //todo
+        // Target at same XZ position; keep current orientation
         return subject.getLocalOrientation();
       } else {
         targetPos = targetPos.withY(0).normalized();

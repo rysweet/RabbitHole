@@ -440,7 +440,7 @@ class TransformAnimator {
       super(duration, style);
       this.m1 = m1;
 
-      double s = -8; //this.m0.translation.calculateMagnitude();
+      double s = -8;
       this.xHermite = new HermiteCubic(m0.translation().x(), m1.translation().x(), s * m0.orientation().backward().x(), s * m1.orientation().backward().x());
       this.yHermite = new HermiteCubic(m0.translation().y(), m1.translation().y(), s * m0.orientation().backward().y(), s * m1.orientation().backward().y());
       this.zHermite = new HermiteCubic(m0.translation().z(), m1.translation().z(), s * m0.orientation().backward().z(), s * m1.orientation().backward().z());
@@ -584,9 +584,6 @@ class TransformAnimator {
         m1 = AffineMatrix4x4.IDENTITY;
       }
       AffineMatrix4x4 m0 = owner.getTransformation(target);
-      //      if( isSmooth ) {
-      //        this.perform( new SmoothAffineMatrix4x4Animation( duration, style, m0, m1 ) );
-      //      } else {
       owner.perform(new AffineMatrix4x4Animation(duration, style, m0, m1) {
         @Override
         public Animated getAnimated() {
@@ -604,7 +601,6 @@ class TransformAnimator {
           owner.getSgComposite().notifyTransformationListeners();
         }
       });
-      //      }
     }
   }
 
