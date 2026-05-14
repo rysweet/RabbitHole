@@ -77,7 +77,7 @@ class ResourceTextureManager {
     } else if (!textureName.isEmpty()) {
       textureName = "_" + ResourceEnumResolver.makeEnumName(textureName);
     }
-    return (modelName != null ? modelName.toLowerCase(Locale.ENGLISH) : null) + textureName;
+    return modelName.toLowerCase(Locale.ENGLISH) + textureName;
   }
 
   static String getThumbnailResourceFileName(String modelName, String textureName) {

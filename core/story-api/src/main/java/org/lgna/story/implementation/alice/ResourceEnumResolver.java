@@ -188,7 +188,6 @@ class ResourceEnumResolver {
           visualName = enumToCamelCase(modelName.toString());
           textureName = arrayToEnum(splitName, i + 1, splitName.length);
           if (ResourceTextureManager.checkVisualAndTextureName(resource, visualName, textureName)) {
-            ResourceTextureManager.checkVisualAndTextureName(resource, visualName, textureName);
             found = true;
             break;
           }
