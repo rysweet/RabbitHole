@@ -578,86 +578,29 @@ class CompositeResourceManager {
 
   // ── contains() ──────────────────────────────────────────────────────
 
-  boolean contains(Model model) {
-    for (AbstractComposite.Key key : this.mapKeyToBooleanState.keySet()) {
-      InternalBooleanState state = this.mapKeyToBooleanState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToPreferenceBooleanState.keySet()) {
-      InternalPreferenceBooleanState state = this.mapKeyToPreferenceBooleanState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToStringState.keySet()) {
-      InternalStringState state = this.mapKeyToStringState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToPreferenceStringState.keySet()) {
-      InternalPreferenceStringState state = this.mapKeyToPreferenceStringState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToImmutableSingleSelectListState.keySet()) {
-      InternalImmutableDataSingleSelectListState state = this.mapKeyToImmutableSingleSelectListState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToRefreshableSingleSelectListState.keySet()) {
-      InternalRefreshableDataSingleSelectListState state = this.mapKeyToRefreshableSingleSelectListState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToMutableSingleSelectListState.keySet()) {
-      InternalMutableDataSingleSelectListState state = this.mapKeyToMutableSingleSelectListState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToTabState.keySet()) {
-      InternalTabState state = this.mapKeyToTabState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToBoundedIntegerState.keySet()) {
-      InternalBoundedIntegerState state = this.mapKeyToBoundedIntegerState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToBoundedDoubleState.keySet()) {
-      InternalBoundedDoubleState state = this.mapKeyToBoundedDoubleState.get(key);
-      if (model == state) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToActionOperation.keySet()) {
-      AbstractComposite.InternalActionOperation operation = this.mapKeyToActionOperation.get(key);
-      if (model == operation) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToCascade.keySet()) {
-      InternalCascadeWithInternalBlank cascade = this.mapKeyToCascade.get(key);
-      if (model == cascade) {
-        return true;
-      }
-    }
-    for (AbstractComposite.Key key : this.mapKeyToItemState.keySet()) {
-      AbstractComposite.InternalCustomItemState itemState = this.mapKeyToItemState.get(key);
-      if (model == itemState) {
+  private static boolean containsByIdentity(Map<?, ?> map, Object target) {
+    for (Object value : map.values()) {
+      if (target == value) {
         return true;
       }
     }
     return false;
+  }
+
+  boolean contains(Model model) {
+    return containsByIdentity(this.mapKeyToBooleanState, model)
+        || containsByIdentity(this.mapKeyToPreferenceBooleanState, model)
+        || containsByIdentity(this.mapKeyToStringState, model)
+        || containsByIdentity(this.mapKeyToPreferenceStringState, model)
+        || containsByIdentity(this.mapKeyToImmutableSingleSelectListState, model)
+        || containsByIdentity(this.mapKeyToRefreshableSingleSelectListState, model)
+        || containsByIdentity(this.mapKeyToMutableSingleSelectListState, model)
+        || containsByIdentity(this.mapKeyToTabState, model)
+        || containsByIdentity(this.mapKeyToBoundedIntegerState, model)
+        || containsByIdentity(this.mapKeyToBoundedDoubleState, model)
+        || containsByIdentity(this.mapKeyToActionOperation, model)
+        || containsByIdentity(this.mapKeyToCascade, model)
+        || containsByIdentity(this.mapKeyToItemState, model);
   }
 
   // ── localize() ──────────────────────────────────────────────────────

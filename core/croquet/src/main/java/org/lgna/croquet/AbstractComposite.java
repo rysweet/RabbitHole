@@ -177,7 +177,6 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   // ── Protected interfaces (implemented by subclasses) ──────────────
 
   protected static interface Action {
-    // TODO remove userActivity if possible. It is used by only two implementors
     Edit perform(UserActivity userActivity, InternalActionOperation source) throws CancelException;
   }
 
