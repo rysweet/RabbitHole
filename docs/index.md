@@ -208,6 +208,7 @@ repository.
 - [Encoder Delegate Decomposition](./reference/encoder-delegate-decomposition.md) - internal decomposition of the 959-line `TweedleEncoder` into a thin coordinator plus `StatementEncoder`, `ExpressionEncoder`, `EncoderMappings`, and `ResourceStructureEncoder` package-private delegates with preserved behavior.
 - [Validate the TweedleEncoder Extraction](./howto/validate-tweedle-encoder-extraction.md) - step-by-step validation for the TweedleEncoder extraction: delegate visibility, line counts, core AST tests, story-api-migration tests, silver-thread round-trip, and stale reference checks.
 - [Tutorial: Trace the Encoder Delegate Decomposition](./tutorials/trace-encoder-delegate-decomposition.md) - guided walkthrough of a Tweedle encode request flowing through TweedleEncoder, StatementEncoder, ExpressionEncoder, EncoderMappings, and ResourceStructureEncoder.
+- [Tweedle VirtualMachine Dead Code Removal](./reference/tweedle-vm-dead-code-removal.md) - removal of ~835 lines of commented-out dead code from `VirtualMachine.java` (938→104 lines), preserving all 11 active methods with identical signatures (issue #579).
 
 ## IK enforcer decomposition
 
