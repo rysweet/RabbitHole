@@ -84,11 +84,7 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
     }
 
     public String getPreferenceKey() {
-      StringBuilder sb = new StringBuilder();
-      sb.append(this.composite.getClass().getName());
-      sb.append("_");
-      sb.append(this.localizationKey);
-      return sb.toString();
+      return this.composite.getClass().getName() + "_" + this.localizationKey;
     }
 
     @Override
@@ -117,14 +113,7 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
 
     @Override
     public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append(this.getClass().getSimpleName());
-      sb.append("[");
-      sb.append(this.composite);
-      sb.append(";");
-      sb.append(this.localizationKey);
-      sb.append("]");
-      return sb.toString();
+      return this.getClass().getSimpleName() + "[" + this.composite + ";" + this.localizationKey + "]";
     }
   }
 
@@ -299,7 +288,7 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   // ── View lifecycle (delegates to CompositeViewLifecycle) ──────────
 
   @Override
-  public synchronized UUID getCardId() {
+  public UUID getCardId() {
     return this.viewLifecycle.getCardId();
   }
 
@@ -312,7 +301,7 @@ public abstract class AbstractComposite<V extends CompositeView<?, ?>> extends A
   }
 
   @Override
-  public final synchronized V getView() {
+  public final V getView() {
     return this.viewLifecycle.initView(this::createView);
   }
 

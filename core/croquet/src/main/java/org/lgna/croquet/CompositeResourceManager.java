@@ -55,8 +55,11 @@ import org.lgna.croquet.preferences.PreferenceBooleanState;
 import org.lgna.croquet.preferences.PreferenceStringState;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -467,6 +470,9 @@ class CompositeResourceManager {
   private final Map<AbstractComposite.Key, InternalCascadeWithInternalBlank> mapKeyToCascade = Maps.newHashMap();
   private final Map<AbstractComposite.Key, AbstractComposite.InternalCustomItemState> mapKeyToItemState = Maps.newHashMap();
 
+  // O(1) identity-based lookup index for contains()
+  private final Set<Object> containsIndex = Collections.newSetFromMap(new IdentityHashMap<>());
+
   // ── Map accessors ───────────────────────────────────────────────────
 
   Map<AbstractComposite.Key, InternalTabState> getMapKeyToTabState() {
@@ -481,10 +487,12 @@ class CompositeResourceManager {
 
   void registerActionOperation(AbstractComposite.Key key, AbstractComposite.InternalActionOperation operation) {
     this.mapKeyToActionOperation.put(key, operation);
+    this.containsIndex.add(operation);
   }
 
   void registerCustomItemState(AbstractComposite.Key key, AbstractComposite.InternalCustomItemState<?> itemState) {
     this.mapKeyToItemState.put(key, itemState);
+    this.containsIndex.add(itemState);
   }
 
   // ── Factory methods ─────────────────────────────────────────────────
@@ -498,42 +506,49 @@ class CompositeResourceManager {
   StringState createStringState(AbstractComposite.Key key, String initialValue) {
     InternalStringState rv = new InternalStringState(initialValue, key);
     this.mapKeyToStringState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   PreferenceStringState createPreferenceStringState(AbstractComposite.Key key, String initialValue, BooleanState isStoringPreferenceDesiredState, UUID encryptionId) {
     InternalPreferenceStringState rv = new InternalPreferenceStringState(initialValue, key, isStoringPreferenceDesiredState, encryptionId);
     this.mapKeyToPreferenceStringState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   BooleanState createBooleanState(AbstractComposite.Key key, boolean initialValue) {
     InternalBooleanState rv = new InternalBooleanState(initialValue, key);
     this.mapKeyToBooleanState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   PreferenceBooleanState createPreferenceBooleanState(AbstractComposite.Key key, boolean initialValue) {
     InternalPreferenceBooleanState rv = new InternalPreferenceBooleanState(initialValue, key);
     this.mapKeyToPreferenceBooleanState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   BoundedIntegerState createBoundedIntegerState(AbstractComposite.Key key, BoundedIntegerState.Details details) {
     InternalBoundedIntegerState rv = new InternalBoundedIntegerState(details, key);
     this.mapKeyToBoundedIntegerState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   BoundedDoubleState createBoundedDoubleState(AbstractComposite.Key key, BoundedDoubleState.Details details) {
     InternalBoundedDoubleState rv = new InternalBoundedDoubleState(details, key);
     this.mapKeyToBoundedDoubleState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   <T> Cascade<T> createCascadeWithInternalBlank(AbstractComposite.Key key, Class<T> cls, AbstractComposite.CascadeCustomizer<T> customizer) {
     InternalCascadeWithInternalBlank<T> rv = new InternalCascadeWithInternalBlank<T>(customizer, cls, key);
     this.mapKeyToCascade.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
@@ -546,6 +561,7 @@ class CompositeResourceManager {
   <T> ImmutableDataSingleSelectListState<T> createImmutableListState(AbstractComposite.Key key, int selectionIndex, ItemCodec<T> codec, T[] values) {
     InternalImmutableDataSingleSelectListState<T> rv = new InternalImmutableDataSingleSelectListState<T>(selectionIndex, codec, values, key);
     this.mapKeyToImmutableSingleSelectListState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
@@ -555,52 +571,35 @@ class CompositeResourceManager {
     EnumCodec<T> enumCodec = localizationCustomizer != null ? EnumCodec.createInstance(valueCls, localizationCustomizer) : EnumCodec.getInstance(valueCls);
     InternalImmutableDataSingleSelectListState<T> rv = new InternalImmutableDataSingleSelectListState<T>(selectionIndex, enumCodec, constants, key);
     this.mapKeyToImmutableSingleSelectListState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   <T> RefreshableDataSingleSelectListState<T> createRefreshableListState(AbstractComposite.Key key, RefreshableListData<T> data, int selectionIndex) {
     InternalRefreshableDataSingleSelectListState<T> rv = new InternalRefreshableDataSingleSelectListState<T>(selectionIndex, data, key);
     this.mapKeyToRefreshableSingleSelectListState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   <T> MutableDataSingleSelectListState<T> createMutableListState(AbstractComposite.Key key, ItemCodec<T> codec, int selectionIndex, T[] values) {
     InternalMutableDataSingleSelectListState<T> rv = new InternalMutableDataSingleSelectListState<T>(selectionIndex, new MutableListData<T>(codec, values), key);
     this.mapKeyToMutableSingleSelectListState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   <C extends SimpleTabComposite<?>> ImmutableDataTabState<C> createImmutableTabState(AbstractComposite.Key key, int selectionIndex, Class<C> cls, C[] tabComposites) {
     InternalTabState<C> rv = new InternalTabState<C>(selectionIndex, cls, tabComposites, key);
     this.mapKeyToTabState.put(key, rv);
+    this.containsIndex.add(rv);
     return rv;
   }
 
   // ── contains() ──────────────────────────────────────────────────────
 
-  private static boolean containsByIdentity(Map<?, ?> map, Object target) {
-    for (Object value : map.values()) {
-      if (target == value) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   boolean contains(Model model) {
-    return containsByIdentity(this.mapKeyToBooleanState, model)
-        || containsByIdentity(this.mapKeyToPreferenceBooleanState, model)
-        || containsByIdentity(this.mapKeyToStringState, model)
-        || containsByIdentity(this.mapKeyToPreferenceStringState, model)
-        || containsByIdentity(this.mapKeyToImmutableSingleSelectListState, model)
-        || containsByIdentity(this.mapKeyToRefreshableSingleSelectListState, model)
-        || containsByIdentity(this.mapKeyToMutableSingleSelectListState, model)
-        || containsByIdentity(this.mapKeyToTabState, model)
-        || containsByIdentity(this.mapKeyToBoundedIntegerState, model)
-        || containsByIdentity(this.mapKeyToBoundedDoubleState, model)
-        || containsByIdentity(this.mapKeyToActionOperation, model)
-        || containsByIdentity(this.mapKeyToCascade, model)
-        || containsByIdentity(this.mapKeyToItemState, model);
+    return this.containsIndex.contains(model);
   }
 
   // ── localize() ──────────────────────────────────────────────────────
@@ -610,8 +609,9 @@ class CompositeResourceManager {
   @SuppressWarnings("unchecked")
   private void localizeSidekicks(AbstractComposite<?> composite, Map<AbstractComposite.Key, ? extends CompletionModel>... maps) {
     for (Map<AbstractComposite.Key, ? extends CompletionModel> map : maps) {
-      for (AbstractComposite.Key key : map.keySet()) {
-        CompletionModel model = map.get(key);
+      for (Map.Entry<AbstractComposite.Key, ? extends CompletionModel> entry : map.entrySet()) {
+        AbstractComposite.Key key = entry.getKey();
+        CompletionModel model = entry.getValue();
         String text = composite.findLocalizedText(key.getLocalizationKey() + SIDEKICK_LABEL_EPILOGUE);
         if (text != null) {
           StringValue sidekickLabel = model.getSidekickLabel();
@@ -640,9 +640,9 @@ class CompositeResourceManager {
 
   @SuppressWarnings("unchecked")
   void localize(AbstractComposite<?> composite) {
-    for (AbstractComposite.Key key : this.mapKeyToStringValue.keySet()) {
-      AbstractComposite.AbstractInternalStringValue stringValue = this.mapKeyToStringValue.get(key);
-      stringValue.setText(composite.modifyLocalizedText(stringValue, composite.findLocalizedText(key.getLocalizationKey())));
+    for (Map.Entry<AbstractComposite.Key, AbstractComposite.AbstractInternalStringValue> entry : this.mapKeyToStringValue.entrySet()) {
+      AbstractComposite.AbstractInternalStringValue stringValue = entry.getValue();
+      stringValue.setText(composite.modifyLocalizedText(stringValue, composite.findLocalizedText(entry.getKey().getLocalizationKey())));
     }
     this.localizeSidekicks(composite, this.mapKeyToActionOperation, this.mapKeyToBooleanState, this.mapKeyToPreferenceBooleanState, this.mapKeyToBoundedDoubleState, this.mapKeyToBoundedIntegerState, this.mapKeyToCascade, this.mapKeyToItemState, this.mapKeyToImmutableSingleSelectListState, this.mapKeyToRefreshableSingleSelectListState, this.mapKeyToMutableSingleSelectListState, this.mapKeyToTabState, this.mapKeyToPreferenceStringState, this.mapKeyToStringState);
   }
