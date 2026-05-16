@@ -164,8 +164,8 @@ final class ResourceCodeTemplates {
   }
 
   static void appendRootJointIds(StringBuilder sb, List<String> rootJoints) {
-    sb.append("\n@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
-    sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] ")
+    sb.append(JavaCodeUtilities.LINE_RETURN).append("@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
+    sb.append(JavaCodeUtilities.LINE_RETURN).append("\tpublic static final org.lgna.story.resources.JointId[] ")
       .append(ModelResourceJavaGenerator.ROOT_IDS_FIELD_NAME)
       .append(" = { ").append(String.join(", ", rootJoints))
       .append(" };").append(JavaCodeUtilities.LINE_RETURN);
@@ -196,11 +196,11 @@ final class ResourceCodeTemplates {
       boolean needsAccessor = ModelResourceJavaGenerator.needsAccessorMethodForFieldName(classData, fullPoseName);
 
       if (needsAccessor) {
-        sb.append("\n\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
+        sb.append(JavaCodeUtilities.LINE_RETURN).append("\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
       }
 
       String poseTypeString = JointedModelPose.class.getName();
-      sb.append("\n\tpublic static final ").append(poseTypeString).append(" ").append(fullPoseName)
+      sb.append(JavaCodeUtilities.LINE_RETURN).append("\tpublic static final ").append(poseTypeString).append(" ").append(fullPoseName)
         .append(" = new ").append(poseTypeString).append("( ");
       sb.append(JavaCodeUtilities.LINE_RETURN);
       int count = 0;
@@ -262,7 +262,7 @@ final class ResourceCodeTemplates {
       boolean needsAccessor = ModelResourceJavaGenerator.needsAccessorMethodForFieldName(classData, fullArrayName);
 
       if (needsAccessor) {
-        sb.append("\n\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
+        sb.append(JavaCodeUtilities.LINE_RETURN).append("\t@FieldTemplate( visibility = org.lgna.project.annotations.Visibility.COMPLETELY_HIDDEN )");
       }
 
       if (hideElementArrays.contains(fullArrayName) || hideElementArrays.contains(arrayEntry.getKey())) {
@@ -280,7 +280,7 @@ final class ResourceCodeTemplates {
           .append("\", ").append(parentString).append(", ").append(javaClassName)
           .append(".class );").append(JavaCodeUtilities.LINE_RETURN);
       } else {
-        sb.append("\n\tpublic static final org.lgna.story.resources.JointId[] ").append(fullArrayName)
+        sb.append(JavaCodeUtilities.LINE_RETURN).append("\tpublic static final org.lgna.story.resources.JointId[] ").append(fullArrayName)
           .append(" = { ").append(String.join(", ", arrayElements))
           .append(" };").append(JavaCodeUtilities.LINE_RETURN);
       }
@@ -326,7 +326,7 @@ final class ResourceCodeTemplates {
       }
       sb.append("\t}").append(JavaCodeUtilities.LINE_RETURN);
     }
-    sb.append("\n\tpublic org.lgna.story.implementation.JointedModelImp.JointImplementationAndVisualDataFactory<org.lgna.story.resources.JointedModelResource> getImplementationAndVisualFactory() {").append(JavaCodeUtilities.LINE_RETURN);
+    sb.append(JavaCodeUtilities.LINE_RETURN).append("\tpublic org.lgna.story.implementation.JointedModelImp.JointImplementationAndVisualDataFactory<org.lgna.story.resources.JointedModelResource> getImplementationAndVisualFactory() {").append(JavaCodeUtilities.LINE_RETURN);
     sb.append("\t\treturn this.resourceType.getFactory( this );").append(JavaCodeUtilities.LINE_RETURN);
     sb.append("\t}").append(JavaCodeUtilities.LINE_RETURN);
     sb.append("\tpublic ").append(classData.implementationClass.getCanonicalName())

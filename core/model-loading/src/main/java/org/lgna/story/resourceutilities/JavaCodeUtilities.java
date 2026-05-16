@@ -57,8 +57,8 @@ public class JavaCodeUtilities {
 
   public static String getCopyrightComment(String lineEnding) {
     if (COPYRIGHT_COMMENT == null) {
-      String copyright = License.TEXT.replace("\r\n", lineEnding + " * ");
-      COPYRIGHT_COMMENT = "/*" + lineEnding + "* " + copyright + lineEnding + " */" + lineEnding;
+      String copyright = License.TEXT.replace("\r\n", "\n").replace("\n", lineEnding + " * ");
+      COPYRIGHT_COMMENT = "/*" + lineEnding + " * " + copyright + lineEnding + " */" + lineEnding;
     }
     return COPYRIGHT_COMMENT;
   }

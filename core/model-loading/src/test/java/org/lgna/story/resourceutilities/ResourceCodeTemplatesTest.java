@@ -763,6 +763,36 @@ public class ResourceCodeTemplatesTest {
     assertEquals("buildJavaCodeBody should be deterministic", expected, secondCall);
   }
 
+  // ── Line ending consistency ────────────────────────────────────
+
+  @Test
+  public void generatedCodeUsesConsistentLineEndings() throws DataFormatException {
+    ModelResourceExporter exporter = createMinimalPropExporter();
+    String output = ModelResourceJavaGenerator.buildJavaCodeBody(exporter);
+
+    // Every line break in the output should be CRLF (\r\n), not bare LF (\n).
+    // Split on \n and verify each preceding character is \r.
+    String[] lines = output.split("\n", -1);
+    for (int i = 0; i < lines.length - 1; i++) {
+      String line = lines[i];
+      assertTrue(
+          "Line " + (i + 1) + " should end with \\r before \\n (CRLF), got: ..."
+              + line.substring(Math.max(0, line.length() - 20)),
+          line.endsWith("\r"));
+    }
+  }
+
+  @Test
+  public void generatedCodeContainsNoBareLineFeed() throws DataFormatException {
+    ModelResourceExporter exporter = createMinimalPropExporter();
+    String output = ModelResourceJavaGenerator.buildJavaCodeBody(exporter);
+
+    // Remove all \r\n, then check that no bare \n remains
+    String withoutCrlf = output.replace("\r\n", "");
+    assertFalse("Output should not contain bare \\n (only \\r\\n)",
+        withoutCrlf.contains("\n"));
+  }
+
   // ── helpers ────────────────────────────────────────────────────
 
   private static ModelResourceExporter createMinimalPropExporter() {
