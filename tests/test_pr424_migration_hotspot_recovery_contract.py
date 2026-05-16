@@ -96,7 +96,7 @@ class Pr424MigrationHotspotRecoveryContractTest(unittest.TestCase):
         self.assertIsNotNone(version_match, "pyproject.toml must declare a project version.")
         assert version_match is not None
         self.assertEqual(
-            "0.13.16",
+            "0.13.17",
             version_match.group("version"),
             "PR #424 recovery must keep origin/develop package metadata unless migration scope requires otherwise.",
         )

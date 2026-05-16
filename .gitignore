@@ -38,3 +38,6 @@ logs/
 # Test log artifacts
 logs/
 qa/outside-in/alice-desktop/logs/
+
+# Git worktrees used during refactoring — never track
+worktrees/
