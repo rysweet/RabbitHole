@@ -63,6 +63,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -70,6 +71,16 @@ import java.util.UUID;
  * from {@link XmlProjectIo}. All methods are package-private static.
  */
 class SecureXmlParser {
+
+  // Package prefixes allowed for reflective resource instantiation.
+  // Defense-in-depth: prevents arbitrary class instantiation even if
+  // an attacker controls the className attribute in a project XML file.
+  private static final Set<String> ALLOWED_RESOURCE_PACKAGES = Set.of(
+      "org.lgna.common.",
+      "org.lgna.common.resources.",
+      "org.lgna.story.resources.",
+      "org.lgna.project."
+  );
 
   private SecureXmlParser() {
   }
@@ -160,7 +171,21 @@ class SecureXmlParser {
     return sb.toString();
   }
 
+  static boolean isAllowedResourcePackage(String className) {
+    return ALLOWED_RESOURCE_PACKAGES.stream().anyMatch(className::startsWith);
+  }
+
   static Resource createResource(Class<? extends Resource> resourceCls, String uuidText) throws IOException {
+    // Defense-in-depth: verify the resource class belongs to an allowed package
+    // before calling setAccessible. The caller already validates via ClassUtilities
+    // and the cast to Class<? extends Resource>, but an explicit package check
+    // prevents instantiation of classes from unexpected packages.
+    String className = resourceCls.getName();
+    if (!isAllowedResourcePackage(className)) {
+      throw new IOException("Resource class '" + className
+          + "' is not in an allowed package for reflective instantiation");
+    }
+
     UUID uuid;
     try {
       uuid = UUID.fromString(uuidText);

@@ -43,6 +43,7 @@
 package org.lgna.project.io;
 
 import org.junit.Test;
+import org.lgna.common.Resource;
 import org.lgna.project.Version;
 import org.lgna.project.ast.AbstractType;
 import org.lgna.project.ast.InstanceCreation;
@@ -187,6 +188,40 @@ public class SecureXmlParserTest {
     IOException thrown = assertThrows(IOException.class, () ->
         SecureXmlParser.createResource(org.lgna.common.Resource.class, "not-a-uuid"));
     assertTrue(thrown.getMessage().contains("Invalid resource UUID"));
+  }
+
+  @Test
+  public void createResource_acceptsAllowedPackage() throws IOException {
+    // AudioResource is in org.lgna.common.resources — an allowed package.
+    // It should pass the allowlist check and successfully create an instance.
+    Resource resource = SecureXmlParser.createResource(
+        org.lgna.common.resources.AudioResource.class,
+        "00000000-0000-0000-0000-000000000001");
+    assertNotNull("Should create resource from allowed package", resource);
+  }
+
+  @Test
+  public void createResource_rejectsDisallowedPackage() {
+    // Create a mock resource class in a disallowed package to verify rejection.
+    // We use a class from java.lang that we pretend is a Resource subclass.
+    // Since we can't easily create a Resource subclass in a disallowed package
+    // in a unit test, we verify the allowlist by checking the ALLOWED_RESOURCE_PACKAGES
+    // field covers the expected prefixes.
+    // The actual rejection test uses a real call with a class that would be
+    // outside the allowed packages — but since all Resource subclasses in the
+    // codebase ARE in allowed packages, we verify the allowlist content instead.
+    assertTrue("Allowlist should cover org.lgna.common.",
+        SecureXmlParser.isAllowedResourcePackage("org.lgna.common.Resource"));
+    assertTrue("Allowlist should cover org.lgna.common.resources.",
+        SecureXmlParser.isAllowedResourcePackage("org.lgna.common.resources.AudioResource"));
+    assertTrue("Allowlist should cover org.lgna.story.resources.",
+        SecureXmlParser.isAllowedResourcePackage("org.lgna.story.resources.prop.BoxResource"));
+    assertTrue("Allowlist should cover org.lgna.project.",
+        SecureXmlParser.isAllowedResourcePackage("org.lgna.project.SomeResource"));
+    assertFalse("Allowlist should reject java.lang",
+        SecureXmlParser.isAllowedResourcePackage("java.lang.Runtime"));
+    assertFalse("Allowlist should reject com.evil",
+        SecureXmlParser.isAllowedResourcePackage("com.evil.MaliciousResource"));
   }
 
   @Test
