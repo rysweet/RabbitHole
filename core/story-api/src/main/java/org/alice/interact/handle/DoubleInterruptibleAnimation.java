@@ -46,9 +46,9 @@ import edu.cmu.cs.dennisc.animation.Style;
 import edu.cmu.cs.dennisc.animation.interpolation.DoubleAnimation;
 
 abstract class DoubleInterruptibleAnimation extends DoubleAnimation {
-  private boolean doEpilogue = true;
-  private boolean isActive = true;
-  private double target;
+  private volatile boolean doEpilogue = true;
+  private volatile boolean isActive = true;
+  private volatile double target;
 
   public DoubleInterruptibleAnimation(Number duration, Style style, Double d0, Double d1) {
     super(duration, style, d0, d1);
@@ -61,7 +61,7 @@ abstract class DoubleInterruptibleAnimation extends DoubleAnimation {
       super.epilogue();
     }
     this.isActive = false;
-    this.target = -1;
+    this.target = Double.NaN;
   }
 
   public boolean isActive() {
@@ -73,7 +73,7 @@ abstract class DoubleInterruptibleAnimation extends DoubleAnimation {
   }
 
   public boolean matchesTarget(double target) {
-    return this.target == target;
+    return Double.compare(this.target, target) == 0;
   }
 
   public void cancel() {

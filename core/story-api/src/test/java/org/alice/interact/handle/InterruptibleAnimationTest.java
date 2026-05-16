@@ -135,10 +135,20 @@ public class InterruptibleAnimationTest {
   }
 
   @Test
-  public void doubleAnimation_cancel_setsTargetToNegativeOne() {
+  public void doubleAnimation_cancel_setsTargetToNaN() {
     TestDoubleAnimation anim = new TestDoubleAnimation(0.0, 1.0);
     anim.cancel();
-    assertEquals("Target should be -1 after cancel", -1.0, anim.getTarget(), EPSILON);
+    assertTrue("Target should be NaN after cancel", Double.isNaN(anim.getTarget()));
+  }
+
+  @Test
+  public void doubleAnimation_matchesTarget_falseAfterCancel() {
+    TestDoubleAnimation anim = new TestDoubleAnimation(0.0, 1.0);
+    anim.cancel();
+    assertFalse("matchesTarget should return false after cancel (NaN != NaN)",
+        anim.matchesTarget(1.0));
+    assertFalse("matchesTarget should return false for NaN target",
+        anim.matchesTarget(-1.0));
   }
 
   // ===== Color4fInterruptibleAnimation =====

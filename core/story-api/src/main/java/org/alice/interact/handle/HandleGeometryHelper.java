@@ -109,7 +109,7 @@ final class HandleGeometryHelper {
       if (distance < .2) {
         return 0.0f;
       } else if (distance < .5) {
-        return (float) ((distance - .2f) / (.5 - .2));
+        return (float) ((distance - .2) / (.5 - .2));
       }
     }
     return 1;
@@ -119,10 +119,13 @@ final class HandleGeometryHelper {
     OrthogonalMatrix3x3 local = localTransform.orientation().normalized();
     if (parent != null) {
       OrthogonalMatrix3x3 parentOrientation = parent.getAbsoluteTransformation().orientation();
+      double rightMag = parentOrientation.getRight().magnitude();
+      double upMag = parentOrientation.getUp().magnitude();
+      double backMag = parentOrientation.getBackward().magnitude();
       local = new OrthogonalMatrix3x3(
-          local.getRight().times(1 / parentOrientation.getRight().magnitude()),
-          local.getUp().times(1 / parentOrientation.getUp().magnitude()),
-          local.getBackward().times(1 / parentOrientation.getBackward().magnitude()));
+          local.getRight().times(rightMag > 0 ? 1 / rightMag : 1),
+          local.getUp().times(upMag > 0 ? 1 / upMag : 1),
+          local.getBackward().times(backMag > 0 ? 1 / backMag : 1));
     }
     return new AffineMatrix4x4(local, localTransform.translation());
   }
