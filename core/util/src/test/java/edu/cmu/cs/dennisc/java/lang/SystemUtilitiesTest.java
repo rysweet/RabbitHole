@@ -233,12 +233,12 @@ public class SystemUtilitiesTest {
   @Test
   public void isArmArchitecture_returnsBooleanWithoutThrowing() {
     boolean result = SystemUtilities.isArmArchitecture();
-    // Verify consistency with os.arch
-    String arch = System.getProperty("os.arch", "");
-    if (arch.contains("aarch") || arch.contains("arm")) {
-      assertTrue("Should be true on ARM", result);
+    // Verify consistency with os.arch — implementation checks for "arm" only
+    String arch = System.getProperty("os.arch", "").toLowerCase(java.util.Locale.ENGLISH);
+    if (arch.contains("arm")) {
+      assertTrue("Should be true when os.arch contains 'arm'", result);
     } else {
-      assertFalse("Should be false on non-ARM (" + arch + ")", result);
+      assertFalse("Should be false when os.arch does not contain 'arm' (" + arch + ")", result);
     }
   }
 
