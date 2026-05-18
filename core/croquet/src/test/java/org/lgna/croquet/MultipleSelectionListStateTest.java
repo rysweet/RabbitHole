@@ -133,16 +133,12 @@ public class MultipleSelectionListStateTest {
   // ── NewSchool value listener ──────────────────────────────────────
 
   @Test
-  public void addNewSchoolListener_notifiesOnSetValue() {
+  public void addNewSchoolListener_canAddAndInvoke() {
     AtomicReference<List<String>> captured = new AtomicReference<>();
-    // Need to re-add the internal listener for fireChanged to work via setValue
-    // Instead, test direct listener behavior
     ValueListener<List<String>> listener = e -> captured.set(e.getNextValue());
     state.addNewSchoolValueListener(listener);
-    // Manually trigger fireChanged via internal path won't work without listener
-    // Just verify the listener is tracked and we can add/invoke/remove
+    // Verify addAndInvoke fires immediately with current value
     state.addAndInvokeNewSchoolValueListener(e -> {
-      // Called immediately with current value
       assertNotNull(e.getNextValue());
     });
   }

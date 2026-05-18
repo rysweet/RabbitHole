@@ -172,8 +172,11 @@ public class StateEditTest {
 
   // ── AbstractEdit: undo exercises undoInternal ──────────────────────
 
+  // Characterization: AbstractEdit.undo() throws CannotRedoException (not
+  // CannotUndoException) when canUndo() is false — this is a pre-existing
+  // production bug at AbstractEdit.java:130.  The test pins the actual behavior.
   @Test(expected = javax.swing.undo.CannotRedoException.class)
-  public void undo_cannotUndo_throws() {
+  public void undo_cannotUndo_throwsCannotRedoException() {
     edit.undo();
   }
 

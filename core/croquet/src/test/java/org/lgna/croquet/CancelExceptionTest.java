@@ -40,8 +40,10 @@ public class CancelExceptionTest {
   }
 
   @Test
-  public void isRuntimeException() {
-    assertTrue(new CancelException() instanceof RuntimeException);
+  public void extendsRuntimeException() {
+    // Verify the type hierarchy — CancelException must remain a RuntimeException
+    // so it propagates through catch-free code paths in the UI framework.
+    assertEquals(RuntimeException.class, CancelException.class.getSuperclass());
   }
 
   @Test

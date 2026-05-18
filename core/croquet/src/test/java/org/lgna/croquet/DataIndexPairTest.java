@@ -1,7 +1,5 @@
 package org.lgna.croquet;
 
-import edu.cmu.cs.dennisc.codec.BinaryDecoder;
-import edu.cmu.cs.dennisc.codec.BinaryEncoder;
 import org.lgna.croquet.data.MutableListData;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +25,7 @@ public class DataIndexPairTest {
 
   @Before
   public void setUp() {
-    data = new MutableListData<>(STRING_CODEC, new String[]{"alpha", "bravo", "charlie"});
+    data = new MutableListData<>(CroquetTestUtils.STRING_CODEC, new String[]{"alpha", "bravo", "charlie"});
     capturedIndex = -999;
     pair = new DataIndexPair<>(data, 1, idx -> capturedIndex = idx);
   }
@@ -142,7 +140,7 @@ public class DataIndexPairTest {
 
   @Test
   public void emptyData_getSize_returnsZero() {
-    MutableListData<String> empty = new MutableListData<>(STRING_CODEC);
+    MutableListData<String> empty = new MutableListData<>(CroquetTestUtils.STRING_CODEC);
     DataIndexPair<String, MutableListData<String>> emptyPair =
         new DataIndexPair<>(empty, -1, idx -> {});
     assertEquals(0, emptyPair.getSize());
@@ -150,33 +148,9 @@ public class DataIndexPairTest {
 
   @Test
   public void emptyData_getSelectedItem_returnsNull() {
-    MutableListData<String> empty = new MutableListData<>(STRING_CODEC);
+    MutableListData<String> empty = new MutableListData<>(CroquetTestUtils.STRING_CODEC);
     DataIndexPair<String, MutableListData<String>> emptyPair =
         new DataIndexPair<>(empty, -1, idx -> {});
     assertNull(emptyPair.getSelectedItem());
   }
-
-  // ── Test infrastructure ───────────────────────────────────────────
-
-  private static final ItemCodec<String> STRING_CODEC = new ItemCodec<String>() {
-    @Override
-    public Class<String> getValueClass() {
-      return String.class;
-    }
-
-    @Override
-    public String decodeValue(BinaryDecoder binaryDecoder) {
-      return binaryDecoder.decodeString();
-    }
-
-    @Override
-    public void encodeValue(BinaryEncoder binaryEncoder, String value) {
-      binaryEncoder.encode(value);
-    }
-
-    @Override
-    public void appendRepresentation(StringBuilder sb, String value) {
-      sb.append(value);
-    }
-  };
 }
