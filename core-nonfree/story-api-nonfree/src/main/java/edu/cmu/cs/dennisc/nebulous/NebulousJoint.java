@@ -58,7 +58,7 @@ import org.lgna.story.resources.JointId;
  */
 public class NebulousJoint extends AbstractTransformable implements ModelJoint {
   static {
-    AdapterFactory.register(NebulousJoint.class, GlrNebulousJoint.class);
+    AdapterFactory.register(NebulousJoint.class, GlrNebulousJoint::new);
   }
 
   public NebulousJoint(Model nebModel, JointId jointId) {

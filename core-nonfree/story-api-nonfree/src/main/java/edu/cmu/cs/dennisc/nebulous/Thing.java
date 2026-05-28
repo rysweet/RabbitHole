@@ -50,7 +50,7 @@ import edu.cmu.cs.dennisc.render.gl.imp.adapters.AdapterFactory;
  */
 public class Thing extends Model {
   static {
-    AdapterFactory.register(Thing.class, ThingAdapter.class);
+    AdapterFactory.register(Thing.class, ThingAdapter::new);
   }
 
   private final Object o;

@@ -61,7 +61,7 @@ import java.awt.image.BufferedImage;
 public class NebulousTexture extends Texture {
 
   static {
-    AdapterFactory.register(NebulousTexture.class, NebulousTextureAdapter.class);
+    AdapterFactory.register(NebulousTexture.class, NebulousTextureAdapter::new);
     if (SystemUtilities.getBooleanProperty("org.alice.ide.disableDefaultNebulousLoading", false)) {
       //Don't load nebulous resources if the default loading is disabled
       //Disabling should only happen under controlled circumstances like running the model batch process

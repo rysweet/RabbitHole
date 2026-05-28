@@ -61,7 +61,7 @@ import java.util.List;
  */
 public class Person extends Model {
   static {
-    AdapterFactory.register(Person.class, PersonAdapter.class);
+    AdapterFactory.register(Person.class, PersonAdapter::new);
   }
 
   private final Object o;
