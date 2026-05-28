@@ -46,7 +46,7 @@ package org.alice.ide.perspectives;
 import edu.cmu.cs.dennisc.java.util.Lists;
 import org.alice.ide.ProjectDocumentFrame;
 import org.alice.ide.RecycleBin;
-import org.alice.ide.clipboard.Clipboard;
+import org.alice.ide.clipboard.ClipboardProvider;
 import org.alice.ide.codedrop.CodePanelWithDropReceptor;
 import org.alice.ide.croquet.models.IdeDragModel;
 import org.lgna.croquet.AbstractPerspective;
@@ -89,8 +89,8 @@ public abstract class ProjectPerspective extends AbstractPerspective {
     if (recycleBinDropReceptor.isPotentiallyAcceptingOf(dragModel)) {
       rv.add(recycleBinDropReceptor);
     }
-    DropReceptor clipboardDropReceptor = Clipboard.SINGLETON.getDropReceptor();
-    if (clipboardDropReceptor.isPotentiallyAcceptingOf(dragModel)) {
+    DropReceptor clipboardDropReceptor = ClipboardProvider.getInstance().getDropReceptor();
+    if ((clipboardDropReceptor != null) && clipboardDropReceptor.isPotentiallyAcceptingOf(dragModel)) {
       rv.add(clipboardDropReceptor);
     }
     return rv;

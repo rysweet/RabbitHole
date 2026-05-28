@@ -42,7 +42,7 @@
  *******************************************************************************/
 package org.alice.ide.toolbar.croquet.views;
 
-import org.alice.ide.clipboard.Clipboard;
+import org.alice.ide.clipboard.ClipboardProvider;
 import org.alice.ide.toolbar.croquet.IdeToolBar;
 import org.lgna.croquet.Element;
 import org.lgna.croquet.views.ToolBarView;
@@ -58,11 +58,13 @@ public class IdeToolBarView extends ToolBarView {
 
   @Override
   protected String addViewForElement(Element element, String constraints) {
-    if (element == Clipboard.SINGLETON.getDragModel()) {
-      this.addComponent(Clipboard.SINGLETON.getDragComponent(), constraints);
-      return "";
-    } else {
-      return super.addViewForElement(element, constraints);
+    ClipboardProvider clipboardProvider = ClipboardProvider.getInstance();
+    if (element == clipboardProvider.getDragModel()) {
+      if (clipboardProvider.getDragComponent() != null) {
+        this.addComponent(clipboardProvider.getDragComponent(), constraints);
+        return "";
+      }
     }
+    return super.addViewForElement(element, constraints);
   }
 }

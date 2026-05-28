@@ -58,9 +58,7 @@ import org.alice.ide.ast.draganddrop.statement.StatementDragModel;
 import org.alice.ide.ast.draganddrop.statement.StatementTemplateDragModel;
 import org.alice.ide.cascade.BlockStatementIndexPairContext;
 import org.alice.ide.cascade.ExpressionCascadeContext;
-import org.alice.ide.clipboard.Clipboard;
-import org.alice.ide.clipboard.CopyFromClipboardOperation;
-import org.alice.ide.clipboard.PasteFromClipboardOperation;
+import org.alice.ide.clipboard.ClipboardProvider;
 import org.alice.ide.code.InsertCopiedStatementOperation;
 import org.alice.ide.codeeditor.StatementListBorder;
 import org.alice.ide.codeeditor.StatementListPropertyPaneInfo;
@@ -304,10 +302,11 @@ public abstract class CodePanelWithDropReceptor extends BorderPanel {
         IDE.getActiveInstance().getExpressionCascadeManager().pushContext(this.pushedContext);
         return dragModel.getDropOperation(step, dropSite);
       }
-      if (dragModel == Clipboard.SINGLETON.getDragModel()) {
+      ClipboardProvider clipboardProvider = ClipboardProvider.getInstance();
+      if (dragModel == clipboardProvider.getDragModel()) {
         return InputEventUtilities.isQuoteControlUnquoteDown(eSource)
-            ? CopyFromClipboardOperation.getInstance(dropSite)
-            : PasteFromClipboardOperation.getInstance(dropSite);
+            ? clipboardProvider.getCopyFromClipboardOperation(dropSite)
+            : clipboardProvider.getPasteFromClipboardOperation(dropSite);
       }
       if (dragModel instanceof StatementDragModel model) {
         return statementDropped(model, eSource, dropSite);

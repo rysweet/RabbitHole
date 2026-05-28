@@ -44,9 +44,10 @@ package org.alice.stageide.perspectives.code;
 
 import edu.cmu.cs.dennisc.java.util.Lists;
 import org.alice.ide.ProjectDocumentFrame;
-import org.alice.ide.clipboard.Clipboard;
+import org.alice.ide.clipboard.ClipboardProvider;
 import org.alice.ide.toolbar.croquet.IdeToolBar;
 import org.alice.stageide.perspectives.ToolBarUtilities;
+import org.lgna.croquet.DragModel;
 import org.lgna.croquet.Element;
 import org.lgna.croquet.PushToolBarSeparator;
 
@@ -64,8 +65,11 @@ public final class CodeToolBarComposite extends IdeToolBar {
     ToolBarUtilities.appendDocumentSubElements(projectDocumentFrame, list);
     ToolBarUtilities.appendUndoRedoSubElements(projectDocumentFrame, list);
     ToolBarUtilities.appendRunSubElements(projectDocumentFrame, list);
-    list.add(PushToolBarSeparator.getInstance());
-    list.add(Clipboard.SINGLETON.getDragModel());
+    DragModel clipboardDragModel = ClipboardProvider.getInstance().getDragModel();
+    if (clipboardDragModel != null) {
+      list.add(PushToolBarSeparator.getInstance());
+      list.add(clipboardDragModel);
+    }
     this.subElements = Collections.unmodifiableList(list);
   }
 

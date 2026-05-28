@@ -107,6 +107,7 @@
     <module>core/i18n</module>
     <module>core/ide</module>
     <module>core/ik-poser</module>
+    <module>core/clipboard-dnd</module>
     <module>core/image-editor</module>
     <module>core/issue-reporting</module>
     <module>core/resources</module>
@@ -189,6 +190,11 @@
       <dependency>
         <groupId>org.alice</groupId>
         <artifactId>ik-poser</artifactId>
+        <version>9.1.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.alice</groupId>
+        <artifactId>clipboard-dnd</artifactId>
         <version>9.1.0-SNAPSHOT</version>
       </dependency>
       <dependency>

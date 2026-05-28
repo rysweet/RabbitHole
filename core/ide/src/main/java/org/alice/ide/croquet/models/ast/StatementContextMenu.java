@@ -47,7 +47,7 @@ import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.Maps;
 import org.alice.ide.IDE;
 import org.alice.ide.ast.delete.DeleteStatementOperation;
-import org.alice.ide.clipboard.CopyToClipboardOperation;
+import org.alice.ide.clipboard.ClipboardProvider;
 import org.alice.ide.croquet.models.ast.keyed.RemoveKeyedArgumentOperation;
 import org.alice.ide.issue.croquet.AnomalousSituationComposite;
 import org.alice.stageide.run.FastForwardToStatementOperation;
@@ -111,9 +111,12 @@ public class StatementContextMenu extends MenuModel {
       rv.add(IDE.getActiveInstance().getDocumentFrame().getDeclarationsEditorComposite().getTabState().getItemSelectionOperationForMethod(invokedUserMethod).getMenuItemPrepModel());
     }
 
-    rv.add(MenuModel.SEPARATOR);
-    rv.add(CopyToClipboardOperation.getInstance(statement).getMenuItemPrepModel());
-    rv.add(MenuModel.SEPARATOR);
+    StandardMenuItemPrepModel copyToClipboardItem = ClipboardProvider.getInstance().getCopyToClipboardMenuItem(statement);
+    if (copyToClipboardItem != null) {
+      rv.add(MenuModel.SEPARATOR);
+      rv.add(copyToClipboardItem);
+      rv.add(MenuModel.SEPARATOR);
+    }
 
     if (StatementContextMenuLogic.shouldAddDelete(statement)) {
       rv.add(new DeleteStatementOperation(statement).getMenuItemPrepModel());

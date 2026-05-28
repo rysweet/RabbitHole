@@ -43,13 +43,13 @@
 package org.alice.ide.croquet.models.menubar;
 
 import org.alice.ide.ProjectDocumentFrame;
-import org.alice.ide.croquet.models.clipboard.CopyOperation;
-import org.alice.ide.croquet.models.clipboard.CutOperation;
-import org.alice.ide.croquet.models.clipboard.PasteOperation;
+import org.alice.ide.clipboard.ClipboardProvider;
 import org.lgna.croquet.MenuModel;
 import org.lgna.croquet.PredeterminedMenuModel;
 import org.lgna.croquet.StandardMenuItemPrepModel;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -63,15 +63,29 @@ public class EditMenuModel extends PredeterminedMenuModel {
 
   @Override
   protected StandardMenuItemPrepModel[] createModels() {
-    return new StandardMenuItemPrepModel[] {
-        projectDocumentFrame.getUndoOperation().getMenuItemPrepModel(),
-        projectDocumentFrame.getRedoOperation().getMenuItemPrepModel(),
-        MenuModel.SEPARATOR,
-        CutOperation.getInstance().getMenuItemPrepModel(),
-        CopyOperation.getInstance().getMenuItemPrepModel(),
-        PasteOperation.getInstance().getMenuItemPrepModel(),
-        MenuModel.SEPARATOR,
-        projectDocumentFrame.getFindComposite().getIsFrameShowingState().getMenuItemPrepModel()};
+    ClipboardProvider clipboardProvider = ClipboardProvider.getInstance();
+    StandardMenuItemPrepModel cutItem = clipboardProvider.getEditMenuCutItem();
+    StandardMenuItemPrepModel copyItem = clipboardProvider.getEditMenuCopyItem();
+    StandardMenuItemPrepModel pasteItem = clipboardProvider.getEditMenuPasteItem();
+
+    List<StandardMenuItemPrepModel> models = new ArrayList<>();
+    models.add(projectDocumentFrame.getUndoOperation().getMenuItemPrepModel());
+    models.add(projectDocumentFrame.getRedoOperation().getMenuItemPrepModel());
+    if ((cutItem != null) || (copyItem != null) || (pasteItem != null)) {
+      models.add(MenuModel.SEPARATOR);
+      if (cutItem != null) {
+        models.add(cutItem);
+      }
+      if (copyItem != null) {
+        models.add(copyItem);
+      }
+      if (pasteItem != null) {
+        models.add(pasteItem);
+      }
+    }
+    models.add(MenuModel.SEPARATOR);
+    models.add(projectDocumentFrame.getFindComposite().getIsFrameShowingState().getMenuItemPrepModel());
+    return models.toArray(new StandardMenuItemPrepModel[0]);
   }
 
   private final ProjectDocumentFrame projectDocumentFrame;
