@@ -91,7 +91,7 @@ public class ClipboardIconDecompositionTest {
   public void clipboardIconIsUnder500Lines() throws IOException {
     Path srcRoot = findSourceRoot();
     Path iconPath = srcRoot.resolve(
-        "core/ide/src/main/java/org/alice/ide/clipboard/icons/ClipboardIcon.java");
+        "core/clipboard-dnd/src/main/java/org/alice/ide/clipboard/icons/ClipboardIcon.java");
     assertTrue("ClipboardIcon.java must exist at expected path", Files.exists(iconPath));
     long lineCount = Files.lines(iconPath).count();
     assertTrue("ClipboardIcon.java must be under 500 lines, was " + lineCount,
@@ -388,13 +388,13 @@ public class ClipboardIconDecompositionTest {
     // Walk up from the test class location to find the repository root
     Path cwd = Paths.get(System.getProperty("user.dir"));
     // Check common locations
-    if (Files.exists(cwd.resolve("core/ide/src/main/java"))) {
+    if (Files.exists(cwd.resolve("core/clipboard-dnd/src/main/java"))) {
       return cwd;
     }
     // Try parent directories
     Path parent = cwd.getParent();
     while (parent != null) {
-      if (Files.exists(parent.resolve("core/ide/src/main/java"))) {
+      if (Files.exists(parent.resolve("core/clipboard-dnd/src/main/java"))) {
         return parent;
       }
       parent = parent.getParent();
@@ -406,7 +406,7 @@ public class ClipboardIconDecompositionTest {
   private static void assertSourceFileExists(String filename) throws IOException {
     Path srcRoot = findSourceRoot();
     Path filePath = srcRoot.resolve(
-        "core/ide/src/main/java/org/alice/ide/clipboard/icons/" + filename);
+        "core/clipboard-dnd/src/main/java/org/alice/ide/clipboard/icons/" + filename);
     assertTrue(filename + " must exist at " + filePath, Files.exists(filePath));
   }
 }
