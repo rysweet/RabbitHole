@@ -91,6 +91,10 @@
 
     <!-- External -->
     <dependency>
+      <groupId>gov.nist.math</groupId>
+      <artifactId>jama</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.alice.external</groupId>
       <artifactId>collada-schema-1-4-1</artifactId>
     </dependency>
