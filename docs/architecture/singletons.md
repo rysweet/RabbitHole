@@ -40,6 +40,12 @@ New code **must not** introduce `static getInstance()`, enum `SINGLETON`, or
 static holder patterns. If a shared instance is needed, pass it via constructor
 or method parameter.
 
+**Exception: ServiceLoader access points.** A single lazy-holder cache around
+`ServiceLoader.load()` is permitted for SPI bridge classes (e.g.,
+`IkPoserContexts`, `ClipboardProviders`) because calling `ServiceLoader.load()`
+on every access has significant overhead. These must be limited to one holder
+per SPI interface and must not expose a general-purpose `getInstance()` method.
+
 ### Rule 2 — Constructor injection for new classes
 
 ```java
@@ -151,8 +157,20 @@ Shared state between tests is a top source of flaky test failures.
 Focus singleton removal on modules being extracted first:
 
 1. **`core/ik-poser`** — `FieldFinder.getInstance()`,
-   `StoryApiConfigurationManager.getInstance()`, `StorytellingSceneEditor.getInstance()`
-2. **`core/clipboard-dnd`** — `Clipboard.SINGLETON`, `RecycleBin.SINGLETON`
+   `StoryApiConfigurationManager.getInstance()`, `StorytellingSceneEditor.getInstance()`.
+   Uses `IkPoserContexts` with a lazy-holder ServiceLoader cache (permitted by
+   Rule 1 exception). SPI interface `IkPoserContext` lives in `core/ik-poser`;
+   IDE implementation `IdeIkPoserContext` lives in `core/ide`.
+2. **`core/clipboard-dnd`** — `Clipboard.SINGLETON`, `RecycleBin.SINGLETON`.
+   This module is an **optional plugin** that depends on `core/ide` (not the
+   reverse). It is loaded at runtime via `ServiceLoader<ClipboardProvider>`.
+   The SPI interface `ClipboardProvider` is defined in `core/ide`; the
+   implementation `ClipboardDnDProvider` is in `core/clipboard-dnd`. Removing
+   `core/clipboard-dnd` from the build will cause a runtime
+   `NoSuchElementException` if clipboard operations are invoked.
+   **Note:** After extracting clipboard classes to this module, 7 generated
+   coverage tests and 9 sweep-test entries in `core/ide` that referenced the
+   moved classes by FQCN were removed.
 3. **`core/glrender`** — `GlrRenderFactory.getInstance()`,
    `ConformanceTestResults.SINGLETON`
 4. **`core/ide`** — largest concentration; address incrementally per subsystem
@@ -164,3 +182,5 @@ Focus singleton removal on modules being extracted first:
 | 2026-05-28 | Adopted containment strategy | Block singleton spread while planning incremental DI migration |
 | — | Chose constructor injection over service locator | Simpler, compile-time verifiable, no framework dependency |
 | — | Deferred full DI framework (Guice/Dagger) | Premature; extract interfaces first, then evaluate framework need |
+| 2026-05-28 | Permitted ServiceLoader lazy-holder exception to Rule 1 | `ServiceLoader.load()` per-call overhead is prohibitive; one cached holder per SPI interface is acceptable |
+| 2026-05-28 | Documented clipboard-dnd as plugin module | Depends on `core/ide`, not standalone; clarifies that removal breaks clipboard operations at runtime |
