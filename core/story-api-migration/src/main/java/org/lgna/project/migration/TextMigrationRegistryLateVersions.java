@@ -51,6 +51,7 @@ import static org.lgna.project.migration.ProjectMigrationTextSnippets.createMore
 import static org.lgna.project.migration.ProjectMigrationTextSnippets.createMoreSpecificFieldReplacement;
 
 // @formatter:off
+@Deprecated // Text migrations now load from migrations/text-migrations.json; retained for JSON regeneration and documentation.
 final class TextMigrationRegistryLateVersions {
 
   static TextMigration[] create() {

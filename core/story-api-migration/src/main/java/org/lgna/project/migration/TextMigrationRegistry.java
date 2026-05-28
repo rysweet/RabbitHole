@@ -43,12 +43,20 @@
 package org.lgna.project.migration;
 
 /**
- * Assembles all text migrations from sub-registries.
- * Split from ProjectMigrationManager to respect the 2000-line FileLength limit.
+ * Loads text migrations from JSON.
+ * Legacy registry classes remain available for regeneration and characterization tests.
  */
 final class TextMigrationRegistry {
+  static final String USE_LEGACY_REGISTRIES_PROPERTY = "org.lgna.project.migration.TextMigrationRegistry.useLegacyRegistries";
 
   static TextMigration[] createAll() {
+    if (Boolean.getBoolean(USE_LEGACY_REGISTRIES_PROPERTY)) {
+      return createLegacyAll();
+    }
+    return TextMigrationJsonLoader.load();
+  }
+
+  private static TextMigration[] createLegacyAll() {
     TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
     TextMigration[] v3134 = TextMigrationRegistryV3134.create();
     TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();

@@ -47,6 +47,7 @@ import org.lgna.project.Version;
 import static org.lgna.project.migration.MigrationManager.NO_REPLACEMENT;
 
 // @formatter:off
+@Deprecated // Text migrations now load from migrations/text-migrations.json; retained for JSON regeneration and documentation.
 final class TextMigrationRegistrySmallVersions {
 
   static TextMigration[] createEarly() {
