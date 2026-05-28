@@ -162,7 +162,7 @@ public class AdapterFactoryRegistrationTest {
 
   @Test
   public void register_customClass_noException() {
-    AdapterFactory.register(BufferedImageTexture.class, GlrBufferedImageTexture.class);
+    AdapterFactory.register(BufferedImageTexture.class, GlrBufferedImageTexture::new);
   }
 
   // ── Multiple lookups ──────────────────────────────────────────────
