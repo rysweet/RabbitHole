@@ -46,9 +46,7 @@ The durable artifact stack is:
 | Layer | Artifact | Role |
 | --- | --- | --- |
 | Concepts (this document) | `docs/concepts/migration-hotspot-characterization.md` | Explains why the layer exists and what it protects. |
-| Reference | [`docs/reference/project-migration-manager-characterization.md`](../reference/project-migration-manager-characterization.md) | Full contract, API reference, configuration, compatibility rules, and examples. |
-| How-to | [`docs/howto/characterize-project-migration-manager.md`](../howto/characterize-project-migration-manager.md) | Step-by-step checklist for adding or reviewing migration characterization. |
-| Tutorial | [`docs/tutorials/project-migration-manager-characterization.md`](../tutorials/project-migration-manager-characterization.md) | Guided example walking through one concrete migration seam. |
+| Executable tests | `ProjectMigrationManagerTest` in `core/story-api-migration` | 18 focused Java characterization tests. |
 | Executable tests | `ProjectMigrationManagerTest` in `core/story-api-migration` | 18 focused Java characterization tests. |
 | QA automation | `migration-hotspot-characterization-smoke` gadugi scenario | Gated-command-smoke that runs the 18-test focused Maven command through the 4-layer argv allowlist. |
 | Repository contract | `tests/test_pr424_migration_hotspot_recovery_contract.py` | Python policy checks for diff scope, doc links, conflict markers, and test method presence. |
@@ -93,7 +91,8 @@ Migration hotspot characterization is complementary: it protects the text
 migration pipeline that runs **during** project loading, before the formal-spec
 lane's archive-level contracts apply.
 
-The [project IO corpus characterization](../reference/project-io-corpus-characterization.md)
+The project IO corpus characterization (previously documented in
+`docs/reference/project-io-corpus-characterization.md`, now removed)
 covers generated archive round-trips. Migration hotspot characterization is
 narrower: it protects individual text rewrites without requiring archive
 fixtures.

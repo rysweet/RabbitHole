@@ -93,12 +93,9 @@ produces module-level data. CI uploads those reports, `coverage-summary.md`, and
 requests. CI enforces an 8.0% aggregate no-Sims line coverage floor plus conservative module floors
 for covered modernization areas; raise them as characterization coverage grows toward the 70%
 mission target. The 70% target is claimable only from measured aggregate JaCoCo data, not from
-module-only evidence. See the
-[coverage reporting reference](docs/reference/coverage-reporting.md), the
-[coverage ratchet how-to](docs/howto/expand-coverage-ratchets.md), and the
-[coverage ratchet tutorial](docs/tutorials/coverage-ratchet-and-hotspot-review.md).
+module-only evidence.
 
-Outside-in desktop acceptance scenarios live in `qa/outside-in/alice-desktop/`. See the [documentation index](docs/index.md), the [Alice desktop outside-in QA guide](docs/howto/alice-desktop-outside-in-qa.md), and the [QA reference](docs/reference/alice-desktop-outside-in-qa.md) for usage, scenario schema, evidence expectations, and configuration.
+Outside-in desktop acceptance scenarios live in `qa/outside-in/alice-desktop/`. See the [documentation index](docs/index.md) for usage, scenario schema, evidence expectations, and configuration.
 
     qa/outside-in/alice-desktop/runners/validate-scenarios.sh
     qa/outside-in/alice-desktop/runners/run-scenario.sh list

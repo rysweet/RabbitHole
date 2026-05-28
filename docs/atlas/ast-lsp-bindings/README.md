@@ -1,5 +1,3 @@
-Mode: static-approximation
-
 # AST + LSP Bindings
 
 This layer is built from static package ownership plus Java import scanning across `core/*/src/main/java` and `netbeans/src/main/java`.
