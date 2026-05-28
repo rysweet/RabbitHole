@@ -288,11 +288,9 @@ Phase 2 adds 27 test files covering trigger classes, cascade runtime
 internals, history steps, preferences, codec/icon helpers, and deeper
 state/model/composite paths. All follow the same headless patterns above.
 
-For the full test inventory, see
-[core/croquet coverage push](../../docs/reference/core-croquet-coverage-push.md).
+For the full test inventory, see the Phase 2 test packages listed below.
 
-For running and troubleshooting instructions, see
-[How to run Issue #775 coverage push](../../docs/howto/run-issue-775-coverage-push.md).
+For running and troubleshooting instructions, see the Quick start section above.
 
 ### New test packages
 

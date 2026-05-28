@@ -440,11 +440,9 @@ conditions, handle/input state, manipulator snap math, implementation
 helpers, and event data classes. All follow the same headless patterns
 and test double strategies above.
 
-For the full test inventory, see
-[core/story-api coverage push phase 2](../../docs/reference/core-story-api-coverage-push-phase2.md).
+For the full test inventory, see the Phase 2 test packages listed below.
 
-For running and troubleshooting instructions, see
-[How to run Issue #775 coverage push](../../docs/howto/run-issue-775-coverage-push.md).
+For running and troubleshooting instructions, see the Running the Tests section above.
 
 ### New test packages
 
