@@ -44,29 +44,61 @@ package org.lgna.ik.poser.croquet;
 
 import edu.cmu.cs.dennisc.java.util.InitializingIfAbsentMap;
 import edu.cmu.cs.dennisc.java.util.Maps;
-import org.alice.ide.croquet.edits.ast.ChangeMethodBodyEdit;
-import org.lgna.croquet.edits.AbstractEdit;
-import org.lgna.croquet.history.UserActivity;
-import org.lgna.project.ast.UserMethod;
+import org.lgna.croquet.SingleValueCreatorInputDialogCoreComposite;
+import org.lgna.ik.poser.CannotCreateExpressionException;
+import org.lgna.croquet.views.BorderPanel;
+import org.lgna.croquet.views.Panel;
+import org.lgna.project.ast.Expression;
+import org.lgna.project.ast.NamedUserType;
 
 import java.util.UUID;
 
 /**
  * @author Matt May
  */
-public class ChangeAnimationProcedureDialog extends AnimationProcedureDialog {
-  private static InitializingIfAbsentMap<UserMethod, ChangeAnimationProcedureDialog> map = Maps.newInitializingIfAbsentHashMap();
+public final class PoseExpressionCreatorComposite extends SingleValueCreatorInputDialogCoreComposite<Panel, Expression> {
+  private static InitializingIfAbsentMap<NamedUserType, PoseExpressionCreatorComposite> map = Maps.newInitializingIfAbsentHashMap();
 
-  public static ChangeAnimationProcedureDialog getInstance(UserMethod method) {
-    return AnimatorComposite.isStrictlyAnimation(method) ? map.get(method, ChangeAnimationProcedureDialog::new) : null;
+  public static PoseExpressionCreatorComposite getInstance(NamedUserType declaringType) {
+    return PoserComposite.isPoseable(declaringType) ? map.get(declaringType, PoseExpressionCreatorComposite::new) : null;
   }
 
-  private ChangeAnimationProcedureDialog(UserMethod method) {
-    super(UUID.fromString("ec6e475b-bff3-4573-a444-37930e5fbe49"), AnimatorComposite.getDialogForUserMethod(method));
+  private PoseExpressionCreatorComposite(NamedUserType declaringType) {
+    super(UUID.fromString("4fc4dd4f-b33d-429a-994a-3a5cf13b6903"));
+    this.poserComposite = this.registerSubComposite(PoserComposite.getDialogForUserType(declaringType));
+    this.poserComposite.addStatusListener(this.statusUpdateListener);
+
   }
 
   @Override
-  protected AbstractEdit createEdit(UserActivity userActivity) {
-    return new ChangeMethodBodyEdit(userActivity, getAnimatorComposite().getMethod(), getAnimatorComposite().getControlComposite().createMethodBody());
+  protected Status getStatusPreRejectorCheck() {
+    if (this.poserComposite.isEmptyPose()) {
+      return this.isEmptyPoseError;
+    } else {
+      return IS_GOOD_TO_GO_STATUS;
+    }
   }
+
+  @Override
+  protected Expression createValue() {
+    try {
+      return this.poserComposite.getControlComposite().createPoseExpression();
+    } catch (CannotCreateExpressionException e) {
+      throw new Error(e);
+    }
+  }
+
+  @Override
+  protected Panel createView() {
+    return new BorderPanel.Builder().center(this.poserComposite.getRootComponent()).build();
+  }
+
+  private final ErrorStatus isEmptyPoseError = this.createErrorStatus("isEmptyPoseError");
+  private final PoserComposite<?> poserComposite;
+  private final StatusUpdateListener statusUpdateListener = new StatusUpdateListener() {
+    @Override
+    public void refreshStatus() {
+      PoseExpressionCreatorComposite.this.refreshStatus();
+    }
+  };
 }

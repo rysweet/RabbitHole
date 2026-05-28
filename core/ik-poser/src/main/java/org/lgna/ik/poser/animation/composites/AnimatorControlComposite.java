@@ -42,9 +42,6 @@
  */
 package org.lgna.ik.poser.animation.composites;
 
-import org.alice.ide.ApiConfigurationManager;
-import org.alice.ide.ast.ExpressionCreator;
-import org.alice.stageide.StoryApiConfigurationManager;
 import org.lgna.common.ComponentExecutor;
 import org.lgna.croquet.ActionOperation;
 import org.lgna.croquet.Application;
@@ -58,6 +55,9 @@ import org.lgna.croquet.edits.AbstractEdit;
 import org.lgna.croquet.history.UserActivity;
 import org.lgna.croquet.views.BorderPanel;
 import org.lgna.croquet.views.CompositeView;
+import org.lgna.ik.poser.CannotCreateExpressionException;
+import org.lgna.ik.poser.IkPoserContext;
+import org.lgna.ik.poser.IkPoserContexts;
 import org.lgna.ik.poser.PoseAstUtilities;
 import org.lgna.ik.poser.PoserSphereManipulatorListener;
 import org.lgna.ik.poser.animation.KeyFrameData;
@@ -231,15 +231,14 @@ public class AnimatorControlComposite<M extends SJointedModel> extends AbstractP
   });
 
   public BlockStatement createMethodBody() {
-    ApiConfigurationManager apiConfigurationManager = StoryApiConfigurationManager.getInstance();
-    ExpressionCreator expressionCreator = apiConfigurationManager.getExpressionCreator();
+    IkPoserContext poserContext = IkPoserContexts.getInstance();
 
     List<KeyFrameData> keyFrameList = tlComposite.getTimeLine().getKeyFrames();
     ExpressionStatement[] miArr = new ExpressionStatement[keyFrameList.size()];
     int i = 0;
     for (KeyFrameData event : keyFrameList) {
       try {
-        Expression argumentExpression = expressionCreator.createExpression(event.getPose());
+        Expression argumentExpression = poserContext.createExpression(event.getPose());
         double duration = tlComposite.getTimeLine().getDurationForKeyFrame(event);
         AnimationStyle style = tlComposite.getTimeLine().getStyleForKeyFramePose(event);
 
@@ -251,11 +250,11 @@ public class AnimatorControlComposite<M extends SJointedModel> extends AbstractP
 
         //animationStyle
         JavaMethod styleKeyMethod = JavaMethod.getInstance(DurationAnimationStyleArgumentFactory.class, "animationStyle", AnimationStyle.class);
-        methodInv.keyedArguments.add(new JavaKeyedArgument(methodInv.method.getValue().getKeyedParameter(), styleKeyMethod, expressionCreator.createExpression(style)));
+        methodInv.keyedArguments.add(new JavaKeyedArgument(methodInv.method.getValue().getKeyedParameter(), styleKeyMethod, poserContext.createExpression(style)));
         //
         ExpressionStatement statement = new ExpressionStatement(methodInv);
         miArr[i] = statement;
-      } catch (ExpressionCreator.CannotCreateExpressionException ccee) {
+      } catch (CannotCreateExpressionException ccee) {
         throw new RuntimeException(ccee);
       }
       ++i;

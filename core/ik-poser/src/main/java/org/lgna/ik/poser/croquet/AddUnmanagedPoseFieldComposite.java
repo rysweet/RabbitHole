@@ -40,51 +40,22 @@
  * THE USE OF OR OTHER DEALINGS WITH THE SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package org.lgna.ik.poser.controllers;
+package org.lgna.ik.poser.croquet;
 
-import org.alice.ide.ast.ExpressionCreator.CannotCreateExpressionException;
-import org.alice.stageide.ast.ExpressionCreator;
-import org.lgna.ik.poser.animation.composites.AbstractPoserControlComposite;
-import org.lgna.ik.poser.croquet.AbstractPoserOrAnimatorComposite;
-import org.lgna.ik.poser.croquet.views.PoserControlView;
+import org.lgna.croquet.Triggerable;
+import org.lgna.ik.poser.IkPoserContexts;
 import org.lgna.project.ast.Expression;
-import org.lgna.story.Pose;
-
-import java.util.UUID;
+import org.lgna.project.ast.NamedUserType;
 
 /**
  * @author Matt May
  */
-public class PoserControlComposite extends AbstractPoserControlComposite<PoserControlView> {
-
-  public PoserControlComposite(AbstractPoserOrAnimatorComposite parent) {
-    super(parent, UUID.fromString("67c1692b-8fca-406a-8be3-267b1796ceb8"));
+public final class AddUnmanagedPoseFieldComposite {
+  private AddUnmanagedPoseFieldComposite() {
+    throw new AssertionError();
   }
 
-  @Override
-  protected PoserControlView createView() {
-    return new PoserControlView(this);
+  public static Triggerable createLaunchOperation(NamedUserType declaringType, Expression initializer) {
+    return IkPoserContexts.getInstance().createAddUnmanagedPoseFieldTrigger(declaringType, initializer);
   }
-
-  public Expression createPoseExpression() throws CannotCreateExpressionException {
-    Pose<?> pose = parent.getPose();
-    return new ExpressionCreator().createExpression(pose);
-  }
-
-  //
-  //  public UserField createPoseField() {
-  //    try {
-  //      Pose<?> pose = parent.getPose();
-  //      Expression rhSide = new ExpressionCreator().createExpression( pose );
-  //      UserField rv = new UserField( nameState.getValue(), JavaType.getInstance( Pose.class ), rhSide );
-  //      return rv;
-  //    } catch( CannotCreateExpressionException e ) {
-  //      throw new CancelException();
-  //    }
-  //  }
-
-  public AbstractPoserOrAnimatorComposite getParent() {
-    return parent;
-  }
-
 }

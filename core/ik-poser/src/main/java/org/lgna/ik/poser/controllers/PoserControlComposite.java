@@ -40,64 +40,51 @@
  * THE USE OF OR OTHER DEALINGS WITH THE SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package org.lgna.ik.poser.croquet;
+package org.lgna.ik.poser.controllers;
 
-import org.alice.ide.IDE;
-import org.alice.ide.name.validators.MethodNameValidator;
-import org.lgna.croquet.AbstractSeverityStatusComposite;
-import org.lgna.croquet.SimpleOperationInputDialogCoreComposite;
-import org.lgna.croquet.views.BorderPanel;
-import org.lgna.croquet.views.Panel;
+import org.lgna.ik.poser.CannotCreateExpressionException;
+import org.lgna.ik.poser.IkPoserContexts;
+import org.lgna.ik.poser.animation.composites.AbstractPoserControlComposite;
+import org.lgna.ik.poser.croquet.AbstractPoserOrAnimatorComposite;
+import org.lgna.ik.poser.croquet.views.PoserControlView;
+import org.lgna.project.ast.Expression;
+import org.lgna.story.Pose;
 
 import java.util.UUID;
 
 /**
- * @author Matt Mayy
+ * @author Matt May
  */
-public abstract class AnimationProcedureDialog extends SimpleOperationInputDialogCoreComposite<Panel> {
+public class PoserControlComposite extends AbstractPoserControlComposite<PoserControlView> {
 
-  public AnimationProcedureDialog(UUID migrationId, AnimatorComposite animatorComposite) {
-    super(migrationId, IDE.PROJECT_GROUP);
-    this.animatorComposite = this.registerSubComposite(animatorComposite);
-    this.animatorComposite.addStatusListener(statusUpdateListener);
+  public PoserControlComposite(AbstractPoserOrAnimatorComposite parent) {
+    super(parent, UUID.fromString("67c1692b-8fca-406a-8be3-267b1796ceb8"));
   }
 
   @Override
-  protected AbstractSeverityStatusComposite.Status getStatusPreRejectorCheck() {
-    if (animatorComposite.getControlComposite().isEmpty()) {
-      return empty;
-    }
-    if (validator == null) {
-      this.validator = new MethodNameValidator(animatorComposite.getDeclaringType());
-    }
-    String candidate = animatorComposite.getControlComposite().getNameState().getValue();
-    String explanation = validator.getExplanationIfOkButtonShouldBeDisabled(candidate);
-    if (explanation != null) {
-      errorStatus.setText(explanation);
-      return errorStatus;
-    }
-    return IS_GOOD_TO_GO_STATUS;
+  protected PoserControlView createView() {
+    return new PoserControlView(this);
   }
 
-  @Override
-  protected Panel createView() {
-    return new BorderPanel.Builder().center(this.animatorComposite.getRootComponent()).build();
+  public Expression createPoseExpression() throws CannotCreateExpressionException {
+    Pose<?> pose = parent.getPose();
+    return IkPoserContexts.getInstance().createExpression(pose);
   }
 
-  private final AnimatorComposite<?> animatorComposite;
+  //
+  //  public UserField createPoseField() {
+  //    try {
+  //      Pose<?> pose = parent.getPose();
+  //      Expression rhSide = new ExpressionCreator().createExpression( pose );
+  //      UserField rv = new UserField( nameState.getValue(), JavaType.getInstance( Pose.class ), rhSide );
+  //      return rv;
+  //    } catch( CannotCreateExpressionException e ) {
+  //      throw new CancelException();
+  //    }
+  //  }
 
-  private final StatusUpdateListener statusUpdateListener = new StatusUpdateListener() {
-    @Override
-    public void refreshStatus() {
-      AnimationProcedureDialog.this.refreshStatus();
-    }
-  };
-
-  public AnimatorComposite<?> getAnimatorComposite() {
-    return this.animatorComposite;
+  public AbstractPoserOrAnimatorComposite getParent() {
+    return parent;
   }
 
-  private final AbstractSeverityStatusComposite.WarningStatus empty = createWarningStatus("noPoses");
-  private final AbstractSeverityStatusComposite.ErrorStatus errorStatus = createErrorStatus("errorStatus");
-  private MethodNameValidator validator;
 }

@@ -42,79 +42,63 @@
  */
 package org.lgna.ik.poser.croquet;
 
-import org.alice.ide.name.validators.MethodNameValidator;
-import org.lgna.croquet.views.BorderPanel;
-import org.lgna.croquet.views.CompositeView;
-import org.lgna.croquet.views.Panel;
-import org.lgna.ik.poser.CheckIfAnimationCrawler;
-import org.lgna.ik.poser.animation.composites.AnimatorControlComposite;
+import edu.cmu.cs.dennisc.java.util.InitializingIfAbsentMap;
+import edu.cmu.cs.dennisc.java.util.Maps;
+import org.lgna.croquet.Application;
+import org.lgna.croquet.SingleThreadIteratingOperation;
+import org.lgna.croquet.Triggerable;
+import org.lgna.croquet.history.UserActivity;
+import org.lgna.project.ast.Expression;
 import org.lgna.project.ast.NamedUserType;
-import org.lgna.project.ast.UserMethod;
-import org.lgna.project.ast.UserType;
-import org.lgna.story.SBiped;
-import org.lgna.story.SFlyer;
-import org.lgna.story.SJointedModel;
-import org.lgna.story.SQuadruped;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
  * @author Matt May
  */
-public abstract class AnimatorComposite<M extends SJointedModel> extends AbstractPoserOrAnimatorComposite<AnimatorControlComposite<M>, M> {
-  private MethodNameValidator validator;
-  private UserMethod method;
+public class DeclarePoseFieldOperation extends SingleThreadIteratingOperation {
+  private static InitializingIfAbsentMap<NamedUserType, DeclarePoseFieldOperation> map = Maps.newInitializingIfAbsentHashMap();
 
-  public AnimatorComposite(UUID migrationId, NamedUserType valueType, UserMethod editedMethod) {
-    super(migrationId, valueType);
-    this.method = editedMethod;
+  public static DeclarePoseFieldOperation getInstance(NamedUserType declaringType) {
+    return PoserComposite.isPoseable(declaringType) ? map.get(declaringType, DeclarePoseFieldOperation::new) : null;
+  }
+
+  private DeclarePoseFieldOperation(NamedUserType declaringType) {
+    super(Application.PROJECT_GROUP, UUID.fromString("c20e6e66-78dd-4bb7-9ed9-8cb2096f5e18"));
+    this.declaringType = declaringType;
   }
 
   @Override
-  protected AnimatorControlComposite<M> createControlComposite() {
-    return new AnimatorControlComposite<M>(this);
+  protected boolean hasNext(List<UserActivity> finishedSteps) {
+    return finishedSteps.size() < 2;
   }
 
   @Override
-  protected Panel createView() {
-    CompositeView splitPane = super.createView();
-    BorderPanel panel = new BorderPanel();
-    panel.addCenterComponent(splitPane);
-    panel.addPageEndComponent(this.getControlComposite().getSouthViewForDialog());
-    return panel;
-  }
-
-  public static boolean isStrictlyAnimation(UserMethod candidate) {
-    if (candidate != null) {
-      if (!(candidate.getDeclaringType() instanceof NamedUserType)) {
-        return false;
+  protected Triggerable getNext(List<UserActivity> finishedSteps) {
+    switch (finishedSteps.size()) {
+    case 0:
+      return PoseExpressionCreatorComposite.getInstance(this.declaringType).getValueCreator();
+    case 1:
+      UserActivity prevSubStep = finishedSteps.getFirst();
+      if (prevSubStep.getProducedValue() != null) {
+        Expression expression = (Expression) prevSubStep.getProducedValue();
+        return AddUnmanagedPoseFieldComposite.createLaunchOperation(this.declaringType, expression);
+      } else {
+        return null;
       }
-      return CheckIfAnimationCrawler.initiateAndCheckMethod(candidate);
-    } else {
-      return true;
+
+    default:
+      throw new Error();
     }
   }
 
-  public UserMethod getMethod() {
-    return this.method;
+  @Override
+  protected void handleSuccessfulCompletionOfSubModels(UserActivity activity) {
+    //    UserField field = getControlComposite().createPoseField( getControlComposite().getNameState().getValue() );
+    //    NamedUserType declaringType = this.getDeclaringType();
+    //    return new DeclareNonGalleryFieldEdit( completionStep, declaringType, field );
   }
 
-  public static AnimatorComposite<?> getDialogForUserType(UserType<?> declaringType, UserMethod method) {
-    if (declaringType != null) {
-      if ((declaringType instanceof NamedUserType namedUserType) && AnimatorComposite.isStrictlyAnimation(method)) {
-        if (namedUserType.isAssignableTo(SBiped.class)) {
-          return new BipedAnimator(namedUserType, method);
-        } else if (namedUserType.isAssignableTo(SQuadruped.class)) {
-          return new QuadrupedAnimator(namedUserType, method);
-        } else if (namedUserType.isAssignableTo(SFlyer.class)) {
-          return new FlyerAnimator(namedUserType, method);
-        }
-      }
-    }
-    return null;
-  }
-
-  public static AnimatorComposite<?> getDialogForUserMethod(UserMethod method) {
-    return getDialogForUserType(method.getDeclaringType(), method);
-  }
+  private final NamedUserType declaringType;
 }

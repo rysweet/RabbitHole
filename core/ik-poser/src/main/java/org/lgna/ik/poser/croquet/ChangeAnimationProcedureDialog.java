@@ -44,71 +44,29 @@ package org.lgna.ik.poser.croquet;
 
 import edu.cmu.cs.dennisc.java.util.InitializingIfAbsentMap;
 import edu.cmu.cs.dennisc.java.util.Maps;
-import org.alice.ide.ast.declaration.AddFieldComposite;
-import org.alice.ide.ast.declaration.views.AddFieldView;
-import org.alice.ide.croquet.edits.ast.DeclareFieldEdit;
-import org.alice.ide.croquet.edits.ast.DeclareNonGalleryFieldEdit;
-import org.alice.ide.croquet.models.ui.preferences.IsNullAllowedForFieldInitializers;
+import org.lgna.croquet.edits.AbstractEdit;
+import org.lgna.ik.poser.IkPoserContexts;
 import org.lgna.croquet.history.UserActivity;
-import org.lgna.project.ast.*;
-import org.lgna.story.Pose;
+import org.lgna.project.ast.UserMethod;
 
 import java.util.UUID;
 
 /**
  * @author Matt May
  */
-public class AddUnmanagedPoseFieldComposite extends AddFieldComposite {
-  private static InitializingIfAbsentMap<NamedUserType, AddUnmanagedPoseFieldComposite> map = Maps.newInitializingIfAbsentHashMap();
+public class ChangeAnimationProcedureDialog extends AnimationProcedureDialog {
+  private static InitializingIfAbsentMap<UserMethod, ChangeAnimationProcedureDialog> map = Maps.newInitializingIfAbsentHashMap();
 
-  public static AddUnmanagedPoseFieldComposite getInstance(NamedUserType declaringType) {
-    return map.get(declaringType, AddUnmanagedPoseFieldComposite::new);
+  public static ChangeAnimationProcedureDialog getInstance(UserMethod method) {
+    return AnimatorComposite.isStrictlyAnimation(method) ? map.get(method, ChangeAnimationProcedureDialog::new) : null;
   }
 
-  private AddUnmanagedPoseFieldComposite(NamedUserType declaringType) {
-    super(UUID.fromString("882dc293-d176-48c6-9b42-abc15c734779"), new FieldDetailsBuilder().isFinal(ApplicabilityStatus.APPLICABLE_BUT_NOT_DISPLAYED, true).valueComponentType(ApplicabilityStatus.DISPLAYED, JavaType.getInstance(Pose.class)).valueIsArrayType(ApplicabilityStatus.APPLICABLE_BUT_NOT_DISPLAYED, false).initializer(ApplicabilityStatus.EDITABLE, null).build());
-    this.declaringType = declaringType;
-  }
-
-  @Override
-  protected boolean isNullAllowedForInitializer() {
-    return IsNullAllowedForFieldInitializers.getInstance().getValue();
+  private ChangeAnimationProcedureDialog(UserMethod method) {
+    super(UUID.fromString("ec6e475b-bff3-4573-a444-37930e5fbe49"), AnimatorComposite.getDialogForUserMethod(method));
   }
 
   @Override
-  public NamedUserType getDeclaringType() {
-    return this.declaringType;
+  protected AbstractEdit createEdit(UserActivity userActivity) {
+    return IkPoserContexts.getInstance().createChangeMethodBodyEdit(userActivity, getAnimatorComposite().getMethod(), getAnimatorComposite().getControlComposite().createMethodBody());
   }
-
-  @Override
-  protected Expression getInitializerInitialValue() {
-    return this.initializerInitialValue;
-  }
-
-  public void setInitializerInitialValue(Expression initializerInitialValue) {
-    this.initializerInitialValue = initializerInitialValue;
-  }
-
-  @Override
-  protected boolean isFieldFinal() {
-    return this.getIsFinalState().getValue();
-  }
-
-  @Override
-  protected ManagementLevel getManagementLevel() {
-    return ManagementLevel.NONE;
-  }
-
-  @Override
-  protected DeclareFieldEdit createEdit(UserActivity step, UserType<?> declaringType, UserField field) {
-    return new DeclareNonGalleryFieldEdit(step, declaringType, field);
-  }
-
-  @Override
-  protected AddFieldView createView() {
-    return new AddFieldView(this);
-  }
-
-  private final NamedUserType declaringType;
-  private Expression initializerInitialValue;
 }

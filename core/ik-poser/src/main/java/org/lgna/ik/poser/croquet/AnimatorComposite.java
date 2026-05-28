@@ -42,63 +42,77 @@
  */
 package org.lgna.ik.poser.croquet;
 
-import edu.cmu.cs.dennisc.java.util.InitializingIfAbsentMap;
-import edu.cmu.cs.dennisc.java.util.Maps;
-import org.alice.ide.ast.ExpressionCreator.CannotCreateExpressionException;
-import org.lgna.croquet.SingleValueCreatorInputDialogCoreComposite;
 import org.lgna.croquet.views.BorderPanel;
+import org.lgna.croquet.views.CompositeView;
 import org.lgna.croquet.views.Panel;
-import org.lgna.project.ast.Expression;
+import org.lgna.ik.poser.CheckIfAnimationCrawler;
+import org.lgna.ik.poser.animation.composites.AnimatorControlComposite;
 import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.UserMethod;
+import org.lgna.project.ast.UserType;
+import org.lgna.story.SBiped;
+import org.lgna.story.SFlyer;
+import org.lgna.story.SJointedModel;
+import org.lgna.story.SQuadruped;
 
 import java.util.UUID;
 
 /**
  * @author Matt May
  */
-public final class PoseExpressionCreatorComposite extends SingleValueCreatorInputDialogCoreComposite<Panel, Expression> {
-  private static InitializingIfAbsentMap<NamedUserType, PoseExpressionCreatorComposite> map = Maps.newInitializingIfAbsentHashMap();
+public abstract class AnimatorComposite<M extends SJointedModel> extends AbstractPoserOrAnimatorComposite<AnimatorControlComposite<M>, M> {
+  private UserMethod method;
 
-  public static PoseExpressionCreatorComposite getInstance(NamedUserType declaringType) {
-    return PoserComposite.isPoseable(declaringType) ? map.get(declaringType, PoseExpressionCreatorComposite::new) : null;
-  }
-
-  private PoseExpressionCreatorComposite(NamedUserType declaringType) {
-    super(UUID.fromString("4fc4dd4f-b33d-429a-994a-3a5cf13b6903"));
-    this.poserComposite = this.registerSubComposite(PoserComposite.getDialogForUserType(declaringType));
-    this.poserComposite.addStatusListener(this.statusUpdateListener);
-
+  public AnimatorComposite(UUID migrationId, NamedUserType valueType, UserMethod editedMethod) {
+    super(migrationId, valueType);
+    this.method = editedMethod;
   }
 
   @Override
-  protected Status getStatusPreRejectorCheck() {
-    if (this.poserComposite.isEmptyPose()) {
-      return this.isEmptyPoseError;
-    } else {
-      return IS_GOOD_TO_GO_STATUS;
-    }
-  }
-
-  @Override
-  protected Expression createValue() {
-    try {
-      return this.poserComposite.getControlComposite().createPoseExpression();
-    } catch (CannotCreateExpressionException e) {
-      throw new Error(e);
-    }
+  protected AnimatorControlComposite<M> createControlComposite() {
+    return new AnimatorControlComposite<M>(this);
   }
 
   @Override
   protected Panel createView() {
-    return new BorderPanel.Builder().center(this.poserComposite.getRootComponent()).build();
+    CompositeView splitPane = super.createView();
+    BorderPanel panel = new BorderPanel();
+    panel.addCenterComponent(splitPane);
+    panel.addPageEndComponent(this.getControlComposite().getSouthViewForDialog());
+    return panel;
   }
 
-  private final ErrorStatus isEmptyPoseError = this.createErrorStatus("isEmptyPoseError");
-  private final PoserComposite<?> poserComposite;
-  private final StatusUpdateListener statusUpdateListener = new StatusUpdateListener() {
-    @Override
-    public void refreshStatus() {
-      PoseExpressionCreatorComposite.this.refreshStatus();
+  public static boolean isStrictlyAnimation(UserMethod candidate) {
+    if (candidate != null) {
+      if (!(candidate.getDeclaringType() instanceof NamedUserType)) {
+        return false;
+      }
+      return CheckIfAnimationCrawler.initiateAndCheckMethod(candidate);
+    } else {
+      return true;
     }
-  };
+  }
+
+  public UserMethod getMethod() {
+    return this.method;
+  }
+
+  public static AnimatorComposite<?> getDialogForUserType(UserType<?> declaringType, UserMethod method) {
+    if (declaringType != null) {
+      if ((declaringType instanceof NamedUserType namedUserType) && AnimatorComposite.isStrictlyAnimation(method)) {
+        if (namedUserType.isAssignableTo(SBiped.class)) {
+          return new BipedAnimator(namedUserType, method);
+        } else if (namedUserType.isAssignableTo(SQuadruped.class)) {
+          return new QuadrupedAnimator(namedUserType, method);
+        } else if (namedUserType.isAssignableTo(SFlyer.class)) {
+          return new FlyerAnimator(namedUserType, method);
+        }
+      }
+    }
+    return null;
+  }
+
+  public static AnimatorComposite<?> getDialogForUserMethod(UserMethod method) {
+    return getDialogForUserType(method.getDeclaringType(), method);
+  }
 }

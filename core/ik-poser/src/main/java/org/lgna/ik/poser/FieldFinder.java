@@ -43,11 +43,14 @@
 package org.lgna.ik.poser;
 
 import edu.cmu.cs.dennisc.java.util.Lists;
-import org.alice.ide.ProjectStack;
-import org.alice.stageide.ast.StoryApiSpecificAstUtilities;
-import org.alice.stageide.type.croquet.TypeNode;
 import org.lgna.project.Project;
-import org.lgna.project.ast.*;
+import org.lgna.project.ast.ConstructorInvocationStatement;
+import org.lgna.project.ast.Expression;
+import org.lgna.project.ast.InstanceCreation;
+import org.lgna.project.ast.NamedUserConstructor;
+import org.lgna.project.ast.NamedUserType;
+import org.lgna.project.ast.SimpleArgument;
+import org.lgna.project.ast.UserField;
 import org.lgna.project.virtualmachine.ReleaseVirtualMachine;
 import org.lgna.story.resources.DynamicBipedResource;
 import org.lgna.story.resources.JointedModelResource;
@@ -75,7 +78,18 @@ public class FieldFinder {
   private final ReleaseVirtualMachine vm = new ReleaseVirtualMachine();
 
   public void refreshScene() {
-    sceneType = StoryApiSpecificAstUtilities.getSceneTypeFromProject(ProjectStack.peekProject());
+    this.sceneType = getSceneType(IkPoserContexts.getInstance().getCurrentProject());
+  }
+
+  private static NamedUserType getSceneType(Project project) {
+    if ((project == null) || (project.getProgramType() == null) || project.getProgramType().fields.isEmpty()) {
+      return null;
+    }
+    UserField sceneField = project.getProgramType().fields.get(0);
+    if (sceneField.getValueType() instanceof NamedUserType sceneUserType) {
+      return sceneUserType;
+    }
+    return null;
   }
 
   public ArrayList<JointedModelResource> getResourcesForType(NamedUserType type) {
@@ -87,59 +101,28 @@ public class FieldFinder {
     }
     List<UserField> fields = sceneType.getDeclaredFields();
     for (UserField field : fields) {
-      if (field.getManagementLevel().isManaged()) {
-        if (field.getValueType().isAssignableTo(type)) {
-          InstanceCreation creation = (InstanceCreation) field.initializer.getValue();
-          if (creation.requiredArguments.size() > 0) {
-            SimpleArgument simpleArgument = creation.requiredArguments.get(0);
-            Expression[] arr = new Expression[1];
-            arr[0] = simpleArgument.expression.getValue();
-            Object[] evaluated = vm.ENTRY_POINT_evaluate(null, arr);
-            Object resource = evaluated[0];
-            rv.add((JointedModelResource) resource);
-          } else {
-            NamedUserConstructor constructor = (NamedUserConstructor) creation.constructor.getValue();
-            ConstructorInvocationStatement constructorInvocationStatement = constructor.body.getValue().constructorInvocationStatement.getValue();
-            SimpleArgument simpleArgument = constructorInvocationStatement.requiredArguments.get(0);
+      if (field.getManagementLevel().isManaged() && field.getValueType().isAssignableTo(type)) {
+        InstanceCreation creation = (InstanceCreation) field.initializer.getValue();
+        if (creation.requiredArguments.size() > 0) {
+          SimpleArgument simpleArgument = creation.requiredArguments.get(0);
+          Expression[] arr = new Expression[1];
+          arr[0] = simpleArgument.expression.getValue();
+          Object[] evaluated = vm.ENTRY_POINT_evaluate(null, arr);
+          rv.add((JointedModelResource) evaluated[0]);
+        } else {
+          NamedUserConstructor constructor = (NamedUserConstructor) creation.constructor.getValue();
+          ConstructorInvocationStatement constructorInvocationStatement = constructor.body.getValue().constructorInvocationStatement.getValue();
+          SimpleArgument simpleArgument = constructorInvocationStatement.requiredArguments.get(0);
 
-            Expression[] arr = new Expression[1];
-            arr[0] = simpleArgument.expression.getValue();
-            Object[] evaluated = vm.ENTRY_POINT_evaluate(null, arr);
-            Object resource = evaluated[0];
-            assert resource instanceof JointedModelResource : resource;
-            rv.add((JointedModelResource) resource);
-          }
+          Expression[] arr = new Expression[1];
+          arr[0] = simpleArgument.expression.getValue();
+          Object[] evaluated = vm.ENTRY_POINT_evaluate(null, arr);
+          Object resource = evaluated[0];
+          assert resource instanceof JointedModelResource : resource;
+          rv.add((JointedModelResource) resource);
         }
       }
     }
     return rv;
-  }
-
-  public static TypeNode populateList(AbstractType<?, ?, ?> rootType) {
-    TypeNode rootNode = new TypeNode(rootType);
-    Project project = ProjectStack.peekProject();
-    Iterable<NamedUserType> types = project.getNamedUserTypes();
-    for (NamedUserType type : types) {
-      if (type.isAssignableTo(rootType)) {
-        TypeNode newNode = new TypeNode(type);
-        insert(newNode, rootNode);
-      }
-    }
-    return rootNode;
-  }
-
-  private static void insert(TypeNode newNode, TypeNode rootNode) {
-    for (int i = 0; i != rootNode.getChildCount(); ++i) {
-      TypeNode child = (TypeNode) rootNode.getChildAt(i);
-      if (child.getType().isAssignableTo(newNode.getType())) {
-        rootNode.add(newNode);
-        newNode.add(child);
-      } else if (newNode.getType().isAssignableTo(child.getType())) {
-        insert(newNode, child);
-      }
-    }
-    if (newNode.getParent() == null) {
-      rootNode.add(newNode);
-    }
   }
 }

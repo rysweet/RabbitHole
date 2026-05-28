@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
     Copyright (c) 2006, 2015, Carnegie Mellon University. All rights reserved.
 
@@ -40,8 +41,9 @@
     THE USE OF OR OTHER DEALINGS WITH THE SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+  xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -50,16 +52,11 @@
     <version>9.1.0-SNAPSHOT</version>
   </parent>
 
-  <name>IDE</name>
-  <artifactId>ide</artifactId>
+  <name>IK Poser</name>
+  <artifactId>ik-poser</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
-    <!-- Modules -->
-    <dependency>
-      <groupId>org.alice</groupId>
-      <artifactId>i18n</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.alice</groupId>
       <artifactId>util</artifactId>
@@ -74,10 +71,6 @@
     </dependency>
     <dependency>
       <groupId>org.alice</groupId>
-      <artifactId>image-editor</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.alice</groupId>
       <artifactId>scenegraph</artifactId>
     </dependency>
     <dependency>
@@ -86,69 +79,13 @@
     </dependency>
     <dependency>
       <groupId>org.alice</groupId>
-      <artifactId>ik-poser</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.alice</groupId>
       <artifactId>story-api</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.alice</groupId>
-      <artifactId>story-api-migration</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.alice</groupId>
-      <artifactId>issue-reporting</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.alice</groupId>
-      <artifactId>resources</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.alice</groupId>
-      <artifactId>models</artifactId>
-    </dependency>
 
-    <!-- Test -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <!-- External -->
-    <dependency>
-      <groupId>de.java2html</groupId>
-      <artifactId>java2html</artifactId>
-      <version>5.0</version>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/org.apache.xmlgraphics/batik-all -->
-    <dependency>
-      <groupId>org.apache.xmlgraphics</groupId>
-      <artifactId>batik-all</artifactId>
-      <type>pom</type>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/org.apache.xmlgraphics/batik-svggen -->
-    <dependency>
-      <groupId>org.apache.xmlgraphics</groupId>
-      <artifactId>batik-svggen</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.openhtmltopdf</groupId>
-      <artifactId>openhtmltopdf-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.openhtmltopdf</groupId>
-      <artifactId>openhtmltopdf-pdfbox</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.openhtmltopdf</groupId>
-      <artifactId>openhtmltopdf-rtl-support</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.openhtmltopdf</groupId>
-      <artifactId>openhtmltopdf-svg-support</artifactId>
-    </dependency>
   </dependencies>
-
 </project>

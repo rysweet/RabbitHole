@@ -42,65 +42,58 @@
  */
 package org.lgna.ik.poser.croquet;
 
-import edu.cmu.cs.dennisc.java.util.InitializingIfAbsentMap;
-import edu.cmu.cs.dennisc.java.util.Maps;
-import org.alice.ide.IDE;
-import org.lgna.croquet.SingleThreadIteratingOperation;
-import org.lgna.croquet.Triggerable;
-import org.lgna.croquet.history.UserActivity;
-import org.lgna.project.ast.Expression;
-import org.lgna.project.ast.NamedUserType;
+import org.lgna.croquet.AbstractSeverityStatusComposite;
+import org.lgna.croquet.Application;
+import org.lgna.croquet.SimpleOperationInputDialogCoreComposite;
+import org.lgna.ik.poser.IkPoserContexts;
+import org.lgna.croquet.views.BorderPanel;
+import org.lgna.croquet.views.Panel;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
- * @author Matt May
+ * @author Matt Mayy
  */
-public class DeclarePoseFieldOperation extends SingleThreadIteratingOperation {
-  private static InitializingIfAbsentMap<NamedUserType, DeclarePoseFieldOperation> map = Maps.newInitializingIfAbsentHashMap();
+public abstract class AnimationProcedureDialog extends SimpleOperationInputDialogCoreComposite<Panel> {
 
-  public static DeclarePoseFieldOperation getInstance(NamedUserType declaringType) {
-    return PoserComposite.isPoseable(declaringType) ? map.get(declaringType, DeclarePoseFieldOperation::new) : null;
-  }
-
-  private DeclarePoseFieldOperation(NamedUserType declaringType) {
-    super(IDE.PROJECT_GROUP, UUID.fromString("c20e6e66-78dd-4bb7-9ed9-8cb2096f5e18"));
-    this.declaringType = declaringType;
+  public AnimationProcedureDialog(UUID migrationId, AnimatorComposite animatorComposite) {
+    super(migrationId, Application.PROJECT_GROUP);
+    this.animatorComposite = this.registerSubComposite(animatorComposite);
+    this.animatorComposite.addStatusListener(statusUpdateListener);
   }
 
   @Override
-  protected boolean hasNext(List<UserActivity> finishedSteps) {
-    return finishedSteps.size() < 2;
-  }
-
-  @Override
-  protected Triggerable getNext(List<UserActivity> finishedSteps) {
-    switch (finishedSteps.size()) {
-    case 0:
-      return PoseExpressionCreatorComposite.getInstance(this.declaringType).getValueCreator();
-    case 1:
-      UserActivity prevSubStep = finishedSteps.getFirst();
-      if (prevSubStep.getProducedValue() != null) {
-        Expression expression = (Expression) prevSubStep.getProducedValue();
-        AddUnmanagedPoseFieldComposite addUnmanagedPoseFieldComposite = AddUnmanagedPoseFieldComposite.getInstance(this.declaringType);
-        addUnmanagedPoseFieldComposite.setInitializerInitialValue(expression);
-        return addUnmanagedPoseFieldComposite.getLaunchOperation();
-      } else {
-        return null;
-      }
-
-    default:
-      throw new Error();
+  protected AbstractSeverityStatusComposite.Status getStatusPreRejectorCheck() {
+    if (animatorComposite.getControlComposite().isEmpty()) {
+      return empty;
     }
+    String candidate = animatorComposite.getControlComposite().getNameState().getValue();
+    String explanation = IkPoserContexts.getInstance().getMethodNameValidationError(animatorComposite.getDeclaringType(), candidate);
+    if (explanation != null) {
+      errorStatus.setText(explanation);
+      return errorStatus;
+    }
+    return IS_GOOD_TO_GO_STATUS;
   }
 
   @Override
-  protected void handleSuccessfulCompletionOfSubModels(UserActivity activity) {
-    //    UserField field = getControlComposite().createPoseField( getControlComposite().getNameState().getValue() );
-    //    NamedUserType declaringType = this.getDeclaringType();
-    //    return new DeclareNonGalleryFieldEdit( completionStep, declaringType, field );
+  protected Panel createView() {
+    return new BorderPanel.Builder().center(this.animatorComposite.getRootComponent()).build();
   }
 
-  private final NamedUserType declaringType;
+  private final AnimatorComposite<?> animatorComposite;
+
+  private final StatusUpdateListener statusUpdateListener = new StatusUpdateListener() {
+    @Override
+    public void refreshStatus() {
+      AnimationProcedureDialog.this.refreshStatus();
+    }
+  };
+
+  public AnimatorComposite<?> getAnimatorComposite() {
+    return this.animatorComposite;
+  }
+
+  private final AbstractSeverityStatusComposite.WarningStatus empty = createWarningStatus("noPoses");
+  private final AbstractSeverityStatusComposite.ErrorStatus errorStatus = createErrorStatus("errorStatus");
 }

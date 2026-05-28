@@ -44,8 +44,8 @@ package org.lgna.ik.poser.croquet;
 
 import edu.cmu.cs.dennisc.java.util.InitializingIfAbsentMap;
 import edu.cmu.cs.dennisc.java.util.Maps;
-import org.alice.ide.croquet.edits.ast.DeclareMethodEdit;
 import org.lgna.croquet.edits.AbstractEdit;
+import org.lgna.ik.poser.IkPoserContexts;
 import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.ast.JavaType;
 import org.lgna.project.ast.NamedUserType;
@@ -68,6 +68,6 @@ public class DeclareAnimationProcedureDialog extends AnimationProcedureDialog {
 
   @Override
   protected AbstractEdit createEdit(UserActivity userActivity) {
-    return new DeclareMethodEdit(userActivity, getAnimatorComposite().getDeclaringType(), getAnimatorComposite().getControlComposite().getNameState().getValue(), JavaType.VOID_TYPE, getAnimatorComposite().getControlComposite().createMethodBody());
+    return IkPoserContexts.getInstance().createDeclareMethodEdit(userActivity, getAnimatorComposite().getDeclaringType(), getAnimatorComposite().getControlComposite().getNameState().getValue(), JavaType.VOID_TYPE, getAnimatorComposite().getControlComposite().createMethodBody());
   }
 }

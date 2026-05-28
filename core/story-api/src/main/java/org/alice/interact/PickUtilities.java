@@ -50,7 +50,6 @@ import edu.cmu.cs.dennisc.scenegraph.Composite;
 import edu.cmu.cs.dennisc.scenegraph.OrthographicCamera;
 import edu.cmu.cs.dennisc.scenegraph.SymmetricPerspectiveCamera;
 import org.alice.interact.handle.ManipulationHandle3D;
-import org.lgna.ik.poser.jselection.JointSelectionSphere;
 import org.lgna.story.CameraMarker;
 import org.lgna.story.Resizable;
 import org.lgna.story.SCamera;
@@ -129,6 +128,10 @@ public class PickUtilities {
     return null;
   }
 
+  private static boolean isIkJointSelectionSphere(SThing entity) {
+    return entity != null && "org.lgna.ik.poser.jselection.JointSelectionSphere".equals(entity.getClass().getName());
+  }
+
   private static PickHint getPickHintForEntity(SThing entity) {
     List<PickHint.PickType> pickTypes = Lists.newLinkedList();
     if (entity != null) {
@@ -159,7 +162,7 @@ public class PickUtilities {
       if (entity instanceof SJoint) {
         pickTypes.add(PickHint.PickType.JOINT);
       }
-      if (entity instanceof JointSelectionSphere) {
+      if (isIkJointSelectionSphere(entity)) {
         pickTypes.add(PickHint.PickType.JOINT);
       }
     }

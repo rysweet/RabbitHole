@@ -69,7 +69,6 @@ import org.lgna.story.event.PointOfViewEvent;
 import org.lgna.story.implementation.PoseUtilities;
 import org.lgna.story.resources.JointId;
 import org.lgna.story.resources.JointedModelResource;
-import test.ik.croquet.SceneComposite;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -45,7 +45,6 @@ package org.lgna.ik.poser.scene;
 import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.render.OnscreenRenderTarget;
-import org.alice.interact.PoserAnimatorDragAdapter;
 import org.alice.interact.handle.HandleStyle;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.lgna.croquet.State;
