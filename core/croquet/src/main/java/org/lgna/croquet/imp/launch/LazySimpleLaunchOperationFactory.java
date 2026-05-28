@@ -42,48 +42,42 @@
  *******************************************************************************/
 package org.lgna.croquet.imp.launch;
 
-import edu.cmu.cs.dennisc.pattern.Lazy;
 import org.lgna.croquet.Group;
 import org.lgna.croquet.Operation;
 import org.lgna.croquet.OperationOwningComposite;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
+import java.util.function.Supplier;
 
 /**
  * @author Dennis Cosgrove
  */
 public final class LazySimpleLaunchOperationFactory<C extends OperationOwningComposite<?>> extends LazyLaunchOperationFactory<C> {
-  public static <C extends OperationOwningComposite<?>> LazySimpleLaunchOperationFactory<C> createInstance(Class<C> cls, Lazy<C> lazy, Group launchGroup) {
-    return new LazySimpleLaunchOperationFactory<C>(cls, lazy, launchGroup);
+  public static <C extends OperationOwningComposite<?>> LazySimpleLaunchOperationFactory<C> createInstance(Class<C> cls, Supplier<C> supplier, Group launchGroup) {
+    return new LazySimpleLaunchOperationFactory<C>(cls, supplier, launchGroup);
   }
 
   public static <C extends OperationOwningComposite<?>> LazySimpleLaunchOperationFactory<C> createNoArgumentConstructorInstance(Class<C> cls, Group launchGroup) {
-    try {
-      final Constructor<C> jConstructor = cls.getConstructor();
-      assert Modifier.isPublic(jConstructor.getModifiers()) : jConstructor;
-      return createInstance(cls, new Lazy<C>() {
-        @Override
-        protected C create() {
-          try {
-            return jConstructor.newInstance();
-          } catch (InvocationTargetException ite) {
-            throw new RuntimeException(jConstructor.toString(), ite);
-          } catch (IllegalAccessException iae) {
-            throw new RuntimeException(jConstructor.toString(), iae);
-          } catch (InstantiationException ie) {
-            throw new RuntimeException(jConstructor.toString(), ie);
+    // Thread-safe lazy supplier via double-checked locking
+    final Object[] holder = new Object[1];
+    Supplier<C> memoized = () -> {
+      if (holder[0] == null) {
+        synchronized (holder) {
+          if (holder[0] == null) {
+            try {
+              holder[0] = cls.getConstructor().newInstance();
+            } catch (ReflectiveOperationException e) {
+              throw new RuntimeException(cls.toString(), e);
+            }
           }
         }
-      }, launchGroup);
-    } catch (NoSuchMethodException nsme) {
-      throw new RuntimeException(nsme);
-    }
+      }
+      return (C) holder[0];
+    };
+    return createInstance(cls, memoized, launchGroup);
   }
 
-  private LazySimpleLaunchOperationFactory(Class<C> cls, Lazy<C> lazy, Group launchGroup) {
-    super(cls, lazy);
+  private LazySimpleLaunchOperationFactory(Class<C> cls, Supplier<C> supplier, Group launchGroup) {
+    super(cls, supplier);
     this.launchOperation = this.createLaunchOperation(launchGroup, null, null);
   }
 

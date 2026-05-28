@@ -52,7 +52,7 @@ import org.lgna.story.implementation.JointedModelImp;
  */
 public class JointedModelVisualization extends Leaf {
   static {
-    AdapterFactory.register(JointedModelVisualization.class, GlrJointedModelVisualization.class);
+    AdapterFactory.register(JointedModelVisualization.class, GlrJointedModelVisualization::new);
   }
 
   public JointedModelVisualization(JointedModelImp implementation) {

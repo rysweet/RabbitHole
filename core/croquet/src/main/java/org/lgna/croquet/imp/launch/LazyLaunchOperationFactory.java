@@ -42,20 +42,21 @@
  *******************************************************************************/
 package org.lgna.croquet.imp.launch;
 
-import edu.cmu.cs.dennisc.pattern.Lazy;
 import org.lgna.croquet.*;
+
+import java.util.function.Supplier;
 
 /**
  * @author Dennis Cosgrove
  */
 public abstract class LazyLaunchOperationFactory<C extends OperationOwningComposite<?>> {
-  public LazyLaunchOperationFactory(Class<C> cls, Lazy<C> lazy) {
+  public LazyLaunchOperationFactory(Class<C> cls, Supplier<C> supplier) {
     this.cls = cls;
-    this.lazy = lazy;
+    this.supplier = supplier;
   }
 
-  public Lazy<C> getLazy() {
-    return this.lazy;
+  public Supplier<C> getSupplier() {
+    return this.supplier;
   }
 
   /*package-private*/Class<? extends Element> getClassUsedForLocalization() {
@@ -67,5 +68,5 @@ public abstract class LazyLaunchOperationFactory<C extends OperationOwningCompos
   }
 
   private final Class<C> cls;
-  private final Lazy<C> lazy;
+  private final Supplier<C> supplier;
 }

@@ -42,7 +42,6 @@
  *******************************************************************************/
 package org.alice.ide.preferences.recursion;
 
-import edu.cmu.cs.dennisc.pattern.Lazy;
 import org.alice.ide.preferences.recursion.components.IsRecursionAllowedPreferenceView;
 import org.lgna.croquet.Application;
 import org.lgna.croquet.LazyOperationUnadornedDialogCoreComposite;
@@ -59,12 +58,7 @@ public final class IsRecursionAllowedPreferenceDialogComposite extends LazyOpera
   private IsRecursionAllowedPreferenceDialogComposite(int index) {
     super(UUID.fromString("877a3f9a-40c0-4100-90a3-6fb736ed5305"));
     this.depth = index;
-    this.next = LazySimpleLaunchOperationFactory.createInstance(IsRecursionAllowedPreferenceDialogComposite.class, new Lazy<IsRecursionAllowedPreferenceDialogComposite>() {
-      @Override
-      protected IsRecursionAllowedPreferenceDialogComposite create() {
-        return new IsRecursionAllowedPreferenceDialogComposite(depth + 1);
-      }
-    }, Application.APPLICATION_UI_GROUP).getLaunchOperation();
+    this.next = LazySimpleLaunchOperationFactory.createInstance(IsRecursionAllowedPreferenceDialogComposite.class, () -> new IsRecursionAllowedPreferenceDialogComposite(depth + 1), Application.APPLICATION_UI_GROUP).getLaunchOperation();
   }
 
   public IsRecursionAllowedPreferenceDialogComposite() {

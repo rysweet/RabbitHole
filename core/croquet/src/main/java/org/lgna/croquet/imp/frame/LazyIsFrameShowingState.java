@@ -42,52 +42,45 @@
  *******************************************************************************/
 package org.lgna.croquet.imp.frame;
 
-import edu.cmu.cs.dennisc.pattern.Lazy;
 import org.lgna.croquet.BooleanState;
 import org.lgna.croquet.Element;
 import org.lgna.croquet.FrameComposite;
 import org.lgna.croquet.Group;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * @author Dennis Cosgrove
  */
 public final class LazyIsFrameShowingState<C extends FrameComposite<?>> extends AbstractIsFrameShowingState {
-  public static <C extends FrameComposite<?>> BooleanState createInstance(Group group, Class<C> cls, Lazy<C> lazy) {
-    return new LazyIsFrameShowingState<C>(group, cls, lazy);
+  public static <C extends FrameComposite<?>> BooleanState createInstance(Group group, Class<C> cls, Supplier<C> supplier) {
+    return new LazyIsFrameShowingState<C>(group, cls, supplier);
   }
 
   public static <C extends FrameComposite<?>> BooleanState createNoArgumentConstructorInstance(Group group, Class<C> cls) {
-    try {
-      final Constructor<C> jConstructor = cls.getConstructor();
-      assert Modifier.isPublic(jConstructor.getModifiers()) : jConstructor;
-      return createInstance(group, cls, new Lazy<C>() {
-        @Override
-        protected C create() {
-          try {
-            return jConstructor.newInstance();
-          } catch (InvocationTargetException ite) {
-            throw new RuntimeException(jConstructor.toString(), ite);
-          } catch (IllegalAccessException iae) {
-            throw new RuntimeException(jConstructor.toString(), iae);
-          } catch (InstantiationException ie) {
-            throw new RuntimeException(jConstructor.toString(), ie);
+    final Object[] holder = new Object[1];
+    Supplier<C> memoized = () -> {
+      if (holder[0] == null) {
+        synchronized (holder) {
+          if (holder[0] == null) {
+            try {
+              holder[0] = cls.getConstructor().newInstance();
+            } catch (ReflectiveOperationException e) {
+              throw new RuntimeException(cls.toString(), e);
+            }
           }
         }
-      });
-    } catch (NoSuchMethodException nsme) {
-      throw new RuntimeException(nsme);
-    }
+      }
+      return (C) holder[0];
+    };
+    return createInstance(group, cls, memoized);
   }
 
-  private LazyIsFrameShowingState(Group group, Class<C> cls, Lazy<C> lazy) {
+  private LazyIsFrameShowingState(Group group, Class<C> cls, Supplier<C> supplier) {
     super(group, UUID.fromString("e6efce56-7da5-4798-9ec3-6fcaab3962b5"));
     this.cls = cls;
-    this.lazy = lazy;
+    this.supplier = supplier;
   }
 
   @Override
@@ -97,9 +90,9 @@ public final class LazyIsFrameShowingState<C extends FrameComposite<?>> extends 
 
   @Override
   public C getFrameComposite() {
-    return this.lazy.get();
+    return this.supplier.get();
   }
 
   private final Class<C> cls;
-  private final Lazy<C> lazy;
+  private final Supplier<C> supplier;
 }

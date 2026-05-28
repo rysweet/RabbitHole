@@ -43,61 +43,113 @@
 
 package edu.cmu.cs.dennisc.render.gl.imp.adapters;
 
-import edu.cmu.cs.dennisc.java.lang.reflect.ReflectionUtilities;
 import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.pattern.Releasable;
+import edu.cmu.cs.dennisc.render.gl.imp.adapters.adorn.GlrPivotFigure;
 import edu.cmu.cs.dennisc.render.gl.imp.adapters.adorn.GlrStickFigure;
-import edu.cmu.cs.dennisc.scenegraph.AbstractCamera;
-import edu.cmu.cs.dennisc.scenegraph.AbstractTransformable;
-import edu.cmu.cs.dennisc.scenegraph.Appearance;
-import edu.cmu.cs.dennisc.scenegraph.Background;
-import edu.cmu.cs.dennisc.scenegraph.Component;
-import edu.cmu.cs.dennisc.scenegraph.Composite;
-import edu.cmu.cs.dennisc.scenegraph.Element;
-import edu.cmu.cs.dennisc.scenegraph.Geometry;
-import edu.cmu.cs.dennisc.scenegraph.Ghost;
-import edu.cmu.cs.dennisc.scenegraph.Graphic;
-import edu.cmu.cs.dennisc.scenegraph.Layer;
-import edu.cmu.cs.dennisc.scenegraph.OrthographicCamera;
-import edu.cmu.cs.dennisc.scenegraph.Scene;
-import edu.cmu.cs.dennisc.scenegraph.Silhouette;
-import edu.cmu.cs.dennisc.scenegraph.SymmetricPerspectiveCamera;
-import edu.cmu.cs.dennisc.scenegraph.TexturedAppearance;
-import edu.cmu.cs.dennisc.scenegraph.Transformable;
+import edu.cmu.cs.dennisc.render.gl.imp.adapters.graphics.GlrMainTitle;
+import edu.cmu.cs.dennisc.render.gl.imp.adapters.graphics.GlrOvertitle;
+import edu.cmu.cs.dennisc.render.gl.imp.adapters.graphics.GlrSpeechBubble;
+import edu.cmu.cs.dennisc.render.gl.imp.adapters.graphics.GlrSubtitle;
+import edu.cmu.cs.dennisc.render.gl.imp.adapters.graphics.GlrThoughtBubble;
+import edu.cmu.cs.dennisc.scenegraph.*;
+import edu.cmu.cs.dennisc.scenegraph.adorn.PivotFigure;
 import edu.cmu.cs.dennisc.scenegraph.adorn.StickFigure;
-import edu.cmu.cs.dennisc.scenegraph.graphics.Text;
+import edu.cmu.cs.dennisc.scenegraph.graphics.MainTitle;
+import edu.cmu.cs.dennisc.scenegraph.graphics.Overtitle;
+import edu.cmu.cs.dennisc.scenegraph.graphics.SpeechBubble;
+import edu.cmu.cs.dennisc.scenegraph.graphics.Subtitle;
+import edu.cmu.cs.dennisc.scenegraph.graphics.ThoughtBubble;
 import edu.cmu.cs.dennisc.texture.BufferedImageTexture;
 import edu.cmu.cs.dennisc.texture.CustomTexture;
 import edu.cmu.cs.dennisc.texture.Texture;
 
 import java.lang.reflect.Array;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * @author Dennis Cosgrove
  */
 public class AdapterFactory {
   private static final Map<Releasable, GlrObject<? extends Releasable>> s_elementToAdapterMap = Maps.newHashMap();
-  private static final Map<Class<? extends Releasable>, Class<? extends GlrObject<? extends Releasable>>> s_classToAdapterClassMap = Maps.newHashMap();
-
-  private static final String SCENEGRAPH_PACKAGE_NAME = Element.class.getPackage().getName();
-  private static final String RENDERER_PACKAGE_NAME = GlrElement.class.getPackage().getName();
-  private static final String SCENEGRAPH_GRAPHICS_PACKAGE_NAME = Text.class.getPackage().getName();
-  private static final String RENDERER_GRAPHICS_PACKAGE_NAME = edu.cmu.cs.dennisc.render.gl.imp.adapters.graphics.GlrText.class.getPackage().getName();
-  private static final String SCENEGRAPH_ADORN_PACKAGE_NAME = StickFigure.class.getPackage().getName();
-  private static final String RENDERER_ADORN_PACKAGE_NAME = GlrStickFigure.class.getPackage().getName();
+  private static final Map<Class<? extends Releasable>, Supplier<? extends GlrObject<?>>> s_supplierMap = Maps.newHashMap();
 
   static {
-    register(BufferedImageTexture.class, GlrBufferedImageTexture.class);
+    // Scenegraph core adapters
+    register(AmbientLight.class, GlrAmbientLight::new);
+    register(Background.class, GlrBackground::new);
+    register(Box.class, GlrBox::new);
+    register(ClippingPlane.class, GlrClippingPlane::new);
+    register(Cylinder.class, GlrCylinder::new);
+    register(DirectionalLight.class, GlrDirectionalLight::new);
+    register(Disc.class, GlrDisc::new);
+    register(ExponentialFog.class, GlrExponentialFog::new);
+    register(ExponentialSquaredFog.class, GlrExponentialSquaredFog::new);
+    register(Ghost.class, GlrGhost::new);
+    register(HorizontalSurface.class, GlrHorizontalSurface::new);
+    register(IndexedQuadrilateralArray.class, GlrIndexedQuadrilateralArray::new);
+    register(IndexedTriangleArray.class, GlrIndexedTriangleArray::new);
+    register(Joint.class, GlrJoint::new);
+    register(Layer.class, GlrLayer::new);
+    register(LineArray.class, GlrLineArray::new);
+    register(LineLoop.class, GlrLineLoop::new);
+    register(LineStrip.class, GlrLineStrip::new);
+    register(LinearFog.class, GlrLinearFog::new);
+    register(Mesh.class, GlrMesh::new);
+    register(OldMesh.class, GlrOldMesh::new);
+    register(OrthographicCamera.class, GlrOrthographicCamera::new);
+    register(PlanarReflector.class, GlrPlanarReflector::new);
+    register(PointArray.class, GlrPointArray::new);
+    register(PointLight.class, GlrPointLight::new);
+    register(QuadArray.class, GlrQuadArray::new);
+    register(QuadStrip.class, GlrQuadStrip::new);
+    register(Scalable.class, GlrScalable::new);
+    register(Scene.class, GlrScene::new);
+    register(Silhouette.class, GlrSilhouette::new);
+    register(SimpleAppearance.class, GlrSimpleAppearance::new);
+    register(SkeletonVisual.class, GlrSkeletonVisual::new);
+    register(Sphere.class, GlrSphere::new);
+    register(SpotLight.class, GlrSpotLight::new);
+    register(Sprite.class, GlrSprite::new);
+    register(StandIn.class, GlrStandIn::new);
+    register(SymmetricPerspectiveCamera.class, GlrSymmetricPerspectiveCamera::new);
+    register(TexturedAppearance.class, GlrTexturedAppearance::new);
+    register(TexturedVisual.class, GlrTexturedVisual::new);
+    register(Torus.class, GlrTorus::new);
+    register(Transformable.class, GlrTransformable::new);
+    register(TransformableVisual.class, GlrTransformableVisual::new);
+    register(TriangleArray.class, GlrTriangleArray::new);
+    register(TriangleFan.class, GlrTriangleFan::new);
+    register(TriangleStrip.class, GlrTriangleStrip::new);
+    register(Visual.class, GlrVisual::new);
+    register(WeightedMesh.class, GlrWeightedMesh::new);
+
+    // Texture adapters
+    register(BufferedImageTexture.class, GlrBufferedImageTexture::new);
+    register(CustomTexture.class, GlrCustomTexture::new);
+
+    // Graphics adapters (scenegraph.Text maps to adapters.GlrText, not graphics.GlrText)
+    register(edu.cmu.cs.dennisc.scenegraph.Text.class, GlrText::new);
+    register(MainTitle.class, GlrMainTitle::new);
+    register(Overtitle.class, GlrOvertitle::new);
+    register(SpeechBubble.class, GlrSpeechBubble::new);
+    register(Subtitle.class, GlrSubtitle::new);
+    register(ThoughtBubble.class, GlrThoughtBubble::new);
+
+    // Adorn adapters
+    register(StickFigure.class, GlrStickFigure::new);
+    register(PivotFigure.class, GlrPivotFigure::new);
   }
 
   private AdapterFactory() {
     throw new AssertionError();
   }
 
-  public static <SG extends Releasable, GLR extends GlrObject<SG>> void register(Class<SG> sgClass, Class<GLR> adapterClass) {
-    s_classToAdapterClassMap.put(sgClass, adapterClass);
+  @SuppressWarnings("unchecked")
+  public static <SG extends Releasable> void register(Class<SG> sgClass, Supplier<? extends GlrObject<?>> supplier) {
+    s_supplierMap.put(sgClass, supplier);
   }
 
   private static void createNecessaryProxies(Releasable sgElement) {
@@ -110,43 +162,27 @@ public class AdapterFactory {
   }
 
   private static <SG extends Releasable, GLR extends GlrObject<SG>> GLR createAdapterFor(SG sgElement) {
-    Class sgClass = sgElement.getClass();
-    Class cls = s_classToAdapterClassMap.get(sgClass);
-    if (cls == null) {
-      StringBuilder sb = new StringBuilder();
-      while (sgClass != null) {
-        Package sgPackage = sgClass.getPackage();
-        if ((sgPackage != null) && sgPackage.getName().equals(SCENEGRAPH_PACKAGE_NAME)) {
-          sb.append(RENDERER_PACKAGE_NAME);
-          break;
-        } else if (sgClass == CustomTexture.class) {
-          sb.append(RENDERER_PACKAGE_NAME);
-          break;
-        } else if ((sgPackage != null) && sgPackage.getName().equals(SCENEGRAPH_GRAPHICS_PACKAGE_NAME)) {
-          sb.append(RENDERER_GRAPHICS_PACKAGE_NAME);
-          break;
-        } else if ((sgPackage != null) && sgPackage.getName().equals(SCENEGRAPH_ADORN_PACKAGE_NAME)) {
-          sb.append(RENDERER_ADORN_PACKAGE_NAME);
-          break;
-        } else {
-          sgClass = sgClass.getSuperclass();
-        }
+    Class<?> sgClass = sgElement.getClass();
+    Supplier<? extends GlrObject<?>> supplier = s_supplierMap.get(sgClass);
+    // Walk up the hierarchy to find a registered adapter
+    if (supplier == null) {
+      Class<?> search = sgClass.getSuperclass();
+      while (search != null && supplier == null) {
+        supplier = s_supplierMap.get(search);
+        search = search.getSuperclass();
       }
-      assert sgClass != null;
-      sb.append('.');
-      sb.append("Glr");
-      sb.append(sgClass.getSimpleName());
-      cls = ReflectionUtilities.getClassForName(sb.toString());
-      if (cls != null) {
-        register(sgClass, cls);
+      if (supplier != null) {
+        // Cache the resolved supplier for this concrete class
+        final Supplier<? extends GlrObject<?>> resolved = supplier;
+        s_supplierMap.put((Class<? extends Releasable>) sgClass, resolved);
       }
     }
     GLR rv;
-    if (cls != null) {
+    if (supplier != null) {
       try {
-        rv = (GLR) ReflectionUtilities.newInstance(cls);
+        rv = (GLR) supplier.get();
       } catch (Throwable t) {
-        Logger.throwable(t, cls);
+        Logger.throwable(t, sgClass);
         rv = null;
       }
     } else {

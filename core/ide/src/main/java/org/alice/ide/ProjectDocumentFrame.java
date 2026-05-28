@@ -48,7 +48,7 @@ import edu.cmu.cs.dennisc.java.util.DStack;
 import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.Stacks;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
-import edu.cmu.cs.dennisc.pattern.Lazy;
+
 import org.alice.ide.capture.ImageCaptureComposite;
 import org.alice.ide.croquet.models.AliceMenuBar;
 import org.alice.ide.croquet.models.history.RedoOperation;
@@ -333,19 +333,9 @@ public class ProjectDocumentFrame extends PerspectiveDocumentFrame {
 
   private final DeclarationsEditorComposite declarationsEditorComposite = new DeclarationsEditorComposite();
 
-  private final Operation resourcesDialogLaunchOperation = LazySimpleLaunchOperationFactory.createInstance(ResourceManagerComposite.class, new Lazy<ResourceManagerComposite>() {
-    @Override
-    protected ResourceManagerComposite create() {
-      return new ResourceManagerComposite(ProjectDocumentFrame.this);
-    }
-  }, Application.DOCUMENT_UI_GROUP).getLaunchOperation();
+  private final Operation resourcesDialogLaunchOperation = LazySimpleLaunchOperationFactory.createInstance(ResourceManagerComposite.class, () -> new ResourceManagerComposite(ProjectDocumentFrame.this), Application.DOCUMENT_UI_GROUP).getLaunchOperation();
 
-  private final BooleanState statisticsFrameIsShowingState = LazyIsFrameShowingState.createInstance(Application.INFORMATION_GROUP, StatisticsFrameComposite.class, new Lazy<StatisticsFrameComposite>() {
-    @Override
-    protected StatisticsFrameComposite create() {
-      return new StatisticsFrameComposite(ProjectDocumentFrame.this);
-    }
-  });
+  private final BooleanState statisticsFrameIsShowingState = LazyIsFrameShowingState.createInstance(Application.INFORMATION_GROUP, StatisticsFrameComposite.class, () -> new StatisticsFrameComposite(ProjectDocumentFrame.this));
   private final DStack<ReasonToDisableSomeAmountOfRendering> stack = Stacks.newStack();
 
   private final Map<AbstractCode, InstanceFactory> mapCodeToInstanceFactory = Maps.newHashMap();

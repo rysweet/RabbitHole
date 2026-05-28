@@ -58,7 +58,7 @@ import java.util.UUID;
 
   @Override
   protected C getComposite() {
-    return this.factory.getLazy().get();
+    return this.factory.getSupplier().get();
   }
 
   @Override
