@@ -173,6 +173,54 @@ public class EatmeReopenProjectTest {
         EatmeReopenProject.escapeJson("quote\" slash\\ backspace\b formfeed\f newline\n return\r tab\t low\u0001"));
   }
 
+  @Test
+  public void sceneTypeMismatchSetsStateVerificationToFailed_reopenedStateJson() {
+    String json = EatmeReopenProject.reopenedStateJson(false, true, "OriginalScene", "RenamedScene");
+
+    assertTrue(json, json.contains("\"state_verification\": \"failed\""));
+    assertTrue(json, json.contains("\"scene_type_matches\": false"));
+    assertTrue(json, json.contains("\"method_present_after_roundtrip\": true"));
+    assertTrue(json, json.contains("\"scene_type_mismatch\""));
+    assertTrue(json, json.contains("\"original_scene_type\": \"OriginalScene\""));
+    assertTrue(json, json.contains("\"reopened_scene_type\": \"RenamedScene\""));
+  }
+
+  @Test
+  public void sceneTypeMismatchSetsStateVerificationToFailed_resultJson() {
+    EatmeReopenProject.ProjectReopen reopen = new EatmeReopenProject.ProjectReopen(
+        "scene.myMethod", "OriginalScene", "myMethod",
+        "saved.a3p", "reopened.a3p", false, "RenamedScene");
+
+    String json = EatmeReopenProject.resultJson(reopen);
+
+    assertTrue(json, json.contains("\"state_verification\":\"failed\""));
+    assertTrue(json, json.contains("\"scene_type_mismatch\""));
+    assertTrue(json, json.contains("\"original_scene_type\":\"OriginalScene\""));
+    assertTrue(json, json.contains("\"reopened_scene_type\":\"RenamedScene\""));
+    assertTrue(json, json.contains("\"status\":\"reopened\""));
+  }
+
+  @Test
+  public void sceneTypeMatchRetainsPassedVerification_reopenedStateJson() {
+    String json = EatmeReopenProject.reopenedStateJson(true, true, "Scene", "Scene");
+
+    assertTrue(json, json.contains("\"state_verification\": \"passed\""));
+    assertTrue(json, json.contains("\"scene_type_matches\": true"));
+    assertTrue(json, !json.contains("scene_type_mismatch"));
+  }
+
+  @Test
+  public void sceneTypeMatchRetainsPassedVerification_resultJson() {
+    EatmeReopenProject.ProjectReopen reopen = new EatmeReopenProject.ProjectReopen(
+        "scene.myMethod", "Scene", "myMethod",
+        "saved.a3p", "reopened.a3p", true, "Scene");
+
+    String json = EatmeReopenProject.resultJson(reopen);
+
+    assertTrue(json, json.contains("\"state_verification\":\"passed\""));
+    assertTrue(json, !json.contains("scene_type_mismatch"));
+  }
+
   private static Project projectWithScene() {
     NamedUserType sceneType = AstUtilities.createType("Scene", JavaType.getInstance(SScene.class));
     NamedUserType programType = AstUtilities.createType("Program", JavaType.getInstance(SProgram.class));

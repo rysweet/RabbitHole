@@ -90,14 +90,18 @@ public final class EatmeReopenProject {
         sceneType.getName(),
         methodName,
         sourceSavedProject,
-        REOPENED_PROJECT);
+        REOPENED_PROJECT,
+        sceneTypeMatches,
+        rereadSceneType.getName());
 
     Path reopenArtifactPath = artifactPath(arguments.evidenceDir(), REOPEN_ARTIFACT);
     Files.writeString(reopenArtifactPath, reopenArtifactJson(reopen), StandardCharsets.UTF_8);
     requireNonEmptyArtifact(reopenArtifactPath, "reopen evidence artifact");
 
     Path reopenedStatePath = artifactPath(arguments.evidenceDir(), REOPENED_STATE_ARTIFACT);
-    Files.writeString(reopenedStatePath, reopenedStateJson(sceneTypeMatches, methodPresent), StandardCharsets.UTF_8);
+    Files.writeString(reopenedStatePath,
+        reopenedStateJson(sceneTypeMatches, methodPresent, sceneType.getName(), rereadSceneType.getName()),
+        StandardCharsets.UTF_8);
     requireNonEmptyArtifact(reopenedStatePath, "reopened state artifact");
 
     return reopen;
@@ -155,17 +159,26 @@ public final class EatmeReopenProject {
     return null;
   }
 
-  private static String resultJson(ProjectReopen reopen) {
-    return "{"
-        + "\"schema_version\":\"eatme.alice-project-reopen-result/v1\","
-        + "\"status\":\"reopened\","
-        + "\"source_saved_project_artifact\":\"" + escapeJson(reopen.sourceSavedProject()) + "\","
-        + "\"reopen_selector\":\"" + escapeJson(reopen.reopenSelector()) + "\","
-        + "\"reopened_project_artifact\":\"" + REOPENED_PROJECT + "\","
-        + "\"reopen_artifact\":\"" + REOPEN_ARTIFACT + "\","
-        + "\"reopened_state_artifact\":\"" + REOPENED_STATE_ARTIFACT + "\","
-        + "\"state_verification\":\"passed\""
-        + "}";
+  static String resultJson(ProjectReopen reopen) {
+    String verification = reopen.sceneTypeMatches() ? "passed" : "failed";
+    StringBuilder json = new StringBuilder();
+    json.append("{");
+    json.append("\"schema_version\":\"eatme.alice-project-reopen-result/v1\",");
+    json.append("\"status\":\"reopened\",");
+    json.append("\"source_saved_project_artifact\":\"").append(escapeJson(reopen.sourceSavedProject())).append("\",");
+    json.append("\"reopen_selector\":\"").append(escapeJson(reopen.reopenSelector())).append("\",");
+    json.append("\"reopened_project_artifact\":\"").append(REOPENED_PROJECT).append("\",");
+    json.append("\"reopen_artifact\":\"").append(REOPEN_ARTIFACT).append("\",");
+    json.append("\"reopened_state_artifact\":\"").append(REOPENED_STATE_ARTIFACT).append("\",");
+    json.append("\"state_verification\":\"").append(verification).append("\"");
+    if (!reopen.sceneTypeMatches()) {
+      json.append(",\"scene_type_mismatch\":{");
+      json.append("\"original_scene_type\":\"").append(escapeJson(reopen.sceneType())).append("\",");
+      json.append("\"reopened_scene_type\":\"").append(escapeJson(reopen.reopenedSceneType())).append("\"");
+      json.append("}");
+    }
+    json.append("}");
+    return json.toString();
   }
 
   private static String reopenArtifactJson(ProjectReopen reopen) {
@@ -181,13 +194,24 @@ public final class EatmeReopenProject {
         + "}\n";
   }
 
-  private static String reopenedStateJson(boolean sceneTypeMatches, boolean methodPresent) {
-    return "{\n"
-        + "  \"schema_version\": \"eatme.alice-project-reopen-state/v1\",\n"
-        + "  \"scene_type_matches\": " + sceneTypeMatches + ",\n"
-        + "  \"method_present_after_roundtrip\": " + methodPresent + ",\n"
-        + "  \"state_verification\": \"passed\"\n"
-        + "}\n";
+  static String reopenedStateJson(boolean sceneTypeMatches, boolean methodPresent,
+      String originalSceneType, String reopenedSceneType) {
+    String verification = sceneTypeMatches ? "passed" : "failed";
+    StringBuilder json = new StringBuilder();
+    json.append("{\n");
+    json.append("  \"schema_version\": \"eatme.alice-project-reopen-state/v1\",\n");
+    json.append("  \"scene_type_matches\": ").append(sceneTypeMatches).append(",\n");
+    json.append("  \"method_present_after_roundtrip\": ").append(methodPresent).append(",\n");
+    json.append("  \"state_verification\": \"").append(verification).append("\"");
+    if (!sceneTypeMatches) {
+      json.append(",\n");
+      json.append("  \"scene_type_mismatch\": {\n");
+      json.append("    \"original_scene_type\": \"").append(escapeJson(originalSceneType)).append("\",\n");
+      json.append("    \"reopened_scene_type\": \"").append(escapeJson(reopenedSceneType)).append("\"\n");
+      json.append("  }");
+    }
+    json.append("\n}\n");
+    return json.toString();
   }
 
   static String escapeJson(String value) {
@@ -257,6 +281,8 @@ public final class EatmeReopenProject {
       String sceneType,
       String methodName,
       String sourceSavedProject,
-      String reopenedProject) {
+      String reopenedProject,
+      boolean sceneTypeMatches,
+      String reopenedSceneType) {
   }
 }
