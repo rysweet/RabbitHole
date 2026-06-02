@@ -239,4 +239,14 @@ public class XMLUtilitiesTest {
     assertNotNull(parsed);
     assertEquals("valid", parsed.getDocumentElement().getTagName());
   }
+
+  // --- XXE attack prevention ---
+
+  @Test(expected = RuntimeException.class)
+  public void read_rejectsXxeExternalEntity() {
+    String xxePayload = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        + "<!DOCTYPE foo [ <!ENTITY xxe SYSTEM \"file:///etc/passwd\"> ]>"
+        + "<root>&xxe;</root>";
+    XMLUtilities.read(new ByteArrayInputStream(xxePayload.getBytes()));
+  }
 }
