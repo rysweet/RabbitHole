@@ -86,8 +86,12 @@ public class XMLUtilities {
     try {
       TransformerFactory factory = TransformerFactory.newInstance();
       factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-      factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-      factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+      try {
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+      } catch (IllegalArgumentException ignored) {
+        // Some JDK implementations (e.g., macOS) do not support these attributes
+      }
       Transformer transformer = factory.newTransformer();
       // for encoding surrogate character, e.g., emojis
       transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-16");
