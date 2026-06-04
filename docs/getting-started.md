@@ -91,11 +91,11 @@ wrong lane.
 ### Headless lane
 
 The headless lane is CI-safe and is the lane the workflow runs. It verifies the
-documented no-Sims test path with the same Maven flags users should run on
+documented no-Sims install path with the same Maven flags users should run on
 machines without Sims assets or a desktop display:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
 It then probes the documented no-Sims launch command:
@@ -175,10 +175,10 @@ Run the full test suite:
 mvn test
 ```
 
-Run the no-Sims, headless-friendly test lane used in CI:
+Run the no-Sims, headless-friendly install lane used in CI:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
 Run Checkstyle on the whole reactor:

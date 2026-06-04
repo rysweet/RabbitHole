@@ -18,10 +18,10 @@ Run everything:
 mvn test
 ```
 
-Run the no-Sims, headless-friendly lane:
+Run the no-Sims, headless-friendly install lane:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
 Run Checkstyle separately:
@@ -63,14 +63,14 @@ point for running the same validator with `uvx --from git+...@<branch-or-commit>
 
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |
-| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven test command passes, and the no-Sims launch probe reaches the expected GUI-required message. |
+| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes, and the no-Sims launch probe reaches the expected GUI-required message. |
 | GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
 | All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
 
 The headless lane runs this Maven command:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
 The launch probe uses this documented no-Sims launch command:

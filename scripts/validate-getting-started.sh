@@ -146,7 +146,7 @@ run_headless_lane() {
     -Dcheckstyle.skip
     -Djava.awt.headless=true
     clean
-    test
+    install
   )
   local headless_launch_maven=(
     mvn

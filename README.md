@@ -72,7 +72,7 @@ outside-in validation of pull-request branches:
 
 The default validation lane is CI-safe and headless. It verifies Git checkout
 state, the initialized `tweedle-lang` grammar submodule, the documented no-Sims
-Maven test command, and the no-Sims Alice launch command up to the expected
+Maven install command, and the no-Sims Alice launch command up to the expected
 GUI-required boundary. On a desktop with a real graphical environment, run the
 GUI lane explicitly:
 

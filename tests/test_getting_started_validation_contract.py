@@ -26,7 +26,7 @@ HEADLESS_MAVEN_FLAGS = (
     "-Dcheckstyle.skip",
     "-Djava.awt.headless=true",
     "clean",
-    "test",
+    "install",
 )
 LAUNCH_MAVEN_FLAGS = (
     "-DincludeSims=false",
