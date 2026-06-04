@@ -36,6 +36,15 @@ def write_executable(path: Path, content: str) -> None:
 def write_wrapper_repo(root: Path) -> None:
     write_executable(root / "qa/outside-in/alice-desktop/runners/validate-scenarios.sh", "#!/usr/bin/env bash\n")
     write_executable(root / "qa/outside-in/alice-desktop/runners/run-scenario.sh", "#!/usr/bin/env bash\n")
+    write_executable(
+        root / "scripts/validate-getting-started.sh",
+        textwrap.dedent(
+            """\
+            #!/usr/bin/env bash
+            printf 'getting-started cwd=%s args=%s\\n' "$PWD" "$*"
+            """
+        ),
+    )
     write_file(
         root / "qa/outside-in/alice-desktop/tests/test-save-menu-dialog-negative-artifact-contract.sh",
         "#!/usr/bin/env bash\n",
@@ -100,6 +109,7 @@ class AmplihackWrapperTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("amplihack alice-scorecard [--root <dir>] [--output <path>]", result.stdout)
         self.assertIn("amplihack alice-qa save-negative-contract", result.stdout)
+        self.assertIn("amplihack getting-started validate", result.stdout)
         self.assertIn("amplihack archive-player-boundary verify", result.stdout)
         self.assertIn("amplihack tweedle-decode verify", result.stdout)
         self.assertIn("simple-if-method-call", result.stdout)
@@ -163,6 +173,51 @@ class AmplihackWrapperTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn(f"save-negative-contract cwd={root}", result.stdout)
+
+    def test_getting_started_validate_delegates_to_repo_validator_from_repo_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+            child = root / "docs"
+            child.mkdir()
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "getting-started",
+                    "validate",
+                    "--all",
+                ],
+                cwd=child,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn(f"getting-started cwd={root} args=--all", result.stdout)
+
+    def test_getting_started_rejects_unknown_subcommand(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_wrapper_repo(root)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(WRAPPER_PATH),
+                    "getting-started",
+                    "probe",
+                ],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(2, result.returncode)
+        self.assertIn("getting-started usage", result.stderr)
 
     def test_tweedle_decode_verify_delegates_to_focused_maven_test(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

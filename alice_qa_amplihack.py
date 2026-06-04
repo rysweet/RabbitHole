@@ -16,6 +16,7 @@ USAGE = """usage:
   amplihack alice-qa list
   amplihack alice-qa save-negative-contract
   amplihack alice-qa run <scenario-id-or-path> [--evidence-dir <dir>] [--timeout-seconds <seconds>] [--prepare-only]
+  amplihack getting-started validate [--headless|--gui|--all|--help]
   amplihack archive-player-boundary verify
   amplihack tweedle-decode verify <simple-if-method-call|simple-if-boundaries|simple-if-player-archive>
 
@@ -226,6 +227,19 @@ def run_alice_qa(root: Path, args: Sequence[str]) -> int:
     return 2
 
 
+def run_getting_started_validation(root: Path, args: Sequence[str]) -> int:
+    """Delegate Getting Started validation to the checked-in executable."""
+    if len(args) == 1 or args[1] in {"-h", "--help", "help"}:
+        return run_from_repo(root, [str(root / "scripts" / "validate-getting-started.sh"), "--help"])
+    if args[1] != "validate":
+        print(
+            "getting-started usage: amplihack getting-started validate [--headless|--gui|--all|--help]",
+            file=sys.stderr,
+        )
+        return 2
+    return run_from_repo(root, [str(root / "scripts" / "validate-getting-started.sh"), *args[2:]])
+
+
 def main(argv: list[str] | None = None) -> int:
     """Dispatch amplihack command wrapper arguments."""
     args = list(sys.argv[1:] if argv is None else argv)
@@ -255,6 +269,9 @@ def main(argv: list[str] | None = None) -> int:
             print("archive-player-boundary usage: amplihack archive-player-boundary verify", file=sys.stderr)
             return 2
         return run_archive_player_boundary_verification(root)
+
+    if args[0] == "getting-started":
+        return run_getting_started_validation(root, args)
 
     if args[0] == "alice-qa":
         return run_alice_qa(root, args)

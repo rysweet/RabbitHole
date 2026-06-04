@@ -9,6 +9,7 @@ Validate the documented Getting Started path:
 
 ```bash
 ./scripts/validate-getting-started.sh
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack getting-started validate --headless
 ```
 
 Run everything:
@@ -57,6 +58,8 @@ immediately after cloning.
 `tests/test_getting_started_validation_contract.py` protects the documented
 command surface from drift by checking the validator flags, submodule failure
 guidance, no-Sims launch command, and GUI skip/block semantics described here.
+`amplihack getting-started validate` is the branch-installable wrapper entry
+point for running the same validator with `uvx --from git+...@<branch-or-commit>`.
 
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |

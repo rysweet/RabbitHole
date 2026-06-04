@@ -78,6 +78,13 @@ Run: git submodule update --init tweedle-lang
 | `./scripts/validate-getting-started.sh --all` | Local full validation | Runs headless validation, then runs GUI validation only when supported; unsupported GUI lanes are reported as skipped or blocked without failing after headless validation passes. |
 | `./scripts/validate-getting-started.sh --help` | Usage reference | Prints supported flags and exits. |
 
+For branch-based outside-in validation, install the QA wrapper from the branch
+or commit under review and run the same checked-out validator:
+
+```bash
+uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack getting-started validate --headless
+```
+
 Unknown flags are rejected with exit code 2 so CI does not accidentally run the
 wrong lane.
 

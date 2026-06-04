@@ -211,6 +211,8 @@ class GettingStartedValidationDocsContract(unittest.TestCase):
 
         self.assertIn("./scripts/validate-getting-started.sh", text)
         self.assertIn("./scripts/validate-getting-started.sh --gui", text)
+        self.assertIn("amplihack getting-started validate --headless", text)
+        self.assertIn("<branch-or-commit>", text)
         self.assertIn("--all", text)
         self.assertIn("#848", text)
 
@@ -222,6 +224,8 @@ class GettingStartedValidationDocsContract(unittest.TestCase):
             "./scripts/validate-getting-started.sh --headless",
             "./scripts/validate-getting-started.sh --gui",
             "./scripts/validate-getting-started.sh --all",
+            "amplihack getting-started validate --headless",
+            "<branch-or-commit>",
             SUBMODULE_FIX_COMMAND,
             EXPECTED_HEADLESS_GUI_MESSAGE,
         ):
@@ -240,6 +244,8 @@ class GettingStartedValidationDocsContract(unittest.TestCase):
         text = read_text(TESTING_DOC_PATH)
 
         self.assertIn("Getting Started validation lanes", text)
+        self.assertIn("amplihack getting-started validate", text)
+        self.assertIn("<branch-or-commit>", text)
         self.assertIn("Missing `tweedle-lang` or `tweedle-lang/Grammar`", text)
         self.assertIn("No desktop display", text)
         self.assertIn("Unknown validator flag", text)

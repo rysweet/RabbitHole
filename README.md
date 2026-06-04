@@ -65,6 +65,11 @@ setup path. Run it from the repository root:
 
     ./scripts/validate-getting-started.sh
 
+The same validator is exposed through the branch-installable QA wrapper for
+outside-in validation of pull-request branches:
+
+    uvx --from git+https://github.com/rysweet/RabbitHole.git@<branch-or-commit> amplihack getting-started validate --headless
+
 The default validation lane is CI-safe and headless. It verifies Git checkout
 state, the initialized `tweedle-lang` grammar submodule, the documented no-Sims
 Maven test command, and the no-Sims Alice launch command up to the expected
