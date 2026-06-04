@@ -421,9 +421,6 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     org.junit.Assume.assumeTrue(
         "xvfb-run is required to prove the real JavaFX display launch path",
         xvfbRun != null);
-    org.junit.Assume.assumeTrue(
-        "xvfb-run must be able to start a Java process before proving the real JavaFX display launch path",
-        xvfbRunStartsJava(xvfbRun));
     org.junit.Assume.assumeFalse(
         "xvfb-run behaves differently on macOS even if found on PATH",
         System.getProperty("os.name").toLowerCase().contains("mac"));
@@ -432,6 +429,9 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     org.junit.Assume.assumeTrue(
         "JavaFX runtime modules must be on classpath for this test",
         !javaFxModulePath.isEmpty());
+    org.junit.Assume.assumeTrue(
+        "xvfb-run must be able to start a Java process before proving the real JavaFX display launch path",
+        xvfbRunStartsJava(xvfbRun));
 
     Path projectDirectory = temporaryFolder.newFolder("template-real-javafx-xvfb-runtime").toPath();
     extractProjectTemplate(projectDirectory);
@@ -1355,8 +1355,10 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         while ((n = process.getInputStream().read(buf)) != -1) {
           drainBuffer.write(buf, 0, n);
         }
-      } catch (IOException ignored) {
-        // Stream closed by destroyForcibly — partial output preserved in drainBuffer
+      } catch (IOException e) {
+        byte[] message = ("\n[process-stdout-drain failed: " + e.getMessage() + "]\n")
+            .getBytes(StandardCharsets.UTF_8);
+        drainBuffer.write(message, 0, message.length);
       }
     }, "process-stdout-drain");
     drainThread.setDaemon(true);

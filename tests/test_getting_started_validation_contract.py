@@ -293,6 +293,15 @@ class GettingStartedValidatorSafetyContract(unittest.TestCase):
         self.assertNotIn("MAVEN_OPTS", source)
         self.assertNotRegex(source, r"(?i)password|secret|credential")
 
+    def test_validator_bounds_environment_timeout_override(self) -> None:
+        source = script_text()
+
+        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS", source)
+        self.assertIn("MAX_LAUNCH_TIMEOUT_SECONDS", source)
+        self.assertRegex(source, r"\^\[0-9\]\+\$")
+        self.assertRegex(source, r"LAUNCH_TIMEOUT_SECONDS\s*<\s*1")
+        self.assertRegex(source, r"LAUNCH_TIMEOUT_SECONDS\s*>\s*MAX_LAUNCH_TIMEOUT_SECONDS")
+
 
 if __name__ == "__main__":
     unittest.main()

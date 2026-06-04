@@ -3,7 +3,9 @@ set -euo pipefail
 
 EXPECTED_HEADLESS_GUI_MESSAGE="Alice desktop launch requires a graphical environment."
 SUBMODULE_FIX_COMMAND="git submodule update --init tweedle-lang"
-LAUNCH_TIMEOUT_SECONDS="${RABBITHOLE_LAUNCH_TIMEOUT_SECONDS:-60}"
+DEFAULT_LAUNCH_TIMEOUT_SECONDS=60
+MAX_LAUNCH_TIMEOUT_SECONDS=600
+LAUNCH_TIMEOUT_SECONDS="${RABBITHOLE_LAUNCH_TIMEOUT_SECONDS:-${DEFAULT_LAUNCH_TIMEOUT_SECONDS}}"
 
 TEMP_PATHS=()
 trap 'rm -rf "${TEMP_PATHS[@]}"' EXIT
@@ -79,10 +81,19 @@ require_tweedle_submodule() {
 
 require_common_prerequisites() {
   require_command git
-  require_command java
-  require_command mvn
   resolve_repo_root
   require_tweedle_submodule
+  require_command java
+  require_command mvn
+}
+
+validate_launch_timeout_seconds() {
+  if [[ ! "${LAUNCH_TIMEOUT_SECONDS}" =~ ^[0-9]+$ ]]; then
+    fail "RABBITHOLE_LAUNCH_TIMEOUT_SECONDS must be an integer from 1 to ${MAX_LAUNCH_TIMEOUT_SECONDS}."
+  fi
+  if (( LAUNCH_TIMEOUT_SECONDS < 1 || LAUNCH_TIMEOUT_SECONDS > MAX_LAUNCH_TIMEOUT_SECONDS )); then
+    fail "RABBITHOLE_LAUNCH_TIMEOUT_SECONDS must be an integer from 1 to ${MAX_LAUNCH_TIMEOUT_SECONDS}."
+  fi
 }
 
 print_command() {
@@ -187,13 +198,9 @@ is_macos_apple_silicon() {
   esac
 }
 
-gui_blocker_message() {
-  printf 'macOS Apple Silicon desktop GUI launch is blocked by RabbitHole issue #848.'
-}
-
 check_gui_capability() {
   if is_macos_apple_silicon; then
-    gui_blocker_message
+    printf 'macOS Apple Silicon desktop GUI launch is blocked by RabbitHole issue #848.'
     return 2
   fi
 
@@ -205,11 +212,6 @@ check_gui_capability() {
       fi
       ;;
   esac
-
-  if ! command -v javac >/dev/null 2>&1; then
-    printf 'Unable to run Java AWT display check because javac was not found on PATH.'
-    return 1
-  fi
 
   local awt_check_dir
   awt_check_dir="$(mktemp -d)"
@@ -227,17 +229,18 @@ public final class AwtDisplayCheck {
 }
 JAVA
 
-  if ! javac "${awt_check_dir}/AwtDisplayCheck.java" >/dev/null 2>&1; then
-    printf 'Unable to compile Java AWT display check with javac.'
-    return 1
-  fi
-  if ! java -cp "${awt_check_dir}" AwtDisplayCheck >/dev/null 2>&1; then
-    printf 'No graphical environment detected: Java AWT reports headless.'
+  local awt_check_output
+  if ! awt_check_output="$(java "${awt_check_dir}/AwtDisplayCheck.java" 2>&1)"; then
+    if [[ "${awt_check_output}" == *"No graphical environment detected"* ]]; then
+      printf 'No graphical environment detected: Java AWT reports headless.'
+    else
+      printf 'Unable to run Java AWT display check with java source-file mode. Output: %s' "${awt_check_output:-<empty>}"
+    fi
     return 1
   fi
 }
 
-run_gui_lane() {
+run_gui_launch() {
   local gui_launch_maven=(
     mvn
     -DincludeSims=false
@@ -245,17 +248,6 @@ run_gui_lane() {
     -Dalice-ide
   )
   local launch_output
-
-  info "Checking desktop GUI capability for requested GUI validation."
-  local gui_status=0
-  local gui_message
-  gui_message="$(check_gui_capability)" || gui_status=$?
-  if [[ "${gui_status}" == "2" ]]; then
-    fail "${gui_message}"
-  fi
-  if [[ "${gui_status}" != "0" ]]; then
-    fail "GUI validation was explicitly requested but is unavailable. ${gui_message}"
-  fi
 
   launch_output="$(mktemp)"
   add_temp_path "${launch_output}"
@@ -278,6 +270,21 @@ run_gui_lane() {
   fail "GUI launch failed unexpectedly."
 }
 
+run_gui_lane() {
+  info "Checking desktop GUI capability for requested GUI validation."
+  local gui_status=0
+  local gui_message
+  gui_message="$(check_gui_capability)" || gui_status=$?
+  if [[ "${gui_status}" == "2" ]]; then
+    fail "${gui_message}"
+  fi
+  if [[ "${gui_status}" != "0" ]]; then
+    fail "GUI validation was explicitly requested but is unavailable. ${gui_message}"
+  fi
+
+  run_gui_launch
+}
+
 run_all_lane() {
   run_headless_lane
 
@@ -294,7 +301,7 @@ run_all_lane() {
     return 0
   fi
 
-  run_gui_lane
+  run_gui_launch
 }
 
 mode="headless"
@@ -324,6 +331,7 @@ if (( "$#" == 1 )); then
 fi
 
 require_common_prerequisites
+validate_launch_timeout_seconds
 
 case "${mode}" in
   headless)
