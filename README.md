@@ -18,10 +18,10 @@ Download and install the following build tools
 
 ---
 
-Clone this Alice 3 modernization repository into a local directory, `${alice3}`
+Clone this RabbitHole repository into a local directory, `${alice3}`
 
     cd ${alice3}
-    git clone --recurse-submodules https://github.com/rysweet/alice3-modernization.git
+    git clone --recurse-submodules https://github.com/rysweet/RabbitHole.git
     
 Alice 3 uses a submodule for the Tweedle language, the internal representation of Alice code.
 If you do not use the `--recurse-submodules` flag above it can be pulled in explicitly.
@@ -59,6 +59,28 @@ If you want to use Install4J to build the installers add a flag to use the build
 More information about configuring Install4j can be found [here](https://www.ej-technologies.com/resources/install4j/help/doc/cli/maven.html)
 
 ## Executing and testing
+
+The Getting Started validator checks that this checkout follows the documented
+setup path. Run it from the repository root:
+
+    ./scripts/validate-getting-started.sh
+
+The default validation lane is CI-safe and headless. It verifies Git checkout
+state, the initialized `tweedle-lang` grammar submodule, the documented no-Sims
+Maven test command, and the no-Sims Alice launch command up to the expected
+GUI-required boundary. On a desktop with a real graphical environment, run the
+GUI lane explicitly:
+
+    ./scripts/validate-getting-started.sh --gui
+
+Use `--all` to run the headless lane and attempt the GUI lane when the platform
+supports it. macOS Apple Silicon desktop GUI launch is currently blocked by
+RabbitHole issue [#848](https://github.com/rysweet/RabbitHole/issues/848), so
+explicit `--gui` validation will exit non-zero with a blocked result on that
+platform. `--all` will report the blocked GUI lane without failing after
+headless validation passes. See [Getting started](docs/getting-started.md#validate-this-checkout)
+and [Testing](docs/testing.md#getting-started-validation-lanes) for the
+validation lanes, skip rules, and failure semantics.
 
 After successfully compiling and installing the Alice jars into the mvn
 repository, you can launch the Alice IDE.

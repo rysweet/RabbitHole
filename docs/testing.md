@@ -5,13 +5,19 @@ desktop proof tests.
 
 ## Run the main test lanes
 
+Validate the documented Getting Started path:
+
+```bash
+./scripts/validate-getting-started.sh
+```
+
 Run everything:
 
 ```bash
 mvn test
 ```
 
-Run the no-Sims, headless-friendly lane used in CI:
+Run the no-Sims, headless-friendly lane:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test
@@ -39,6 +45,53 @@ python3 scripts/summarize-jacoco-coverage.py \
   --min-module-line-percent core/scenegraph=10.0 \
   --min-module-line-percent netbeans=25.0
 ```
+
+## Getting Started validation lanes
+
+`scripts/validate-getting-started.sh` is the executable contract for the
+out-of-the-box setup instructions in [Getting started](getting-started.md). It
+validates the current checkout instead of creating a nested clone: GitHub
+Actions supplies the fresh checkout, and local users can run the script
+immediately after cloning.
+
+`tests/test_getting_started_validation_contract.py` protects the documented
+command surface from drift by checking the validator flags, submodule failure
+guidance, no-Sims launch command, and GUI skip/block semantics described here.
+
+| Lane | Command | Intended environment | Success condition |
+| --- | --- | --- | --- |
+| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven test command passes, and the no-Sims launch probe reaches the expected GUI-required message. |
+| GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
+| All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
+
+The headless lane runs this Maven command:
+
+```bash
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test
+```
+
+The launch probe uses this documented no-Sims launch command:
+
+```bash
+cd alice-ide
+mvn -DincludeSims=false exec:java -Dalice-ide
+```
+
+The headless validator adds `-Djava.awt.headless=true` to that launch probe so
+the command proves the GUI boundary without opening the IDE on local desktops.
+
+### Skip, fail, and block behavior
+
+| Situation | `--headless` | `--gui` | `--all` |
+| --- | --- | --- | --- |
+| Missing Git checkout metadata | Fail | Fail | Fail |
+| Missing `tweedle-lang` or `tweedle-lang/Grammar` | Fail with `git submodule update --init tweedle-lang` guidance | Fail with the same guidance | Fail with the same guidance |
+| No desktop display | Pass only if the launch probe reports `Alice desktop launch requires a graphical environment.` | Exit non-zero because GUI was requested explicitly | Skip the GUI lane and exit successfully after headless validation passes |
+| macOS Apple Silicon desktop GUI launch | Headless lane remains valid | Exit non-zero as blocked by [#848](https://github.com/rysweet/RabbitHole/issues/848) | Report blocked and exit successfully after headless validation passes |
+| Unknown validator flag | Fail | Fail | Fail |
+
+CI integration calls the headless lane only. Local users should run `--gui`
+only when their desktop session supports Java GUI launch.
 
 ## What the coverage lane measures
 

@@ -421,6 +421,9 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     org.junit.Assume.assumeTrue(
         "xvfb-run is required to prove the real JavaFX display launch path",
         xvfbRun != null);
+    org.junit.Assume.assumeTrue(
+        "xvfb-run must be able to start a Java process before proving the real JavaFX display launch path",
+        xvfbRunStartsJava(xvfbRun));
     org.junit.Assume.assumeFalse(
         "xvfb-run behaves differently on macOS even if found on PATH",
         System.getProperty("os.name").toLowerCase().contains("mac"));
@@ -1383,6 +1386,19 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       }
     }
     return null;
+  }
+
+  private static boolean xvfbRunStartsJava(Path xvfbRun) throws Exception {
+    List<String> command = new ArrayList<>();
+    command.add(xvfbRun.toAbsolutePath().normalize().toString());
+    command.add("-a");
+    command.add("-s");
+    command.add("-screen 0 1024x768x24");
+    command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+    command.add("-version");
+
+    ProcessResult result = runCommand(Path.of(".").toAbsolutePath().normalize(), command);
+    return !result.timedOut && result.exitCode == 0;
   }
 
   private static void assertProgramMarker(Path programMarker, String... expectedArgs) throws Exception {

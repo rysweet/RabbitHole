@@ -7,7 +7,7 @@ RabbitHole keeps that classroom experience working while the codebase is moderni
 
 - Coverage snapshot: **74%**
 - Build system: **22 Maven modules** on **Java 21**
-- Main validation lanes: **Checkstyle**, **headless no-Sims tests**, and **JaCoCo coverage**
+- Main validation lanes: **Checkstyle**, **headless no-Sims tests**, **Getting Started headless validation**, and **JaCoCo coverage**.
 
 ## Quick links
 
@@ -20,7 +20,7 @@ RabbitHole keeps that classroom experience working while the codebase is moderni
 
 ## What this site covers
 
-- how to clone, build, test, and package Alice 3
+- how to clone, build, test, validate, and package Alice 3
 - how the Maven modules fit together
 - how characterization tests protect refactors
 - how save, export, migration, desktop proof, and QA contracts work
