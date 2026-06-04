@@ -40,8 +40,24 @@ public final class CroquetTestUtils {
     return new UUID(0L, UUID_COUNTER.incrementAndGet());
   }
 
+  /**
+   * Resets the Application singleton to null via reflection, allowing tests
+   * to install a fresh instance regardless of prior test execution order.
+   */
+  public static void resetApplicationSingleton() {
+    try {
+      java.lang.reflect.Field field = Application.class.getDeclaredField("singleton");
+      field.setAccessible(true);
+      field.set(null, null);
+    } catch (ReflectiveOperationException e) {
+      throw new AssertionError("Failed to reset Application singleton", e);
+    }
+  }
+
   public static synchronized Application<?> ensureTestApplication() {
-    if (Application.getActiveInstance() == null) {
+    Application<?> active = Application.getActiveInstance();
+    if (active == null || !(active instanceof HeadlessTestApplication)) {
+      resetApplicationSingleton();
       new HeadlessTestApplication();
     }
     return Application.getActiveInstance();
