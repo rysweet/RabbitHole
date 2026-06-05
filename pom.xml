@@ -537,6 +537,9 @@
               <version>3.5.2</version>
             </dependency>
           </dependencies>
+          <configuration>
+            <argLine>@{argLine} -Djava.awt.headless=${java.awt.headless}</argLine>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
