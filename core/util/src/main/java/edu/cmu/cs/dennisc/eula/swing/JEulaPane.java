@@ -170,8 +170,9 @@ public class JEulaPane extends JPanel {
   private final JCheckBox accept = new JCheckBox();
   private boolean isCommitted;
 
-  public static void main(String[] args) {
-    SwingUtilities.invokeLater(new Runnable() {
+  public static void main(String[] args) throws Exception {
+    final JEulaPane[] eulaPaneHolder = new JEulaPane[1];
+    SwingUtilities.invokeAndWait(new Runnable() {
       @Override
       public void run() {
         //        java.util.Locale locale = java.util.Locale.SIMPLIFIED_CHINESE;
@@ -179,13 +180,14 @@ public class JEulaPane extends JPanel {
         //        //javax.swing.JComponent.setDefaultLocale( locale );
         //        //javax.swing.JOptionPane.showConfirmDialog( null, "hello", "title", javax.swing.JOptionPane.OK_CANCEL_OPTION );
         JEulaPane eulaPane = new JEulaPane("eulaText");
+        eulaPaneHolder[0] = eulaPane;
         JDialog dialog = new JDialogBuilder().isModal(true).title("title").build();
         dialog.getContentPane().add(eulaPane, BorderLayout.CENTER);
         dialog.pack();
         dialog.setVisible(true);
-        Logger.outln(eulaPane.isAccepted());
-        System.exit(0);
       }
     });
+    Logger.outln(eulaPaneHolder[0].isAccepted());
+    System.exit(0);
   }
 }

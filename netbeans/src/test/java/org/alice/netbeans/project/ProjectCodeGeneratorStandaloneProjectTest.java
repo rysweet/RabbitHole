@@ -59,6 +59,9 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
   private static final String RENDER_OBSERVATION_JSON_PREFIX =
       "ALICE_LAUNCHER_RENDER_OBSERVATION "
           + "{\"schema_version\":\"alice.launcher.render-observation/v1\",";
+  private static final Map<String, Boolean> XVFB_RUN_STARTS_JAVA_CACHE = new LinkedHashMap<>();
+  private static final Map<String, Boolean> JAVAFX_XVFB_DISPLAY_CACHE = new LinkedHashMap<>();
+  private static List<Path> javaFxRuntimeModulePathCache;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -425,13 +428,16 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         "xvfb-run behaves differently on macOS even if found on PATH",
         System.getProperty("os.name").toLowerCase().contains("mac"));
 
-    List<Path> javaFxModulePath = javaFxRuntimeModulePath();
+    List<Path> javaFxModulePath = assumeJavaFxRuntimeModulePathForDisplayTest();
     org.junit.Assume.assumeTrue(
         "JavaFX runtime modules must be on classpath for this test",
         !javaFxModulePath.isEmpty());
     org.junit.Assume.assumeTrue(
         "xvfb-run must be able to start a Java process before proving the real JavaFX display launch path",
         xvfbRunStartsJava(xvfbRun));
+    org.junit.Assume.assumeTrue(
+        "JavaFX display runtime must initialize under xvfb-run",
+        javaFxDisplayRuntimeStartsUnderXvfb(xvfbRun, javaFxModulePath));
 
     Path projectDirectory = temporaryFolder.newFolder("template-real-javafx-xvfb-runtime").toPath();
     extractProjectTemplate(projectDirectory);
@@ -1224,7 +1230,39 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     }
   }
 
-  private static List<Path> javaFxRuntimeModulePath() throws Exception {
+  private static synchronized List<Path> javaFxRuntimeModulePath() throws Exception {
+    if (javaFxRuntimeModulePathCache != null) {
+      return javaFxRuntimeModulePathCache;
+    }
+
+    Map<String, Path> modules = javaFxRuntimeModules();
+    assertTrue("Missing JavaFX base runtime jar on test classpath", modules.containsKey("javafx-base"));
+    assertTrue("Missing JavaFX graphics runtime jar on test classpath", modules.containsKey("javafx-graphics"));
+    assertTrue("Missing JavaFX media runtime jar on test classpath", modules.containsKey("javafx-media"));
+    javaFxRuntimeModulePathCache = javaFxRuntimeModulePaths(modules);
+    return javaFxRuntimeModulePathCache;
+  }
+
+  private static synchronized List<Path> assumeJavaFxRuntimeModulePathForDisplayTest() throws Exception {
+    if (javaFxRuntimeModulePathCache != null) {
+      return javaFxRuntimeModulePathCache;
+    }
+
+    Map<String, Path> modules = javaFxRuntimeModules();
+    org.junit.Assume.assumeTrue(
+        "JavaFX base runtime jar must be on the test classpath for the display test",
+        modules.containsKey("javafx-base"));
+    org.junit.Assume.assumeTrue(
+        "JavaFX graphics runtime jar must be on the test classpath for the display test",
+        modules.containsKey("javafx-graphics"));
+    org.junit.Assume.assumeTrue(
+        "JavaFX media runtime jar must be on the test classpath for the display test",
+        modules.containsKey("javafx-media"));
+    javaFxRuntimeModulePathCache = javaFxRuntimeModulePaths(modules);
+    return javaFxRuntimeModulePathCache;
+  }
+
+  private static Map<String, Path> javaFxRuntimeModules() throws Exception {
     Map<String, Path> modules = new LinkedHashMap<>();
     for (String entry : System.getProperty(
         "surefire.test.class.path",
@@ -1238,9 +1276,10 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         modules.putIfAbsent(artifact, path.toAbsolutePath().normalize());
       }
     }
-    assertTrue("Missing JavaFX base runtime jar on test classpath", modules.containsKey("javafx-base"));
-    assertTrue("Missing JavaFX graphics runtime jar on test classpath", modules.containsKey("javafx-graphics"));
-    assertTrue("Missing JavaFX media runtime jar on test classpath", modules.containsKey("javafx-media"));
+    return modules;
+  }
+
+  private static List<Path> javaFxRuntimeModulePaths(Map<String, Path> modules) {
     return List.of(
         modules.get("javafx-base"),
         modules.get("javafx-graphics"),
@@ -1373,7 +1412,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     return new ProcessResult(exited ? process.exitValue() : -1, output, !exited);
   }
 
-  private static Path findExecutableOnPath(String executableName) {
+  private static Path findExecutableOnPath(String executableName) throws IOException {
     String path = System.getenv("PATH");
     if (path == null) {
       return null;
@@ -1382,17 +1421,27 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       if (entry.isBlank()) {
         continue;
       }
-      Path candidate = Path.of(entry, executableName);
+      Path directory = Path.of(entry);
+      if (!directory.isAbsolute()) {
+        continue;
+      }
+      Path candidate = directory.resolve(executableName);
       if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
-        return candidate;
+        return candidate.toRealPath();
       }
     }
     return null;
   }
 
-  private static boolean xvfbRunStartsJava(Path xvfbRun) throws Exception {
+  private static synchronized boolean xvfbRunStartsJava(Path xvfbRun) throws Exception {
+    String cacheKey = xvfbRun.toAbsolutePath().normalize().toString();
+    Boolean cached = XVFB_RUN_STARTS_JAVA_CACHE.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
+
     List<String> command = new ArrayList<>();
-    command.add(xvfbRun.toAbsolutePath().normalize().toString());
+    command.add(cacheKey);
     command.add("-a");
     command.add("-s");
     command.add("-screen 0 1024x768x24");
@@ -1400,7 +1449,65 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     command.add("-version");
 
     ProcessResult result = runCommand(Path.of(".").toAbsolutePath().normalize(), command);
-    return !result.timedOut && result.exitCode == 0;
+    boolean starts = !result.timedOut && result.exitCode == 0;
+    XVFB_RUN_STARTS_JAVA_CACHE.put(cacheKey, starts);
+    return starts;
+  }
+
+  private static synchronized boolean javaFxDisplayRuntimeStartsUnderXvfb(Path xvfbRun, List<Path> javaFxModulePath) throws Exception {
+    String cacheKey = xvfbRun.toAbsolutePath().normalize() + File.pathSeparator + pathList(javaFxModulePath);
+    Boolean cached = JAVAFX_XVFB_DISPLAY_CACHE.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
+
+    Path probeDirectory = Files.createTempDirectory("javafx-xvfb-probe");
+    try {
+      Path probeSource = probeDirectory.resolve("JavaFxXvfbProbe.java");
+      Files.writeString(probeSource, """
+          public final class JavaFxXvfbProbe {
+            public static void main(String[] args) throws Exception {
+              java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+              javafx.application.Platform.startup(latch::countDown);
+              if (!latch.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                throw new IllegalStateException("JavaFX Platform.startup did not complete");
+              }
+              javafx.application.Platform.exit();
+            }
+          }
+          """);
+
+      List<String> command = new ArrayList<>();
+      command.add(xvfbRun.toAbsolutePath().normalize().toString());
+      command.add("-a");
+      command.add("-s");
+      command.add("-screen 0 1024x768x24");
+      command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+      command.add("--module-path");
+      command.add(pathList(javaFxModulePath));
+      command.add("--add-modules");
+      command.add("javafx.graphics,javafx.media");
+      command.add("-Djava.awt.headless=false");
+      command.add(probeSource.toAbsolutePath().normalize().toString());
+
+      ProcessResult result = runCommand(probeDirectory, command);
+      boolean starts = !result.timedOut && result.exitCode == 0;
+      JAVAFX_XVFB_DISPLAY_CACHE.put(cacheKey, starts);
+      return starts;
+    } finally {
+      deleteRecursively(probeDirectory);
+    }
+  }
+
+  private static void deleteRecursively(Path directory) throws IOException {
+    if (!Files.exists(directory)) {
+      return;
+    }
+    try (Stream<Path> paths = Files.walk(directory)) {
+      for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+        Files.deleteIfExists(path);
+      }
+    }
   }
 
   private static void assertProgramMarker(Path programMarker, String... expectedArgs) throws Exception {

@@ -45,6 +45,7 @@ package org.lgna.croquet.simple;
 import org.lgna.croquet.Application;
 import org.lgna.croquet.DocumentFrame;
 import org.lgna.croquet.Operation;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.history.UserActivity;
 
 import java.awt.event.WindowEvent;
@@ -70,7 +71,7 @@ public class SimpleApplication extends Application<DocumentFrame> {
 
   @Override
   public void handleQuit(UserActivity activity) {
-    System.exit(0);
+    ProcessTerminator.requestExit(0, "Simple application quit requested");
   }
 
   @Override

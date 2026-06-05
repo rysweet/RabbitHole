@@ -285,7 +285,7 @@ public final class PersonResourceComposite extends ValueCreatorInputDialogCoreCo
   }
 
   public static void main(String[] args) throws Exception {
-    SwingUtilities.invokeLater(new Runnable() {
+    SwingUtilities.invokeAndWait(new Runnable() {
       @Override
       public void run() {
         new SimpleApplication();
@@ -295,8 +295,8 @@ public final class PersonResourceComposite extends ValueCreatorInputDialogCoreCo
         } catch (CancelException ce) {
           //pass
         }
-        System.exit(0);
       }
     });
+    System.exit(0);
   }
 }

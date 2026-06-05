@@ -236,6 +236,9 @@ public final class ClassLoadingSweepSupport {
         if (method.getName().equals("wait") || method.getName().equals("notify") || method.getName().equals("notifyAll") || method.getName().equals("getClass")) {
           continue;
         }
+        if (opensRealModalDialog(current, method)) {
+          continue;
+        }
         try {
           method.setAccessible(true);
           if (method.getParameterCount() == 0) {
@@ -243,6 +246,7 @@ public final class ClassLoadingSweepSupport {
             if (value != null && value.getClass().isArray()) {
               Assert.assertTrue(Array.getLength(value) >= 0);
             }
+
           } else if (method.getParameterCount() >= 1 && method.getParameterCount() <= 5) {
             Object[] arguments = buildArguments(method.getParameterTypes());
             if (arguments != null) {
@@ -253,6 +257,11 @@ public final class ClassLoadingSweepSupport {
         }
       }
     }
+  }
+
+  private static boolean opensRealModalDialog(Class<?> owner, Method method) {
+    return owner == DocumentFrame.class
+        && (method.getName().equals("showSaveFileDialog") || method.getName().equals("showOpenFileDialog"));
   }
 
   private static Object[] buildArguments(Class<?>[] parameterTypes) {

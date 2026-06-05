@@ -158,13 +158,33 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Install Xvfb
+        if: (github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true') && runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb
+
       - name: Show Maven version
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: mvn -v
 
       - name: Run Getting Started headless validation
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
-        run: ./scripts/validate-getting-started.sh --headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            xvfb_run="$(command -v xvfb-run)"
+            case "${xvfb_run}" in
+              /*) ;;
+              *) printf 'xvfb-run resolved to non-absolute path: %s\n' "${xvfb_run}" >&2; exit 1 ;;
+            esac
+            "${xvfb_run}" -a ./scripts/validate-getting-started.sh --headless
+          else
+            ./scripts/validate-getting-started.sh --headless
+          fi
 
       - name: Report Maven validation no-op
         if: github.event_name == 'pull_request' && steps.change-scope.outputs.maven-required == 'false'

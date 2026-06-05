@@ -76,6 +76,7 @@ import org.alice.stageide.ast.StoryApiSpecificAstUtilities;
 import org.alice.stageide.sceneeditor.StorytellingSceneEditor;
 import org.alice.stageide.sceneeditor.ThumbnailGenerator;
 import org.lgna.croquet.Operation;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.data.ListData;
 import org.lgna.croquet.icon.IconFactory;
 import org.lgna.croquet.views.AwtComponentView;
@@ -206,7 +207,7 @@ public class StageIDE extends IDE {
       NebulousIde.nonfree.promptForLicenseAgreements(IS_LICENSE_ACCEPTED_PREFERENCE_KEY);
     } catch (LicenseRejectedException lre) {
       Dialogs.showInfo("You must accept the license agreements in order to use Alice 3 and The Sims (TM) 2 Art Assets.  Exiting.");
-      System.exit(-1);
+      ProcessTerminator.requestExit(-1, "License agreements were rejected");
     }
   }
 
