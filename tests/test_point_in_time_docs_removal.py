@@ -63,7 +63,7 @@ TEMPORARY_BRANDING_RE = re.compile(
 POINT_IN_TIME_LANGUAGE_RE = re.compile(
     r"\b(?:"
     r"current " + r"status"
-    r"|coverage snapshot"
+    r"|coverage " + r"snapshot"
     r"|refactor " + r"progress"
     r"|status " + r"report"
     r"|work in " + r"progress"
@@ -89,10 +89,6 @@ CONTENT_SCAN_EXCLUDES = (
     "qa/outside-in/alice-desktop/schema/",
     "qa/outside-in/alice-desktop/runners/",
 )
-POINT_IN_TIME_LANGUAGE_SCAN_EXCLUDES = (
-    "docs/repository-hygiene.md",
-)
-
 REQUIRED_IGNORES = (
     "." + "co" + "pilot/",
     "." + "co" + "pilot-*",
@@ -247,7 +243,7 @@ class DurableDocumentationRewriteContract(unittest.TestCase):
     def test_durable_docs_do_not_use_point_in_time_language(self) -> None:
         matches = matching_lines(
             POINT_IN_TIME_LANGUAGE_RE,
-            durable_content_paths(exclude=POINT_IN_TIME_LANGUAGE_SCAN_EXCLUDES),
+            durable_content_paths(),
         )
 
         self.assertEqual(

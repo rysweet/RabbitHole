@@ -118,13 +118,13 @@ For outside-in QA documentation or scenario changes, run:
 qa/outside-in/alice-desktop/runners/validate-scenarios.sh
 ```
 
-## Example: rewriting a temporary note
+## Example: rewriting an unstable note
 
-Temporary narrative:
+Unstable note:
 
 ```text
-The branch now partially removes old generated output. Remaining work is to
-rename the desktop QA wrapper and update the navigation before review.
+A local investigation deleted generated output and renamed a QA helper while
+checking documentation navigation.
 ```
 
 Durable documentation:
@@ -135,7 +135,7 @@ Generated output is not committed. The desktop QA wrapper is named
 ```
 
 The durable version says what the repository guarantees after the change. It
-does not depend on branch history, review state, or a local run.
+does not depend on investigation history, review state, or a local run.
 
 ## Configuration
 
