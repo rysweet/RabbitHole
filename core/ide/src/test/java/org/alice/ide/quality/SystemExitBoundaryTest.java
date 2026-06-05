@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,11 +24,11 @@ public class SystemExitBoundaryTest {
     List<String> offenders = new ArrayList<>();
 
     try (Stream<Path> paths = Files.walk(repositoryRoot)) {
-      for (Path sourceFile : paths
-          .filter(path -> path.toString().endsWith(".java"))
-          .filter(path -> path.toString().contains("/src/main/java/"))
-          .filter(path -> !path.toString().contains("/target/"))
-          .toList()) {
+      Iterator<Path> sourceFiles = paths
+          .filter(SystemExitBoundaryTest::isProductionJavaSource)
+          .iterator();
+      while (sourceFiles.hasNext()) {
+        Path sourceFile = sourceFiles.next();
         offenders.addAll(nonEntryPointSystemExitUses(repositoryRoot, sourceFile));
       }
     }
@@ -39,6 +40,10 @@ public class SystemExitBoundaryTest {
   }
 
   private static List<String> nonEntryPointSystemExitUses(Path repositoryRoot, Path sourceFile) throws IOException {
+    if (!mentionsSystemExit(sourceFile)) {
+      return List.of();
+    }
+
     List<String> lines = Files.readAllLines(sourceFile);
     List<String> offenders = new ArrayList<>();
     boolean inBlockComment = false;
@@ -62,6 +67,19 @@ public class SystemExitBoundaryTest {
       }
     }
     return offenders;
+  }
+
+  private static boolean isProductionJavaSource(Path path) {
+    String pathName = path.toString();
+    return pathName.endsWith(".java")
+        && pathName.contains("/src/main/java/")
+        && !pathName.contains("/target/");
+  }
+
+  private static boolean mentionsSystemExit(Path sourceFile) throws IOException {
+    try (Stream<String> lines = Files.lines(sourceFile)) {
+      return lines.anyMatch(line -> line.contains("System.exit("));
+    }
   }
 
   private static boolean isWithinMainMethod(List<String> lines, int lineIndex) {
