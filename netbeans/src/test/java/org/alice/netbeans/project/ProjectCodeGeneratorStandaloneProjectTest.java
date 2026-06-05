@@ -1412,7 +1412,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     return new ProcessResult(exited ? process.exitValue() : -1, output, !exited);
   }
 
-  private static Path findExecutableOnPath(String executableName) {
+  private static Path findExecutableOnPath(String executableName) throws IOException {
     String path = System.getenv("PATH");
     if (path == null) {
       return null;
@@ -1421,9 +1421,13 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       if (entry.isBlank()) {
         continue;
       }
-      Path candidate = Path.of(entry, executableName);
+      Path directory = Path.of(entry);
+      if (!directory.isAbsolute()) {
+        continue;
+      }
+      Path candidate = directory.resolve(executableName);
       if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
-        return candidate;
+        return candidate.toRealPath();
       }
     }
     return null;
