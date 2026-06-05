@@ -95,6 +95,7 @@
     <jakarta.api.version>2.3.3</jakarta.api.version>
     <install4j.version>10.0.6</install4j.version>
     <jacoco.version>0.8.13</jacoco.version>
+    <java.awt.headless>true</java.awt.headless>
     <argLine></argLine>
 
     <javafx.version>21.0.7</javafx.version>
@@ -702,6 +703,14 @@
   </build>
 
   <profiles>
+
+    <!-- Opt in with -Pdev for local GUI runs; the default stays headless for CI compatibility. -->
+    <profile>
+      <id>dev</id>
+      <properties>
+        <java.awt.headless>false</java.awt.headless>
+      </properties>
+    </profile>
 
     <profile>
       <id>coverage</id>
