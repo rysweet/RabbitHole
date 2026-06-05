@@ -24,6 +24,19 @@ Run the no-Sims, headless-friendly install lane:
 mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
+Run the golden Alice project corpus validator:
+
+```bash
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=GoldenProjectCorpusValidatorTest \
+  test
+```
+
 Run Checkstyle separately:
 
 ```bash
@@ -95,6 +108,148 @@ the command proves the GUI boundary without opening the IDE on local desktops.
 
 CI integration calls the headless lane only. Local users should run `--gui`
 only when their desktop session supports Java GUI launch.
+
+## Golden Alice project corpus validator
+
+`GoldenProjectCorpusValidatorTest` is the executable archive contract for
+representative Alice project and player-export shapes. It lives in
+`core/story-api-migration/src/test/java/org/lgna/project/io/` because it
+characterizes the same save, reopen, export, manifest, and ZIP-entry behavior
+implemented by `IoUtilities`, `ProjectIo`, `XmlProjectIo`, and `JsonProjectIo`.
+
+The corpus is text-only. The checked-in manifest is:
+
+```text
+core/story-api-migration/src/test/resources/golden-project-corpus/corpus.properties
+```
+
+The test reads that manifest, generates deterministic temporary `.a3p` and
+`.a3w` archives, validates each archive with `ZipFile`, and deletes the generated
+payloads with the test temporary directory. Do not check in generated `.a3p`,
+`.a3w`, image, audio, or other binary fixture payloads for this corpus.
+
+### What it proves
+
+Each manifest case describes one archive shape. The validator applies the
+expectations that match the case type:
+
+| Case type | Extension | Validation contract |
+| --- | --- | --- |
+| Editable project | `.a3p` | Generate the project, save it, reopen it with `IoUtilities.readProject`, save the reopened project to a second archive, reopen that second archive, export it to `.a3w`, and verify the expected project name, camera type, resource metadata, manifest file type, and archive entries. |
+| Player export | `.a3w` | Generate a project, export it to the player archive, and verify the expected manifest metadata, Tweedle source entries, resource entries, readable ZIP entries, and absence of editable-only entries such as `programType.xml`. Player export cases are ZIP/player-shape characterization only; they do not require editable save/reopen through `IoUtilities.readProject`. |
+
+For both types, ZIP entry validation rejects unsafe entry names before checking
+content. Invalid entries include empty names, absolute paths, `..` traversal,
+Windows drive-letter paths, and backslash-separated paths.
+
+### Manifest format
+
+`corpus.properties` is a JDK `Properties` file. It uses one comma-separated
+`cases` key and one `case.<id>.*` namespace per case.
+
+```properties
+cases=editable-minimal,editable-with-image-resource,player-export-minimal,player-export-with-image-resource
+
+case.editable-minimal.archiveType=a3p
+case.editable-minimal.projectName=GoldenEditableMinimal
+case.editable-minimal.cameraType=WindowCamera
+case.editable-minimal.resources=none
+case.editable-minimal.expectedEntries=version.txt,manifest.json,programType.xml
+case.editable-minimal.absentEntries=resources.xml
+case.editable-minimal.roundTripEditable=true
+case.editable-minimal.exportAfterReopen=true
+
+case.editable-with-image-resource.archiveType=a3p
+case.editable-with-image-resource.projectName=GoldenEditableWithImageResource
+case.editable-with-image-resource.cameraType=WindowCamera
+case.editable-with-image-resource.resources=image:golden-texture.png
+case.editable-with-image-resource.expectedEntries=version.txt,manifest.json,programType.xml,resources.xml,resources/golden-texture.png
+case.editable-with-image-resource.roundTripEditable=true
+case.editable-with-image-resource.exportAfterReopen=true
+
+case.player-export-minimal.archiveType=a3w
+case.player-export-minimal.projectName=GoldenPlayerExportMinimal
+case.player-export-minimal.cameraType=VRHeadset
+case.player-export-minimal.resources=none
+case.player-export-minimal.expectedEntries=version.txt,manifest.json,src/GoldenPlayerExportMinimal.twe
+case.player-export-minimal.absentEntries=programType.xml
+case.player-export-minimal.roundTripEditable=false
+
+case.player-export-with-image-resource.archiveType=a3w
+case.player-export-with-image-resource.projectName=GoldenPlayerExportWithImageResource
+case.player-export-with-image-resource.cameraType=WindowCamera
+case.player-export-with-image-resource.resources=image:golden-export-texture.png
+case.player-export-with-image-resource.expectedEntries=version.txt,manifest.json,src/GoldenPlayerExportWithImageResource.twe,resources/golden-export-texture.png
+case.player-export-with-image-resource.absentEntries=programType.xml
+case.player-export-with-image-resource.roundTripEditable=false
+```
+
+Supported fields:
+
+| Field | Required | Values |
+| --- | --- | --- |
+| `cases` | Yes | Comma-separated case IDs. IDs must be unique and use safe filename characters: letters, numbers, `.`, `_`, and `-`. |
+| `case.<id>.archiveType` | Yes | `a3p` for editable projects or `a3w` for player exports. |
+| `case.<id>.projectName` | Yes | Simple ASCII Alice type name used for generated program type and manifest assertions. It must match `[A-Za-z_][A-Za-z0-9_]*` and must not be a Java reserved word. |
+| `case.<id>.cameraType` | Yes | `WindowCamera` or `VRHeadset`. |
+| `case.<id>.resources` | Yes | `none` or a comma-separated list of generated resources such as `image:golden-texture.png`. Resource payloads are generated in the test temporary directory. |
+| `case.<id>.expectedEntries` | Yes | Comma-separated archive entries that must exist and be readable. Use forward slashes. |
+| `case.<id>.absentEntries` | No | Comma-separated archive entries that must not exist. |
+| `case.<id>.roundTripEditable` | Yes | `true` only for archive shapes that are expected to reopen as editable projects and save again as `.a3p`. |
+| `case.<id>.exportAfterReopen` | No | `true` when an editable case must also prove export to `.a3w` after reopen. |
+
+The validator fails fast on duplicate case IDs, missing required fields,
+unsupported archive types, unsupported resource declarations, unsafe project
+names, empty expected-entry lists, or unsafe ZIP-entry paths.
+
+### Local commands
+
+Run the focused corpus test when changing project archive save, read, export, or
+resource handling:
+
+```bash
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=GoldenProjectCorpusValidatorTest \
+  test
+```
+
+Run the full `story-api-migration` test lane:
+
+```bash
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  test
+```
+
+### CI behavior
+
+The validator is named `GoldenProjectCorpusValidatorTest`, so Maven Surefire
+picks it up with the existing `core/story-api-migration` test command and
+reactor test or verify commands when those lanes run. There is no separate CI
+workflow for the corpus, and docs-only pull requests may skip Maven by
+change-scope rules. A CI failure in this test means a project/archive behavior
+changed and the manifest expectations or the IO implementation need to be
+reviewed together.
+
+### Adding a corpus case
+
+1. Add a new ID to the `cases` list in
+   `core/story-api-migration/src/test/resources/golden-project-corpus/corpus.properties`.
+2. Add the matching `case.<id>.*` keys with explicit archive type, project name,
+   camera type, generated resources, and expected entries.
+3. Keep expected entries focused on stable archive contracts: `version.txt`,
+   `manifest.json`, editable XML entries, generated `src/*.twe` exports, and
+   generated `resources/*` entries.
+4. Run the focused validator command before opening a pull request.
 
 ## What the coverage lane measures
 

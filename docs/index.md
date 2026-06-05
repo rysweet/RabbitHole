@@ -23,7 +23,7 @@ RabbitHole keeps that classroom experience working while the codebase is moderni
 - how to clone, build, test, validate, and package Alice 3
 - how the Maven modules fit together
 - how characterization tests protect refactors
-- how save, export, migration, desktop proof, and QA contracts work
+- how save, export, golden corpus, migration, desktop proof, and QA contracts work
 
 ## Documentation map
 
