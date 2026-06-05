@@ -1320,9 +1320,10 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       String... args) throws Exception {
     List<String> command = new ArrayList<>();
     command.add(xvfbRun.toAbsolutePath().normalize().toString());
+    command.add("--auto-servernum");
     command.add("-a");
     command.add("-s");
-    command.add("-screen 0 1024x768x24");
+    command.add("-screen 0 1024x768x24 -ac");
     command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     command.add("-Dalice.test.program.marker=" + programMarker.toAbsolutePath().normalize());
     command.add("--module-path");
@@ -1393,9 +1394,10 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
   private static boolean xvfbRunStartsJava(Path xvfbRun) throws Exception {
     List<String> command = new ArrayList<>();
     command.add(xvfbRun.toAbsolutePath().normalize().toString());
+    command.add("--auto-servernum");
     command.add("-a");
     command.add("-s");
-    command.add("-screen 0 1024x768x24");
+    command.add("-screen 0 1024x768x24 -ac");
     command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     command.add("-version");
 
