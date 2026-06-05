@@ -428,7 +428,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         "xvfb-run behaves differently on macOS even if found on PATH",
         System.getProperty("os.name").toLowerCase().contains("mac"));
 
-    List<Path> javaFxModulePath = javaFxRuntimeModulePath();
+    List<Path> javaFxModulePath = assumeJavaFxRuntimeModulePathForDisplayTest();
     org.junit.Assume.assumeTrue(
         "JavaFX runtime modules must be on classpath for this test",
         !javaFxModulePath.isEmpty());
@@ -1235,6 +1235,34 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       return javaFxRuntimeModulePathCache;
     }
 
+    Map<String, Path> modules = javaFxRuntimeModules();
+    assertTrue("Missing JavaFX base runtime jar on test classpath", modules.containsKey("javafx-base"));
+    assertTrue("Missing JavaFX graphics runtime jar on test classpath", modules.containsKey("javafx-graphics"));
+    assertTrue("Missing JavaFX media runtime jar on test classpath", modules.containsKey("javafx-media"));
+    javaFxRuntimeModulePathCache = javaFxRuntimeModulePaths(modules);
+    return javaFxRuntimeModulePathCache;
+  }
+
+  private static synchronized List<Path> assumeJavaFxRuntimeModulePathForDisplayTest() throws Exception {
+    if (javaFxRuntimeModulePathCache != null) {
+      return javaFxRuntimeModulePathCache;
+    }
+
+    Map<String, Path> modules = javaFxRuntimeModules();
+    org.junit.Assume.assumeTrue(
+        "JavaFX base runtime jar must be on the test classpath for the display test",
+        modules.containsKey("javafx-base"));
+    org.junit.Assume.assumeTrue(
+        "JavaFX graphics runtime jar must be on the test classpath for the display test",
+        modules.containsKey("javafx-graphics"));
+    org.junit.Assume.assumeTrue(
+        "JavaFX media runtime jar must be on the test classpath for the display test",
+        modules.containsKey("javafx-media"));
+    javaFxRuntimeModulePathCache = javaFxRuntimeModulePaths(modules);
+    return javaFxRuntimeModulePathCache;
+  }
+
+  private static Map<String, Path> javaFxRuntimeModules() throws Exception {
     Map<String, Path> modules = new LinkedHashMap<>();
     for (String entry : System.getProperty(
         "surefire.test.class.path",
@@ -1248,14 +1276,14 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
         modules.putIfAbsent(artifact, path.toAbsolutePath().normalize());
       }
     }
-    assertTrue("Missing JavaFX base runtime jar on test classpath", modules.containsKey("javafx-base"));
-    assertTrue("Missing JavaFX graphics runtime jar on test classpath", modules.containsKey("javafx-graphics"));
-    assertTrue("Missing JavaFX media runtime jar on test classpath", modules.containsKey("javafx-media"));
-    javaFxRuntimeModulePathCache = List.of(
+    return modules;
+  }
+
+  private static List<Path> javaFxRuntimeModulePaths(Map<String, Path> modules) {
+    return List.of(
         modules.get("javafx-base"),
         modules.get("javafx-graphics"),
         modules.get("javafx-media"));
-    return javaFxRuntimeModulePathCache;
   }
 
   private static String javaFxArtifact(Path path) {
