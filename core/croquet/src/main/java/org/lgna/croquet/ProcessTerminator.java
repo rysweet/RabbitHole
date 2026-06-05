@@ -4,10 +4,9 @@ import java.util.Objects;
 import java.util.function.IntConsumer;
 
 public final class ProcessTerminator {
-  private static final IntConsumer THROWING_HANDLER = status -> {
-    throw new ProcessTerminationRequestedException(status, "Process termination requested with status " + status);
+  private static final IntConsumer DEFAULT_HANDLER = status -> {
   };
-  private static volatile IntConsumer handler = THROWING_HANDLER;
+  private static volatile IntConsumer handler = DEFAULT_HANDLER;
 
   private ProcessTerminator() {
   }
@@ -17,7 +16,7 @@ public final class ProcessTerminator {
   }
 
   public static void resetHandler() {
-    handler = THROWING_HANDLER;
+    handler = DEFAULT_HANDLER;
   }
 
   public static void requestExit(int status, String message) {
