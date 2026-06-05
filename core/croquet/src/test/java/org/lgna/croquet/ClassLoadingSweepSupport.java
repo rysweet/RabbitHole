@@ -226,6 +226,28 @@ public final class ClassLoadingSweepSupport {
     }
   }
 
+  private static final Set<String> BLOCKED_METHOD_NAMES = Set.of(
+      "wait", "notify", "notifyAll", "getClass",
+      "show", "showAndWait", "setVisible",
+      "showSaveFileDialog", "showOpenFileDialog",
+      "showSaveDialog", "showOpenDialog",
+      "showMessageDialog", "showConfirmDialog", "showInputDialog", "showOptionDialog",
+      "showDialog", "showFrame", "showModal",
+      "pack", "dispose", "toFront", "requestFocus",
+      "exit", "halt"
+  );
+
+  private static boolean isBlockedMethod(Method method) {
+    String name = method.getName();
+    if (BLOCKED_METHOD_NAMES.contains(name)) {
+      return true;
+    }
+    String lower = name.toLowerCase();
+    return lower.contains("dialog") && lower.contains("show")
+        || lower.contains("filechooser")
+        || lower.equals("main");
+  }
+
   private static void exerciseInstanceMethods(Class<?> cls, Object instance) {
     for (Class<?> current = cls; current != null && current != Object.class; current = current.getSuperclass()) {
       for (Method method : current.getDeclaredMethods()) {
@@ -233,7 +255,7 @@ public final class ClassLoadingSweepSupport {
         if (Modifier.isAbstract(modifiers) || Modifier.isNative(modifiers) || Modifier.isStatic(modifiers)) {
           continue;
         }
-        if (method.getName().equals("wait") || method.getName().equals("notify") || method.getName().equals("notifyAll") || method.getName().equals("getClass")) {
+        if (isBlockedMethod(method)) {
           continue;
         }
         try {
