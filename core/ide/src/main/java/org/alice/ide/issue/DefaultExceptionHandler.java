@@ -172,8 +172,7 @@ public class DefaultExceptionHandler extends ExceptionHandler {
       }
       this.isInTheMidstOfHandlingAThrowable = false;
       if (isSystemExitDesired) {
-        JOptionPane.showMessageDialog(null, "Exception occurred before application was able to show window.  Exiting.");
-        System.exit(-1);
+        throw new IllegalStateException("Exception occurred before application was able to show window.  Exiting.");
       }
     }
   }
