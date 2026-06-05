@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,11 +24,11 @@ public class SystemExitBoundaryTest {
     List<String> offenders = new ArrayList<>();
 
     try (Stream<Path> paths = Files.walk(repositoryRoot)) {
-      for (Path sourceFile : paths
-          .filter(path -> path.toString().endsWith(".java"))
-          .filter(path -> path.toString().contains("/src/main/java/"))
-          .filter(path -> !path.toString().contains("/target/"))
-          .toList()) {
+      Iterator<Path> sourceFiles = paths
+          .filter(SystemExitBoundaryTest::isProductionJavaSource)
+          .iterator();
+      while (sourceFiles.hasNext()) {
+        Path sourceFile = sourceFiles.next();
         offenders.addAll(nonEntryPointSystemExitUses(repositoryRoot, sourceFile));
       }
     }
@@ -39,45 +40,94 @@ public class SystemExitBoundaryTest {
   }
 
   private static List<String> nonEntryPointSystemExitUses(Path repositoryRoot, Path sourceFile) throws IOException {
+    if (!mentionsSystemExit(sourceFile)) {
+      return List.of();
+    }
+
     List<String> lines = Files.readAllLines(sourceFile);
     List<String> offenders = new ArrayList<>();
     boolean inBlockComment = false;
 
     for (int i = 0; i < lines.size(); i++) {
-      String line = lines.get(i);
-      String code = line;
+      String code = stripComments(lines.get(i), inBlockComment);
       if (inBlockComment) {
-        int end = code.indexOf("*/");
-        if (end < 0) {
-          continue;
-        }
-        code = code.substring(end + 2);
-        inBlockComment = false;
+        int end = lines.get(i).indexOf("*/");
+        inBlockComment = end < 0;
       }
-      while (code.contains("/*")) {
-        int start = code.indexOf("/*");
-        int end = code.indexOf("*/", start + 2);
-        if (end < 0) {
-          code = code.substring(0, start);
-          inBlockComment = true;
-          break;
-        }
-        code = code.substring(0, start) + code.substring(end + 2);
-      }
-      int lineComment = code.indexOf("//");
-      if (lineComment >= 0) {
-        code = code.substring(0, lineComment);
+      if (lines.get(i).contains("/*") && !lines.get(i).contains("*/")) {
+        inBlockComment = true;
       }
       if (!code.contains("System.exit(")) {
         continue;
       }
 
       String methodName = enclosingMethodName(lines, i);
-      if (!"main".equals(methodName)) {
+      if (!"main".equals(methodName) && !isWithinMainMethod(lines, i)) {
         offenders.add(repositoryRoot.relativize(sourceFile) + ":" + (i + 1) + " in " + methodName);
       }
     }
     return offenders;
+  }
+
+  private static boolean isProductionJavaSource(Path path) {
+    String pathName = path.toString();
+    return pathName.endsWith(".java")
+        && pathName.contains("/src/main/java/")
+        && !pathName.contains("/target/");
+  }
+
+  private static boolean mentionsSystemExit(Path sourceFile) throws IOException {
+    try (Stream<String> lines = Files.lines(sourceFile)) {
+      return lines.anyMatch(line -> line.contains("System.exit("));
+    }
+  }
+
+  private static boolean isWithinMainMethod(List<String> lines, int lineIndex) {
+    for (int i = lineIndex; i >= 0; i--) {
+      String line = lines.get(i);
+      if (!line.contains(" main(")) {
+        continue;
+      }
+      int depth = 0;
+      for (int j = i; j <= lineIndex; j++) {
+        String code = stripComments(lines.get(j), false);
+        for (int k = 0; k < code.length(); k++) {
+          char ch = code.charAt(k);
+          if (ch == '{') {
+            depth++;
+          } else if (ch == '}') {
+            depth--;
+          }
+        }
+      }
+      return depth > 0;
+    }
+    return false;
+  }
+
+  private static String stripComments(String line, boolean inBlockComment) {
+    String code = line;
+    if (inBlockComment) {
+      int end = code.indexOf("*/");
+      if (end < 0) {
+        return "";
+      }
+      code = code.substring(end + 2);
+    }
+    while (code.contains("/*")) {
+      int start = code.indexOf("/*");
+      int end = code.indexOf("*/", start + 2);
+      if (end < 0) {
+        code = code.substring(0, start);
+        break;
+      }
+      code = code.substring(0, start) + code.substring(end + 2);
+    }
+    int lineComment = code.indexOf("//");
+    if (lineComment >= 0) {
+      code = code.substring(0, lineComment);
+    }
+    return code;
   }
 
   private static String enclosingMethodName(List<String> lines, int lineIndex) {

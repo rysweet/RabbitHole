@@ -30,13 +30,18 @@ public class JavaFxDisplayPrerequisiteContractTest {
         method.contains("findExecutableOnPath(\"xvfb-run\")"));
     assertTrue(
         "The test must gate on JavaFX runtime modules",
-        method.contains("javaFxRuntimeModulePath()"));
+        method.contains("assumeJavaFxRuntimeModulePathForDisplayTest()"));
     assertTrue(
         "The test must prove xvfb-run can start Java before running the display-bound launcher",
         method.contains("xvfbRunStartsJava"));
     assertTrue(
-        "The test must skip or explicitly gate the display-bound JavaFX path when Maven is running in headless mode",
-        method.contains("java.awt.headless") || method.contains("GraphicsEnvironment.isHeadless"));
+        "The test must prove the JavaFX display runtime initializes under Xvfb before running the launcher",
+        method.contains("javaFxDisplayRuntimeStartsUnderXvfb"));
+    assertTrue(
+        "Expensive JavaFX/Xvfb prerequisite probes must be cached for the test class",
+        source.contains("javaFxRuntimeModulePathCache")
+            && source.contains("XVFB_RUN_STARTS_JAVA_CACHE")
+            && source.contains("JAVAFX_XVFB_DISPLAY_CACHE"));
   }
 
   private static String methodBody(String source, String methodName) {
