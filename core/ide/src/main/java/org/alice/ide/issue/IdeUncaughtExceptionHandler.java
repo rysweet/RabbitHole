@@ -47,6 +47,7 @@ import edu.cmu.cs.dennisc.javax.swing.WindowStack;
 import org.alice.ide.issue.croquet.LgnaExceptionComposite;
 import org.lgna.common.LgnaRuntimeException;
 import org.lgna.croquet.Application;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.views.Frame;
 import org.lgna.issue.AbstractUncaughtExceptionHandler;
 import org.lgna.issue.ApplicationIssueConfiguration;
@@ -129,7 +130,7 @@ public abstract class IdeUncaughtExceptionHandler extends AbstractUncaughtExcept
     }
     if (isSystemExitDesired) {
       JOptionPane.showMessageDialog(null, "Exception occurred before application was able to show window.  Exiting.");
-      System.exit(-1);
+      ProcessTerminator.requestExit(-1, "Uncaught exception occurred before application window was visible");
     }
   }
 

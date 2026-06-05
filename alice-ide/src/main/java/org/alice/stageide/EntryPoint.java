@@ -60,6 +60,7 @@ import javafx.stage.Stage;
 import org.lgna.project.ProjectVersion;
 import org.lgna.project.reflect.ClassInfo;
 import org.lgna.project.reflect.ClassInfoManager;
+import org.lgna.croquet.ProcessTerminator;
 
 import javax.swing.*;
 import java.awt.Frame;
@@ -75,6 +76,7 @@ public class EntryPoint extends Application {
   private static HeapWatchDog heapMonitor;
 
   public static void main(final String[] args) {
+    ProcessTerminator.setHandler(status -> System.exit(status));
     requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
 
     final CrashDetector crashDetector = new CrashDetector(EntryPoint.class);
