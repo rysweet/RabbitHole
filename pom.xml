@@ -831,6 +831,16 @@
       </modules>
     </profile>
 
+    <!-- Local development profile: runs tests with a real display (non-headless).
+         CI defaults to headless=true; activate this profile for local builds that
+         need AWT/Swing interaction:  mvn -Pdev clean test -->
+    <profile>
+      <id>dev</id>
+      <properties>
+        <argLine>-Djava.awt.headless=false</argLine>
+      </properties>
+    </profile>
+
   </profiles>
 
   <pluginRepositories>
