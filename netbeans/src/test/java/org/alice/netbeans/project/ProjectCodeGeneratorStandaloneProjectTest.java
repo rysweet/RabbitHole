@@ -432,6 +432,9 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     org.junit.Assume.assumeTrue(
         "xvfb-run must be able to start a Java process before proving the real JavaFX display launch path",
         xvfbRunStartsJava(xvfbRun));
+    org.junit.Assume.assumeTrue(
+        "JavaFX display runtime must initialize under xvfb-run",
+        javaFxDisplayRuntimeStartsUnderXvfb(xvfbRun, javaFxModulePath));
 
     Path projectDirectory = temporaryFolder.newFolder("template-real-javafx-xvfb-runtime").toPath();
     extractProjectTemplate(projectDirectory);
@@ -1400,6 +1403,39 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     command.add("-version");
 
     ProcessResult result = runCommand(Path.of(".").toAbsolutePath().normalize(), command);
+    return !result.timedOut && result.exitCode == 0;
+  }
+
+  private static boolean javaFxDisplayRuntimeStartsUnderXvfb(Path xvfbRun, List<Path> javaFxModulePath) throws Exception {
+    Path probeDirectory = Files.createTempDirectory("javafx-xvfb-probe");
+    Path probeSource = probeDirectory.resolve("JavaFxXvfbProbe.java");
+    Files.writeString(probeSource, """
+        public final class JavaFxXvfbProbe {
+          public static void main(String[] args) throws Exception {
+            java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            javafx.application.Platform.startup(latch::countDown);
+            if (!latch.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+              throw new IllegalStateException("JavaFX Platform.startup did not complete");
+            }
+            javafx.application.Platform.exit();
+          }
+        }
+        """);
+
+    List<String> command = new ArrayList<>();
+    command.add(xvfbRun.toAbsolutePath().normalize().toString());
+    command.add("-a");
+    command.add("-s");
+    command.add("-screen 0 1024x768x24");
+    command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+    command.add("--module-path");
+    command.add(pathList(javaFxModulePath));
+    command.add("--add-modules");
+    command.add("javafx.graphics,javafx.media");
+    command.add("-Djava.awt.headless=false");
+    command.add(probeSource.toAbsolutePath().normalize().toString());
+
+    ProcessResult result = runCommand(probeDirectory, command);
     return !result.timedOut && result.exitCode == 0;
   }
 
