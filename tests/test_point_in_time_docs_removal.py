@@ -1,7 +1,6 @@
 """Repository hygiene contract for durable RabbitHole documentation.
 
-These tests are intentionally written before the cleanup implementation. They
-define the red/green contract for removing non-durable point-in-time artifacts
+These tests define the contract for removing non-durable point-in-time artifacts
 while preserving maintained RabbitHole/Alice documentation.
 """
 
@@ -67,6 +66,8 @@ POINT_IN_TIME_LANGUAGE_RE = re.compile(
     r"|refactor " + r"progress"
     r"|status " + r"report"
     r"|work in " + r"progress"
+    r"|implementation " + r"pending"
+    r"|coverage " + r"push"
     r"|remaining " + r"work"
     r"|next " + r"steps"
     r"|session " + r"artifact"
@@ -81,6 +82,11 @@ DURABLE_CONTENT_ROOTS = (
     "README.md",
     "AGENTS.md",
     "docs/",
+    "core/croquet/TESTING.md",
+    "core/story-api/TESTING.md",
+    "core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/imp/GlResourceCache.md",
+    "core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/imp/RenderTargetGlEventHandler.md",
+    "core/ide/src/test/resources/org/alice/ide/coverage/small-class-targets.txt",
     "qa/outside-in/alice-desktop/",
     "pyproject.toml",
 )

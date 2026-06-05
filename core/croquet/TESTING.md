@@ -282,13 +282,13 @@ mvn -pl core/croquet test \
 | `Group already registered` | Two tests using the same UUID | Use `UUID.randomUUID()` for every State constructor |
 | `ClassCastException` on spinner model | Wrong cast in listener removal | Cast to `AbstractSpinnerModel` for `getChangeListeners()` |
 
-## Phase 2 — Issue #775 coverage push (30.4% → 50%)
+## Expanded coverage packages
 
-Phase 2 adds 27 test files covering trigger classes, cascade runtime
-internals, history steps, preferences, codec/icon helpers, and deeper
+The expanded croquet suite covers trigger classes, cascade runtime internals,
+history steps, preferences, codec/icon helpers, and deeper
 state/model/composite paths. All follow the same headless patterns above.
 
-For the full test inventory, see the Phase 2 test packages listed below.
+For the full test inventory, see the test packages listed below.
 
 For running and troubleshooting instructions, see the Quick start section above.
 

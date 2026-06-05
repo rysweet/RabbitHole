@@ -113,7 +113,7 @@ test.ik.IkProgram
 test.ik.IkProgramLauncher
 test.ik.IkScene
 test.ik.TestPoser
-# --- Additional targets for 50% coverage (issue #796) ---
+# --- Additional coverage sweep targets ---
 edu.wustl.lookingglass.utilities.memory.HeapWatchDog
 org.alice.ide.DefaultTheme
 org.alice.ide.IdePreferences

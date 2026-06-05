@@ -317,16 +317,12 @@ normalization rules, review workflow, and relationship to `eatme`.
 
 ## Dual-baseline replay harness
 
-`DualBaselineReplayHarnessTest` will be the headless compatibility lane for
+`DualBaselineReplayHarnessTest` is the headless compatibility lane for
 comparing current RabbitHole project I/O summaries against a local preserved
-Alice baseline checkout. It will live in
+Alice baseline checkout. It lives in
 `core/story-api-migration/src/test/java/org/lgna/project/io/compat/` because it
-will characterize project save, reopen, export, manifest, source, and resource
+characterizes project save, reopen, export, manifest, source, and resource
 behavior around `IoUtilities` and the story API migration boundary.
-
-**Status: planned - implementation pending.** This section describes the feature
-contract to build. Remove this note when `DualBaselineReplayHarnessTest` and its
-test-scope support classes land.
 
 The harness uses deterministic generated cases only. It never requires checked-in
 `.a3p`, `.a3w`, `.a3c`, image, audio, or ZIP payloads. Temporary project,

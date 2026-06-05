@@ -1,8 +1,7 @@
-# GlResourceCache — GL Resource Lifecycle Delegate
+# GlResourceCache - GL Resource Lifecycle Delegate
 
-> Extracted from `RenderContext.java` (issue #655) to reduce the class from
-> 603 lines to ~492 by moving GL resource lifecycle management into a
-> focused, package-private delegate.
+`GlResourceCache` is the package-private delegate that keeps GL resource
+lifecycle management focused inside the render implementation package.
 
 ## Design
 
@@ -24,13 +23,15 @@ Plus the **static** `unusedTexturesListeners` list and `clearUnusedTextures` bro
 - **Stateless w.r.t. GL** — never stores a `GL2` reference; receives the owning `RenderContext` as a parameter.
 - **Identical synchronization** — same lock objects, same ordering, no new locks.
 
-**Note:** `textureBindingMap` is never populated (the only `put()` is commented out). This is pre-existing; the extraction moves it faithfully.
+**Note:** `textureBindingMap` is never populated because the only historical
+`put()` site remains disabled. Preserve that behavior unless a rendering
+contract explicitly changes it.
 
-## Bug Fix
+## Listener removal contract
 
-The original `removeUnusedTexturesListener` called `.add(listener)` instead
-of `.remove(listener)`. Corrected in extraction. Safe because no caller
-currently invokes it (grep-confirmed zero call sites).
+`addUnusedTexturesListener` registers a listener and
+`removeUnusedTexturesListener` removes that same listener. Keep the methods
+symmetrical so callers can manage listener lifetimes without leaking callbacks.
 
 ## Concurrency Model
 
@@ -50,15 +51,15 @@ Identical to original — no lock objects change, no ordering changes.
 and calls `forgetGeometryAdapter` which re-acquires it. Java `synchronized`
 is reentrant — do not refactor into a lock-free helper.
 
-## File Layout
+## Package layout
 
 ```
 core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/imp/
-├── Context.java              (unchanged)
-├── GlResourceCache.java      (NEW — 196 lines, package-private)
-├── RenderContext.java         (MODIFIED — 492 lines, down from 603)
-├── PickContext.java           (unchanged)
-└── RenderTargetImp.java       (unchanged)
+├── Context.java
+├── GlResourceCache.java
+├── RenderContext.java
+├── PickContext.java
+└── RenderTargetImp.java
 ```
 
 Callers (`GlrGeometry`, `GlrTexture`, `RenderTargetImp`, `GlrRenderTarget`)

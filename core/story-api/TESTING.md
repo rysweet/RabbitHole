@@ -454,14 +454,14 @@ git submodule update --init tweedle-lang
 
 ---
 
-## Phase 2 — Issue #775 coverage push (52.3% → 70%)
+## Expanded coverage packages
 
-Phase 2 adds 30 test files covering the IK solver math layer, interact
+The expanded story-api suite covers the IK solver math layer, interact
 conditions, handle/input state, manipulator snap math, implementation
 helpers, and event data classes. All follow the same headless patterns
 and test double strategies above.
 
-For the full test inventory, see the Phase 2 test packages listed below.
+For the full test inventory, see the test packages listed below.
 
 For running and troubleshooting instructions, see the Running the Tests section above.
 

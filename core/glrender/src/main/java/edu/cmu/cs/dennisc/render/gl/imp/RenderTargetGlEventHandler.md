@@ -1,9 +1,7 @@
-# RenderTargetGlEventHandler — GL Event Listener Delegate
+# RenderTargetGlEventHandler - GL Event Listener Delegate
 
-> Extracted from `RenderTargetImp.java` (issue #671) to reduce the class from
-> 584 lines to under 500 by moving GL event handling and render-target setup
-> into a focused, package-private delegate. Dead commented-out code (~81 lines)
-> was also removed.
+`RenderTargetGlEventHandler` is the package-private delegate that owns JOGL
+event callbacks for `RenderTargetImp`.
 
 ## Design
 
@@ -55,17 +53,6 @@ The handler also calls these package-private methods on `RenderTargetImp`:
 | `fireResized(e)`      | Widened from private → package-private |
 | `getRenderTarget()`   | Already public                        |
 
-## Dead Code Removed
-
-Three commented-out blocks and scattered debug comments were removed:
-
-| Lines (original) | Content                                       | Reason safe to remove                |
-| ----------------- | --------------------------------------------- | ------------------------------------ |
-| 255–284           | `paintOverlay()` — overlay rendering via GL matrix stack | Never called; `Overlay` type unused in codebase |
-| 369–406           | GL extension check for `GL_EXT_abgr`          | Superseded by unconditional `TYPE_4BYTE_ABGR` path on L407–408 |
-| 521–525           | `displayChanged()` callback                   | JOGL 2.x removed this from `GLEventListener`; dead since migration |
-| ~8 scattered      | Single-line debug prints (`PrintUtilities.println`), TODO comments, dead `lookingGlass` call | Inside extracted methods — stripped during extraction, not copied to handler |
-
 ## Concurrency Model
 
 Identical to original — no lock objects change, no ordering changes.
@@ -79,29 +66,13 @@ Identical to original — no lock objects change, no ordering changes.
 
 The handler introduces no new threads, locks, or shared state.
 
-## Usage
-
-### Before (anonymous inner class in RenderTargetImp)
+## Wiring
 
 ```java
-// 22-line anonymous GLEventListener at bottom of RenderTargetImp
-private final GLEventListener glEventListener = new GLEventListener() {
-    @Override public void init(GLAutoDrawable drawable) { handleInit(drawable); }
-    @Override public void display(GLAutoDrawable drawable) { handleDisplay(drawable); }
-    @Override public void reshape(GLAutoDrawable d, int x, int y, int w, int h) { handleReshape(d, x, y, w, h); }
-    @Override public void dispose(GLAutoDrawable drawable) { handleDispose(drawable); }
-};
-```
-
-### After (dedicated class)
-
-```java
-// In RenderTargetImp — single field replaces anonymous listener + 4 handle*() methods
 final RenderTargetGlEventHandler glEventHandler = new RenderTargetGlEventHandler(this);
 ```
 
 ```java
-// RenderTargetGlEventHandler.java (~70 lines, package-private)
 class RenderTargetGlEventHandler implements GLEventListener {
   private final RenderTargetImp rtImp;
 
@@ -174,8 +145,8 @@ class RenderTargetGlEventHandler implements GLEventListener {
 
 ### Wiring in RenderTargetImp
 
-The `startListening` and `stopListening` methods reference `glEventHandler`
-instead of the old `glEventListener`:
+The `startListening` and `stopListening` methods register and remove the same
+handler instance:
 
 ```java
 private void startListening(GLAutoDrawable drawable) {
@@ -198,44 +169,25 @@ private void stopListening(GLAutoDrawable drawable) {
 No new configuration. The `USE_DEBUG_GL` compile-time constant moves
 unchanged into the handler's `init()`.
 
-## File Layout
+## Package layout
 
 ```
 core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/imp/
-├── GlResourceCache.java            (unchanged)
-├── GlResourceCache.md              (unchanged)
-├── RenderContext.java               (unchanged)
-├── RenderTargetGlEventHandler.java  (NEW — ~70 lines, package-private)
-├── RenderTargetGlEventHandler.md    (NEW — this file)
-└── RenderTargetImp.java             (MODIFIED — ~413 lines, down from 584)
+├── GlResourceCache.java
+├── GlResourceCache.md
+├── RenderContext.java
+├── RenderTargetGlEventHandler.java
+├── RenderTargetGlEventHandler.md
+└── RenderTargetImp.java
 ```
 
-## Line Budget
+## Invariants
 
-| Change                                      | Lines removed | Lines added |
-| ------------------------------------------- | ------------- | ----------- |
-| Dead code: `paintOverlay` block             | −30           | 0           |
-| Dead code: `GL_EXT_abgr` check block        | −38           | 0           |
-| Dead code: `displayChanged` block           | −5            | 0           |
-| Inter-method blanks & separator comments      | −8            | 0           |
-| `initialize()` + `handleInit()`             | −32           | 0           |
-| `handleDisplay()`                           | −26           | 0           |
-| `handleReshape()`                           | −8            | 0           |
-| `handleDispose()`                           | −3            | 0           |
-| Anonymous `GLEventListener`                 | −22           | 0           |
-| `RenderTargetGlEventHandler` field          | 0             | +1          |
-| **Net in RenderTargetImp**                  | **−172**      | **+1**      |
-| **New file: RenderTargetGlEventHandler.java** | —           | ~70         |
-
-**Result:** RenderTargetImp drops from 584 → ~413 lines (well under 500 target).
-
-## Risks
-
-| Risk                                     | Mitigation                                           |
-| ---------------------------------------- | ---------------------------------------------------- |
-| Package-private field widening           | Only `RenderTargetGlEventHandler` in same package accesses them; no public API change |
-| Behavioral drift in GL callbacks          | Logic is semantically identical — minor style cleanups only (inverted guard, shortened locals) |
-| Missing initialization on edge-case paths | `display()` still lazy-initializes via `init()` call if `renderContext.gl` is null — same as before |
+| Invariant | Rationale |
+| --- | --- |
+| Package-private access only | Only render implementation classes in this package use the widened fields and methods. |
+| GL callback behavior stays in JOGL order | `init`, `display`, `reshape`, and `dispose` follow the `GLEventListener` contract. |
+| Lazy initialization remains guarded | `display()` initializes through `init()` when `renderContext.gl` is null. |
 
 ## Security
 
