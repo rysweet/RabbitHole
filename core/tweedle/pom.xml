@@ -118,7 +118,7 @@
         </dependencies>
         <configuration>
           <argLine>
-            @{argLine} --add-opens=java.desktop/sun.awt=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED
+            @{argLine} -Djava.awt.headless=${java.awt.headless} --add-opens=java.desktop/sun.awt=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED
           </argLine>
         </configuration>
       </plugin>
