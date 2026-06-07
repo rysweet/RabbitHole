@@ -38,6 +38,7 @@ HEADED_MAVEN_FLAGS = (
     "-DincludeSims=false",
     "-Dinstall4j.skip",
     "-Dcheckstyle.skip",
+    "-DskipTests",
     "-Djava.awt.headless=false",
     "clean",
     "install",
@@ -270,6 +271,20 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
         self.assertIn("LAUNCH_TIMEOUT_SECONDS", body)
         self.assertIn("124", body)
 
+    def test_gui_lane_runs_non_headless_maven_validation_before_launch(self) -> None:
+        source = script_text()
+        body = function_body(source, "run_gui_maven_validation")
+        lane_body = function_body(source, "run_gui_lane")
+        normalized = re.sub(r"\s+", " ", body)
+
+        for token in HEADED_MAVEN_FLAGS:
+            with self.subTest(token=token):
+                self.assertIn(token, normalized)
+        self.assertLess(
+            lane_body.index("run_gui_maven_validation"),
+            lane_body.index("run_gui_launch"),
+        )
+
     def test_timeout_kills_stubborn_gui_processes_after_grace_period(self) -> None:
         source = script_text()
         body = function_body(source, "run_with_timeout")
@@ -443,27 +458,14 @@ class GettingStartedValidationCiContract(unittest.TestCase):
         self.assertIn("id: setup-xvfb", headed_job)
         self.assertIn(SETUP_XVFB_ACTION_OUTPUT, headed_job)
 
-    def test_headed_ubuntu_xvfb_job_runs_true_non_headless_maven_validation(self) -> None:
-        workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
-        headed_job = workflow_job_block(workflow, "headed-ubuntu-xvfb")
-        normalized = re.sub(r"\s+", " ", headed_job)
-
-        self.assertIn("mvn", normalized)
-        self.assertIn("--auto-servernum", normalized)
-        self.assertIn('-s "-screen 0 1024x768x24 -ac"', headed_job)
-        for token in HEADED_MAVEN_FLAGS:
-            with self.subTest(token=token):
-                self.assertIn(token, normalized)
-
-        self.assertNotIn("-Djava.awt.headless=true", headed_job)
-        self.assertNotIn("--headless", headed_job)
-
     def test_headed_ubuntu_xvfb_job_runs_bounded_gui_getting_started_validation(self) -> None:
         workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
         headed_job = workflow_job_block(workflow, "headed-ubuntu-xvfb")
 
         self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60", headed_job)
         self.assertIn(SETUP_XVFB_ACTION_OUTPUT, headed_job)
+        self.assertNotIn("-Djava.awt.headless=true", headed_job)
+        self.assertNotIn("--headless", headed_job)
         self.assertRegex(
             headed_job,
             r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"

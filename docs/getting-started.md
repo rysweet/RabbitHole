@@ -158,17 +158,10 @@ validation starts if `xvfb-run` is unavailable.
 
 The job must remain separate from the headless validation path because an
 Xvfb-wrapped `--headless` run still uses `java.awt.headless=true` and is not
-equivalent to a headed GUI launch. The headed job runs Maven under Xvfb with
-GUI mode enabled:
-
-```bash
-xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
-"${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
-```
-
-It then runs the Getting Started GUI validator inside Xvfb with an explicit
-bounded startup timeout, using the absolute `xvfb-run` path provided by the
-shared action. In the workflow `run` block, that looks like this:
+equivalent to a headed GUI launch. The headed job runs the Getting Started GUI
+validator inside Xvfb with an explicit bounded startup timeout, using the
+absolute `xvfb-run` path provided by the shared action. In the workflow `run`
+block, that looks like this:
 
 ```bash
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
@@ -176,10 +169,11 @@ RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
 ```
 
 The workflow uses the shared action output, not a hard-coded filesystem path.
-The timeout is part of the CI contract: the GUI launch probe must either start
-far enough to prove the documented display-dependent launch path or fail within
-the configured startup window. A hung Alice startup is a CI failure, not a
-skipped GUI validation.
+The validator first installs no-Sims artifacts with `java.awt.headless=false`
+and tests skipped, then runs the GUI launch probe. The timeout is part of the CI
+contract: the GUI launch probe must either start far enough to prove the
+documented display-dependent launch path or fail within the configured startup
+window. A hung Alice startup is a CI failure, not a skipped GUI validation.
 
 ### macOS Apple Silicon GUI blocker
 

@@ -28,7 +28,6 @@ The headed Ubuntu GUI validation lane runs under Xvfb:
 
 ```bash
 xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
-"${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
   "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui
 ```
@@ -143,7 +142,7 @@ running the same validator from the checkout under review.
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |
 | Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes with `java.awt.headless=true`, and the no-Sims launch probe reaches the expected GUI-required message. |
-| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims Maven validation passes under Xvfb with `java.awt.headless=false`, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
+| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims build/install passes under Xvfb with `java.awt.headless=false` and tests skipped, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
 | Local GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
 | All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
 

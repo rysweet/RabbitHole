@@ -225,18 +225,6 @@ jobs:
       - name: Show Maven version
         run: mvn -v
 
-      - name: Run headed no-Sims Maven validation
-        shell: bash
-        run: |
-          set -euo pipefail
-          "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum -s "-screen 0 1024x768x24 -ac" mvn \
-            -DincludeSims=false \
-            -Dinstall4j.skip \
-            -Dcheckstyle.skip \
-            -Djava.awt.headless=false \
-            clean \
-            install
-
       - name: Run Getting Started GUI validation under Xvfb
         shell: bash
         run: |

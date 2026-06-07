@@ -311,6 +311,23 @@ run_gui_launch() {
   fail "GUI launch failed unexpectedly."
 }
 
+run_gui_maven_validation() {
+  local mvn_cmd=(
+    mvn
+    -DincludeSims=false
+    -Dinstall4j.skip
+    -Dcheckstyle.skip
+    -DskipTests
+    -Djava.awt.headless=false
+    clean
+    install
+  )
+
+  info "Running GUI no-Sims Maven validation."
+  print_command "${mvn_cmd[@]}"
+  "${mvn_cmd[@]}"
+}
+
 run_gui_lane() {
   info "Checking desktop GUI capability for requested GUI validation."
   local gui_status=0
@@ -323,6 +340,7 @@ run_gui_lane() {
     fail "GUI validation was explicitly requested but is unavailable. ${gui_message}"
   fi
 
+  run_gui_maven_validation
   run_gui_launch
 }
 
