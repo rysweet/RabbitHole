@@ -173,7 +173,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            "${{ steps.setup-xvfb.outputs.xvfb-run }}" -a ./scripts/validate-getting-started.sh --headless
+            "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --headless
           else
             ./scripts/validate-getting-started.sh --headless
           fi
@@ -229,7 +229,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum mvn \
+          "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum -s "-screen 0 1024x768x24 -ac" mvn \
             -DincludeSims=false \
             -Dinstall4j.skip \
             -Dcheckstyle.skip \
@@ -241,4 +241,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum ./scripts/validate-getting-started.sh --gui
+          RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui

@@ -111,7 +111,7 @@ final class SaveProofJsonDelegate {
 
   static String requiresNextEvidenceJson() {
     return "  \"requiresNextEvidence\": [\n"
-        + "    \"Run under xvfb-run -a or an equivalent desktop session when blocker.kind is environment-related\",\n"
+        + "    \"Run under xvfb-run --auto-servernum -s \\\"-screen 0 1024x768x24 -ac\\\" or an equivalent desktop session when blocker.kind is environment-related\",\n"
         + "    \"Use status proven only when Robot menu activation, dialog control, write, readback, and marker verification all succeed in one rendered path\"\n"
         + "  ],\n";
   }

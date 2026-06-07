@@ -422,6 +422,8 @@ class GettingStartedValidationCiContract(unittest.TestCase):
             test_job,
             r"(?ms)- name: Run Getting Started headless validation\n.*"
             r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"
+            r"--auto-servernum.*"
+            r"-s \"-screen 0 1024x768x24 -ac\".*"
             r"./scripts/validate-getting-started.sh --headless",
         )
         self.assertIn("-Djava.awt.headless=true", test_job)
@@ -447,6 +449,8 @@ class GettingStartedValidationCiContract(unittest.TestCase):
         normalized = re.sub(r"\s+", " ", headed_job)
 
         self.assertIn("mvn", normalized)
+        self.assertIn("--auto-servernum", normalized)
+        self.assertIn('-s "-screen 0 1024x768x24 -ac"', headed_job)
         for token in HEADED_MAVEN_FLAGS:
             with self.subTest(token=token):
                 self.assertIn(token, normalized)
@@ -464,6 +468,7 @@ class GettingStartedValidationCiContract(unittest.TestCase):
             headed_job,
             r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"
             r"--auto-servernum.*"
+            r"-s \"-screen 0 1024x768x24 -ac\".*"
             r"./scripts/validate-getting-started.sh --gui",
         )
 

@@ -21,19 +21,24 @@ untestable Swing view/component packages.
 
 ```bash
 # Tests only (fast feedback)
-xvfb-run mvn -pl core/ide -am \
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false test
 
 # Tests + JaCoCo report
-xvfb-run mvn -pl core/ide -am \
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn -pl core/ide -am \
   -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false verify
 ```
 
 The `xvfb-run` wrapper provides a virtual display for tests that bootstrap the
 mini-IDE via `TestIdeBootstrap`. Pure headless tests work without it but the
-wrapper is harmless.
+wrapper is harmless. Use the resilient prefix from the
+[JavaFX Xvfb Launcher Reference](reference/javafx-xvfb-launcher.md) so parallel
+jobs get separate display numbers and the temporary X server accepts local test
+clients.
 
 ### Reading the report
 
@@ -339,7 +344,8 @@ override.
 The test needs a display. Wrap the Maven command with `xvfb-run`:
 
 ```bash
-xvfb-run mvn -pl core/ide -am test
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn -pl core/ide -am test
 ```
 
 ### `TestIdeBootstrap.boot()` throws `NullPointerException`
@@ -356,7 +362,8 @@ Run `verify` instead of `test` — JaCoCo's report goal is bound to the verify
 phase:
 
 ```bash
-xvfb-run mvn -pl core/ide -am verify
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn -pl core/ide -am verify
 ```
 
 ### Sweep test loads 0 classes

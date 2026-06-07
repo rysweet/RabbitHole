@@ -15,6 +15,7 @@ expectations.
 - [Getting started](./getting-started.md)
 - [Architecture](./architecture.md)
 - [Testing](./testing.md)
+- [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [RabbitHole baseline parity](./rabbithole-baseline-parity.md)
 - [Dual-baseline replay harness](./dual-baseline-replay-harness.md)
 - [Contributing](./contributing.md)
@@ -38,6 +39,7 @@ expectations.
 - [Getting started](./getting-started.md)
 - [Architecture](./architecture.md)
 - [Testing](./testing.md)
+- [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [RabbitHole baseline parity](./rabbithole-baseline-parity.md)
 - [Dual-baseline replay harness](./dual-baseline-replay-harness.md)
 - [Contributing](./contributing.md)
@@ -55,8 +57,10 @@ expectations.
 
 ### Reference
 
+- [JavaFX Xvfb Launcher Reference](./reference/javafx-xvfb-launcher.md)
 - [Modernization Scorecard Generator](./reference/modernization-scorecard-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
+- [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
 
 ### Architecture Atlas
 

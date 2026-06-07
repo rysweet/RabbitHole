@@ -1,117 +1,117 @@
 package org.lgna.project.migration;
 
 import org.junit.Test;
+import org.lgna.project.Version;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class TextMigrationJsonLoaderTest {
   @Test
   public void jsonLoaderMatchesLegacyRegistryDefinitions() throws Exception {
-    TextMigration[] expected = createLegacyMigrations();
-    TextMigration[] actual = TextMigrationJsonLoader.load();
-
-    assertEquals(expected.length, actual.length);
-    for (int i = 0; i < expected.length; i++) {
-      assertEquals(expected[i].getResultVersion().toString(), actual[i].getResultVersion().toString());
-
-      List<PairData> expectedPairs = pairsOf(expected[i]);
-      List<PairData> actualPairs = pairsOf(actual[i]);
-      assertEquals(expectedPairs.size(), actualPairs.size());
-      for (int j = 0; j < expectedPairs.size(); j++) {
-        assertEquals(expectedPairs.get(j).pattern, actualPairs.get(j).pattern);
-        assertEquals(expectedPairs.get(j).replacement, actualPairs.get(j).replacement);
-      }
-    }
+    assertEquals(TextMigrationParityTestSupport.legacyRegistryData(), TextMigrationParityTestSupport.loadedJsonData());
   }
 
   @Test
   public void jsonLoaderContainsKnownResolvedPairs() throws Exception {
     TextMigration[] migrations = TextMigrationJsonLoader.load();
 
-    assertMigrationContainsPair(migrationForVersion(migrations, "3.1.9.0.0"),
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(migrations, "3.1.9.0.0"),
         "ARMOIRE_CLOTHING",
-        null);
-    assertMigrationContainsPair(migrationForVersion(migrations, "3.1.34.0.0"),
+        null));
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(migrations, "3.1.34.0.0"),
         "org.lgna.story.Program",
-        "org.lgna.story.SProgram");
-    assertMigrationContainsPair(migrationForVersion(migrations, "3.2.110.0.0"),
+        "org.lgna.story.SProgram"));
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(migrations, "3.2.110.0.0"),
         "name=\"OVAL\">\\s*<declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\"",
-        "name=\"OVAL_DESERT\"> <declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\"");
+        "name=\"OVAL_DESERT\"> <declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\""));
   }
 
-  private static TextMigration[] createLegacyMigrations() {
-    TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
-    TextMigration[] v3134 = TextMigrationRegistryV3134.create();
-    TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
-    TextMigration[] v3159 = TextMigrationRegistryV3159.create();
-    TextMigration[] late = TextMigrationRegistryLateVersions.create();
+  @Test
+  public void nullReplacementEntriesAreNoOpTextMigrations() {
+    TextMigration migration = new TextMigration(
+        new Version("3.1.9.0.0"),
+        "legacyName",
+        MigrationManager.NO_REPLACEMENT,
+        "oldName",
+        "newName");
 
-    TextMigration[] all = new TextMigration[early.length + v3134.length + mid.length + v3159.length + late.length];
-    int offset = 0;
-    System.arraycopy(early, 0, all, offset, early.length);
-    offset += early.length;
-    System.arraycopy(v3134, 0, all, offset, v3134.length);
-    offset += v3134.length;
-    System.arraycopy(mid, 0, all, offset, mid.length);
-    offset += mid.length;
-    System.arraycopy(v3159, 0, all, offset, v3159.length);
-    offset += v3159.length;
-    System.arraycopy(late, 0, all, offset, late.length);
-    return all;
+    assertEquals("legacyName and newName", migration.migrate("legacyName and oldName"));
   }
 
-  private static TextMigration migrationForVersion(TextMigration[] migrations, String version) {
-    for (TextMigration migration : migrations) {
-      if (migration.getResultVersion().toString().equals(version)) {
-        return migration;
-      }
-    }
-    throw new AssertionError("No migration found for version " + version);
+  @Test
+  public void jsonLoaderPreservesMigrationAndReplacementOrder() throws Exception {
+    TextMigration[] migrations = TextMigrationParityTestSupport.parseJson("["
+        + "{\"version\":\"3.1.1.0.0\",\"replacements\":["
+        + "{\"pattern\":\"first\",\"replacement\":\"one\"},"
+        + "{\"pattern\":\"second\",\"replacement\":\"two\"}]},"
+        + "{\"version\":\"3.1.2.0.0\",\"replacements\":["
+        + "{\"pattern\":\"third\",\"replacement\":\"three\"}]}]");
+
+    List<TextMigrationParityTestSupport.MigrationData> data = TextMigrationParityTestSupport.dataOf(migrations);
+    assertEquals("3.1.1.0.0", data.get(0).version);
+    assertEquals("first", data.get(0).pairs.get(0).pattern);
+    assertEquals("second", data.get(0).pairs.get(1).pattern);
+    assertEquals("3.1.2.0.0", data.get(1).version);
+    assertEquals("third", data.get(1).pairs.get(0).pattern);
   }
 
-  private static void assertMigrationContainsPair(TextMigration migration, String expectedPattern, String expectedReplacement) throws Exception {
-    for (PairData pair : pairsOf(migration)) {
-      if (pair.pattern.equals(expectedPattern) && equalsNullable(pair.replacement, expectedReplacement)) {
-        return;
-      }
-    }
-    throw new AssertionError("Missing pair " + expectedPattern + " -> " + expectedReplacement + " in " + migration.getResultVersion());
+  @Test
+  public void jsonLoaderAcceptsEmptyMigrationList() throws Exception {
+    TextMigration[] migrations = TextMigrationParityTestSupport.parseJson("[]");
+
+    assertEquals(0, migrations.length);
   }
 
-  private static boolean equalsNullable(String left, String right) {
-    return left == null ? right == null : left.equals(right);
+  @Test
+  public void jsonLoaderAcceptsEmptyReplacementList() throws Exception {
+    TextMigration[] migrations = TextMigrationParityTestSupport.parseJson("["
+        + "{\"version\":\"3.1.1.0.0\",\"replacements\":[]}]");
+
+    assertEquals(0, TextMigrationParityTestSupport.pairsOf(migrations[0]).size());
   }
 
-  private static List<PairData> pairsOf(TextMigration textMigration) throws Exception {
-    Field pairsField = TextMigration.class.getDeclaredField("pairs");
-    pairsField.setAccessible(true);
+  @Test
+  public void jsonLoaderAcceptsDuplicateReplacementEntriesInOrder() throws Exception {
+    TextMigration[] migrations = TextMigrationParityTestSupport.parseJson("["
+        + "{\"version\":\"3.1.1.0.0\",\"replacements\":["
+        + "{\"pattern\":\"same\",\"replacement\":\"one\"},"
+        + "{\"pattern\":\"same\",\"replacement\":\"two\"}]}]");
 
-    Class<?> pairClass = Class.forName(TextMigration.class.getName() + "$Pair");
-    Field patternField = pairClass.getDeclaredField("pattern");
-    patternField.setAccessible(true);
-    Field replacementField = pairClass.getDeclaredField("replacement");
-    replacementField.setAccessible(true);
-
-    Object[] pairs = (Object[]) pairsField.get(textMigration);
-    List<PairData> data = new ArrayList<>(pairs.length);
-    for (Object pair : pairs) {
-      data.add(new PairData(((Pattern) patternField.get(pair)).pattern(), (String) replacementField.get(pair)));
-    }
-    return data;
+    List<TextMigrationParityTestSupport.PairData> pairs = TextMigrationParityTestSupport.pairsOf(migrations[0]);
+    assertEquals(2, pairs.size());
+    assertEquals("one", pairs.get(0).replacement);
+    assertEquals("two", pairs.get(1).replacement);
   }
 
-  private static final class PairData {
-    private final String pattern;
-    private final String replacement;
+  @Test
+  public void jsonLoaderRejectsMalformedJson() {
+    assertThrows(IOException.class, () -> TextMigrationParityTestSupport.parseJson("["));
+  }
 
-    private PairData(String pattern, String replacement) {
-      this.pattern = pattern;
-      this.replacement = replacement;
-    }
+  @Test
+  public void jsonLoaderSurfacesMissingVersionField() {
+    assertThrows(NullPointerException.class, () -> TextMigrationParityTestSupport.parseJson("["
+        + "{\"replacements\":[{\"pattern\":\"legacy\",\"replacement\":\"modern\"}]}]"));
+  }
+
+  @Test
+  public void jsonLoaderSurfacesMissingPatternField() {
+    assertThrows(NullPointerException.class, () -> TextMigrationParityTestSupport.parseJson("["
+        + "{\"version\":\"3.1.1.0.0\",\"replacements\":[{\"replacement\":\"modern\"}]}]"));
+  }
+
+  @Test
+  public void jsonLoaderSurfacesInvalidPatternField() {
+    assertThrows(PatternSyntaxException.class, () -> TextMigrationParityTestSupport.parseJson("["
+        + "{\"version\":\"3.1.1.0.0\",\"replacements\":[{\"pattern\":\"[\",\"replacement\":\"modern\"}]}]"));
   }
 }

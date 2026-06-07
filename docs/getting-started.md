@@ -163,7 +163,7 @@ GUI mode enabled:
 
 ```bash
 xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
-"${xvfb_run}" --auto-servernum mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
+"${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
 ```
 
 It then runs the Getting Started GUI validator inside Xvfb with an explicit
@@ -172,7 +172,7 @@ shared action. In the workflow `run` block, that looks like this:
 
 ```bash
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
-  "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui
+  "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui
 ```
 
 The workflow uses the shared action output, not a hard-coded filesystem path.
@@ -277,7 +277,7 @@ Key output files:
 | Build everything | `mvn compile install` |
 | Run all tests | `mvn test` |
 | Run CI-like headless tests | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
-| Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 xvfb-run --auto-servernum ./scripts/validate-getting-started.sh --gui` |
+| Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui` |
 | Run Checkstyle | `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml` |
 | Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify` |
 | Start the IDE after a full build | `cd alice-ide && mvn exec:java -Dalice-ide` |

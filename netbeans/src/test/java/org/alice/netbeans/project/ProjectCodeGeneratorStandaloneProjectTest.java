@@ -1318,12 +1318,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
       List<Path> javaFxModulePath,
       Path programMarker,
       String... args) throws Exception {
-    List<String> command = new ArrayList<>();
-    command.add(xvfbRun.toAbsolutePath().normalize().toString());
-    command.add("--auto-servernum");
-    command.add("-a");
-    command.add("-s");
-    command.add("-screen 0 1024x768x24 -ac");
+    List<String> command = javaFxXvfbRunPrefix(xvfbRun);
     command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     command.add("-Dalice.test.program.marker=" + programMarker.toAbsolutePath().normalize());
     command.add("--module-path");
@@ -1334,6 +1329,15 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
     command.add(distJar.toAbsolutePath().normalize().toString());
     command.addAll(Arrays.asList(args));
     return runCommand(workingDirectory, command);
+  }
+
+  static List<String> javaFxXvfbRunPrefix(Path xvfbRun) {
+    List<String> command = new ArrayList<>();
+    command.add(xvfbRun.toAbsolutePath().normalize().toString());
+    command.add("--auto-servernum");
+    command.add("-s");
+    command.add("-screen 0 1024x768x24 -ac");
+    return command;
   }
 
   private static ProcessResult runForkedJava(Path workingDirectory, List<String> javaArguments) throws Exception {
@@ -1392,12 +1396,7 @@ public class ProjectCodeGeneratorStandaloneProjectTest {
   }
 
   private static boolean xvfbRunStartsJava(Path xvfbRun) throws Exception {
-    List<String> command = new ArrayList<>();
-    command.add(xvfbRun.toAbsolutePath().normalize().toString());
-    command.add("--auto-servernum");
-    command.add("-a");
-    command.add("-s");
-    command.add("-screen 0 1024x768x24 -ac");
+    List<String> command = javaFxXvfbRunPrefix(xvfbRun);
     command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     command.add("-version");
 

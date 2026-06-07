@@ -28,9 +28,9 @@ The headed Ubuntu GUI validation lane runs under Xvfb:
 
 ```bash
 xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
-"${xvfb_run}" --auto-servernum mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
+"${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
-  "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui
+  "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui
 ```
 
 Run the golden Alice project corpus validator:
@@ -70,6 +70,20 @@ mvn -pl core/story-api-migration \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
   -Dtest=DualBaselineReplayHarnessTest \
+  test
+```
+
+Run the text migration registry parity lane:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=TextMigrationRegistryTest,TextMigrationJsonLoaderTest,TextMigrationJsonGeneratorTest \
   test
 ```
 
@@ -129,7 +143,7 @@ running the same validator from the checkout under review.
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |
 | Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes with `java.awt.headless=true`, and the no-Sims launch probe reaches the expected GUI-required message. |
-| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims Maven validation passes under Xvfb with `java.awt.headless=false`, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
+| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims Maven validation passes under Xvfb with `java.awt.headless=false`, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
 | Local GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
 | All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
 
@@ -472,6 +486,13 @@ Common patterns:
 Modernization changes usually start with a characterization test. That protects
 the current Alice 3 behavior before a large class is split or moved.
 
+The text migration registry parity lane applies that rule to generated migration
+JSON. See
+[Verify Text Migration Registry Parity](howto/verify-text-migration-parity.md)
+for the focused workflow and
+[Text Migration Registry Parity](reference/text-migration-registry-parity.md)
+for the JSON, loader, generator, and test contracts.
+
 ### Focused module validation
 
 When you touch one area, prefer a targeted Maven command before you run the
@@ -497,9 +518,13 @@ New coverage follows a three-tier approach. See
 Run core/ide tests with coverage:
 
 ```bash
-xvfb-run mvn -pl core/ide -am -DfailIfNoTests=false \
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn -pl core/ide -am -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false verify
 ```
+
+Maintained Markdown examples use the resilient Xvfb prefix documented in the
+[JavaFX Xvfb Launcher Reference](reference/javafx-xvfb-launcher.md).
 
 Check the JaCoCo report:
 
