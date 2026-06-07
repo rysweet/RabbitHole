@@ -360,6 +360,7 @@ run_all_lane() {
     return 0
   fi
 
+  run_gui_maven_validation
   run_gui_launch
 }
 

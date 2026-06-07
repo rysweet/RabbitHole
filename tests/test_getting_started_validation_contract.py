@@ -285,6 +285,15 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
             lane_body.index("run_gui_launch"),
         )
 
+    def test_all_lane_runs_non_headless_maven_validation_before_gui_launch(self) -> None:
+        source = script_text()
+        body = function_body(source, "run_all_lane")
+
+        self.assertLess(
+            body.index("run_gui_maven_validation"),
+            body.index("run_gui_launch"),
+        )
+
     def test_timeout_kills_stubborn_gui_processes_after_grace_period(self) -> None:
         source = script_text()
         body = function_body(source, "run_with_timeout")
