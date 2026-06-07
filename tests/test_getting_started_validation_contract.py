@@ -273,13 +273,16 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
     def test_timeout_kills_stubborn_gui_processes_after_grace_period(self) -> None:
         source = script_text()
         body = function_body(source, "run_with_timeout")
+        terminate_body = function_body(source, "terminate_process_tree")
 
-        self.assertIn("kill \"${command_pid}\"", body)
+        self.assertIn("terminate_process_tree \"${command_pid}\" TERM", body)
         self.assertIn("grace_seconds", body)
-        self.assertIn("kill -9 \"${command_pid}\"", body)
+        self.assertIn("terminate_process_tree \"${command_pid}\" KILL", body)
+        self.assertIn("pgrep -P \"${root_pid}\"", terminate_body)
+        self.assertIn("kill \"-${signal}\" \"${root_pid}\"", terminate_body)
         self.assertLess(
-            body.index("kill \"${command_pid}\""),
-            body.index("kill -9 \"${command_pid}\""),
+            body.index("terminate_process_tree \"${command_pid}\" TERM"),
+            body.index("terminate_process_tree \"${command_pid}\" KILL"),
         )
 
 
@@ -311,7 +314,8 @@ class SharedXvfbSetupActionContract(unittest.TestCase):
         self.assertIn("xvfb-run", source)
         self.assertRegex(source, r"command\s+-v\s+xvfb-run")
         self.assertRegex(source, r"case\s+\"\$\{xvfb_run\}\"")
-        self.assertRegex(source, r"\*/\)")
+        self.assertRegex(source, r"/\*\)")
+        self.assertNotRegex(source, r"\*/\)")
         self.assertRegex(source, r"GITHUB_OUTPUT")
         self.assertRegex(normalized, r"outputs: .*xvfb-run:")
 

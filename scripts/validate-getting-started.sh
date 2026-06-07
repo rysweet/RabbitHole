@@ -102,6 +102,18 @@ print_command() {
   printf '\n'
 }
 
+terminate_process_tree() {
+  local root_pid="$1"
+  local signal="$2"
+  local child_pid
+
+  for child_pid in $(pgrep -P "${root_pid}" 2>/dev/null || true); do
+    terminate_process_tree "${child_pid}" "${signal}"
+  done
+
+  kill "-${signal}" "${root_pid}" 2>/dev/null || true
+}
+
 run_with_timeout() {
   local output_file="$1"
   local timeout_seconds="$2"
@@ -117,13 +129,13 @@ run_with_timeout() {
   local elapsed_seconds=0
   while kill -0 "${command_pid}" 2>/dev/null; do
     if (( elapsed_seconds >= timeout_seconds )); then
-      kill "${command_pid}" 2>/dev/null || true
+      terminate_process_tree "${command_pid}" TERM
       local grace_seconds=5
       while (( grace_seconds > 0 )) && kill -0 "${command_pid}" 2>/dev/null; do
         sleep 1
         grace_seconds=$((grace_seconds - 1))
       done
-      kill -9 "${command_pid}" 2>/dev/null || true
+      terminate_process_tree "${command_pid}" KILL
       wait "${command_pid}" 2>/dev/null || true
       return 124
     fi
