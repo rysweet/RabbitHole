@@ -782,7 +782,6 @@ final class TextMigrationRegistryLateVersions {
           createMoreSpecificFieldReplacement("U_F_O_PROP", "org.lgna.story.resources.prop.UFOPropResource"),
 
           //added for older projects
-          //todo: do others require this?
           "name=\"org.lgna.story.resources.prop.UFOResource",
           "name=\"org.lgna.story.resources.prop.UFOPropResource",
           //

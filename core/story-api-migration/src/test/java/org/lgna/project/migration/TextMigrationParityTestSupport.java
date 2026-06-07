@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 final class TextMigrationParityTestSupport {
@@ -105,23 +106,11 @@ final class TextMigrationParityTestSupport {
   }
 
   static TextMigration[] parseJson(String json) throws IOException {
-    TextMigrationJsonLoader.MigrationJson[] migrations =
-        OBJECT_MAPPER.readValue(json, TextMigrationJsonLoader.MigrationJson[].class);
-    TextMigration[] textMigrations = new TextMigration[migrations.length];
-    for (int i = 0; i < migrations.length; i++) {
-      textMigrations[i] = migrations[i].toTextMigration();
-    }
-    return textMigrations;
+    return toTextMigrations(OBJECT_MAPPER.readValue(json, TextMigrationJsonLoader.MigrationJson[].class));
   }
 
   static List<MigrationData> dataFromJson(Path jsonPath) throws Exception {
-    TextMigrationJsonLoader.MigrationJson[] migrations =
-        OBJECT_MAPPER.readValue(jsonPath.toFile(), TextMigrationJsonLoader.MigrationJson[].class);
-    TextMigration[] textMigrations = new TextMigration[migrations.length];
-    for (int i = 0; i < migrations.length; i++) {
-      textMigrations[i] = migrations[i].toTextMigration();
-    }
-    return dataOf(textMigrations);
+    return dataOf(toTextMigrations(OBJECT_MAPPER.readValue(jsonPath.toFile(), TextMigrationJsonLoader.MigrationJson[].class)));
   }
 
   static JsonNode jsonTree(Path jsonPath) throws IOException {
@@ -150,26 +139,35 @@ final class TextMigrationParityTestSupport {
     throw new IllegalStateException("Unable to resolve committed text migration JSON");
   }
 
-  private static List<MigrationJson> serialize(TextMigration[] textMigrations) throws Exception {
-    List<MigrationJson> migrations = new ArrayList<>(textMigrations.length);
+  private static List<TextMigrationJsonLoader.MigrationJson> serialize(TextMigration[] textMigrations) throws Exception {
+    List<TextMigrationJsonLoader.MigrationJson> migrations = new ArrayList<>(textMigrations.length);
     for (TextMigration textMigration : textMigrations) {
-      MigrationJson migration = new MigrationJson();
+      TextMigrationJsonLoader.MigrationJson migration = new TextMigrationJsonLoader.MigrationJson();
       migration.version = textMigration.getResultVersion().toString();
 
       List<PairData> pairs = pairsOf(textMigration);
-      migration.replacements = new ArrayList<>(pairs.size());
+      migration.replacements = new TextMigrationJsonLoader.ReplacementJson[pairs.size()];
+      int i = 0;
       for (PairData pair : pairs) {
-        ReplacementJson replacement = new ReplacementJson();
+        TextMigrationJsonLoader.ReplacementJson replacement = new TextMigrationJsonLoader.ReplacementJson();
         replacement.pattern = pair.pattern;
         replacement.replacement = pair.replacement;
-        migration.replacements.add(replacement);
+        migration.replacements[i++] = replacement;
       }
       migrations.add(migration);
     }
     return migrations;
   }
 
-  private static TextMigration[] withUseLegacyRegistriesProperty(String value, MigrationSupplier supplier) throws Exception {
+  private static TextMigration[] toTextMigrations(TextMigrationJsonLoader.MigrationJson[] migrations) {
+    TextMigration[] textMigrations = new TextMigration[migrations.length];
+    for (int i = 0; i < migrations.length; i++) {
+      textMigrations[i] = migrations[i].toTextMigration();
+    }
+    return textMigrations;
+  }
+
+  private static TextMigration[] withUseLegacyRegistriesProperty(String value, Callable<TextMigration[]> supplier) throws Exception {
     String previousValue = System.getProperty(TextMigrationRegistry.USE_LEGACY_REGISTRIES_PROPERTY);
     try {
       if (value == null) {
@@ -177,7 +175,7 @@ final class TextMigrationParityTestSupport {
       } else {
         System.setProperty(TextMigrationRegistry.USE_LEGACY_REGISTRIES_PROPERTY, value);
       }
-      return supplier.get();
+      return supplier.call();
     } finally {
       if (previousValue == null) {
         System.clearProperty(TextMigrationRegistry.USE_LEGACY_REGISTRIES_PROPERTY);
@@ -203,10 +201,6 @@ final class TextMigrationParityTestSupport {
     } catch (ClassNotFoundException exception) {
       throw new ExceptionInInitializerError(exception);
     }
-  }
-
-  private interface MigrationSupplier {
-    TextMigration[] get() throws Exception;
   }
 
   static final class MigrationData {
@@ -271,16 +265,6 @@ final class TextMigrationParityTestSupport {
     public String toString() {
       return "PairData{pattern='" + this.pattern + "', replacement='" + this.replacement + "'}";
     }
-  }
-
-  static final class MigrationJson {
-    public String version;
-    public List<ReplacementJson> replacements = new ArrayList<>();
-  }
-
-  static final class ReplacementJson {
-    public String pattern;
-    public String replacement;
   }
 
   private TextMigrationParityTestSupport() {

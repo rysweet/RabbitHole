@@ -67,18 +67,15 @@ public class TextMigration extends AbstractMigration {
 
     public String migrate(String source) {
       Matcher matcher = this.pattern.matcher(source);
-      if (matcher.find()) {
-        //todo?
-        Logger.outln("replace all", this.pattern, this.replacement);
-        matcher.reset();
-        String rv = matcher.replaceAll(this.replacement);
-        //        java.util.regex.Matcher postMatcher = this.pattern.matcher( rv );
-        //        assert postMatcher.find() == false : rv;
-        //edu.cmu.cs.dennisc.java.util.logging.Logger.outln( rv );
-        return rv;
-      } else {
+      if (!matcher.find()) {
         return source;
       }
+      Logger.outln("replace all", this.pattern, this.replacement);
+      if (this.replacement == null) {
+        return source;
+      }
+      matcher.reset();
+      return matcher.replaceAll(this.replacement);
     }
 
     public boolean isPatternEqual(Pair other) {

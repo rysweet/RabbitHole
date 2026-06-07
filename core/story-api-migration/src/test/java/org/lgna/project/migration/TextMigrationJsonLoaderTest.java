@@ -1,6 +1,7 @@
 package org.lgna.project.migration;
 
 import org.junit.Test;
+import org.lgna.project.Version;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,6 +33,18 @@ public class TextMigrationJsonLoaderTest {
         TextMigrationParityTestSupport.migrationForVersion(migrations, "3.2.110.0.0"),
         "name=\"OVAL\">\\s*<declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\"",
         "name=\"OVAL_DESERT\"> <declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\""));
+  }
+
+  @Test
+  public void nullReplacementEntriesAreNoOpTextMigrations() {
+    TextMigration migration = new TextMigration(
+        new Version("3.1.9.0.0"),
+        "legacyName",
+        MigrationManager.NO_REPLACEMENT,
+        "oldName",
+        "newName");
+
+    assertEquals("legacyName and newName", migration.migrate("legacyName and oldName"));
   }
 
   @Test
