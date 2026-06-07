@@ -35,6 +35,18 @@ public class TextMigrationJsonLoaderTest {
   }
 
   @Test
+  public void nullReplacementEntriesAreNoOpTextMigrations() {
+    TextMigration migration = new TextMigration(
+        new org.lgna.project.Version("3.1.9.0.0"),
+        "legacyName",
+        MigrationManager.NO_REPLACEMENT,
+        "oldName",
+        "newName");
+
+    assertEquals("legacyName and newName", migration.migrate("legacyName and oldName"));
+  }
+
+  @Test
   public void jsonLoaderPreservesMigrationAndReplacementOrder() throws Exception {
     TextMigration[] migrations = TextMigrationParityTestSupport.parseJson("["
         + "{\"version\":\"3.1.1.0.0\",\"replacements\":["

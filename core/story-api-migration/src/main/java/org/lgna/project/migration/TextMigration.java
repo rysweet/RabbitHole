@@ -70,6 +70,9 @@ public class TextMigration extends AbstractMigration {
       if (matcher.find()) {
         //todo?
         Logger.outln("replace all", this.pattern, this.replacement);
+        if (this.replacement == null) {
+          return source;
+        }
         matcher.reset();
         String rv = matcher.replaceAll(this.replacement);
         //        java.util.regex.Matcher postMatcher = this.pattern.matcher( rv );
