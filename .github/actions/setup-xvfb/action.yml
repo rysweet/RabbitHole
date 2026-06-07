@@ -24,10 +24,6 @@ runs:
         xvfb_run="$(command -v xvfb-run)"
         case "${xvfb_run}" in
           /*) ;;
-          */)
-            printf 'xvfb-run resolved to non-absolute path: %s\n' "${xvfb_run}" >&2
-            exit 1
-            ;;
           *)
             printf 'xvfb-run resolved to non-absolute path: %s\n' "${xvfb_run}" >&2
             exit 1
