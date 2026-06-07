@@ -74,7 +74,7 @@ Run: git submodule update --init tweedle-lang
 | --- | --- | --- |
 | `./scripts/validate-getting-started.sh` | Default local or CI validation | Runs the headless lane. |
 | `./scripts/validate-getting-started.sh --headless` | Explicit CI-safe validation | Same as the default lane. |
-| `./scripts/validate-getting-started.sh --gui` | Local desktop validation | Requires a real graphical desktop. Exits non-zero if no GUI is available or the platform is blocked. |
+| `./scripts/validate-getting-started.sh --gui` | GUI validation | Runs the documented no-Sims GUI launch path with `java.awt.headless=false`. Requires either a real desktop display or an Xvfb display such as the headed Ubuntu CI lane. Exits non-zero if no GUI is available or the platform is blocked. |
 | `./scripts/validate-getting-started.sh --all` | Local full validation | Runs headless validation, then runs GUI validation only when supported; unsupported GUI lanes are reported as skipped or blocked without failing after headless validation passes. |
 | `./scripts/validate-getting-started.sh --help` | Usage reference | Prints supported flags and exits. |
 
@@ -90,9 +90,10 @@ wrong lane.
 
 ### Headless lane
 
-The headless lane is CI-safe and is the lane the workflow runs. It verifies the
-documented no-Sims install path with the same Maven flags users should run on
-machines without Sims assets or a desktop display:
+The headless lane is CI-safe and verifies CLI/docs-safe launch behavior with
+`java.awt.headless=true`. It checks the documented no-Sims install path with the
+same Maven flags users should run on machines without Sims assets or a desktop
+display:
 
 ```bash
 mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
@@ -122,26 +123,63 @@ Alice desktop launch requires a graphical environment.
 ```
 
 Any other launch result is a failure because it means the Getting Started
-instructions no longer match the application behavior.
+instructions no longer match the application behavior. This lane intentionally
+does not prove that Ubuntu GUI/display-dependent behavior works; it proves that
+the documented launch command fails safely and predictably when Java AWT is
+headless.
 
-### Desktop GUI lane
+### GUI lane
 
-The GUI lane runs the same no-Sims launch path on a machine that can actually
-show the Alice desktop:
+The GUI lane runs the same no-Sims launch path on a machine that can provide a
+Java AWT display:
 
 ```bash
 ./scripts/validate-getting-started.sh --gui
 ```
 
-Use this lane only from a local desktop session with Java AWT display support.
+Use this lane from a local desktop session with Java AWT display support.
 Examples include a Linux desktop with a usable `DISPLAY` or Wayland bridge, a
-Windows desktop session, or an Intel macOS desktop session. The lane is not
-intended for ordinary headless CI.
+Windows desktop session, or an Intel macOS desktop session. The headed Ubuntu
+Xvfb CI lane runs this same GUI lane on an Xvfb-backed display and launches
+with `-Djava.awt.headless=false` so it cannot silently fall back to headless
+behavior.
 
 If there is no graphical environment, explicit `--gui` must exit non-zero with
 a clear message because the caller requested GUI validation. In `--all`, the
 same unavailable GUI environment is reported as a skip after the headless lane
 passes, and the command exits successfully.
+
+### Headed Ubuntu Xvfb CI lane
+
+The headed Ubuntu Xvfb workflow job is the CI version of the GUI lane. It uses
+the shared Xvfb setup action to install Ubuntu's Xvfb tooling, resolve
+`xvfb-run` to an absolute path exposed as an action output, and fail before
+validation starts if `xvfb-run` is unavailable.
+
+The job must remain separate from the headless validation path because an
+Xvfb-wrapped `--headless` run still uses `java.awt.headless=true` and is not
+equivalent to a headed GUI launch. The headed job runs Maven under Xvfb with
+GUI mode enabled:
+
+```bash
+xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
+"${xvfb_run}" --auto-servernum mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
+```
+
+It then runs the Getting Started GUI validator inside Xvfb with an explicit
+bounded startup timeout, using the absolute `xvfb-run` path provided by the
+shared action. In the workflow `run` block, that looks like this:
+
+```bash
+RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
+  "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui
+```
+
+The workflow uses the shared action output, not a hard-coded filesystem path.
+The timeout is part of the CI contract: the GUI launch probe must either start
+far enough to prove the documented display-dependent launch path or fail within
+the configured startup window. A hung Alice startup is a CI failure, not a
+skipped GUI validation.
 
 ### macOS Apple Silicon GUI blocker
 
@@ -239,6 +277,7 @@ Key output files:
 | Build everything | `mvn compile install` |
 | Run all tests | `mvn test` |
 | Run CI-like headless tests | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
+| Preview planned GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 xvfb-run --auto-servernum ./scripts/validate-getting-started.sh --gui` |
 | Run Checkstyle | `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml` |
 | Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify` |
 | Start the IDE after a full build | `cd alice-ide && mvn exec:java -Dalice-ide` |

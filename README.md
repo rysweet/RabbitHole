@@ -70,21 +70,26 @@ outside-in validation of the checkout under review:
 
     python3 alice_qa.py getting-started validate --headless
 
-The default validation lane is CI-safe and headless. It verifies Git checkout
-state, the initialized `tweedle-lang` grammar submodule, the documented no-Sims
-Maven install command, and the no-Sims Alice launch command up to the expected
-GUI-required boundary. On a desktop with a real graphical environment, run the
-GUI lane explicitly:
+The CI-safe headless lane checks CLI/docs-safe launch behavior with
+`java.awt.headless=true`: Git checkout state, the initialized `tweedle-lang`
+grammar submodule, the documented no-Sims Maven install command, and the no-Sims
+Alice launch command up to the expected GUI-required boundary. The headed
+Ubuntu Xvfb lane checks GUI/display-dependent behavior on Ubuntu without a
+physical display by running the GUI lane under the shared Xvfb action with
+`java.awt.headless=false` and a bounded startup timeout.
+
+On a desktop with a real graphical environment, run the same GUI lane explicitly:
 
     ./scripts/validate-getting-started.sh --gui
 
 Use `--all` to run the headless lane and attempt the GUI lane when the platform
-supports it. macOS Apple Silicon desktop GUI launch is treated as a known platform
-blocker, so explicit `--gui` validation exits non-zero with a blocked result on
-that platform. `--all` reports the blocked GUI lane without failing
+supports it. macOS Apple Silicon desktop GUI launch is treated as a known
+platform blocker, so explicit `--gui` validation exits non-zero with a blocked
+result on that platform. `--all` reports the blocked GUI lane without failing
 after headless validation passes. See [Getting started](docs/getting-started.md#validate-this-checkout)
 and [Testing](docs/testing.md#getting-started-validation-lanes) for the
-validation lanes, skip rules, and failure semantics.
+headless validation lane, headed Xvfb validation lane, skip rules, and failure
+semantics.
 
 After successfully compiling and installing the Alice jars into the mvn
 repository, you can launch the Alice IDE.

@@ -24,6 +24,15 @@ Run the no-Sims, headless-friendly install lane:
 mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
+The headed Ubuntu GUI validation lane runs under Xvfb:
+
+```bash
+xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
+"${xvfb_run}" --auto-servernum mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
+RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
+  "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui
+```
+
 Run the golden Alice project corpus validator:
 
 ```bash
@@ -111,14 +120,17 @@ immediately after cloning.
 
 `tests/test_getting_started_validation_contract.py` protects the documented
 command surface from drift by checking the validator flags, submodule failure
-guidance, no-Sims launch command, and GUI skip/block semantics described here.
+guidance, no-Sims launch command, and GUI skip/block behavior described here.
+Those contract tests also assert the shared Xvfb action, separate headed job,
+bounded startup timeout, and preserved headless lane.
 `python3 alice_qa.py getting-started validate` is the wrapper entry point for
 running the same validator from the checkout under review.
 
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |
-| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes, and the no-Sims launch probe reaches the expected GUI-required message. |
-| GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
+| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes with `java.awt.headless=true`, and the no-Sims launch probe reaches the expected GUI-required message. |
+| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims Maven validation passes under Xvfb with `java.awt.headless=false`, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
+| Local GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
 | All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
 
 The headless lane runs this Maven command:
@@ -137,6 +149,15 @@ mvn -DincludeSims=false exec:java -Dalice-ide
 The headless validator adds `-Djava.awt.headless=true` to that launch probe so
 the command proves the GUI boundary without opening the IDE on local desktops.
 
+The headed Ubuntu Xvfb lane is intentionally separate. It uses the shared Xvfb
+setup action to install Xvfb from Ubuntu apt repositories and expose an absolute
+`xvfb-run` path to workflow steps. Running `--headless` under Xvfb is not a GUI
+validation because Java still runs with `java.awt.headless=true`; the headed
+lane must use `-Djava.awt.headless=false` and `--gui` so display-dependent
+behavior is actually exercised. The `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60`
+setting is required in the CI job so a failed GUI startup cannot hang the
+workflow indefinitely.
+
 ### Skip, fail, and block behavior
 
 | Situation | `--headless` | `--gui` | `--all` |
@@ -147,8 +168,10 @@ the command proves the GUI boundary without opening the IDE on local desktops.
 | macOS Apple Silicon desktop GUI launch | Headless lane remains valid | Exit non-zero as a known platform blocker | Report blocked and exit successfully after headless validation passes |
 | Unknown validator flag | Fail | Fail | Fail |
 
-CI integration calls the headless lane only. Local users should run `--gui`
-only when their desktop session supports Java GUI launch.
+CI integration keeps the headless lane for CLI/docs-safe launch behavior with
+`java.awt.headless=true` and adds a separate headed Ubuntu Xvfb lane for
+GUI/display-dependent behavior without a physical display. Local users should
+run `--gui` only when their desktop session supports Java GUI launch.
 
 ## Golden Alice project corpus validator
 

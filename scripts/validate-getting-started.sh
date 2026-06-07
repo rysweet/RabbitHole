@@ -20,7 +20,7 @@ Modes:
   --headless  CI-safe default. Checks Git/submodule setup, runs the no-Sims
               Maven test lane, then verifies the no-Sims launch reaches the
               expected GUI-required boundary in headless mode.
-  --gui       Local desktop lane. Requires a real graphical environment and
+  --gui       GUI lane. Requires a real or Xvfb graphical environment and
               fails when GUI validation is unavailable or blocked.
   --all       Runs --headless first, then attempts --gui when supported. GUI
               unavailability or the macOS Apple Silicon blocker is
@@ -217,20 +217,20 @@ check_gui_capability() {
   awt_check_dir="$(mktemp -d)"
   add_temp_path "${awt_check_dir}"
   cat >"${awt_check_dir}/AwtDisplayCheck.java" <<'JAVA'
-import java.awt.GraphicsEnvironment;
+ import java.awt.GraphicsEnvironment;
 
-public final class AwtDisplayCheck {
-  public static void main(String[] args) {
-    if (GraphicsEnvironment.isHeadless()) {
-      System.err.println("No graphical environment detected: Java AWT reports headless.");
-      System.exit(1);
-    }
+ public final class AwtDisplayCheck {
+   public static void main(String[] args) {
+     if (GraphicsEnvironment.isHeadless()) {
+       System.err.println("No graphical environment detected: Java AWT reports headless.");
+       System.exit(1);
+     }
+   }
   }
-}
 JAVA
 
   local awt_check_output
-  if ! awt_check_output="$(java "${awt_check_dir}/AwtDisplayCheck.java" 2>&1)"; then
+  if ! awt_check_output="$(java -Djava.awt.headless=false "${awt_check_dir}/AwtDisplayCheck.java" 2>&1)"; then
     if [[ "${awt_check_output}" == *"No graphical environment detected"* ]]; then
       printf 'No graphical environment detected: Java AWT reports headless.'
     else
@@ -244,6 +244,7 @@ run_gui_launch() {
   local gui_launch_maven=(
     mvn
     -DincludeSims=false
+    -Djava.awt.headless=false
     exec:java
     -Dalice-ide
   )

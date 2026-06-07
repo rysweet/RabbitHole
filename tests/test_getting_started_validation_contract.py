@@ -19,6 +19,7 @@ TESTING_DOC_PATH = REPO_ROOT / "docs" / "testing.md"
 ALICE_TEST_WORKFLOW_PATH = (
     REPO_ROOT / ".github" / "workflows" / "alice-test-ci.yml"
 )
+SETUP_XVFB_ACTION_PATH = REPO_ROOT / ".github" / "actions" / "setup-xvfb" / "action.yml"
 
 HEADLESS_MAVEN_FLAGS = (
     "-DincludeSims=false",
@@ -33,10 +34,25 @@ LAUNCH_MAVEN_FLAGS = (
     "exec:java",
     "-Dalice-ide",
 )
+HEADED_MAVEN_FLAGS = (
+    "-DincludeSims=false",
+    "-Dinstall4j.skip",
+    "-Dcheckstyle.skip",
+    "-Djava.awt.headless=false",
+    "clean",
+    "install",
+)
+HEADED_GUI_LAUNCH_FLAGS = (
+    "-DincludeSims=false",
+    "-Djava.awt.headless=false",
+    "exec:java",
+    "-Dalice-ide",
+)
 EXPECTED_HEADLESS_GUI_MESSAGE = (
     "Alice desktop launch requires a graphical environment."
 )
 SUBMODULE_FIX_COMMAND = "git submodule update --init tweedle-lang"
+SETUP_XVFB_ACTION_OUTPUT = "steps.setup-xvfb.outputs.xvfb-run"
 
 
 @lru_cache(maxsize=None)
@@ -50,6 +66,32 @@ def script_text() -> str:
             "Expected executable validator at scripts/validate-getting-started.sh"
         )
     return read_text(VALIDATOR_PATH)
+
+
+def function_body(source: str, function_name: str) -> str:
+    pattern = rf"(?ms)^{re.escape(function_name)}\(\) \{{\n(?P<body>.*?)(?=^\}}\n)"
+    match = re.search(pattern, source)
+    if match is None:
+        raise AssertionError(f"Missing shell function: {function_name}")
+    return match.group("body")
+
+
+def setup_xvfb_action_text() -> str:
+    if not SETUP_XVFB_ACTION_PATH.exists():
+        raise AssertionError(
+            "Expected shared Xvfb setup action at .github/actions/setup-xvfb/action.yml"
+        )
+    return read_text(SETUP_XVFB_ACTION_PATH)
+
+
+def workflow_job_block(workflow: str, job_name: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(job_name)}:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\n|\Z)",
+        workflow,
+    )
+    if match is None:
+        raise AssertionError(f"Missing workflow job: {job_name}")
+    return match.group("body")
 
 
 class GettingStartedValidatorFileContract(unittest.TestCase):
@@ -203,6 +245,71 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
         self.assertRegex(source, r"arm64|aarch64|Apple Silicon")
         self.assertRegex(source, r"(?i)blocked")
 
+    def test_gui_capability_check_forces_java_awt_non_headless_mode(self) -> None:
+        source = script_text()
+        body = function_body(source, "check_gui_capability")
+
+        self.assertIn("-Djava.awt.headless=false", body)
+        self.assertNotIn("-Djava.awt.headless=true", body)
+        self.assertRegex(
+            body,
+            r"java\b.*-Djava\.awt\.headless=false.*AwtDisplayCheck\.java",
+        )
+
+    def test_gui_launch_probe_forces_non_headless_maven_launch(self) -> None:
+        source = script_text()
+        body = function_body(source, "run_gui_launch")
+        normalized = re.sub(r"\s+", " ", body)
+
+        for token in HEADED_GUI_LAUNCH_FLAGS:
+            with self.subTest(token=token):
+                self.assertIn(token, normalized)
+
+        self.assertNotIn("-Djava.awt.headless=true", body)
+        self.assertIn("run_with_timeout", body)
+        self.assertIn("LAUNCH_TIMEOUT_SECONDS", body)
+        self.assertIn("124", body)
+
+
+class SharedXvfbSetupActionContract(unittest.TestCase):
+    def test_shared_xvfb_setup_action_exists_at_workflow_local_path(self) -> None:
+        self.assertTrue(
+            SETUP_XVFB_ACTION_PATH.exists(),
+            "Expected shared Xvfb setup action at .github/actions/setup-xvfb/action.yml",
+        )
+
+    def test_shared_xvfb_setup_action_uses_composite_strict_bash(self) -> None:
+        source = setup_xvfb_action_text()
+
+        self.assertIn("using: composite", source)
+        self.assertIn("shell: bash", source)
+        self.assertIn("set -euo pipefail", source)
+
+    def test_shared_xvfb_setup_action_installs_only_ubuntu_xvfb_from_apt(self) -> None:
+        source = setup_xvfb_action_text()
+
+        self.assertIn("sudo apt-get update", source)
+        self.assertIn("sudo apt-get install -y --no-install-recommends xvfb", source)
+        self.assertNotRegex(source, r"\b(curl|wget|npm|pip|brew|dnf|yum)\b")
+
+    def test_shared_xvfb_setup_action_exposes_absolute_xvfb_run_output(self) -> None:
+        source = setup_xvfb_action_text()
+        normalized = re.sub(r"\s+", " ", source)
+
+        self.assertIn("xvfb-run", source)
+        self.assertRegex(source, r"command\s+-v\s+xvfb-run")
+        self.assertRegex(source, r"case\s+\"\$\{xvfb_run\}\"")
+        self.assertRegex(source, r"\*/\)")
+        self.assertRegex(source, r"GITHUB_OUTPUT")
+        self.assertRegex(normalized, r"outputs: .*xvfb-run:")
+
+    def test_shared_xvfb_setup_action_does_not_accept_arbitrary_execution_inputs(self) -> None:
+        source = setup_xvfb_action_text()
+
+        self.assertNotRegex(source, r"(?m)^inputs:\s*$")
+        self.assertNotRegex(source, r"(?m)^\s*eval\b")
+        self.assertNotIn("${var@P}", source)
+
 
 class GettingStartedValidationDocsContract(unittest.TestCase):
     def test_readme_exposes_validator_and_lanes(self) -> None:
@@ -261,23 +368,95 @@ class GettingStartedValidationDocsContract(unittest.TestCase):
         self.assertIn("## Validate this checkout", getting_started)
         self.assertIn("## Getting Started validation lanes", testing)
 
+    def test_docs_define_current_headless_and_headed_xvfb_ci_semantics(self) -> None:
+        combined = "\n".join(
+            read_text(path)
+            for path in (README_PATH, GETTING_STARTED_PATH, TESTING_DOC_PATH)
+        )
+        normalized = " ".join(combined.split())
+
+        self.assertIn("headless validation", normalized)
+        self.assertIn("headed Ubuntu Xvfb", normalized)
+        self.assertIn("java.awt.headless=true", combined)
+        self.assertIn("java.awt.headless=false", combined)
+        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60", combined)
+        self.assertIn("GUI/display-dependent behavior", normalized)
+        self.assertNotIn("[PLANNED", combined)
+        self.assertNotIn("Implementation Pending", combined)
+        self.assertNotRegex(normalized, r"\bplanned headed Ubuntu Xvfb\b")
+
 
 class GettingStartedValidationCiContract(unittest.TestCase):
-    def test_alice_test_ci_uses_headless_validator_only_when_wired(self) -> None:
+    def test_alice_test_ci_uses_shared_xvfb_action_instead_of_inline_install(self) -> None:
         workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
 
-        self.assertNotIn("./scripts/validate-getting-started.sh --gui", workflow)
-        self.assertNotIn("./scripts/validate-getting-started.sh --all", workflow)
-        if "./scripts/validate-getting-started.sh" in workflow:
-            self.assertRegex(
-                workflow,
-                r"(?ms)- name: .*Getting Started.*\n.*run: ./scripts/validate-getting-started.sh(?: --headless)?",
-            )
-            self.assertIn(
-                "if: github.event_name != 'pull_request' || "
-                "steps.change-scope.outputs.maven-required == 'true'",
-                workflow,
-            )
+        self.assertIn("uses: ./.github/actions/setup-xvfb", workflow)
+        self.assertIn("id: setup-xvfb", workflow)
+        self.assertNotIn("sudo apt-get install -y --no-install-recommends xvfb", workflow)
+        self.assertNotRegex(workflow, r"command\s+-v\s+xvfb-run")
+
+    def test_headless_lane_is_preserved_as_cli_docs_safe_validation(self) -> None:
+        workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
+        test_job = workflow_job_block(workflow, "test")
+
+        self.assertRegex(
+            test_job,
+            r"(?ms)- name: Run Getting Started headless validation\n.*"
+            r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"
+            r"./scripts/validate-getting-started.sh --headless",
+        )
+        self.assertIn("-Djava.awt.headless=true", test_job)
+        self.assertNotIn("./scripts/validate-getting-started.sh --gui", test_job)
+
+    def test_headed_ubuntu_xvfb_job_is_distinct_from_matrix_headless_job(self) -> None:
+        workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
+        headed_job = workflow_job_block(workflow, "headed-ubuntu-xvfb")
+
+        self.assertIn("runs-on: ubuntu-latest", headed_job)
+        self.assertNotIn("matrix.os", headed_job)
+        self.assertIn("uses: actions/checkout@v4", headed_job)
+        self.assertIn("git submodule update --init tweedle-lang", headed_job)
+        self.assertIn("uses: actions/setup-java@v4", headed_job)
+        self.assertIn("java-version: '21'", headed_job)
+        self.assertIn("uses: ./.github/actions/setup-xvfb", headed_job)
+        self.assertIn("id: setup-xvfb", headed_job)
+        self.assertIn(SETUP_XVFB_ACTION_OUTPUT, headed_job)
+
+    def test_headed_ubuntu_xvfb_job_runs_true_non_headless_maven_validation(self) -> None:
+        workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
+        headed_job = workflow_job_block(workflow, "headed-ubuntu-xvfb")
+        normalized = re.sub(r"\s+", " ", headed_job)
+
+        self.assertIn("mvn", normalized)
+        for token in HEADED_MAVEN_FLAGS:
+            with self.subTest(token=token):
+                self.assertIn(token, normalized)
+
+        self.assertNotIn("-Djava.awt.headless=true", headed_job)
+        self.assertNotIn("--headless", headed_job)
+
+    def test_headed_ubuntu_xvfb_job_runs_bounded_gui_getting_started_validation(self) -> None:
+        workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
+        headed_job = workflow_job_block(workflow, "headed-ubuntu-xvfb")
+
+        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60", headed_job)
+        self.assertIn(SETUP_XVFB_ACTION_OUTPUT, headed_job)
+        self.assertRegex(
+            headed_job,
+            r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"
+            r"--auto-servernum.*"
+            r"./scripts/validate-getting-started.sh --gui",
+        )
+
+    def test_alice_test_ci_keeps_least_privilege_develop_pr_semantics(self) -> None:
+        workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
+
+        self.assertRegex(workflow, r"(?ms)^permissions:\n  contents: read\n")
+        self.assertIn("pull_request:", workflow)
+        self.assertIn("branches: [develop]", workflow)
+        self.assertNotIn("pull_request_target", workflow)
+        self.assertNotRegex(workflow, r"(?m)^\s+contents: write$")
+        self.assertNotRegex(workflow, r"(?m)^\s+pull-requests: write$")
 
 
 class GettingStartedValidatorSafetyContract(unittest.TestCase):

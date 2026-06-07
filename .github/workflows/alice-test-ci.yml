@@ -158,13 +158,10 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Install Xvfb
+      - name: Set up Xvfb
+        id: setup-xvfb
         if: (github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true') && runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb
+        uses: ./.github/actions/setup-xvfb
 
       - name: Show Maven version
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
@@ -176,12 +173,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            xvfb_run="$(command -v xvfb-run)"
-            case "${xvfb_run}" in
-              /*) ;;
-              *) printf 'xvfb-run resolved to non-absolute path: %s\n' "${xvfb_run}" >&2; exit 1 ;;
-            esac
-            "${xvfb_run}" -a ./scripts/validate-getting-started.sh --headless
+            "${{ steps.setup-xvfb.outputs.xvfb-run }}" -a ./scripts/validate-getting-started.sh --headless
           else
             ./scripts/validate-getting-started.sh --headless
           fi
@@ -205,3 +197,48 @@ jobs:
           printf 'Maven validation skipped: %s\n' "${{ steps.change-scope.outputs.reason }}"
           printf 'changed files:\n'
           sed 's/^/- /' "${RUNNER_TEMP}/ci-changed-files.txt"
+
+  headed-ubuntu-xvfb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          submodules: false
+          fetch-depth: 1
+
+      - name: Initialize Tweedle grammar submodule
+        run: git submodule update --init tweedle-lang
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Xvfb
+        id: setup-xvfb
+        uses: ./.github/actions/setup-xvfb
+
+      - name: Show Maven version
+        run: mvn -v
+
+      - name: Run headed no-Sims Maven validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum mvn \
+            -DincludeSims=false \
+            -Dinstall4j.skip \
+            -Dcheckstyle.skip \
+            -Djava.awt.headless=false \
+            clean \
+            install
+
+      - name: Run Getting Started GUI validation under Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum ./scripts/validate-getting-started.sh --gui
