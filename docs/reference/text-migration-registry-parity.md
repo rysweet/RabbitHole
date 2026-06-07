@@ -67,7 +67,7 @@ performs the same classpath JSON parity check and covers loader edge cases.
 | `version` | string | Yes | Alice result version passed to `new Version(...)`. |
 | `replacements` | array | No | Ordered replacement entries for the version. Missing or `null` replacement arrays are treated as empty arrays. |
 | `replacements[].pattern` | string | Yes | Regular expression pattern used by `TextMigration`. |
-| `replacements[].replacement` | string or `null` | Yes | Replacement text. `null` maps to `MigrationManager.NO_REPLACEMENT`, preserving deletion-style migrations. |
+| `replacements[].replacement` | string or `null` | Yes | Replacement text. `null` maps to `MigrationManager.NO_REPLACEMENT` for no-op migrations where a pattern is recognized but the source text remains unchanged. |
 
 The loader preserves JSON order. It does not sort, deduplicate, or silently skip
 entries. Malformed JSON is surfaced as an unchecked IO failure, and a missing
@@ -119,7 +119,7 @@ The extracted data shape is:
 | --- | --- |
 | `version` | `TextMigration.getResultVersion().toString()` for the migration. |
 | `pattern` | The original regular expression pattern for one replacement pair. |
-| `replacement` | The original replacement string, including `null` where the migration removes a match. |
+| `replacement` | The original replacement string, including `null` for no-op migrations where a pattern is recognized but the source text remains unchanged. |
 | Migration order | Array position from the loaded, generated, or legacy registry sequence. |
 | Pair order | Array position inside a single `TextMigration`. |
 
