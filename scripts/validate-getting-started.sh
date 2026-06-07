@@ -146,7 +146,11 @@ run_with_timeout() {
   local elapsed_seconds=0
   while kill -0 "${command_pid}" 2>/dev/null; do
     if (( elapsed_seconds >= timeout_seconds )); then
-      mapfile -t timed_out_pids < <(process_tree_pids "${command_pid}")
+      local timed_out_pids=()
+      local timed_out_pid
+      while IFS= read -r timed_out_pid; do
+        timed_out_pids+=("${timed_out_pid}")
+      done < <(process_tree_pids "${command_pid}")
       send_signal_to_pids TERM "${timed_out_pids[@]}"
       local grace_seconds=5
       while (( grace_seconds > 0 )) && any_pid_alive "${timed_out_pids[@]}"; do
