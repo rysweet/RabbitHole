@@ -102,16 +102,33 @@ print_command() {
   printf '\n'
 }
 
-terminate_process_tree() {
+process_tree_pids() {
   local root_pid="$1"
-  local signal="$2"
   local child_pid
 
+  printf '%s\n' "${root_pid}"
   for child_pid in $(pgrep -P "${root_pid}" 2>/dev/null || true); do
-    terminate_process_tree "${child_pid}" "${signal}"
+    process_tree_pids "${child_pid}"
   done
+}
 
-  kill "-${signal}" "${root_pid}" 2>/dev/null || true
+send_signal_to_pids() {
+  local signal="$1"
+  shift
+  local pid
+
+  for pid in "$@"; do
+    kill "-${signal}" "${pid}" 2>/dev/null || true
+  done
+}
+
+any_pid_alive() {
+  local pid
+
+  for pid in "$@"; do
+    kill -0 "${pid}" 2>/dev/null && return 0
+  done
+  return 1
 }
 
 run_with_timeout() {
@@ -129,13 +146,14 @@ run_with_timeout() {
   local elapsed_seconds=0
   while kill -0 "${command_pid}" 2>/dev/null; do
     if (( elapsed_seconds >= timeout_seconds )); then
-      terminate_process_tree "${command_pid}" TERM
+      mapfile -t timed_out_pids < <(process_tree_pids "${command_pid}")
+      send_signal_to_pids TERM "${timed_out_pids[@]}"
       local grace_seconds=5
-      while (( grace_seconds > 0 )) && kill -0 "${command_pid}" 2>/dev/null; do
+      while (( grace_seconds > 0 )) && any_pid_alive "${timed_out_pids[@]}"; do
         sleep 1
         grace_seconds=$((grace_seconds - 1))
       done
-      terminate_process_tree "${command_pid}" KILL
+      send_signal_to_pids KILL "${timed_out_pids[@]}"
       wait "${command_pid}" 2>/dev/null || true
       return 124
     fi

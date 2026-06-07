@@ -273,16 +273,19 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
     def test_timeout_kills_stubborn_gui_processes_after_grace_period(self) -> None:
         source = script_text()
         body = function_body(source, "run_with_timeout")
-        terminate_body = function_body(source, "terminate_process_tree")
+        tree_body = function_body(source, "process_tree_pids")
+        signal_body = function_body(source, "send_signal_to_pids")
 
-        self.assertIn("terminate_process_tree \"${command_pid}\" TERM", body)
+        self.assertIn("process_tree_pids \"${command_pid}\"", body)
+        self.assertIn("send_signal_to_pids TERM \"${timed_out_pids[@]}\"", body)
         self.assertIn("grace_seconds", body)
-        self.assertIn("terminate_process_tree \"${command_pid}\" KILL", body)
-        self.assertIn("pgrep -P \"${root_pid}\"", terminate_body)
-        self.assertIn("kill \"-${signal}\" \"${root_pid}\"", terminate_body)
+        self.assertIn("any_pid_alive \"${timed_out_pids[@]}\"", body)
+        self.assertIn("send_signal_to_pids KILL \"${timed_out_pids[@]}\"", body)
+        self.assertIn("pgrep -P \"${root_pid}\"", tree_body)
+        self.assertIn("kill \"-${signal}\" \"${pid}\"", signal_body)
         self.assertLess(
-            body.index("terminate_process_tree \"${command_pid}\" TERM"),
-            body.index("terminate_process_tree \"${command_pid}\" KILL"),
+            body.index("send_signal_to_pids TERM \"${timed_out_pids[@]}\""),
+            body.index("send_signal_to_pids KILL \"${timed_out_pids[@]}\""),
         )
 
 
