@@ -49,6 +49,7 @@ import org.alice.ide.ast.type.merge.croquet.AddMembersPage;
 import org.alice.ide.ast.type.preview.croquet.PreviewPage;
 import org.lgna.common.Resource;
 import org.lgna.croquet.Application;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.SimpleOperationWizardDialogCoreComposite;
 import org.lgna.croquet.edits.Edit;
 import org.lgna.croquet.simple.SimpleApplication;
@@ -122,6 +123,6 @@ public class ImportTypeWizard extends SimpleOperationWizardDialogCoreComposite {
     }
     ImportTypeWizard wizard = new ImportTypeWizard(typeFile.toURI(), importedRootType, importedResources, srcType, dstType);
     wizard.getLaunchOperation().fire();
-    System.exit(0);
+    ProcessTerminator.requestExit(0);
   }
 }

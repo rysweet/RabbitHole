@@ -46,6 +46,7 @@ package org.lgna.croquet.views;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.lgna.croquet.Application;
 import org.lgna.croquet.DocumentFrame;
+import org.lgna.croquet.ProcessTerminator;
 
 import javax.swing.JMenuBar;
 import javax.swing.JRootPane;
@@ -183,7 +184,7 @@ public final class Dialog extends AbstractWindow<javax.swing.JDialog> {
         if (this.defaultCloseOperation == DefaultCloseOperation.HIDE) {
           this.setVisible(false);
         } else {
-          System.exit(0);
+          ProcessTerminator.requestExit(0);
         }
       }
     }

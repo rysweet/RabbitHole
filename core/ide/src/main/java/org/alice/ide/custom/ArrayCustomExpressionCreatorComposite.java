@@ -51,6 +51,7 @@ import org.lgna.croquet.CancelException;
 import org.lgna.croquet.Cascade;
 import org.lgna.croquet.CascadeBlankChild;
 import org.lgna.croquet.PlainStringValue;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.data.MutableListData;
 import org.lgna.croquet.edits.Edit;
 import org.lgna.croquet.imp.cascade.BlankNode;
@@ -166,6 +167,6 @@ public class ArrayCustomExpressionCreatorComposite extends CustomExpressionCreat
     } catch (CancelException ce) {
       //pass
     }
-    System.exit(0);
+    ProcessTerminator.requestExit(0);
   }
 }

@@ -2,8 +2,13 @@ package org.alice.ide.issue;
 
 import org.junit.Test;
 import org.lgna.common.LgnaRuntimeException;
+import org.lgna.croquet.ProcessTerminationRequestedException;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.*;
 
@@ -181,5 +186,39 @@ public class DefaultExceptionHandlerTest {
   public void defaultHandler_extendsExceptionHandler() {
     DefaultExceptionHandler handler = new DefaultExceptionHandler();
     assertTrue(handler instanceof ExceptionHandler);
+  }
+
+  @Test
+  public void defaultHandler_treatsProcessTerminationRequestAsControlFlow() throws Exception {
+    DefaultExceptionHandler handler = new DefaultExceptionHandler();
+    ProcessTerminationRequestedException request = new ProcessTerminationRequestedException(-1);
+
+    String stderr = captureStandardError(() -> handler.uncaughtException(Thread.currentThread(), request));
+
+    assertEquals("Intentional termination must not increment the crash counter", 0, readIntField(handler, "count"));
+    assertFalse("Intentional termination must not be printed as an uncaught exception: " + stderr,
+        stderr.contains(ProcessTerminationRequestedException.class.getName()));
+  }
+
+  private static int readIntField(Object instance, String fieldName) throws Exception {
+    Field field = DefaultExceptionHandler.class.getDeclaredField(fieldName);
+    field.setAccessible(true);
+    return field.getInt(instance);
+  }
+
+  private static String captureStandardError(ThrowingRunnable runnable) throws Exception {
+    PrintStream previous = System.err;
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    try (PrintStream replacement = new PrintStream(bytes, true, StandardCharsets.UTF_8)) {
+      System.setErr(replacement);
+      runnable.run();
+    } finally {
+      System.setErr(previous);
+    }
+    return bytes.toString(StandardCharsets.UTF_8);
+  }
+
+  private interface ThrowingRunnable {
+    void run() throws Exception;
   }
 }

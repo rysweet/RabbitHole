@@ -184,7 +184,7 @@ public class JEulaPane extends JPanel {
         dialog.pack();
         dialog.setVisible(true);
         Logger.outln(eulaPane.isAccepted());
-        System.exit(0);
+        dialog.dispose();
       }
     });
   }

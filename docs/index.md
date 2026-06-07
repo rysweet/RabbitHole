@@ -21,6 +21,8 @@ expectations.
 - [Contributing](./contributing.md)
 - [Repository hygiene](./repository-hygiene.md)
 - [Concepts](#concepts)
+- [How-to guides](#how-to-guides)
+- [Reference](#reference)
 - [Architecture Atlas](#architecture-atlas)
 
 ## What this site covers
@@ -54,12 +56,18 @@ expectations.
 
 - [Formal Specification Lane](./concepts/formal-spec-lane.md)
 - [Migration Hotspot Characterization](./concepts/migration-hotspot-characterization.md)
+- [Process Termination Boundary](./concepts/process-termination-boundary.md)
+
+### How-to guides
+
+- [Request Process Termination Safely](./howto/request-process-termination.md)
 
 ### Reference
 
 - [Modernization Scorecard Generator](./reference/modernization-scorecard-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
+- [Process Termination API](./reference/process-termination-api.md)
 
 ### Architecture Atlas
 

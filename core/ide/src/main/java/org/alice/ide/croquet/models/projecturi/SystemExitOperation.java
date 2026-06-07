@@ -44,6 +44,7 @@ package org.alice.ide.croquet.models.projecturi;
 
 import org.lgna.croquet.ActionOperation;
 import org.lgna.croquet.Application;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.history.UserActivity;
 
 import java.util.UUID;
@@ -59,6 +60,6 @@ public final class SystemExitOperation extends ActionOperation {
   @Override
   protected void perform(UserActivity activity) {
     activity.finish();
-    System.exit(0);
+    ProcessTerminator.requestExit(0);
   }
 }

@@ -58,6 +58,9 @@ public abstract class AbstractUncaughtExceptionHandler implements Thread.Uncaugh
 
   @Override
   public final void uncaughtException(Thread thread, Throwable throwable) {
+    if (isIgnoredControlFlowThrowable(throwable)) {
+      return;
+    }
     throwable.printStackTrace();
     if (!isInTheMidstOfHandlingAThrowable) {
       this.isInTheMidstOfHandlingAThrowable = true;
@@ -83,5 +86,9 @@ public abstract class AbstractUncaughtExceptionHandler implements Thread.Uncaugh
         this.isInTheMidstOfHandlingAThrowable = false;
       }
     }
+  }
+
+  protected boolean isIgnoredControlFlowThrowable(Throwable throwable) {
+    return false;
   }
 }

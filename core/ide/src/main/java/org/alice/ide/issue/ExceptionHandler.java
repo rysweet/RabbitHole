@@ -43,6 +43,7 @@
 package org.alice.ide.issue;
 
 import org.lgna.common.LgnaRuntimeException;
+import org.lgna.croquet.ProcessTerminationRequestedException;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -56,6 +57,9 @@ public abstract class ExceptionHandler implements Thread.UncaughtExceptionHandle
 
   @Override
   public final void uncaughtException(Thread thread, Throwable throwable) {
+    if (throwable instanceof ProcessTerminationRequestedException) {
+      return;
+    }
     throwable.printStackTrace();
     if (throwable instanceof RuntimeException runtimeException) {
       Throwable cause = runtimeException.getCause();

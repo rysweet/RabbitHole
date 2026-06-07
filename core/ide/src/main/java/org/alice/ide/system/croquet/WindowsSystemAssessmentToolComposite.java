@@ -171,6 +171,6 @@ public class WindowsSystemAssessmentToolComposite extends SimpleOperationUnadorn
   public static void main(String[] args) throws Exception {
     new SimpleApplication();
     WindowsSystemAssessmentToolComposite.getInstance().getLaunchOperation().fire();
-    System.exit(0);
+    ProcessTerminator.requestExit(0);
   }
 }

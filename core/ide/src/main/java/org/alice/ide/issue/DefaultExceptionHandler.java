@@ -53,6 +53,8 @@ import org.alice.stageide.run.RunComposite;
 import org.alice.stageide.run.views.RunView;
 import org.lgna.common.LgnaRuntimeException;
 import org.lgna.croquet.Application;
+import org.lgna.croquet.ProcessTerminationRequestedException;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.simple.SimpleApplication;
 import org.lgna.croquet.views.Frame;
 
@@ -173,7 +175,11 @@ public class DefaultExceptionHandler extends ExceptionHandler {
       this.isInTheMidstOfHandlingAThrowable = false;
       if (isSystemExitDesired) {
         JOptionPane.showMessageDialog(null, "Exception occurred before application was able to show window.  Exiting.");
-        System.exit(-1);
+        try {
+          ProcessTerminator.requestExit(-1);
+        } catch (ProcessTerminationRequestedException request) {
+          // The exception handler must not report intentional termination as another crash.
+        }
       }
     }
   }

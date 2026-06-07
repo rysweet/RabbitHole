@@ -44,6 +44,7 @@ package org.alice.ide.upgrade;
 
 import org.alice.ide.upgrade.views.ProjectAheadView;
 import org.lgna.croquet.Application;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.croquet.SimpleOperationInputDialogCoreComposite;
 import org.lgna.croquet.edits.Edit;
 import org.lgna.croquet.history.UserActivity;
@@ -91,6 +92,6 @@ public class ProjectAheadDialog extends SimpleOperationInputDialogCoreComposite<
   public static void main(String[] args) throws Exception {
     new SimpleApplication();
     new ProjectAheadDialog(new Version("3.1.112358.0.0")).getLaunchOperation().fire();
-    System.exit(0);
+    ProcessTerminator.requestExit(0);
   }
 }

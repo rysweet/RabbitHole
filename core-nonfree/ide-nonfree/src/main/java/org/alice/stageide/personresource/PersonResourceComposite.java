@@ -295,7 +295,7 @@ public final class PersonResourceComposite extends ValueCreatorInputDialogCoreCo
         } catch (CancelException ce) {
           //pass
         }
-        System.exit(0);
+        ProcessTerminator.requestExit(0);
       }
     });
   }

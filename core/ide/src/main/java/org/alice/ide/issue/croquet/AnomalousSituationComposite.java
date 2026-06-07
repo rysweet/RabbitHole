@@ -200,7 +200,7 @@ public final class AnomalousSituationComposite extends AbstractIssueComposite<An
       @Override
       public void run() {
         composite.getLaunchOperation().fire();
-        //System.exit( 0 );
+        // Process exit is intentionally left to the launcher boundary.
       }
     });
   }

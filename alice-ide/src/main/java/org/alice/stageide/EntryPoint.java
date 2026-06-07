@@ -57,6 +57,8 @@ import edu.cmu.cs.dennisc.render.gl.RendererNativeLibraryLoader;
 import edu.wustl.lookingglass.utilities.memory.HeapWatchDog;
 import javafx.application.Application;
 import javafx.stage.Stage;
+import org.lgna.croquet.ProcessTerminationRequestedException;
+import org.lgna.croquet.ProcessTerminator;
 import org.lgna.project.ProjectVersion;
 import org.lgna.project.reflect.ClassInfo;
 import org.lgna.project.reflect.ClassInfoManager;
@@ -75,88 +77,95 @@ public class EntryPoint extends Application {
   private static HeapWatchDog heapMonitor;
 
   public static void main(final String[] args) {
-    requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
-
-    final CrashDetector crashDetector = new CrashDetector(EntryPoint.class);
-    if (crashDetector.isPreviouslyOpenedButNotSucessfullyClosed()) {
-      String propertyName = "org.alice.stageide.isCrashDetectionDesired";
-      String isCrashDetectionDesiredText = System.getProperty(propertyName, "true");
-      if ("true".equals(isCrashDetectionDesiredText.toLowerCase(Locale.ENGLISH))) {
-        JOptionPane.showMessageDialog(null, "Alice did not successfully close last time.");
-      }
-    }
-    crashDetector.open();
-    String text = ProjectVersion.getCurrentVersionText()/* + " BETA" */;
-    System.out.println("version: " + text);
-
-    // This resources file is where all the theme colors are defined
-    FlatLaf.registerCustomDefaultsSource("org.alice.stageide.themes");
-
-    // TODO- create a setting somewhere? auto-determine from OS?
-    Boolean useDarkMode = false;
+    ProcessTerminator.Handler previous = ProcessTerminator.setHandler(System::exit);
     try {
+      requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
+
+      final CrashDetector crashDetector = new CrashDetector(EntryPoint.class);
+      if (crashDetector.isPreviouslyOpenedButNotSucessfullyClosed()) {
+        String propertyName = "org.alice.stageide.isCrashDetectionDesired";
+        String isCrashDetectionDesiredText = System.getProperty(propertyName, "true");
+        if ("true".equals(isCrashDetectionDesiredText.toLowerCase(Locale.ENGLISH))) {
+          JOptionPane.showMessageDialog(null, "Alice did not successfully close last time.");
+        }
+      }
+      crashDetector.open();
+      String text = ProjectVersion.getCurrentVersionText()/* + " BETA" */;
+      System.out.println("version: " + text);
+
+      // This resources file is where all the theme colors are defined
+      FlatLaf.registerCustomDefaultsSource("org.alice.stageide.themes");
+
+      // TODO- create a setting somewhere? auto-determine from OS?
+      Boolean useDarkMode = false;
+      try {
         javax.swing.UIManager.setLookAndFeel((useDarkMode ? new com.formdev.flatlaf.FlatDarkLaf() : new com.formdev.flatlaf.FlatLightLaf()));
         com.formdev.flatlaf.FlatLaf.updateUI();
       } catch (UnsupportedLookAndFeelException updateFlatLafThemeException) {
-      Logger.severe("Was unable to set look and feel theme: " + updateFlatLafThemeException.getMessage());
-      updateFlatLafThemeException.printStackTrace();
-    }
+        Logger.severe("Was unable to set look and feel theme: " + updateFlatLafThemeException.getMessage());
+        updateFlatLafThemeException.printStackTrace();
+      }
 
-    // Initialize this on the main thread, before Swing or JavaFX, and before opening a project in args.
-    try {
-      RendererNativeLibraryLoader.initializeIfNecessary();
-    } catch (ApplicationRootInitializationException e) {
-      JOptionPane.showMessageDialog(null, e.getMessage(), "Application Root Error", JOptionPane.ERROR_MESSAGE);
-      System.exit(-1);
-    }
+      // Initialize this on the main thread, before Swing or JavaFX, and before opening a project in args.
+      try {
+        RendererNativeLibraryLoader.initializeIfNecessary();
+      } catch (ApplicationRootInitializationException e) {
+        JOptionPane.showMessageDialog(null, e.getMessage(), "Application Root Error", JOptionPane.ERROR_MESSAGE);
+        ProcessTerminator.requestExit(-1);
+      }
 
-    // Initialize Swing here to do it on the correct thread, outside of JavaFX
-    SwingUtilities.invokeLater(() -> {
-      if (SystemUtilities.isMac()) { //&& SystemUtilities.isPropertyTrue("apple.laf.useScreenMenuBar")) {
-        final Object macMenuBarUI = UIManager.get(MENU_BAR_UI_NAME);
-        if (macMenuBarUI != null) {
-          UIManager.put(MENU_BAR_UI_NAME, macMenuBarUI);
+      // Initialize Swing here to do it on the correct thread, outside of JavaFX
+      SwingUtilities.invokeLater(() -> {
+        if (SystemUtilities.isMac()) { //&& SystemUtilities.isPropertyTrue("apple.laf.useScreenMenuBar")) {
+          final Object macMenuBarUI = UIManager.get(MENU_BAR_UI_NAME);
+          if (macMenuBarUI != null) {
+            UIManager.put(MENU_BAR_UI_NAME, macMenuBarUI);
+          }
         }
-      }
 
-      UIManagerUtilities.scaleFontIAppropriate();
+        UIManagerUtilities.scaleFontIAppropriate();
 
-      UIManager.put("ScrollBar.width", 13);
-      UIManager.put("ScrollBar.incrementButtonGap", 0);
-      UIManager.put("ScrollBar.decrementButtonGap", 0);
+        UIManager.put("ScrollBar.width", 13);
+        UIManager.put("ScrollBar.incrementButtonGap", 0);
+        UIManager.put("ScrollBar.decrementButtonGap", 0);
 
-      ConsistentMouseDragEventQueue.pushIfAppropriate();
+        ConsistentMouseDragEventQueue.pushIfAppropriate();
 
-      LaunchConfiguration launchConfiguration = LaunchConfiguration.parse(args);
+        LaunchConfiguration launchConfiguration = LaunchConfiguration.parse(args);
 
-      JFrame rootFrame = WindowStack.getRootFrame();
-      rootFrame.setLocation(launchConfiguration.getXLocation(), launchConfiguration.getYLocation());
-      rootFrame.setSize(launchConfiguration.getWidth(), launchConfiguration.getHeight());
+        JFrame rootFrame = WindowStack.getRootFrame();
+        rootFrame.setLocation(launchConfiguration.getXLocation(), launchConfiguration.getYLocation());
+        rootFrame.setSize(launchConfiguration.getWidth(), launchConfiguration.getHeight());
 
-      if (launchConfiguration.isMaximizationDesired()) {
-        rootFrame.setExtendedState(rootFrame.getExtendedState() | Frame.MAXIMIZED_BOTH);
-      }
-      if (launchConfiguration.getLocaleString() != null) {
-        System.setProperty("org.alice.ide.locale", launchConfiguration.getLocaleString());
-        String localeTest = System.getProperty("org.alice.ide.locale");
-        System.out.println(localeTest);
-      }
-
-      loadClassInfos();
-      StageIDE ide = new StageIDE(crashDetector);
-      if (launchConfiguration.getProjectFile() != null) {
-        if (launchConfiguration.getProjectFile().exists()) {
-          ide.setProjectFileToLoadOnWindowOpened(launchConfiguration.getProjectFile());
-        } else {
-          Logger.warning("file does not exist:", launchConfiguration.getProjectFile());
+        if (launchConfiguration.isMaximizationDesired()) {
+          rootFrame.setExtendedState(rootFrame.getExtendedState() | Frame.MAXIMIZED_BOTH);
         }
-      }
-      ide.initialize(args);
-      ide.getDocumentFrame().getFrame().setVisible(true);
-      heapMonitor = new HeapWatchDog();
-    });
-    // Call to initialize JavaFX
-    launch(args);
+        if (launchConfiguration.getLocaleString() != null) {
+          System.setProperty("org.alice.ide.locale", launchConfiguration.getLocaleString());
+          String localeTest = System.getProperty("org.alice.ide.locale");
+          System.out.println(localeTest);
+        }
+
+        loadClassInfos();
+        StageIDE ide = new StageIDE(crashDetector);
+        if (launchConfiguration.getProjectFile() != null) {
+          if (launchConfiguration.getProjectFile().exists()) {
+            ide.setProjectFileToLoadOnWindowOpened(launchConfiguration.getProjectFile());
+          } else {
+            Logger.warning("file does not exist:", launchConfiguration.getProjectFile());
+          }
+        }
+        ide.initialize(args);
+        ide.getDocumentFrame().getFrame().setVisible(true);
+        heapMonitor = new HeapWatchDog();
+      });
+      // Call to initialize JavaFX
+      launch(args);
+    } catch (ProcessTerminationRequestedException request) {
+      System.exit(request.getStatus());
+    } finally {
+      ProcessTerminator.setHandler(previous);
+    }
   }
 
   static void requireGraphicalEnvironmentForDesktopLaunch(boolean isHeadless) {

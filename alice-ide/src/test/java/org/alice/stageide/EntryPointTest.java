@@ -4,10 +4,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.lgna.project.reflect.ClassInfoManager;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class EntryPointTest {
@@ -40,5 +45,32 @@ public class EntryPointTest {
   @Test
   public void startAllowsNullPrimaryStageBecauseItIsCurrentlyANoOp() throws Exception {
     new EntryPoint().start(null);
+  }
+
+  @Test
+  public void mainInstallsProcessTerminatorBoundaryAroundDesktopLaunch() throws IOException {
+    String source = Files.readString(
+        findRepositoryRoot().resolve("alice-ide/src/main/java/org/alice/stageide/EntryPoint.java"),
+        StandardCharsets.UTF_8);
+
+    assertTrue("EntryPoint must install the production process termination handler",
+        source.contains("ProcessTerminator.setHandler"));
+    assertTrue("EntryPoint must handle fallback termination requests at the launcher boundary",
+        source.contains("ProcessTerminationRequestedException"));
+    assertTrue("EntryPoint must preserve the requested exit status",
+        source.contains("System.exit(request.getStatus())"));
+    assertTrue("EntryPoint must restore the previous process termination handler",
+        source.contains("ProcessTerminator.setHandler(previous"));
+  }
+
+  private static Path findRepositoryRoot() {
+    Path current = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+    while (current != null) {
+      if (Files.exists(current.resolve(".git")) && Files.isRegularFile(current.resolve("pom.xml"))) {
+        return current;
+      }
+      current = current.getParent();
+    }
+    throw new AssertionError("Could not find repository root from " + System.getProperty("user.dir"));
   }
 }
