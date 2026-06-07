@@ -64,6 +64,20 @@ mvn -pl core/story-api-migration \
   test
 ```
 
+Run the text migration registry parity lane:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=TextMigrationRegistryTest,TextMigrationJsonLoaderTest,TextMigrationJsonGeneratorTest \
+  test
+```
+
 Run the same harness against a local preserved baseline checkout:
 
 ```bash
@@ -448,6 +462,13 @@ Common patterns:
 
 Modernization changes usually start with a characterization test. That protects
 the current Alice 3 behavior before a large class is split or moved.
+
+The text migration registry parity lane applies that rule to generated migration
+JSON. See
+[Verify Text Migration Registry Parity](howto/verify-text-migration-parity.md)
+for the focused workflow and
+[Text Migration Registry Parity](reference/text-migration-registry-parity.md)
+for the JSON, loader, generator, and test contracts.
 
 ### Focused module validation
 

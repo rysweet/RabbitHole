@@ -1,34 +1,55 @@
 package org.lgna.project.migration;
 
-import org.lgna.project.Version;
 import org.junit.Test;
+import org.lgna.project.Version;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
-/**
- * TDD tests for the TextMigrationRegistry extraction.
- *
- * These tests define the contract that the new registry classes must satisfy.
- * They verify structural properties (counts, ordering, boundaries) and
- * behavioral identity (registry output matches the original PMM output).
- */
 public class TextMigrationRegistryTest {
-
-  // ── Registry assembler: createAll() ──────────────────────────────────
+  private static final List<String> EXPECTED_VERSIONS = Arrays.asList(
+      "3.1.8.0.0", "3.1.9.0.0", "3.1.11.0.0", "3.1.14.0.0",
+      "3.1.15.1.0", "3.1.20.0.0", "3.1.33.0.0", "3.1.34.0.0",
+      "3.1.35.0.0", "3.1.38.0.0", "3.1.39.0.0", "3.1.48.0.0",
+      "3.1.58.0.0", "3.1.59.0.0", "3.1.68.0.0", "3.1.69.0.0",
+      "3.1.70.0.0", "3.1.85.0.0", "3.1.92.0.0", "3.1.93.0.0",
+      "3.2.108.0.0", "3.2.110.0.0", "3.2.111.0.0", "3.2.112.0.0",
+      "3.2.113.0.0", "3.3.0.0.0", "3.4.0.0", "3.9.0.0");
 
   @Test
-  public void createAllReturns28Migrations() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
+  public void createAllReturnsRuntimeJsonMigrationsInLegacyRegistryOrder() throws Exception {
+    List<TextMigrationParityTestSupport.MigrationData> expected = TextMigrationParityTestSupport.legacyRegistryData();
+    List<TextMigrationParityTestSupport.MigrationData> actual = TextMigrationParityTestSupport.runtimeJsonRegistryData();
 
-    assertEquals("Total text migration count", 28, all.length);
+    assertEquals("Runtime JSON registry must match the authoritative legacy registry sequence", expected, actual);
   }
 
   @Test
-  public void createAllContainsNoNulls() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
+  public void legacyPropertyReturnsTheSameOrderedMigrationSequence() throws Exception {
+    List<TextMigrationParityTestSupport.MigrationData> expected = TextMigrationParityTestSupport.legacyRegistryData();
+    List<TextMigrationParityTestSupport.MigrationData> actual = TextMigrationParityTestSupport.legacyPropertyRegistryData();
+
+    assertEquals("Legacy registry system property must preserve the authoritative sequence", expected, actual);
+  }
+
+  @Test
+  public void createAllContainsExpectedVersionsInOrder() throws Exception {
+    List<TextMigrationParityTestSupport.MigrationData> all = TextMigrationParityTestSupport.runtimeJsonRegistryData();
+
+    assertEquals("Text migration versions must stay order-sensitive", EXPECTED_VERSIONS,
+        TextMigrationParityTestSupport.versionsOf(all));
+  }
+
+  @Test
+  public void createAllContainsNoNulls() throws Exception {
+    TextMigration[] all = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
 
     for (int i = 0; i < all.length; i++) {
       assertNotNull("Migration at index " + i + " is null", all[i]);
@@ -36,334 +57,98 @@ public class TextMigrationRegistryTest {
   }
 
   @Test
-  public void createAllVersionsAreStrictlyIncreasing() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
+  public void createAllVersionsAreStrictlyIncreasing() throws Exception {
+    TextMigration[] all = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
     Version previous = null;
 
     for (TextMigration migration : all) {
-      Version v = migration.getResultVersion();
+      Version version = migration.getResultVersion();
       if (previous != null) {
-        assertTrue(previous + " should be before " + v, previous.compareTo(v) < 0);
+        assertTrue(previous + " should be before " + version, previous.compareTo(version) < 0);
       }
-      previous = v;
+      previous = version;
     }
   }
 
   @Test
-  public void createAllFirstVersionIs3_1_8() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
+  public void createAllVersionsHaveNoDuplicates() throws Exception {
+    TextMigration[] all = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
+    Set<String> seen = new HashSet<>();
 
-    assertEquals("3.1.8.0.0", all[0].getResultVersion().toString());
+    for (TextMigration migration : all) {
+      String version = migration.getResultVersion().toString();
+      assertTrue("Duplicate version: " + version, seen.add(version));
+    }
   }
 
   @Test
-  public void createAllLastVersionIs3_9_0() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
+  public void createAllPreservesFirstAndLastMigrationBoundaries() throws Exception {
+    TextMigration[] all = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
 
+    assertEquals("3.1.8.0.0", all[0].getResultVersion().toString());
     assertEquals("3.9.0.0", all[all.length - 1].getResultVersion().toString());
   }
 
   @Test
-  public void createAllContainsFactoryMigration3_2_110() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
-    Version target = new Version("3.2.110.0.0");
+  public void createAllPreservesRepresentativeSegmentPairs() throws Exception {
+    TextMigration[] all = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
 
-    boolean found = false;
-    for (TextMigration migration : all) {
-      if (migration.getResultVersion().compareTo(target) == 0) {
-        found = true;
-        break;
-      }
-    }
-    assertTrue("Factory migration 3.2.110.0.0 must be present", found);
-  }
-
-  @Test
-  public void createAllVersionsHaveNoDuplicates() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
-    Set<String> seen = new HashSet<>();
-
-    for (TextMigration migration : all) {
-      String v = migration.getResultVersion().toString();
-      assertTrue("Duplicate version: " + v, seen.add(v));
-    }
-  }
-
-  @Test
-  public void createAllExpectedVersionsPresent() {
-    TextMigration[] all = TextMigrationRegistry.createAll();
-    Set<String> versions = new HashSet<>();
-    for (TextMigration m : all) {
-      versions.add(m.getResultVersion().toString());
-    }
-
-    String[] expected = {
-        "3.1.8.0.0", "3.1.9.0.0", "3.1.11.0.0", "3.1.14.0.0",
-        "3.1.15.1.0", "3.1.20.0.0", "3.1.33.0.0", "3.1.34.0.0",
-        "3.1.35.0.0", "3.1.38.0.0", "3.1.39.0.0", "3.1.48.0.0",
-        "3.1.58.0.0", "3.1.59.0.0", "3.1.68.0.0", "3.1.69.0.0",
-        "3.1.70.0.0", "3.1.85.0.0", "3.1.92.0.0", "3.1.93.0.0",
-        "3.2.108.0.0", "3.2.110.0.0", "3.2.111.0.0", "3.2.112.0.0",
-        "3.2.113.0.0", "3.3.0.0.0", "3.4.0.0", "3.9.0.0"
-    };
-
-    for (String v : expected) {
-      assertTrue("Missing version: " + v, versions.contains(v));
-    }
-  }
-
-  // ── Identity: registry output matches original PMM ───────────────────
-
-  @Test
-  public void registryMatchesProjectMigrationManagerTextMigrations() {
-    TextMigration[] fromRegistry = TextMigrationRegistry.createAll();
-    TextMigration[] fromManager = ProjectMigrationManager.getInstance().getTextMigrations();
-
-    assertEquals("Array lengths must match",
-        fromManager.length, fromRegistry.length);
-
-    for (int i = 0; i < fromManager.length; i++) {
-      assertEquals("Version mismatch at index " + i,
-          fromManager[i].getResultVersion().toString(),
-          fromRegistry[i].getResultVersion().toString());
-    }
-  }
-
-  @Test
-  public void registryMigrationsProduceSameOutputAsOriginal() {
-    TextMigration[] fromRegistry = TextMigrationRegistry.createAll();
-    TextMigration[] fromManager = ProjectMigrationManager.getInstance().getTextMigrations();
-
-    // Test with a sample input that exercises multiple migration versions
-    String testInput = String.join("\n",
-        "org.lgna.story.resources.dresser.DresserCentralAsian",
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(all, "3.1.9.0.0"),
+        "ARMOIRE_CLOTHING",
+        null));
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(all, "3.1.34.0.0"),
         "org.lgna.story.Program",
-        "INDIA_BRICK_D",
-        "name=\"LEFT_THUMB_1\">",
-        "name=\"ICE_FLOW",
-        "name=\"OVAL\">\n<declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\""
-    );
-
-    for (int i = 0; i < fromManager.length; i++) {
-      String managerResult = fromManager[i].migrate(testInput);
-      String registryResult = fromRegistry[i].migrate(testInput);
-      assertEquals("Migration output mismatch at version "
-              + fromManager[i].getResultVersion(),
-          managerResult, registryResult);
-    }
-  }
-
-  // ── Sub-component: SmallVersions ─────────────────────────────────────
-
-  @Test
-  public void smallVersionsEarlyReturns7Migrations() {
-    TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
-
-    assertEquals("Early migration count", 7, early.length);
+        "org.lgna.story.SProgram"));
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(all, "3.1.59.0.0"),
+        "name=\"org.lgna.story.resources.prop.JungleShrubResource",
+        "name=\"org.lgna.story.resources.prop.JunglePlantResource"));
+    assertTrue(TextMigrationParityTestSupport.containsPair(
+        TextMigrationParityTestSupport.migrationForVersion(all, "3.2.110.0.0"),
+        "name=\"OVAL\">\\s*<declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\"",
+        "name=\"OVAL_DESERT\"> <declaringClass name=\"org.lgna.story.resources.prop.SandDunesResource\""));
   }
 
   @Test
-  public void smallVersionsEarlyFirstVersionIs3_1_8() {
-    TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
-
-    assertEquals("3.1.8.0.0", early[0].getResultVersion().toString());
-  }
-
-  @Test
-  public void smallVersionsEarlyLastVersionIs3_1_33() {
-    TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
-
-    assertEquals("3.1.33.0.0", early[early.length - 1].getResultVersion().toString());
-  }
-
-  @Test
-  public void smallVersionsEarlyVersionsAreStrictlyIncreasing() {
-    TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
-    Version previous = null;
-
-    for (TextMigration m : early) {
-      Version v = m.getResultVersion();
-      if (previous != null) {
-        assertTrue(previous + " should be before " + v,
-            previous.compareTo(v) < 0);
-      }
-      previous = v;
-    }
-  }
-
-  @Test
-  public void smallVersionsMidReturns5Migrations() {
-    TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
-
-    assertEquals("Mid migration count", 5, mid.length);
-  }
-
-  @Test
-  public void smallVersionsMidFirstVersionIs3_1_35() {
-    TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
-
-    assertEquals("3.1.35.0.0", mid[0].getResultVersion().toString());
-  }
-
-  @Test
-  public void smallVersionsMidLastVersionIs3_1_58() {
-    TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
-
-    assertEquals("3.1.58.0.0", mid[mid.length - 1].getResultVersion().toString());
-  }
-
-  @Test
-  public void smallVersionsMidVersionsAreStrictlyIncreasing() {
-    TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
-    Version previous = null;
-
-    for (TextMigration m : mid) {
-      Version v = m.getResultVersion();
-      if (previous != null) {
-        assertTrue(previous + " should be before " + v,
-            previous.compareTo(v) < 0);
-      }
-      previous = v;
-    }
-  }
-
-  // ── Sub-component: V3134 ─────────────────────────────────────────────
-
-  @Test
-  public void v3134Returns1Migration() {
-    TextMigration[] v3134 = TextMigrationRegistryV3134.create();
-
-    assertEquals("V3134 migration count", 1, v3134.length);
-  }
-
-  @Test
-  public void v3134VersionIs3_1_34() {
-    TextMigration[] v3134 = TextMigrationRegistryV3134.create();
-
-    assertEquals("3.1.34.0.0", v3134[0].getResultVersion().toString());
-  }
-
-  // ── Sub-component: V3159 ─────────────────────────────────────────────
-
-  @Test
-  public void v3159Returns1Migration() {
-    TextMigration[] v3159 = TextMigrationRegistryV3159.create();
-
-    assertEquals("V3159 migration count", 1, v3159.length);
-  }
-
-  @Test
-  public void v3159VersionIs3_1_59() {
-    TextMigration[] v3159 = TextMigrationRegistryV3159.create();
-
-    assertEquals("3.1.59.0.0", v3159[0].getResultVersion().toString());
-  }
-
-  // ── Sub-component: LateVersions ──────────────────────────────────────
-
-  @Test
-  public void lateVersionsReturns14Migrations() {
-    TextMigration[] late = TextMigrationRegistryLateVersions.create();
-
-    assertEquals("Late migration count", 14, late.length);
-  }
-
-  @Test
-  public void lateVersionsFirstVersionIs3_1_68() {
-    TextMigration[] late = TextMigrationRegistryLateVersions.create();
-
-    assertEquals("3.1.68.0.0", late[0].getResultVersion().toString());
-  }
-
-  @Test
-  public void lateVersionsLastVersionIs3_9_0() {
-    TextMigration[] late = TextMigrationRegistryLateVersions.create();
-
-    assertEquals("3.9.0.0", late[late.length - 1].getResultVersion().toString());
-  }
-
-  @Test
-  public void lateVersionsContainsFactoryMigration() {
-    TextMigration[] late = TextMigrationRegistryLateVersions.create();
-    Version target = new Version("3.2.110.0.0");
-
-    boolean found = false;
-    for (TextMigration m : late) {
-      if (m.getResultVersion().compareTo(target) == 0) {
-        found = true;
-        break;
-      }
-    }
-    assertTrue("Factory migration 3.2.110 must be in late versions", found);
-  }
-
-  @Test
-  public void lateVersionsAreStrictlyIncreasing() {
-    TextMigration[] late = TextMigrationRegistryLateVersions.create();
-    Version previous = null;
-
-    for (TextMigration m : late) {
-      Version v = m.getResultVersion();
-      if (previous != null) {
-        assertTrue(previous + " should be before " + v,
-            previous.compareTo(v) < 0);
-      }
-      previous = v;
-    }
-  }
-
-  // ── Assembly correctness ─────────────────────────────────────────────
-
-  @Test
-  public void assemblyOrderMatchesSubComponentOrder() {
+  public void legacyRegistryComponentsAssembleIntoTheAuthoritativeSequence() throws Exception {
     TextMigration[] early = TextMigrationRegistrySmallVersions.createEarly();
     TextMigration[] v3134 = TextMigrationRegistryV3134.create();
     TextMigration[] mid = TextMigrationRegistrySmallVersions.createMid();
     TextMigration[] v3159 = TextMigrationRegistryV3159.create();
     TextMigration[] late = TextMigrationRegistryLateVersions.create();
-    TextMigration[] all = TextMigrationRegistry.createAll();
+    TextMigration[] all = TextMigrationParityTestSupport.legacyRegistrySequence();
 
-    int expectedTotal = early.length + v3134.length + mid.length
-        + v3159.length + late.length;
+    int expectedTotal = early.length + v3134.length + mid.length + v3159.length + late.length;
     assertEquals("Sum of parts must equal whole", expectedTotal, all.length);
 
     int offset = 0;
-    for (TextMigration m : early) {
-      assertEquals("Early mismatch at offset " + offset,
-          m.getResultVersion().toString(),
-          all[offset++].getResultVersion().toString());
-    }
-    for (TextMigration m : v3134) {
-      assertEquals("V3134 mismatch at offset " + offset,
-          m.getResultVersion().toString(),
-          all[offset++].getResultVersion().toString());
-    }
-    for (TextMigration m : mid) {
-      assertEquals("Mid mismatch at offset " + offset,
-          m.getResultVersion().toString(),
-          all[offset++].getResultVersion().toString());
-    }
-    for (TextMigration m : v3159) {
-      assertEquals("V3159 mismatch at offset " + offset,
-          m.getResultVersion().toString(),
-          all[offset++].getResultVersion().toString());
-    }
-    for (TextMigration m : late) {
-      assertEquals("Late mismatch at offset " + offset,
-          m.getResultVersion().toString(),
-          all[offset++].getResultVersion().toString());
-    }
+    offset = assertSegmentMatches("early", early, all, offset);
+    offset = assertSegmentMatches("v3134", v3134, all, offset);
+    offset = assertSegmentMatches("mid", mid, all, offset);
+    offset = assertSegmentMatches("v3159", v3159, all, offset);
+    offset = assertSegmentMatches("late", late, all, offset);
+    assertEquals("Every migration must be covered by a segment", all.length, offset);
   }
 
-  // ── Each sub-array returns a fresh copy ──────────────────────────────
-
   @Test
-  public void createAllReturnsFreshArrayEachCall() {
-    TextMigration[] first = TextMigrationRegistry.createAll();
-    TextMigration[] second = TextMigrationRegistry.createAll();
+  public void createAllReturnsFreshArrayEachCall() throws Exception {
+    TextMigration[] first = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
+    TextMigration[] second = TextMigrationParityTestSupport.runtimeJsonRegistrySequence();
 
-    assertNotSame("createAll must return a new array each time",
-        first, second);
+    assertNotSame("createAll must return a new array each time", first, second);
     assertEquals(first.length, second.length);
+  }
+
+  private static int assertSegmentMatches(String segmentName, TextMigration[] segment, TextMigration[] all, int offset)
+      throws Exception {
+    for (TextMigration migration : segment) {
+      assertEquals(segmentName + " mismatch at offset " + offset,
+          TextMigrationParityTestSupport.dataOf(new TextMigration[] {migration}).get(0),
+          TextMigrationParityTestSupport.dataOf(new TextMigration[] {all[offset]}).get(0));
+      offset++;
+    }
+    return offset;
   }
 }

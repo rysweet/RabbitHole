@@ -22,6 +22,7 @@ nav:
     - "Getting started": "getting-started.md"
     - "Architecture": "architecture.md"
     - "Testing": "testing.md"
+    - "Verify Text Migration Registry Parity": "howto/verify-text-migration-parity.md"
     - "RabbitHole baseline parity": "rabbithole-baseline-parity.md"
     - "Contributing": "contributing.md"
     - "Repository hygiene": "repository-hygiene.md"
@@ -31,6 +32,7 @@ nav:
   - "Reference":
     - "Modernization Scorecard Generator": "reference/modernization-scorecard-generator.md"
     - "Modernization Corpus Manifest": "reference/modernization-corpus-manifest.md"
+    - "Text Migration Registry Parity": "reference/text-migration-registry-parity.md"
   - "Architecture Atlas":
     - "Atlas Overview": "atlas/index.md"
     - "Repository Surface": "atlas/repo-surface/README.md"
