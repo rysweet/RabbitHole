@@ -68,6 +68,20 @@ public final class ClassLoadingSweepSupport {
   private static final sun.misc.Unsafe UNSAFE = getUnsafe();
   private static final UUID SWEEP_UUID = UUID.fromString("00000000-0000-0000-0000-000000000070");
   private static final Group SWEEP_GROUP = Group.getInstance(SWEEP_UUID, "classLoadingSweep");
+  private static final Set<String> BLOCKED_METHOD_NAMES = Set.of(
+      "setVisible",
+      "show",
+      "hide",
+      "pack",
+      "toFront",
+      "toBack",
+      "requestFocus",
+      "dispose",
+      "close",
+      "launch",
+      "openInSystemEditor"
+  );
+  private static final Set<String> BLOCKED_METHOD_NAME_FRAGMENTS = Set.of("show", "dialog", "chooser", "browse");
 
   private ClassLoadingSweepSupport() {
   }
@@ -260,8 +274,19 @@ public final class ClassLoadingSweepSupport {
   }
 
   private static boolean opensRealModalDialog(Class<?> owner, Method method) {
-    return owner == DocumentFrame.class
-        && (method.getName().equals("showSaveFileDialog") || method.getName().equals("showOpenFileDialog"));
+    String methodName = method.getName();
+    if (owner == DocumentFrame.class
+        && (methodName.equals("showSaveFileDialog") || methodName.equals("showOpenFileDialog"))) {
+      return true;
+    }
+    if (BLOCKED_METHOD_NAMES.contains(methodName)) {
+      return true;
+    }
+    if (methodName.startsWith("get") || methodName.startsWith("set") || methodName.startsWith("is") || methodName.startsWith("has")) {
+      return false;
+    }
+    String lowerCaseMethodName = methodName.toLowerCase(Locale.ROOT);
+    return BLOCKED_METHOD_NAME_FRAGMENTS.stream().anyMatch(lowerCaseMethodName::contains);
   }
 
   private static Object[] buildArguments(Class<?>[] parameterTypes) {
