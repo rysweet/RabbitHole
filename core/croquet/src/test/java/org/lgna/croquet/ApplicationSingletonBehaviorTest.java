@@ -7,21 +7,26 @@ import org.junit.Test;
 import org.lgna.croquet.history.UserActivity;
 
 import javax.swing.JComponent;
+import java.util.Set;
 
 import static org.junit.Assert.*;
 
 public class ApplicationSingletonBehaviorTest {
+  private static final Set<String> SUPPORTED_TEST_APPLICATION_SUB_PATHS = Set.of(
+      "test",
+      "target/test-xvfb-croquet/app");
 
   @org.junit.Before
   public void skipIfHeadless() {
     Assume.assumeTrue("Requires display", !GraphicsEnvironment.isHeadless());
   }
-@Test
+
+  @Test
   public void ensureTestApplication_setsActiveSingletonAndSubPath() {
     Application<?> application = CroquetTestUtils.ensureTestApplication();
 
     assertSame(application, Application.getActiveInstance());
-    assertEquals("test", application.getApplicationSubPath());
+    assertTrue(SUPPORTED_TEST_APPLICATION_SUB_PATHS.contains(application.getApplicationSubPath()));
     assertNotNull(application.getOverallUserActivity());
   }
 

@@ -158,11 +158,12 @@ validation starts if `xvfb-run` is unavailable.
 
 The job must remain separate from the headless validation path because an
 Xvfb-wrapped `--headless` run still uses `java.awt.headless=true` and is not
-equivalent to a headed GUI launch. The headed job runs Maven with GUI mode
-enabled:
+equivalent to a headed GUI launch. The headed job runs Maven under Xvfb with
+GUI mode enabled:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
+xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
+"${xvfb_run}" --auto-servernum mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=false clean install
 ```
 
 It then runs the Getting Started GUI validator inside Xvfb with an explicit
@@ -170,7 +171,6 @@ bounded startup timeout, using the absolute `xvfb-run` path provided by the
 shared action. In the workflow `run` block, that looks like this:
 
 ```bash
-xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
   "${xvfb_run}" --auto-servernum ./scripts/validate-getting-started.sh --gui
 ```
