@@ -299,6 +299,23 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
   }
 
   @Test
+  public void blockerArtifactRequiresResilientXvfbCommandWhenDisplayIsUnavailable() throws Exception {
+    Path evidenceDir = Files.createDirectories(newTestDir().resolve("no-display-blocker-xvfb-command"));
+    Boolean previousCachedDisplayAvailable = SaveMenuDoClickProbe.cachedNonHeadlessAwtDisplayAvailable;
+    try {
+      SaveMenuDoClickProbe.cachedNonHeadlessAwtDisplayAvailable = false;
+
+      Path artifact = SaveMenuDoClickProbe.writeNoAvailableNonHeadlessAwtDisplayBlocker(evidenceDir);
+
+      String json = Files.readString(artifact);
+      assertTrue(json, json.contains("xvfb-run --auto-servernum -s \\\"-screen 0 1024x768x24 -ac\\\""));
+      assertFalse(json, json.contains("xvfb-run" + " -a"));
+    } finally {
+      SaveMenuDoClickProbe.cachedNonHeadlessAwtDisplayAvailable = previousCachedDisplayAvailable;
+    }
+  }
+
+  @Test
   public void incompleteArtifactDoesNotClaimChooserApprovalOrFileWrite() throws Exception {
     Path testDir = newTestDir().resolve("incomplete-evidence");
     Path evidenceDir = Files.createDirectories(testDir.resolve("evidence"));
@@ -686,7 +703,7 @@ public class StageIdeSaveMenuDoClickToWriteProofTest {
               + "    \"required\": \"Xvfb or another non-headless AWT display capable of showing a Swing JFileChooser\"\n"
               + "  },\n"
               + "  \"requiresNextEvidence\": [\n"
-              + "    \"Run this proof shard under xvfb-run -a or an equivalent desktop session\",\n"
+              + "    \"Run this proof shard under xvfb-run --auto-servernum -s \\\"-screen 0 1024x768x24 -ac\\\" or an equivalent desktop session\",\n"
               + "    \"Save menu/control/dialog/write/readback/marker path artifact with status proven\"\n"
               + "  ],\n"
               + "  \"doesNotClaim\": [\n"

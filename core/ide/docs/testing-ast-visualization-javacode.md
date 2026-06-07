@@ -340,8 +340,12 @@ find core/ide/src/main/java -name 'ClassName.java'
 **Fix:** Either start an X server or run with Xvfb:
 
 ```bash
-xvfb-run mvn test -pl core/ide -Dtest=AstI18nFactoryHierarchyTest
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn test -pl core/ide -Dtest=AstI18nFactoryHierarchyTest
 ```
+
+For the shared Xvfb command contract, see the
+[JavaFX Xvfb Launcher Reference](../../../docs/reference/javafx-xvfb-launcher.md).
 
 ### `NoSuchMethodException` for singleton `getInstance()`
 

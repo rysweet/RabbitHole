@@ -495,9 +495,13 @@ New coverage follows a three-tier approach. See
 Run core/ide tests with coverage:
 
 ```bash
-xvfb-run mvn -pl core/ide -am -DfailIfNoTests=false \
+xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" \
+  mvn -pl core/ide -am -DfailIfNoTests=false \
   -Dsurefire.failIfNoSpecifiedTests=false verify
 ```
+
+Maintained Markdown examples use the resilient Xvfb prefix documented in the
+[JavaFX Xvfb Launcher Reference](reference/javafx-xvfb-launcher.md).
 
 Check the JaCoCo report:
 

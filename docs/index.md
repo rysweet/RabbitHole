@@ -57,6 +57,7 @@ expectations.
 
 ### Reference
 
+- [JavaFX Xvfb Launcher Reference](./reference/javafx-xvfb-launcher.md)
 - [Modernization Scorecard Generator](./reference/modernization-scorecard-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)

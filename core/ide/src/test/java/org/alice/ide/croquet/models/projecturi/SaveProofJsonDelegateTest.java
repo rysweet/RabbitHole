@@ -343,7 +343,8 @@ public class SaveProofJsonDelegateTest {
   public void requiresNextEvidenceJsonContainsInstructions() {
     String json = SaveProofJsonDelegate.requiresNextEvidenceJson();
     assertTrue(json, json.contains("\"requiresNextEvidence\": ["));
-    assertTrue(json, json.contains("xvfb-run"));
+    assertTrue(json, json.contains("xvfb-run --auto-servernum -s \\\"-screen 0 1024x768x24 -ac\\\""));
+    assertFalse(json, json.contains("xvfb-run" + " -a"));
     assertTrue(json, json.contains("status proven"));
   }
 

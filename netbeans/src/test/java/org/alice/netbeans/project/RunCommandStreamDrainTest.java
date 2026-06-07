@@ -11,7 +11,9 @@ import java.io.PipedOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -282,6 +284,63 @@ public class RunCommandStreamDrainTest {
   }
 
   // =========================================================================
+  // Issue 866 follow-up — JavaFX xvfb-run launcher command construction
+  // =========================================================================
+
+  @Test
+  public void javaFxXvfbRunPrefixExposesCanonicalResilientArguments() throws Exception {
+    Method prefixMethod = ProjectCodeGeneratorStandaloneProjectTest.class
+        .getDeclaredMethod("javaFxXvfbRunPrefix", Path.class);
+    int modifiers = prefixMethod.getModifiers();
+
+    assertTrue("Shared Xvfb prefix helper must be static", Modifier.isStatic(modifiers));
+    assertFalse("Shared Xvfb prefix helper should be package-private", Modifier.isPublic(modifiers));
+    assertFalse("Shared Xvfb prefix helper should be package-private", Modifier.isProtected(modifiers));
+    assertFalse("Shared Xvfb prefix helper should be package-private", Modifier.isPrivate(modifiers));
+
+    prefixMethod.setAccessible(true);
+    Path xvfbRun = Path.of("/tmp", "..", "tmp", "xvfb-run");
+    @SuppressWarnings("unchecked")
+    List<String> prefix = (List<String>) prefixMethod.invoke(null, xvfbRun);
+
+    assertEquals(
+        Arrays.asList(
+            xvfbRun.toAbsolutePath().normalize().toString(),
+            "--auto-servernum",
+            "-s",
+            "-screen 0 1024x768x24 -ac"),
+        prefix);
+    assertFalse("The older -a alias must not drift back into JavaFX Xvfb commands",
+        prefix.contains("-a"));
+  }
+
+  @Test
+  public void javaFxXvfbLauncherAndPreflightCommandsUseSharedPrefix() throws Exception {
+    String source = readProjectCodeGeneratorStandaloneProjectTestSource();
+    String launcherBody = methodBody(source, "runJarWithJavaFxModulesUnderXvfb");
+    String preflightBody = methodBody(source, "xvfbRunStartsJava");
+
+    assertTrue(
+        "Packaged JavaFX launch command must start from the shared Xvfb prefix",
+        launcherBody.contains("javaFxXvfbRunPrefix(xvfbRun)"));
+    assertTrue(
+        "Xvfb Java preflight command must start from the shared Xvfb prefix",
+        preflightBody.contains("javaFxXvfbRunPrefix(xvfbRun)"));
+    assertFalse(
+        "Packaged JavaFX launch command must not duplicate --auto-servernum outside the shared prefix",
+        launcherBody.contains("command.add(\"--auto-servernum\")"));
+    assertFalse(
+        "Xvfb Java preflight command must not duplicate --auto-servernum outside the shared prefix",
+        preflightBody.contains("command.add(\"--auto-servernum\")"));
+    assertFalse(
+        "Packaged JavaFX launch command must not carry the stale -a alias",
+        launcherBody.contains("command.add(\"-a\")"));
+    assertFalse(
+        "Xvfb Java preflight command must not carry the stale -a alias",
+        preflightBody.contains("command.add(\"-a\")"));
+  }
+
+  // =========================================================================
   // Helpers
   // =========================================================================
 
@@ -310,5 +369,55 @@ public class RunCommandStreamDrainTest {
     Field field = obj.getClass().getDeclaredField(fieldName);
     field.setAccessible(true);
     return (T) field.get(obj);
+  }
+
+  private static String readProjectCodeGeneratorStandaloneProjectTestSource() throws Exception {
+    Path moduleRelativeSource = Path.of(
+        "src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandaloneProjectTest.java");
+    if (Files.isRegularFile(moduleRelativeSource)) {
+      return Files.readString(moduleRelativeSource, StandardCharsets.UTF_8);
+    }
+
+    Path rootRelativeSource = Path.of(
+        "netbeans/src/test/java/org/alice/netbeans/project/ProjectCodeGeneratorStandaloneProjectTest.java");
+    if (Files.isRegularFile(rootRelativeSource)) {
+      return Files.readString(rootRelativeSource, StandardCharsets.UTF_8);
+    }
+
+    fail("Could not locate ProjectCodeGeneratorStandaloneProjectTest.java from " + Path.of("").toAbsolutePath());
+    return "";
+  }
+
+  private static String methodBody(String source, String methodName) {
+    int methodNameIndex = -1;
+    int searchIndex = 0;
+    while (methodNameIndex < 0) {
+      int candidateIndex = source.indexOf(methodName + "(", searchIndex);
+      assertTrue("Could not find method " + methodName, candidateIndex >= 0);
+      int lineStart = source.lastIndexOf('\n', candidateIndex) + 1;
+      String declarationPrefix = source.substring(lineStart, candidateIndex);
+      if (declarationPrefix.contains("static")) {
+        methodNameIndex = candidateIndex;
+      } else {
+        searchIndex = candidateIndex + methodName.length();
+      }
+    }
+    int bodyStart = source.indexOf('{', methodNameIndex);
+    assertTrue("Could not find body for method " + methodName, bodyStart >= 0);
+
+    int depth = 0;
+    for (int index = bodyStart; index < source.length(); index++) {
+      char ch = source.charAt(index);
+      if (ch == '{') {
+        depth++;
+      } else if (ch == '}') {
+        depth--;
+        if (depth == 0) {
+          return source.substring(bodyStart, index + 1);
+        }
+      }
+    }
+    fail("Could not find end of method " + methodName);
+    return "";
   }
 }
