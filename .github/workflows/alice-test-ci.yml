@@ -226,10 +226,8 @@ jobs:
         run: mvn -v
 
       - name: Run headed no-Sims Maven validation
-        shell: bash
         run: |
-          set -euo pipefail
-          "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum mvn \
+          mvn \
             -DincludeSims=false \
             -Dinstall4j.skip \
             -Dcheckstyle.skip \
