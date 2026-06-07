@@ -118,6 +118,12 @@ run_with_timeout() {
   while kill -0 "${command_pid}" 2>/dev/null; do
     if (( elapsed_seconds >= timeout_seconds )); then
       kill "${command_pid}" 2>/dev/null || true
+      local grace_seconds=5
+      while (( grace_seconds > 0 )) && kill -0 "${command_pid}" 2>/dev/null; do
+        sleep 1
+        grace_seconds=$((grace_seconds - 1))
+      done
+      kill -9 "${command_pid}" 2>/dev/null || true
       wait "${command_pid}" 2>/dev/null || true
       return 124
     fi

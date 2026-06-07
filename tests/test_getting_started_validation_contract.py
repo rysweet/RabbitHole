@@ -270,6 +270,18 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
         self.assertIn("LAUNCH_TIMEOUT_SECONDS", body)
         self.assertIn("124", body)
 
+    def test_timeout_kills_stubborn_gui_processes_after_grace_period(self) -> None:
+        source = script_text()
+        body = function_body(source, "run_with_timeout")
+
+        self.assertIn("kill \"${command_pid}\"", body)
+        self.assertIn("grace_seconds", body)
+        self.assertIn("kill -9 \"${command_pid}\"", body)
+        self.assertLess(
+            body.index("kill \"${command_pid}\""),
+            body.index("kill -9 \"${command_pid}\""),
+        )
+
 
 class SharedXvfbSetupActionContract(unittest.TestCase):
     def test_shared_xvfb_setup_action_exists_at_workflow_local_path(self) -> None:
