@@ -161,7 +161,20 @@ jobs:
 
       - name: Build NetBeans package without Sims assets
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
-        run: mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -pl netbeans -am package -DskipTests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -pl netbeans -am package -DskipTests; then
+              exit 0
+            fi
+            if [[ "${attempt}" == "3" ]]; then
+              exit 1
+            fi
+            printf 'NetBeans package Maven command failed; retrying (%s/3).\n' "${attempt}"
+            find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+            sleep $((attempt * 10))
+          done
 
       - name: Verify NetBeans package artifacts
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
