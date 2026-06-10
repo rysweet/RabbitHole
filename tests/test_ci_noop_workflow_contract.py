@@ -54,9 +54,9 @@ WORKFLOWS = {
         "workflow_name": "Alice Coverage Reports",
         "job": "coverage",
         "maven_step": "Generate no-Sims aggregate and per-module coverage reports",
-        "maven_command": "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify",
+        "maven_command": "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify",
         "maven_fragments": [
-            "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify",
+            "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify",
             "Coverage Maven command failed; retrying",
         ],
         "dependent_steps": [

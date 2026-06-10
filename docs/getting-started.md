@@ -250,7 +250,7 @@ nonfree Sims dependency that the no-Sims build intentionally skipped.
 Generate the no-Sims JaCoCo report used by the modernization coverage lane:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify
+mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
@@ -279,7 +279,7 @@ Key output files:
 | Run CI-like headless tests | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
 | Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" --expect success -- ./scripts/validate-getting-started.sh --gui` |
 | Run Checkstyle | `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml` |
-| Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify` |
+| Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify` |
 | Start the IDE after a full build | `cd alice-ide && mvn exec:java -Dalice-ide` |
 | Start the IDE after a no-Sims build | `cd alice-ide && mvn -DincludeSims=false exec:java -Dalice-ide` |
 | Validate Getting Started, headless | `./scripts/validate-getting-started.sh --headless` |

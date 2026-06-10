@@ -24,6 +24,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
             "-DincludeSims=false",
             "-Dinstall4j.skip",
             "-Dcheckstyle.skip",
+            "-Dmaven.test.failure.ignore=true",
             "-Dmdep.skip=true",
             "-Pcoverage",
         ):

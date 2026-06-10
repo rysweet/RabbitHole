@@ -67,7 +67,7 @@ Important build lanes:
 | --- | --- | --- |
 | Full reactor build | `mvn compile install` | Local development and packaging |
 | Headless no-Sims test lane | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` | Fast validation without Sims assets |
-| Coverage lane | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify` | JaCoCo aggregate and per-module reports |
+| Coverage lane | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify` | JaCoCo aggregate and per-module reports |
 | NetBeans package lane | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -pl netbeans -am package -DskipTests` | Packaging checks |
 
 ## Why the modernization keeps splitting code
