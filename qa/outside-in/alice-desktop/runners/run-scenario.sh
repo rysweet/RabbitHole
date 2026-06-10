@@ -434,6 +434,19 @@ format_argv() {
   local IFS=' '
   printf '%s' "$*"
 }
+write_gated_timeout_policy() {
+  local scenario_id=$1
+  local run_timeout=$2
+
+  case "$scenario_id" in
+    alice-desktop-save-menu-dialog-write-proof|alice-desktop-project-io-smoke|"$RUN_WINDOW_CONTRACT_SCENARIO")
+      printf 'timeoutPolicy=none\n'
+      ;;
+    *)
+      printf 'timeoutSeconds=%s\n' "$run_timeout"
+      ;;
+  esac
+}
 validate_scenario_automation_cwd() {
   local scenario_json=$1
   local cwd
@@ -3919,18 +3932,12 @@ PY
       printf 'checklist=%s\n' "$(basename "$checklist")"
       printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
       printf 'cwd=%s\n' "$cwd"
-      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ] ||
-        [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
-        printf 'timeoutPolicy=none\n'
-      fi
+      write_gated_timeout_policy "$scenario_id" "$run_timeout"
       if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
         printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
       elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
-        printf 'timeoutPolicy=none\n'
         printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
         printf 'runWindowEvidenceStatus=not-run\n'
-      elif [ "$scenario_id" != alice-desktop-project-io-smoke ]; then
-        printf 'timeoutSeconds=%s\n' "$run_timeout"
       fi
     } > "$run_dir/status.txt"
     if [ "$prepare_only" = "1" ]; then
@@ -4028,20 +4035,15 @@ PY
     printf 'commandLog=command.log\n'
     printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
     printf 'cwd=%s\n' "$cwd"
+    write_gated_timeout_policy "$scenario_id" "$run_timeout"
     if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
-      printf 'timeoutPolicy=none\n'
       printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
       printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
       printf 'saveProofValidationLog=%s\n' save-proof-validation.log
     elif [ "$scenario_id" = "$RUN_WINDOW_CONTRACT_SCENARIO" ]; then
-      printf 'timeoutPolicy=none\n'
       printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
       printf 'runWindowEvidenceStatus=%s\n' "$run_window_validation_status"
       printf 'runWindowValidationLog=%s\n' run-window-validation.log
-    elif [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
-      printf 'timeoutPolicy=none\n'
-    else
-      printf 'timeoutSeconds=%s\n' "$run_timeout"
     fi
   } > "$run_dir/status.txt"
 

@@ -8,6 +8,7 @@ MAX_LAUNCH_TIMEOUT_SECONDS=600
 LAUNCH_TIMEOUT_SECONDS="${RABBITHOLE_LAUNCH_TIMEOUT_SECONDS:-${DEFAULT_LAUNCH_TIMEOUT_SECONDS}}"
 
 TEMP_PATHS=()
+MAVEN_CMD=(mvn)
 trap 'rm -rf "${TEMP_PATHS[@]}"' EXIT
 
 usage() {
@@ -87,8 +88,8 @@ require_common_prerequisites() {
   require_command mvn
 }
 
-require_maven_settings() {
-  local settings_path=$1
+configure_maven_command() {
+  local settings_path=${MAVEN_SETTINGS_PATH:-}
   if [[ -z "${settings_path}" ]]; then
     return 0
   fi
@@ -98,14 +99,7 @@ require_maven_settings() {
   if [[ ! -f "${settings_path}" ]]; then
     fail "MAVEN_SETTINGS_PATH does not name an existing file: ${settings_path}"
   fi
-}
-
-maven_command() {
-  if [[ -n "${MAVEN_SETTINGS_PATH:-}" ]]; then
-    printf '%s\0%s\0%s\0' mvn --settings "${PWD}/${MAVEN_SETTINGS_PATH}"
-  else
-    printf '%s\0' mvn
-  fi
+  MAVEN_CMD=(mvn --settings "${PWD}/${settings_path}")
 }
 
 validate_launch_timeout_seconds() {
@@ -200,10 +194,8 @@ show_captured_output_tail() {
 }
 
 run_headless_lane() {
-  local maven_prefix=()
-  mapfile -d '' -t maven_prefix < <(maven_command)
   local mvn_cmd=(
-    "${maven_prefix[@]}"
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
@@ -212,7 +204,7 @@ run_headless_lane() {
     install
   )
   local headless_launch_maven=(
-    "${maven_prefix[@]}"
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Djava.awt.headless=true
     exec:java
@@ -304,10 +296,8 @@ JAVA
 }
 
 run_gui_launch() {
-  local maven_prefix=()
-  mapfile -d '' -t maven_prefix < <(maven_command)
   local gui_launch_maven=(
-    "${maven_prefix[@]}"
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Djava.awt.headless=false
     exec:java
@@ -337,10 +327,8 @@ run_gui_launch() {
 }
 
 run_gui_maven_validation() {
-  local maven_prefix=()
-  mapfile -d '' -t maven_prefix < <(maven_command)
   local mvn_cmd=(
-    "${maven_prefix[@]}"
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
@@ -418,7 +406,7 @@ if (( "$#" == 1 )); then
 fi
 
 require_common_prerequisites
-require_maven_settings "${MAVEN_SETTINGS_PATH:-}"
+configure_maven_command
 validate_launch_timeout_seconds
 
 case "${mode}" in
