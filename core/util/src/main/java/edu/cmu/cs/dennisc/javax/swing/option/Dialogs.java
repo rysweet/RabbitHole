@@ -43,6 +43,7 @@
 package edu.cmu.cs.dennisc.javax.swing.option;
 
 import edu.cmu.cs.dennisc.java.io.FileUtilities;
+import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.javax.swing.WindowStack;
 
 import javax.swing.Icon;
@@ -51,30 +52,50 @@ import java.awt.EventQueue;
 import java.io.File;
 
 public class Dialogs {
+  private static final boolean TESTING_MODE =
+      Boolean.getBoolean("org.alice.ide.internalTesting");
+
   private Dialogs() {
   }
 
   public static boolean confirm(String title, String message) {
-    // TODO ensure this is run on DispatchThread
+    if (TESTING_MODE) {
+      Logger.warning("Dialogs.confirm suppressed in test mode: [", title, "] ", message);
+      return true;
+    }
     return JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(WindowStack.peek(), message, title, JOptionPane.YES_NO_OPTION);
   }
 
   public static boolean confirmWithWarning(String title, String message) {
-    // TODO ensure this is run on DispatchThread
+    if (TESTING_MODE) {
+      Logger.warning("Dialogs.confirmWithWarning suppressed in test mode: [", title, "] ", message);
+      return true;
+    }
     return JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(WindowStack.peek(), message, title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
   }
 
   public static YesNoCancelResult confirmOrCancel(String title, String message) {
-    // TODO ensure this is run on DispatchThread
+    if (TESTING_MODE) {
+      Logger.warning("Dialogs.confirmOrCancel suppressed in test mode: [", title, "] ", message);
+      return YesNoCancelResult.YES;
+    }
     return YesNoCancelResult.getInstance(JOptionPane.showConfirmDialog(WindowStack.peek(), message, title, JOptionPane.YES_NO_CANCEL_OPTION));
   }
 
   public static YesNoCancelResult showCustomConfirm(String title, String message, String[] options) {
+    if (TESTING_MODE) {
+      Logger.warning("Dialogs.showCustomConfirm suppressed in test mode: [", title, "] ", message);
+      return YesNoCancelResult.YES;
+    }
     return YesNoCancelResult.getInstance(JOptionPane.showOptionDialog(WindowStack.peek(), message, title,
             JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, options, null));
   }
 
   public static YesNoCancelResult showCustomConfirmOrCancel(String title, String message, String[] options) {
+    if (TESTING_MODE) {
+      Logger.warning("Dialogs.showCustomConfirmOrCancel suppressed in test mode: [", title, "] ", message);
+      return YesNoCancelResult.YES;
+    }
     return YesNoCancelResult.getInstance(JOptionPane.showOptionDialog(WindowStack.peek(), message, title,
             JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE, null, options, null));
   }
@@ -109,6 +130,10 @@ public class Dialogs {
   }
 
   private static void showMessageDialog(String title, String message, int messageType, Icon icon) {
+    if (TESTING_MODE) {
+      Logger.warning("Dialogs.showMessageDialog suppressed in test mode: [", title, "] ", message);
+      return;
+    }
     show(() -> JOptionPane.showMessageDialog(WindowStack.peek(), message, title, messageType, icon));
   }
 
