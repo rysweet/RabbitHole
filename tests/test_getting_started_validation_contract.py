@@ -39,7 +39,6 @@ HEADED_MAVEN_FLAGS = (
     "-DincludeSims=false",
     "-Dinstall4j.skip",
     "-Dcheckstyle.skip",
-    "-Dmdep.skip=true",
     "-DskipTests",
     "-Djava.awt.headless=false",
     "clean",
