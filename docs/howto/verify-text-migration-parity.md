@@ -17,19 +17,21 @@ mvn -pl core/story-api-migration -am \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
-  -Dtest=TextMigrationRegistryTest,TextMigrationJsonLoaderTest,TextMigrationJsonGeneratorTest \
+  -Dtest=TextMigrationJsonGeneratorTest \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
-git diff --exit-code -- core/story-api-migration/src/main/resources/migrations/text-migrations.json
 ```
 
-The focused Maven command runs the parity lane. The final `git diff` command
-confirms the committed generated JSON was not hand-edited or dirtied by local
-verification.
+This is the strict text migration JSON drift check. It regenerates JSON from the
+legacy registry definitions in memory, reads the committed
+`core/story-api-migration/src/main/resources/migrations/text-migrations.json`
+resource as UTF-8 text, compares the two UTF-8 strings exactly, and exits
+non-zero when the committed JSON is stale. The strict check is read-only: it
+does not modify `text-migrations.json` when JSON is current or stale.
 
 ## When to run this workflow
 
-Run the parity lane when a change touches any of these files:
+Run this workflow when a change touches any of these files:
 
 ```text
 core/story-api-migration/src/main/java/org/lgna/project/migration/TextMigration*.java
@@ -37,8 +39,23 @@ core/story-api-migration/src/main/resources/migrations/text-migrations.json
 core/story-api-migration/src/test/java/org/lgna/project/migration/TextMigration*.java
 ```
 
-For broader migration work, run the focused parity lane first, then run the full
-module lane:
+For broader migration work, run the strict drift check first, then run the full
+text migration parity lane:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=TextMigrationRegistryTest,TextMigrationJsonLoaderTest,TextMigrationJsonGeneratorTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
+```
+
+Run the full module lane when the change is larger than registry parity:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -51,15 +68,12 @@ mvn -pl core/story-api-migration -am \
   test
 ```
 
-## Verify generated migration JSON safely
+## Verify generated migration JSON strictly
 
 `text-migrations.json` is generated data. Do not edit it by hand.
 
-When the legacy registry definitions intentionally change, run the approved
-generator validation path. By default it compares generated JSON exactly against
-the committed resource, writes canonical JSON to a temporary file, compares that
-output with the committed resource, then proves the generated JSON still loads to
-the legacy registry definitions:
+The default `TextMigrationJsonGeneratorTest` path is the strict, read-only drift
+check:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -72,26 +86,69 @@ mvn -pl core/story-api-migration -am \
   -Dtest=TextMigrationJsonGeneratorTest \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
+```
+
+The strict path performs all validation in test memory or temporary files:
+
+1. Serialize the legacy registry sequence to deterministic pretty-printed JSON.
+2. Read the committed `text-migrations.json` resource as UTF-8 text.
+3. Compare generated and committed JSON with exact UTF-8 string comparison.
+4. Verify generated JSON loads back to the same legacy registry definitions.
+5. Verify the committed resource remains loadable through the default runtime
+   JSON registry path.
+
+When strict verification fails, the test reports drift against the repo-relative
+resource path and reminds developers that the write property is only for
+explicit regeneration.
+
+## Regenerate generated migration JSON explicitly
+
+Use the write property only when the legacy registry definitions intentionally
+changed and the committed JSON must be refreshed:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dorg.lgna.project.migration.TextMigrationJsonGenerator.write=true \
+  -Dtest=TextMigrationJsonGeneratorTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
 git diff -- core/story-api-migration/src/main/resources/migrations/text-migrations.json
 ```
 
-The command should leave the resource unchanged for parity-only work. If the
-resource must change in a separate migration-content change, accept the JSON diff
-only when it is generated output and the registry, loader, and generator tests
-pass together. Formatting-only, manual, reordered, or partial JSON edits are not
-valid.
+`-Dorg.lgna.project.migration.TextMigrationJsonGenerator.write=true` is the only
+write gate for this resource. It writes canonical JSON generated from the legacy
+registries to the committed resource path, then the same generator test verifies
+the refreshed file. Keep the JSON diff only when it is the intended generated
+output of a migration-content change. Formatting-only, manual, reordered, or
+partial JSON edits are not valid.
 
 ## Add or change a migration safely
 
 1. Update the authoritative legacy registry class that owns the migration
    version segment.
-2. Run `TextMigrationJsonGeneratorTest` to regenerate canonical JSON and compare it with the committed resource.
-3. Run `TextMigrationRegistryTest`, `TextMigrationJsonLoaderTest`, and
+2. Run the strict `TextMigrationJsonGeneratorTest` command. It must fail if the
+   committed generated JSON is stale and must not write files.
+3. If the legacy registry change is intentional, run the explicit regeneration
+   command and inspect the generated JSON diff.
+4. Run `TextMigrationRegistryTest`, `TextMigrationJsonLoaderTest`, and
    `TextMigrationJsonGeneratorTest` together.
-4. If `text-migrations.json` changes, confirm it changed only through generator
+5. If `text-migrations.json` changes, confirm it changed only through generator
    output.
-5. Keep the change scoped to migration parity unless the behavior change has its
+6. Keep the change scoped to migration parity unless the behavior change has its
    own characterization tests and review path.
+
+## Pull request gate
+
+Text migration registry changes target `develop`. Before merging, the strict
+`TextMigrationJsonGeneratorTest` lane must pass, the full text migration parity
+lane must pass when registry behavior or data changed, and required CI checks on
+the pull request must be green.
 
 ## What the parity lane proves
 
@@ -99,7 +156,7 @@ valid.
 | --- | --- |
 | `TextMigrationRegistryTest` | `TextMigrationRegistry.createAll()` keeps the expected count, version order, boundaries, sub-registry assembly order, fresh-array behavior, and ordered source/replacement pair parity with the legacy registries. |
 | `TextMigrationJsonLoaderTest` | The classpath JSON produces the same ordered versions and source/replacement pairs as the concatenated legacy registries, including representative resolved pairs and loader edge-case characterization. |
-| `TextMigrationJsonGeneratorTest` | The generator validation path serializes the legacy registries to temporary canonical JSON, compares it with committed `text-migrations.json`, and confirms generated JSON loads back to the legacy definitions. |
+| `TextMigrationJsonGeneratorTest` | The strict command serializes the legacy registries in memory, compares generated JSON with committed `text-migrations.json` using exact UTF-8 string comparison, stays read-only, and confirms generated JSON loads back to the legacy definitions. The same test writes committed JSON only when the explicit write property is supplied through the regeneration command. |
 
 ## Boundaries of this lane
 
@@ -114,7 +171,8 @@ add fallback behavior. Shared reflection-based pair extraction lives in
 | Symptom | Fix |
 | --- | --- |
 | Maven reports missing Tweedle parser classes | Run `git submodule update --init tweedle-lang`, then confirm `tweedle-lang/Grammar` exists. |
-| `TextMigrationJsonGeneratorTest` writes a resource diff | Review the `text-migrations.json` diff and confirm the legacy registry change is intentional. |
+| Strict `TextMigrationJsonGeneratorTest` fails with generated JSON drift | Do not hand-edit the resource. If the legacy registry change is intentional, run the explicit regeneration command and keep only the generated `text-migrations.json` diff. |
+| `TextMigrationJsonGeneratorTest` writes a resource diff | Confirm the command included `-Dorg.lgna.project.migration.TextMigrationJsonGenerator.write=true`; without that property the strict path is read-only. |
 | `TextMigrationRegistryTest` reports an order mismatch | Check the legacy concatenation order: early small versions, `V3134`, mid small versions, `V3159`, then late versions. |
 | `TextMigrationJsonLoaderTest` reports pair or version drift | Compare the JSON order and replacement pairs with the legacy registry definitions. |
 

@@ -85,9 +85,11 @@ Always restore the previous handler in a `finally` block:
 
 ```java
 ProcessTerminator.Handler previous =
-    ProcessTerminator.setHandler(status -> System.exit(status));
+    ProcessTerminator.setHandler(System::exit);
 try {
-  runApplication(args);
+  requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
+  // EntryPoint initializes Alice desktop services here.
+  launch(args);
 } catch (ProcessTerminationRequestedException request) {
   System.exit(request.getStatus());
 } finally {
@@ -101,7 +103,7 @@ other tests.
 ## `ProcessTerminationRequestedException`
 
 ```java
-public final class ProcessTerminationRequestedException extends RuntimeException {
+public class ProcessTerminationRequestedException extends RuntimeException {
   public ProcessTerminationRequestedException(int status)
 
   public int getStatus()
@@ -153,30 +155,37 @@ Configuration is process-local Java state:
 | --- | --- |
 | `0` | Normal successful tool or launcher completion. |
 | `-1` | Existing Alice desktop startup or exception-handler failure exit. |
-| Tool-specific non-zero status | Headless tool argument or runtime failure, as documented by that tool. |
+| Tool-specific non-zero status | Existing headless tool argument or runtime failure status returned by that tool's `run(...)` method. |
 
 `ProcessTerminator` preserves the exact status supplied by the caller. It does
 not normalize, remap, or swallow statuses.
 
 ## Allowlist contract
 
-`SystemExitBoundaryTest` is the code-level authorization boundary for direct JVM
-termination. It scans repository production Java sources under `src/main/java`
-across every module, including `alice-ide`, `core`, `core/ide`, `core/util`,
-`core-nonfree`, and `netbeans` production roots. Test sources are outside the
-production allowlist scan, but tests must not terminate the Maven test JVM.
+`SystemExitBoundaryTest` is the current file-level code authorization boundary
+for direct JVM termination. It scans repository production Java sources under
+`src/main/java` across every module, including `alice-ide`, `core`, `core/ide`,
+`core/util`, `core-nonfree`, and `netbeans` production roots. Test sources are
+outside the production allowlist scan, but tests must not terminate the Maven
+test JVM.
 
-The test recognizes direct process termination through `System.exit(...)`,
-`System::exit`, `Runtime.getRuntime().exit(...)`, and
-`Runtime.getRuntime().halt(...)`. Approval is exact: repository-relative source
-path, enclosing context, and normalized call text must match the allowlist.
-Adding another direct exit to an otherwise-approved file fails the test until the
-new call site is explicitly approved.
+The checked-in test currently recognizes `System.exit(...)` by source text and
+approves whole files through `APPROVED_SYSTEM_EXIT_FILES`. The feature target is
+exact call-site approval: repository-relative source path, enclosing context,
+and normalized call text must match the allowlist, and adding another direct
+exit to an otherwise-approved file must fail until the new call site is
+explicitly approved.
+
+The target scanner must recognize direct process termination through
+`System.exit(...)`, `System::exit`, `Runtime.getRuntime().exit(...)`, and
+`Runtime.getRuntime().halt(...)`.
 
 When a new production launcher truly needs direct process termination, update
-the explicit allowlist in `SystemExitBoundaryTest` and
+the allowlist in `SystemExitBoundaryTest` and
 [System.exit allowlist reference](./system-exit-allowlist.md) in the same
-change that introduces the launcher.
+change that introduces the launcher. Until the exact scanner lands, the test
+allowlist is file-level and the documentation table records the intended exact
+call site.
 
 Do not add `System.exit` to reusable classes, exception handlers, Croquet
 operations, dialogs, composites, utilities, or tests that run in the same JVM as

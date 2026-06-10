@@ -43,37 +43,26 @@
 
 package org.alice.ide.clipboard;
 
-import edu.cmu.cs.dennisc.java.util.Maps;
 import org.alice.ide.IDE;
 import org.lgna.croquet.ActionOperation;
 import org.lgna.croquet.Application;
 import org.lgna.croquet.history.UserActivity;
-import org.lgna.project.ast.AbstractNode;
 import org.lgna.project.ast.Node;
 import org.lgna.project.ast.Statement;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
  * @author Dennis Cosgrove
  */
 public class CopyToClipboardOperation extends ActionOperation {
-  private static Map<AbstractNode, CopyToClipboardOperation> map = Maps.newHashMap();
-
-  public static synchronized CopyToClipboardOperation getInstance(Statement node) {
-    assert node != null;
-    CopyToClipboardOperation rv = map.get(node);
-    if (rv == null) {
-      rv = new CopyToClipboardOperation(node);
-      map.put(node, rv);
-    }
-    return rv;
+  public static CopyToClipboardOperation getInstance(Statement node) {
+    return ClipboardOperationRegistries.getActiveRegistry().getCopyToClipboardOperation(node);
   }
 
   private final Statement node;
 
-  private CopyToClipboardOperation(Statement node) {
+  CopyToClipboardOperation(Statement node) {
     super(Application.DOCUMENT_UI_GROUP, UUID.fromString("86025bf5-1f1f-4f2d-8182-190574a3c3d0"));
     this.node = node;
   }

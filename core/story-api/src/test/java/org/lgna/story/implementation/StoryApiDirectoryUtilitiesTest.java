@@ -15,44 +15,37 @@ public class StoryApiDirectoryUtilitiesTest {
   // ── getSoundGalleryDirectory ──
 
   @Test
-  public void getSoundGalleryDirectoryReturnsFileOrFallback() {
+  public void getSoundGalleryDirectoryReturnsNullWithoutInstall() {
+    // Without org.alice.ide.rootDirectory set to a real installation,
+    // getDirectory returns null instead of falling back to scanning home.
     File dir = StoryApiDirectoryUtilities.getSoundGalleryDirectory();
-    assertNotNull("Should return a directory or fallback, never null", dir);
+    if (dir != null) {
+      assertTrue("If returned, should be a real directory", dir.isDirectory());
+    }
+    // null is acceptable when no Alice installation is present
   }
 
   // ── getStarterProjectsDirectory ──
 
   @Test
-  public void getStarterProjectsDirectoryReturnsFileOrFallback() {
+  public void getStarterProjectsDirectoryReturnsNullWithoutInstall() {
     File dir = StoryApiDirectoryUtilities.getStarterProjectsDirectory();
-    assertNotNull("Should return a directory or fallback, never null", dir);
+    if (dir != null) {
+      assertTrue("If returned, should be a real directory", dir.isDirectory());
+    }
   }
 
   // ── getInternalModelsDirectory ──
 
   @Test
-  public void getInternalModelsDirectoryReturnsFileOrFallback() {
+  public void getInternalModelsDirectoryReturnsNullWithoutInstall() {
     File dir = StoryApiDirectoryUtilities.getInternalModelsDirectory();
-    assertNotNull("Should return a directory or fallback, never null", dir);
+    if (dir != null) {
+      assertTrue("If returned, should be a real directory", dir.isDirectory());
+    }
   }
 
   // ── setUserGalleryDirectory / getUserGalleryDirectory ──
-
-  @Test
-  public void getUserGalleryDirectoryDefaultIsNotNull() {
-    // Reset any previously set value
-    StoryApiDirectoryUtilities.setUserGalleryDirectory(null);
-    File dir = StoryApiDirectoryUtilities.getUserGalleryDirectory();
-    assertNotNull("Default user gallery should never be null", dir);
-  }
-
-  @Test
-  public void getUserGalleryDirectoryDefaultPathContainsAlice() {
-    StoryApiDirectoryUtilities.setUserGalleryDirectory(null);
-    File dir = StoryApiDirectoryUtilities.getUserGalleryDirectory();
-    assertTrue("Default path should contain Alice3",
-        dir.getAbsolutePath().contains("Alice3"));
-  }
 
   @Test
   public void setUserGalleryDirectoryRoundTrips() {
@@ -75,13 +68,26 @@ public class StoryApiDirectoryUtilitiesTest {
     assertNotEquals("Should restore default, not custom", custom, result);
   }
 
-  // ── getDirectory fallback behavior ──
+  // ── getDirectory no longer falls back to home directory ──
 
   @Test
-  public void soundGalleryFallsBackToDefaultDirectory() {
-    // Without a proper install directory, all getDirectory calls
-    // should fall back to FileUtilities.getDefaultDirectory()
-    File dir = StoryApiDirectoryUtilities.getSoundGalleryDirectory();
-    assertTrue("Fallback directory should exist", dir.exists() || dir.getAbsolutePath().length() > 0);
+  public void directoryMethodsDoNotFallBackToHomeDirectory() {
+    String home = System.getProperty("user.home");
+    File soundDir = StoryApiDirectoryUtilities.getSoundGalleryDirectory();
+    File starterDir = StoryApiDirectoryUtilities.getStarterProjectsDirectory();
+    File internalDir = StoryApiDirectoryUtilities.getInternalModelsDirectory();
+
+    if (soundDir != null) {
+      assertFalse("Should not fall back to home directory",
+          soundDir.getAbsolutePath().equals(home));
+    }
+    if (starterDir != null) {
+      assertFalse("Should not fall back to home directory",
+          starterDir.getAbsolutePath().equals(home));
+    }
+    if (internalDir != null) {
+      assertFalse("Should not fall back to home directory",
+          internalDir.getAbsolutePath().equals(home));
+    }
   }
 }

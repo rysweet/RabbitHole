@@ -43,30 +43,63 @@
 
 package org.alice.ide.clipboard;
 
-import org.alice.ide.IDE;
+import edu.cmu.cs.dennisc.java.util.Maps;
 import org.alice.ide.ast.draganddrop.BlockStatementIndexPair;
-import org.alice.ide.croquet.edits.ast.InsertStatementEdit;
-import org.lgna.croquet.edits.Edit;
-import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.ast.Statement;
 
-import java.util.UUID;
+import java.util.Map;
+import java.util.Objects;
 
 /**
- * @author Dennis Cosgrove
+ * Owns clipboard and drag-and-drop operation memoization for one context.
  */
-public class CopyFromClipboardOperation extends FromClipboardOperation {
-  public static CopyFromClipboardOperation getInstance(BlockStatementIndexPair blockStatementIndexPair) {
-    return ClipboardOperationRegistries.getActiveRegistry().getCopyFromClipboardOperation(blockStatementIndexPair);
+public final class ClipboardOperationRegistry {
+  private final Map<Statement, CopyToClipboardOperation> copyToClipboardOperations = Maps.newHashMap();
+  private final Map<Statement, CutToClipboardOperation> cutToClipboardOperations = Maps.newHashMap();
+  private final Map<BlockStatementIndexPair, PasteFromClipboardOperation> pasteFromClipboardOperations =
+      Maps.newHashMap();
+  private final Map<BlockStatementIndexPair, CopyFromClipboardOperation> copyFromClipboardOperations =
+      Maps.newHashMap();
+
+  public synchronized CopyToClipboardOperation getCopyToClipboardOperation(Statement statement) {
+    Objects.requireNonNull(statement, "statement");
+    CopyToClipboardOperation rv = this.copyToClipboardOperations.get(statement);
+    if (rv == null) {
+      rv = new CopyToClipboardOperation(statement);
+      this.copyToClipboardOperations.put(statement, rv);
+    }
+    return rv;
   }
 
-  CopyFromClipboardOperation(BlockStatementIndexPair blockStatementIndexPair) {
-    super(UUID.fromString("fc162a45-2175-4ccf-a5f2-d3de969692c3"), blockStatementIndexPair);
+  public synchronized CutToClipboardOperation getCutToClipboardOperation(Statement statement) {
+    Objects.requireNonNull(statement, "statement");
+    CutToClipboardOperation rv = this.cutToClipboardOperations.get(statement);
+    if (rv == null) {
+      rv = new CutToClipboardOperation(statement);
+      this.cutToClipboardOperations.put(statement, rv);
+    }
+    return rv;
   }
 
-  @Override
-  protected Edit createEdit(UserActivity userActivity, Statement statement) {
-    Statement copy = IDE.getActiveInstance().createCopy(statement);
-    return new InsertStatementEdit<CopyFromClipboardOperation>(userActivity, this.getBlockStatementIndexPair(), copy);
+  public synchronized PasteFromClipboardOperation getPasteFromClipboardOperation(
+      BlockStatementIndexPair blockStatementIndexPair) {
+    Objects.requireNonNull(blockStatementIndexPair, "blockStatementIndexPair");
+    PasteFromClipboardOperation rv = this.pasteFromClipboardOperations.get(blockStatementIndexPair);
+    if (rv == null) {
+      rv = new PasteFromClipboardOperation(blockStatementIndexPair);
+      this.pasteFromClipboardOperations.put(blockStatementIndexPair, rv);
+    }
+    return rv;
+  }
+
+  public synchronized CopyFromClipboardOperation getCopyFromClipboardOperation(
+      BlockStatementIndexPair blockStatementIndexPair) {
+    Objects.requireNonNull(blockStatementIndexPair, "blockStatementIndexPair");
+    CopyFromClipboardOperation rv = this.copyFromClipboardOperations.get(blockStatementIndexPair);
+    if (rv == null) {
+      rv = new CopyFromClipboardOperation(blockStatementIndexPair);
+      this.copyFromClipboardOperations.put(blockStatementIndexPair, rv);
+    }
+    return rv;
   }
 }

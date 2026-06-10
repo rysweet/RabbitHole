@@ -36,7 +36,12 @@ The headed Ubuntu GUI validation lane runs under Xvfb:
 ```bash
 xvfb_run="${{ steps.setup-xvfb.outputs.xvfb-run }}"
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
-  "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui
+scripts/validate-gui-with-xvfb.sh \
+  --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-1800}" \
+  --expect success \
+  --xvfb-run "${xvfb_run}" \
+  -- \
+  scripts/validate-getting-started.sh --gui
 ```
 
 Run the golden Alice project corpus validator:
@@ -79,7 +84,30 @@ mvn -pl core/story-api-migration \
   test
 ```
 
-Run the text migration registry parity lane:
+Run the strict text migration JSON drift check:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=TextMigrationJsonGeneratorTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
+```
+
+This lane regenerates text migration JSON from the legacy registries in memory,
+compares it with
+`core/story-api-migration/src/main/resources/migrations/text-migrations.json`
+using exact UTF-8 string comparison, and fails non-zero on drift. This strict
+command is read-only. Do not add the write property to this command; use the
+regeneration command in
+[Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md).
+
+Run the full text migration registry parity lane:
 
 ```bash
 export NODE_OPTIONS=--max-old-space-size=32768
@@ -93,6 +121,15 @@ mvn -pl core/story-api-migration -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 ```
+
+Both text migration lanes require the Tweedle grammar submodule. If Maven reports
+missing generated Tweedle parser classes, run:
+
+```bash
+git submodule update --init tweedle-lang
+```
+
+Then confirm `tweedle-lang/Grammar` exists.
 
 Run the same harness against a local preserved baseline checkout:
 
@@ -142,15 +179,15 @@ immediately after cloning.
 `tests/test_getting_started_validation_contract.py` protects the documented
 command surface from drift by checking the validator flags, submodule failure
 guidance, no-Sims launch command, and GUI skip/block behavior described here.
-Those contract tests also assert the shared Xvfb action, separate headed job,
-bounded startup timeout, and preserved headless lane.
+Those contract tests also assert the shared Xvfb action, reusable Xvfb harness,
+separate headed job, bounded startup timeout, and preserved headless lane.
 `python3 alice_qa.py getting-started validate` is the wrapper entry point for
 running the same validator from the checkout under review.
 
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |
 | Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes with `java.awt.headless=true`, and the no-Sims launch probe reaches the expected GUI-required message. |
-| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims build/install passes under Xvfb with `java.awt.headless=false` and tests skipped, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
+| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-1800}" --expect success --xvfb-run "${xvfb_run}" -- scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims build/install passes under Xvfb with `java.awt.headless=false` and tests skipped, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
 | Local GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
 | All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
 
@@ -175,9 +212,11 @@ setup action to install Xvfb from Ubuntu apt repositories and expose an absolute
 `xvfb-run` path to workflow steps. Running `--headless` under Xvfb is not a GUI
 validation because Java still runs with `java.awt.headless=true`; the headed
 lane must use `-Djava.awt.headless=false` and `--gui` so display-dependent
-behavior is actually exercised. The `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60`
-setting is required in the CI job so a failed GUI startup cannot hang the
-workflow indefinitely.
+behavior is actually exercised. The reusable Xvfb harness owns the standard
+`xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac"` invocation. The
+`RABBITHOLE_LAUNCH_TIMEOUT_SECONDS` setting bounds the Alice startup probe, and
+`RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS` is the larger whole-command
+deadline for the harness.
 
 ### Skip, fail, and block behavior
 

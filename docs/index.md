@@ -61,12 +61,15 @@ expectations.
 - [Migration Hotspot Characterization](./concepts/migration-hotspot-characterization.md)
 - [Process Termination Boundary](./concepts/process-termination-boundary.md)
 - [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
+- [Scoped Clipboard Operation Registries](./concepts/scoped-clipboard-operation-registries.md)
 - [Reflection Sweep Contracts](./concepts/reflection-sweep-contracts.md)
 
 ### How-to guides
 
+- [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [Request Process Termination Safely](./howto/request-process-termination.md)
 - [Use the UI Prompt Boundary](./howto/use-ui-prompt-boundary.md)
+- [Use a Scoped Clipboard Operation Registry](./howto/use-scoped-clipboard-operation-registry.md)
 - [Replace Reflection Sweeps with Explicit Contracts](./howto/replace-reflection-sweeps.md)
 
 ### Tutorials
@@ -81,6 +84,7 @@ expectations.
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
 - [Process Termination API](./reference/process-termination-api.md)
 - [UI Prompt Boundary API](./reference/ui-prompt-boundary-api.md)
+- [Clipboard Operation Registry](./reference/clipboard-operation-registry.md)
 - [Reflection Smoke Support](./reference/reflection-smoke-support.md)
 - [System.exit Allowlist](./reference/system-exit-allowlist.md)
 

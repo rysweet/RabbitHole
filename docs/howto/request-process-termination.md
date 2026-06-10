@@ -36,8 +36,10 @@ Call `ProcessTerminator.requestExit(status)` instead of `System.exit(status)`.
 ```java
 import org.lgna.croquet.ProcessTerminator;
 
-public final class ProjectCloseOperation {
-  public void handleUserConfirmedExit() {
+public final class SystemExitOperation extends ActionOperation {
+  @Override
+  protected void perform(UserActivity activity) {
+    activity.finish();
     ProcessTerminator.requestExit(0);
   }
 }
@@ -75,11 +77,11 @@ rg 'System\.exit|System::exit|Runtime\.getRuntime\(\)\.(exit|halt)' \
   --glob '**/src/main/java/**/*.java'
 ```
 
-Every result must either match the exact
-[System.exit allowlist](../reference/system-exit-allowlist.md) or be converted
-to `ProcessTerminator.requestExit(status)`. Do not rely on a file-level
-approval; a new direct exit in an approved launcher file still needs its own
-explicit allowlist entry.
+Every result must either be a true process boundary or be converted to
+`ProcessTerminator.requestExit(status)`. The checked-in boundary test currently
+uses a file-level allowlist for `System.exit(...)`; the
+[System.exit allowlist](../reference/system-exit-allowlist.md) records the
+target exact call sites that the scanner must enforce when the feature lands.
 
 ## Handle termination inside exception handlers
 
@@ -94,9 +96,7 @@ JOptionPane.showMessageDialog(
 try {
   ProcessTerminator.requestExit(-1);
 } catch (ProcessTerminationRequestedException request) {
-  if (request.getStatus() != -1) {
-    throw request;
-  }
+  // The exception handler must not report intentional termination as another crash.
 }
 ```
 
@@ -111,11 +111,12 @@ before starting reusable Alice code and catches the fallback exception at the
 launcher boundary.
 
 ```java
-public static void main(String[] args) {
-  ProcessTerminator.Handler previous =
-      ProcessTerminator.setHandler(status -> System.exit(status));
+public static void main(final String[] args) {
+  ProcessTerminator.Handler previous = ProcessTerminator.setHandler(System::exit);
   try {
-    launchAliceDesktop(args);
+    requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
+    // EntryPoint initializes Alice desktop services here.
+    launch(args);
   } catch (ProcessTerminationRequestedException request) {
     System.exit(request.getStatus());
   } finally {
@@ -144,22 +145,31 @@ public static void main(String[] args) {
 }
 
 static int run(String[] args, PrintStream out, PrintStream err) {
+  PrintStream originalSystemOut = System.out;
+  PrintStream silentSystemOut = new PrintStream(OutputStream.nullOutputStream());
+  System.setOut(silentSystemOut);
   try {
-    runTool(args, out);
+    Arguments arguments = Arguments.parse(args);
+    ProjectSave save = saveProject(arguments);
+    out.println(resultJson(save));
     return 0;
-  } catch (IllegalArgumentException ex) {
+  } catch (IllegalArgumentException | IOException | VersionNotSupportedException ex) {
     err.println(ex.getMessage());
     return 2;
   } catch (RuntimeException ex) {
-    err.println("tool failed: " + ex.getMessage());
+    err.println("project save failed: " + ex.getMessage());
     return 3;
+  } finally {
+    System.setOut(originalSystemOut);
+    silentSystemOut.close();
   }
 }
 ```
 
 When the tool is a real process boundary, add the exact `System.exit(status)`
-call site to `SystemExitBoundaryTest` and document it in
-[System.exit allowlist reference](../reference/system-exit-allowlist.md).
+call site to [System.exit allowlist reference](../reference/system-exit-allowlist.md).
+Until the exact scanner is implemented, also add the tool file to
+`APPROVED_SYSTEM_EXIT_FILES` in `SystemExitBoundaryTest`.
 
 ## Add characterization for a new termination path
 
@@ -168,7 +178,7 @@ test that records the requested status:
 
 ```java
 @Test
-public void requestsFailureExitWithoutTerminatingTestJvm() {
+public void requestExitInvokesInstalledHandlerWithRequestedStatus() {
   AtomicInteger requestedStatus = new AtomicInteger(Integer.MIN_VALUE);
   ProcessTerminator.Handler previous =
       ProcessTerminator.setHandler(requestedStatus::set);
@@ -176,18 +186,18 @@ public void requestsFailureExitWithoutTerminatingTestJvm() {
     ProcessTerminationRequestedException request =
         assertThrows(
             ProcessTerminationRequestedException.class,
-            () -> operationThatRequestsExit());
+            () -> ProcessTerminator.requestExit(42));
 
-    assertEquals(-1, request.getStatus());
-    assertEquals(-1, requestedStatus.get());
+    assertEquals(42, requestedStatus.get());
+    assertEquals(42, request.getStatus());
   } finally {
     ProcessTerminator.setHandler(previous);
   }
 }
 ```
 
-This proves both halves of the contract: reusable code requested the correct
-status, and the test JVM did not exit.
+This proves both halves of the contract: the request preserves the correct
+status, and the test JVM does not exit.
 
 ## Validate the boundary
 

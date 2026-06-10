@@ -43,33 +43,23 @@
 
 package org.alice.ide.clipboard;
 
-import edu.cmu.cs.dennisc.java.util.Maps;
 import org.alice.ide.ast.draganddrop.BlockStatementIndexPair;
 import org.alice.ide.clipboard.edits.PasteFromClipboardEdit;
 import org.lgna.croquet.edits.Edit;
 import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.ast.Statement;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
  * @author Dennis Cosgrove
  */
 public class PasteFromClipboardOperation extends FromClipboardOperation {
-  private static Map<BlockStatementIndexPair, PasteFromClipboardOperation> map = Maps.newHashMap();
-
-  public static synchronized PasteFromClipboardOperation getInstance(BlockStatementIndexPair blockStatementIndexPair) {
-    assert blockStatementIndexPair != null;
-    PasteFromClipboardOperation rv = map.get(blockStatementIndexPair);
-    if (rv == null) {
-      rv = new PasteFromClipboardOperation(blockStatementIndexPair);
-      map.put(blockStatementIndexPair, rv);
-    }
-    return rv;
+  public static PasteFromClipboardOperation getInstance(BlockStatementIndexPair blockStatementIndexPair) {
+    return ClipboardOperationRegistries.getActiveRegistry().getPasteFromClipboardOperation(blockStatementIndexPair);
   }
 
-  private PasteFromClipboardOperation(BlockStatementIndexPair blockStatementIndexPair) {
+  PasteFromClipboardOperation(BlockStatementIndexPair blockStatementIndexPair) {
     super(UUID.fromString("4dea691b-af8f-4991-80e2-3db880f1883f"), blockStatementIndexPair);
   }
 

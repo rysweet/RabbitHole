@@ -174,11 +174,38 @@ final class HeadlessClassExerciseSupport {
     }
   }
 
+  // Best-effort denylist for methods that show modal dialogs or have
+  // disruptive side effects. This is NOT exhaustive — new dialog-showing
+  // methods (e.g. alertUser(), confirmAction()) will bypass it. If sweep
+  // tests hang again, take a thread dump, identify the method, and add it
+  // here. A structural fix would be a per-method timeout with thread-kill.
+  private static final Set<String> BLOCKED_METHOD_NAMES = Set.of(
+      "setVisible", "hide", "pack", "toFront", "toBack",
+      "dispose", "close", "requestFocus", "requestFocusInWindow",
+      "browse", "openInSystemEditor", "launch",
+      "getGalleryLocationFromUser");
+
+  private static final String[] BLOCKED_METHOD_PREFIXES = {
+      "show", "open", "print", "display"
+  };
+
   private static boolean isExercisable(Method method) {
-    return !method.isSynthetic()
-        && !Modifier.isNative(method.getModifiers())
-        && !method.getName().equals("$jacocoInit")
-        && !method.getName().equals("main");
+    if (method.isSynthetic() || Modifier.isNative(method.getModifiers())) {
+      return false;
+    }
+    String name = method.getName();
+    if (name.equals("$jacocoInit") || name.equals("main")) {
+      return false;
+    }
+    if (BLOCKED_METHOD_NAMES.contains(name)) {
+      return false;
+    }
+    for (String prefix : BLOCKED_METHOD_PREFIXES) {
+      if (name.startsWith(prefix)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static Object instantiate(Class<?> clazz, int depth) {

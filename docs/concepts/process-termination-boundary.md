@@ -40,7 +40,7 @@ The process termination boundary keeps those responsibilities separate:
 | Entry points and launchers | Convert a final exit status into `System.exit(status)`. |
 | Reusable application code | Call `ProcessTerminator.requestExit(status)` when it needs the process to end. |
 | Exception handlers | Preserve the existing dialog and logging behavior, then consume intentional termination requests instead of reporting them as new crashes. |
-| Tests | Enforce the explicit `System.exit` allowlist and characterize the termination control flow. |
+| Tests | Enforce the current `System.exit` file allowlist, define the target exact call-site allowlist, and characterize the termination control flow. |
 
 ## Termination flow
 
@@ -68,22 +68,25 @@ handler records the request and returns.
 
 ## Approved `System.exit` locations
 
-Production direct termination calls are limited to exact approved call sites in
-the Alice desktop entry point and documented Eatme command-line tools.
-`SystemExitBoundaryTest` scans production Java sources under `src/main/java` and
-fails on:
+Production direct termination calls are limited to approved launcher and tool
+files today. The feature target is stricter: exact approved call sites in the
+Alice desktop entry point and Eatme command-line tools.
 
-1. a discovered direct termination call that is not in the exact allowlist;
-2. an allowlist entry whose source call site no longer exists;
+`SystemExitBoundaryTest` currently scans production Java sources under
+`src/main/java` for `System.exit(` text and fails on:
+
+1. a discovered `System.exit(` call in a file outside the approved file list;
+2. an approved file entry whose source file is missing or no longer contains
+   `System.exit(`;
 3. a traversal or source-read error while scanning production sources.
 
-The scanner covers `System.exit(...)`, `System::exit`,
-`Runtime.getRuntime().exit(...)`, and `Runtime.getRuntime().halt(...)`. Approval
-is by repository-relative path, enclosing context, and normalized call text, not
-by whole file.
+The planned exact scanner must also cover `System::exit`,
+`Runtime.getRuntime().exit(...)`, and `Runtime.getRuntime().halt(...)`.
+Approval will be by repository-relative path, enclosing context, and normalized
+call text, not by whole file.
 
 See the [System.exit allowlist reference](../reference/system-exit-allowlist.md)
-for the complete approved call-site table.
+for the current enforcement status and target approved call-site table.
 
 Main methods used as demos, dialogs, components, or diagnostics are not process
 boundaries. They must return normally, throw a useful exception, or request exit
@@ -128,7 +131,7 @@ The boundary is protected by tests at the module that owns each behavior:
 | Test | Contract |
 | --- | --- |
 | `core/croquet/src/test/java/org/lgna/croquet/ProcessTerminatorTest.java` | Default request behavior, handler invocation, fallback exception when a handler returns, status propagation, and handler cleanup. |
-| `core/ide/src/test/java/org/alice/ide/SystemExitBoundaryTest.java` | Only exact allowlisted production launcher/tool call sites use direct JVM termination. |
+| `core/ide/src/test/java/org/alice/ide/SystemExitBoundaryTest.java` | Currently restricts `System.exit(...)` to approved production launcher/tool files; the feature target is exact call-site enforcement. |
 | `core/ide/src/test/java/org/alice/ide/issue/DefaultExceptionHandlerTest.java` | Handler-initiated termination requests do not leak as uncaught failures and preserve the existing visible failure message/status. |
 | `core/ide/src/test/java/org/alice/ide/issue/IdeUncaughtExceptionHandlerTest.java` | IDE uncaught handler treats `ProcessTerminationRequestedException` as intentional termination control flow. |
 

@@ -79,7 +79,7 @@ public final class ModelManifestManager {
   public List<File> getDynamicModelFiles(File... directoriesToSearch) {
     List<File> dynamicModelFiles = new ArrayList<>();
     for (File directory : directoriesToSearch) {
-      if (directory.isDirectory()) {
+      if (directory != null && directory.isDirectory()) {
         File[] modelFiles = FileUtilities.listDescendants(directory, "json");
         dynamicModelFiles.addAll(Arrays.asList(modelFiles));
       }

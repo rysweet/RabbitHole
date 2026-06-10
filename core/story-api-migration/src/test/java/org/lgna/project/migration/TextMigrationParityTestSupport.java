@@ -132,10 +132,6 @@ final class TextMigrationParityTestSupport {
     return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(serialize(legacyRegistrySequence()));
   }
 
-  static String committedJson() throws IOException {
-    return Files.readString(committedJsonPath(), StandardCharsets.UTF_8);
-  }
-
   static Path committedJsonPath() {
     Path moduleRelative = Paths.get("src/main/resources/migrations/text-migrations.json").toAbsolutePath().normalize();
     if (Files.isRegularFile(moduleRelative)) {

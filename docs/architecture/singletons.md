@@ -168,6 +168,10 @@ Focus singleton removal on modules being extracted first:
    implementation `ClipboardDnDProvider` is in `core/clipboard-dnd`. Removing
    `core/clipboard-dnd` from the build will cause a runtime
    `NoSuchElementException` if clipboard operations are invoked.
+   Clipboard operation memoization uses scoped
+   [`ClipboardOperationRegistry`](../reference/clipboard-operation-registry.md)
+   instances instead of static mutable maps on operation classes; see
+   [Scoped Clipboard Operation Registries](../concepts/scoped-clipboard-operation-registries.md).
    **Note:** After extracting clipboard classes to this module, 7 generated
    coverage tests and 9 sweep-test entries in `core/ide` that referenced the
    moved classes by FQCN were removed.

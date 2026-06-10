@@ -43,6 +43,7 @@
 
 package org.alice.ide.ast.importers;
 
+import edu.cmu.cs.dennisc.java.io.FileUtilities;
 import edu.cmu.cs.dennisc.media.javafx.MediaFactory;
 import org.lgna.common.resources.AudioResource;
 import org.lgna.croquet.importer.Importer;
@@ -64,7 +65,12 @@ public class AudioResourceImporter extends Importer<AudioResource> {
   }
 
   private AudioResourceImporter() {
-    super(StoryApiDirectoryUtilities.getSoundGalleryDirectory(), AudioResource.createFilenameFilter(true), AudioResource.getFileExtensions());
+    super(getInitialDirectory(), AudioResource.createFilenameFilter(true), AudioResource.getFileExtensions());
+  }
+
+  private static File getInitialDirectory() {
+    File soundGalleryDirectory = StoryApiDirectoryUtilities.getSoundGalleryDirectory();
+    return soundGalleryDirectory != null ? soundGalleryDirectory : FileUtilities.getDefaultDirectory();
   }
 
   @Override

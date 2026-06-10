@@ -42,19 +42,15 @@
  *******************************************************************************/
 package org.lgna.story.implementation;
 
-import edu.cmu.cs.dennisc.java.io.FileUtilities;
-import edu.cmu.cs.dennisc.ui.prompt.ResourcePromptRequest;
-import edu.cmu.cs.dennisc.ui.prompt.ResourcePromptResult;
-import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
-
 import java.io.File;
-import java.util.Collections;
+import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 
 /**
  * @author Dennis Cosgrove
  */
 public class StoryApiDirectoryUtilities {
+  private static final Logger logger = Logger.getLogger(StoryApiDirectoryUtilities.class.getName());
   private static final String MODEL_GALLERY_PREFRENCE_KEY = "MODEL_GALLERY_PREFRENCE_KEY";
   private static final String MODEL_GALLERY_NAME = "application/gallery";
   private static final String SOUND_GALLERY_NAME = "application/sound-gallery";
@@ -84,10 +80,6 @@ public class StoryApiDirectoryUtilities {
     return rootDir;
   }
 
-  private static File getFallbackDirectory() {
-    return FileUtilities.getDefaultDirectory();
-  }
-
   private static File modelGalleryDirectory;
 
   public static File getModelGalleryDirectory() {
@@ -95,7 +87,8 @@ public class StoryApiDirectoryUtilities {
       initializeModelGallery();
     }
     if (StoryApiDirectoryUtilities.modelGalleryDirectory == null) {
-      askUserForModelGallery();
+      logger.warning("Model gallery directory not found. "
+          + "Set -Dorg.alice.ide.rootDirectory to a directory containing application/gallery.");
     }
     return StoryApiDirectoryUtilities.modelGalleryDirectory;
   }
@@ -129,18 +122,6 @@ public class StoryApiDirectoryUtilities {
     }
   }
 
-  private static void askUserForModelGallery() {
-    ResourcePromptRequest request = new ResourcePromptRequest(
-        "Locate Resources",
-        "Alice gallery resources",
-        "assets/alice",
-        Collections.emptyList(),
-        "Cannot find the Alice gallery resources.",
-        true);
-    ResourcePromptResult result = UiPrompts.requestResourceLocation(request);
-    StoryApiDirectoryUtilities.modelGalleryDirectory = result.selectedGalleryDirectory().orElse(null);
-  }
-
   public static File getSoundGalleryDirectory() {
     return getDirectory(SOUND_GALLERY_NAME);
   }
@@ -154,21 +135,16 @@ public class StoryApiDirectoryUtilities {
   }
 
   private static File getDirectory(String name) {
-    try {
-      File installDirectory = getInstallDirectory();
-      if (installDirectory != null) {
-        File resourceDirectory = new File(installDirectory, name);
-        if (resourceDirectory.isDirectory()) {
-          return resourceDirectory;
-        } else {
-          throw new RuntimeException();
-        }
-      } else {
-        throw new NullPointerException();
+    File installDirectory = getInstallDirectory();
+    if (installDirectory != null) {
+      File resourceDirectory = new File(installDirectory, name);
+      if (resourceDirectory.isDirectory()) {
+        return resourceDirectory;
       }
-    } catch (Throwable t) {
-      return getFallbackDirectory();
     }
+    logger.warning("Resource directory '" + name + "' not found. "
+        + "Set -Dorg.alice.ide.rootDirectory to a valid Alice installation.");
+    return null;
   }
 
   private static File userGalleryDirectory = null;

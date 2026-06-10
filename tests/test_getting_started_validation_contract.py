@@ -422,7 +422,7 @@ class GettingStartedValidationDocsContract(unittest.TestCase):
         self.assertIn("headed Ubuntu Xvfb", normalized)
         self.assertIn("java.awt.headless=true", combined)
         self.assertIn("java.awt.headless=false", combined)
-        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60", combined)
+        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS", combined)
         self.assertIn("GUI/display-dependent behavior", normalized)
         self.assertNotIn("[PLANNED", combined)
         self.assertNotIn("Implementation Pending", combined)
@@ -442,14 +442,9 @@ class GettingStartedValidationCiContract(unittest.TestCase):
         workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
         test_job = workflow_job_block(workflow, "test")
 
-        self.assertRegex(
-            test_job,
-            r"(?ms)- name: Run Getting Started headless validation\n.*"
-            r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"
-            r"--auto-servernum.*"
-            r"-s \"-screen 0 1024x768x24 -ac\".*"
-            r"./scripts/validate-getting-started.sh --headless",
-        )
+        self.assertIn("run: ./scripts/validate-getting-started.sh --headless", test_job)
+        self.assertNotIn("steps.setup-xvfb.outputs.xvfb-run", test_job)
+        self.assertNotIn("--auto-servernum", test_job)
         self.assertIn("-Djava.awt.headless=true", test_job)
         self.assertNotIn("./scripts/validate-getting-started.sh --gui", test_job)
 
@@ -471,17 +466,17 @@ class GettingStartedValidationCiContract(unittest.TestCase):
         workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
         headed_job = workflow_job_block(workflow, "headed-ubuntu-xvfb")
 
-        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60", headed_job)
+        self.assertIn("scripts/validate-gui-with-xvfb.sh", headed_job)
+        self.assertIn("--timeout-seconds", headed_job)
+        self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS", headed_job)
+        self.assertIn("RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS", headed_job)
+        self.assertIn("--expect success", headed_job)
+        self.assertIn("--xvfb-run", headed_job)
         self.assertIn(SETUP_XVFB_ACTION_OUTPUT, headed_job)
         self.assertNotIn("-Djava.awt.headless=true", headed_job)
         self.assertNotIn("--headless", headed_job)
-        self.assertRegex(
-            headed_job,
-            r"\$\{\{\s*steps\.setup-xvfb\.outputs\.xvfb-run\s*\}\}.*"
-            r"--auto-servernum.*"
-            r"-s \"-screen 0 1024x768x24 -ac\".*"
-            r"./scripts/validate-getting-started.sh --gui",
-        )
+        self.assertIn("scripts/validate-getting-started.sh --gui", headed_job)
+        self.assertNotIn("--auto-servernum", headed_job)
 
     def test_alice_test_ci_keeps_least_privilege_develop_pr_semantics(self) -> None:
         workflow = read_text(ALICE_TEST_WORKFLOW_PATH)

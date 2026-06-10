@@ -12,9 +12,9 @@ them in parity.
 | `TextMigrationRegistry` | `core/story-api-migration/src/main/java/org/lgna/project/migration/` | Runtime assembler for all text migrations. It loads JSON by default and can use legacy registries for characterization and regeneration. |
 | `TextMigrationJsonLoader` | `core/story-api-migration/src/main/java/org/lgna/project/migration/` | Loads `migrations/text-migrations.json` from the classpath and converts entries to `TextMigration` instances in file order. |
 | Legacy registries | `TextMigrationRegistrySmallVersions`, `TextMigrationRegistryV3134`, `TextMigrationRegistryV3159`, `TextMigrationRegistryLateVersions` | Authoritative Java definitions used as the source for loader parity checks and JSON generation. |
-| `text-migrations.json` | `core/story-api-migration/src/main/resources/migrations/` | Generated runtime migration table. It must be changed only through the approved generator path. |
+| `text-migrations.json` | `core/story-api-migration/src/main/resources/migrations/` | Generated runtime migration table. It must match the legacy registry generated JSON exactly and must be changed only through the explicit generator write path. |
 | Parity test support | `TextMigrationParityTestSupport` | Test-only canonical extraction of ordered migration source/replacement pairs from runtime JSON, generated JSON, and legacy registry classes. |
-| Parity tests | `TextMigrationRegistryTest`, `TextMigrationJsonLoaderTest`, `TextMigrationJsonGeneratorTest` | Characterization suite that protects order, count, version boundaries, loader pair parity, loader edge cases, and generator parity. |
+| Parity tests | `TextMigrationRegistryTest`, `TextMigrationJsonLoaderTest`, `TextMigrationJsonGeneratorTest` | Characterization suite that protects order, count, version boundaries, loader pair parity, loader edge cases, strict generated JSON drift detection, and generator parity. |
 
 ## Runtime behavior
 
@@ -28,6 +28,10 @@ story API migration pipeline. Its default behavior is:
 The registry returns a new array for each call. Migration ordering is part of the
 compatibility contract because older Alice project text can pass through several
 versioned rewrites before reaching the current class or resource name.
+
+The strict generator check does not change runtime behavior. Production loading
+continues to use `TextMigrationRegistry.createAll()` and `TextMigrationJsonLoader`
+against the committed JSON resource.
 
 ## Legacy registry order
 
@@ -77,8 +81,7 @@ classpath resource is surfaced as an illegal state.
 
 Runtime Alice project loading requires no application configuration.
 
-The registry has one package-private system property for test and regeneration
-work:
+The registry has one package-private system property for characterization work:
 
 ```text
 org.lgna.project.migration.TextMigrationRegistry.useLegacyRegistries
@@ -100,6 +103,28 @@ mvn -pl core/story-api-migration -am \
 
 Use this property only for characterization and generator workflows. Do not use
 it to change application behavior.
+
+The generator test has one explicit write gate:
+
+```text
+org.lgna.project.migration.TextMigrationJsonGenerator.write
+```
+
+When this property is absent or set to any value other than `true`,
+`TextMigrationJsonGeneratorTest` is a strict read-only drift check. It regenerates
+the JSON from the legacy registry sequence in memory, reads the committed
+resource as UTF-8 text, compares the UTF-8 strings exactly, and fails non-zero on
+drift.
+
+When set to `true`, the test writes canonical legacy-registry JSON to:
+
+```text
+core/story-api-migration/src/main/resources/migrations/text-migrations.json
+```
+
+Use that write path only to refresh generated JSON after an intentional legacy
+registry change. Do not add environment-variable triggers, alternate output
+paths, plugins, or a generator framework around this property.
 
 Local automation shells should keep the repository memory preference:
 
@@ -126,16 +151,34 @@ The extracted data shape is:
 The tests use that extraction for these checks:
 
 1. Runtime JSON migrations versus the concatenated legacy registries.
-2. Generated JSON versus committed `text-migrations.json`.
+2. In-memory generated JSON versus committed `text-migrations.json`, compared
+   with exact UTF-8 string comparison.
 3. Generated JSON loaded back to the concatenated legacy registry sequence.
 
-The generator test writes to a temporary file, compares the canonical JSON tree
-with the committed resource, compares the in-memory generated JSON exactly with
-the committed resource, and verifies that generated JSON loads to the legacy
-sequence. Reflection stays test-scope only. Production code should continue to
-use `TextMigrationRegistry.createAll()`.
+The generator test compares the in-memory generated JSON with the committed
+resource using exact UTF-8 string comparison, writes only to temporary files for
+canonical/loadability checks, and verifies that generated JSON loads to the
+legacy sequence. It writes the committed resource only when
+`-Dorg.lgna.project.migration.TextMigrationJsonGenerator.write=true` is supplied.
+Reflection stays test-scope only. Production code should continue to use
+`TextMigrationRegistry.createAll()`.
 
 ## Validation commands
+
+Strict generated JSON drift check:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dtest=TextMigrationJsonGeneratorTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
+```
 
 Focused parity validation:
 
@@ -152,6 +195,23 @@ mvn -pl core/story-api-migration -am \
   test
 ```
 
+Explicit generated JSON regeneration:
+
+```bash
+export NODE_OPTIONS=--max-old-space-size=32768
+git submodule update --init tweedle-lang
+mvn -pl core/story-api-migration -am \
+  -DincludeSims=false \
+  -Dinstall4j.skip \
+  -Dcheckstyle.skip \
+  -Djava.awt.headless=true \
+  -Dorg.lgna.project.migration.TextMigrationJsonGenerator.write=true \
+  -Dtest=TextMigrationJsonGeneratorTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  test
+git diff -- core/story-api-migration/src/main/resources/migrations/text-migrations.json
+```
+
 Full module validation:
 
 ```bash
@@ -165,7 +225,7 @@ mvn -pl core/story-api-migration -am \
   test
 ```
 
-Generated JSON drift check:
+Optional working-tree confirmation after strict verification:
 
 ```bash
 git diff --exit-code -- core/story-api-migration/src/main/resources/migrations/text-migrations.json
@@ -178,6 +238,9 @@ git diff --exit-code -- core/story-api-migration/src/main/resources/migrations/t
 - Keep migration order stable unless the generator and parity tests prove an
   intentional legacy-registry change.
 - Do not hand-edit `text-migrations.json`.
+- Keep strict drift verification read-only; use only
+  `-Dorg.lgna.project.migration.TextMigrationJsonGenerator.write=true` for
+  explicit regeneration.
 - Do not add silent loader fallbacks for malformed JSON, missing resources, or
   invalid required fields.
 - Keep reflective pair extraction in test scope only.

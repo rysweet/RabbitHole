@@ -60,13 +60,18 @@ public class StartersTab extends ListUriTab {
   public StartersTab() {
     super(UUID.fromString("e31ab4b2-c305-4d04-8dcc-5de8cbb6facf"));
     File starterProjectsDirectory = StoryApiDirectoryUtilities.getStarterProjectsDirectory();
-    File[] files = FileUtilities.listFiles(starterProjectsDirectory, "a3p");
-    ProjectSnapshot[] projectSnapshots = new ProjectSnapshot[files.length];
-    int i = 0;
-    Arrays.sort(files);
-    for (File file : files) {
-      projectSnapshots[i] = new ProjectSnapshot(StarterProjectUtilities.toUri(file));
-      i++;
+    ProjectSnapshot[] projectSnapshots;
+    if (starterProjectsDirectory != null) {
+      File[] files = FileUtilities.listFiles(starterProjectsDirectory, "a3p");
+      projectSnapshots = new ProjectSnapshot[files.length];
+      int i = 0;
+      Arrays.sort(files);
+      for (File file : files) {
+        projectSnapshots[i] = new ProjectSnapshot(StarterProjectUtilities.toUri(file));
+        i++;
+      }
+    } else {
+      projectSnapshots = new ProjectSnapshot[0];
     }
     this.listState = this.createImmutableListState("listState", ProjectSnapshot.class, ProjectSnapshotCodec.SINGLETON, -1, projectSnapshots);
   }

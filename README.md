@@ -75,7 +75,8 @@ The CI-safe headless lane checks CLI/docs-safe launch behavior with
 grammar submodule, the documented no-Sims Maven install command, and the no-Sims
 Alice launch command up to the expected GUI-required boundary. The headed
 Ubuntu Xvfb lane checks GUI/display-dependent behavior on Ubuntu without a
-physical display by running the GUI lane under the shared Xvfb action with
+physical display by running the GUI lane through
+`scripts/validate-gui-with-xvfb.sh`, backed by the shared Xvfb action, with
 `java.awt.headless=false` and a bounded startup timeout.
 
 On a desktop with a real graphical environment, run the same GUI lane explicitly:

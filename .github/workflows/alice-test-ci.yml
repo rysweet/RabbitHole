@@ -158,25 +158,13 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Set up Xvfb
-        id: setup-xvfb
-        if: (github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true') && runner.os == 'Linux'
-        uses: ./.github/actions/setup-xvfb
-
       - name: Show Maven version
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: mvn -v
 
       - name: Run Getting Started headless validation
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "${RUNNER_OS}" == "Linux" ]]; then
-            "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --headless
-          else
-            ./scripts/validate-getting-started.sh --headless
-          fi
+        run: ./scripts/validate-getting-started.sh --headless
 
       - name: Run dual-baseline replay harness fallback
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
@@ -227,6 +215,13 @@ jobs:
 
       - name: Run Getting Started GUI validation under Xvfb
         shell: bash
+        env:
+          RABBITHOLE_LAUNCH_TIMEOUT_SECONDS: '60'
         run: |
           set -euo pipefail
-          RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 "${{ steps.setup-xvfb.outputs.xvfb-run }}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui
+          scripts/validate-gui-with-xvfb.sh \
+            --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-1800}" \
+            --expect success \
+            --xvfb-run "${{ steps.setup-xvfb.outputs.xvfb-run }}" \
+            -- \
+            scripts/validate-getting-started.sh --gui

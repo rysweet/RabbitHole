@@ -159,21 +159,27 @@ validation starts if `xvfb-run` is unavailable.
 The job must remain separate from the headless validation path because an
 Xvfb-wrapped `--headless` run still uses `java.awt.headless=true` and is not
 equivalent to a headed GUI launch. The headed job runs the Getting Started GUI
-validator inside Xvfb with an explicit bounded startup timeout, using the
-absolute `xvfb-run` path provided by the shared action. In the workflow `run`
-block, that looks like this:
+validator through the reusable Xvfb harness with an explicit bounded startup
+timeout, using the absolute `xvfb-run` path provided by the shared action. In
+the workflow `run` block, that looks like this:
 
 ```bash
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
-  "${xvfb_run}" --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui
+scripts/validate-gui-with-xvfb.sh \
+  --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-1800}" \
+  --expect success \
+  --xvfb-run "${xvfb_run}" \
+  -- \
+  scripts/validate-getting-started.sh --gui
 ```
 
 The workflow uses the shared action output, not a hard-coded filesystem path.
 The validator first installs no-Sims artifacts with `java.awt.headless=false`
-and tests skipped, then runs the GUI launch probe. The timeout is part of the CI
-contract: the GUI launch probe must either start far enough to prove the
-documented display-dependent launch path or fail within the configured startup
-window. A hung Alice startup is a CI failure, not a skipped GUI validation.
+and tests skipped, then runs the GUI launch probe. The validator's
+`RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60` setting keeps the GUI startup probe
+bounded, while the harness timeout is a larger whole-command deadline so
+dependency downloads or no-Sims installation do not consume the launch window. A
+hung Alice startup is a CI failure, not a skipped GUI validation.
 
 ### macOS Apple Silicon GUI blocker
 
@@ -271,7 +277,7 @@ Key output files:
 | Build everything | `mvn compile install` |
 | Run all tests | `mvn test` |
 | Run CI-like headless tests | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
-| Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 xvfb-run --auto-servernum -s "-screen 0 1024x768x24 -ac" ./scripts/validate-getting-started.sh --gui` |
+| Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-1800}" --expect success -- ./scripts/validate-getting-started.sh --gui` |
 | Run Checkstyle | `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml` |
 | Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify` |
 | Start the IDE after a full build | `cd alice-ide && mvn exec:java -Dalice-ide` |
