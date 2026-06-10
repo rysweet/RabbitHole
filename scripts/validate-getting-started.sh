@@ -221,7 +221,6 @@ run_headless_lane() {
   )
   local headless_launch_maven=(
     mvn
-    -U
     -DincludeSims=false
     -Djava.awt.headless=true
     exec:java
@@ -314,7 +313,6 @@ JAVA
 run_gui_launch() {
   local gui_launch_maven=(
     mvn
-    -U
     -DincludeSims=false
     -Djava.awt.headless=false
     exec:java
