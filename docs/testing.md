@@ -3,6 +3,13 @@
 RabbitHole uses a mix of unit tests, characterization tests, and focused
 desktop proof tests.
 
+The planned reflection-sweep migration makes broad sweeps non-initializing
+smoke-load checks only. Constructor, method, lifecycle, state, data, factory,
+and render behaviors belong in explicit JUnit contracts. See
+[Reflection Sweep Contracts](concepts/reflection-sweep-contracts.md),
+[Replace Reflection Sweeps with Explicit Contracts](howto/replace-reflection-sweeps.md),
+and [Reflection Smoke Support](reference/reflection-smoke-support.md).
+
 ## Run the main test lanes
 
 Validate the documented Getting Started path:

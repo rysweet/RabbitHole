@@ -10,7 +10,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CroquetClassLoadingSweepTest {
   @Test
-  public void loadsAdditionalCroquetClassesAndExercisesClassLoadingPaths() {
+  public void smokeLoadsAdditionalCroquetClasses() {
     ClassLoadingSweepSupport.SweepStats stats = ClassLoadingSweepSupport.sweepClasses(List.of(
         "org.lgna.croquet.CompositeLocalizationDelegate",
         "org.lgna.croquet.CompositeResourceManager",
@@ -54,9 +54,11 @@ public class CroquetClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertEquals(summary, 32, stats.getAttemptedClassCount());
-    assertTrue(summary, stats.getLoadedClassCount() >= 24);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 8);
-    assertTrue(summary, stats.getEnumExerciseCount() >= 1);
-    assertTrue(summary, stats.getStaticFieldAccessCount() >= 1);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
+    assertEquals(summary, 0, stats.getEnumExerciseCount());
+    assertEquals(summary, 0, stats.getStaticFieldAccessCount());
+    assertEquals(summary, 0, stats.getCodecExerciseCount());
   }
 }

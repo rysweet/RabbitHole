@@ -78,9 +78,11 @@ public class GlrenderAdditionalClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertEquals(summary, 51, stats.getAttemptedClassCount());
-    assertTrue(summary, stats.getLoadedClassCount() >= 28);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 10);
-    assertTrue(summary, stats.getEnumExerciseCount() >= 1);
-    assertTrue(summary, stats.getStaticFieldAccessCount() >= 1);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
+    assertEquals(summary, 0, stats.getEnumExerciseCount());
+    assertEquals(summary, 0, stats.getStaticFieldAccessCount());
+    assertEquals(summary, 0, stats.getStaticMethodCallCount());
   }
 }

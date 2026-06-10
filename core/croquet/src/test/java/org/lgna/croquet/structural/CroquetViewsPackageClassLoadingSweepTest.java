@@ -3,6 +3,7 @@ package org.lgna.croquet.structural;
 import org.junit.Test;
 import org.lgna.croquet.ClassLoadingSweepSupport;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class CroquetViewsPackageClassLoadingSweepTest {
@@ -16,7 +17,9 @@ public class CroquetViewsPackageClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertTrue(summary, stats.getAttemptedClassCount() >= 60);
-    assertTrue(summary, stats.getLoadedClassCount() >= 45);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 25);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
+    assertEquals(summary, 0, stats.getStaticFieldAccessCount());
   }
 }

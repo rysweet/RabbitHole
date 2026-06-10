@@ -36,7 +36,9 @@ public class CroquetHotspotClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertEquals(summary, 16, stats.getAttemptedClassCount());
-    assertTrue(summary, stats.getLoadedClassCount() >= 12);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 5);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
+    assertEquals(summary, 0, stats.getStaticFieldAccessCount());
   }
 }

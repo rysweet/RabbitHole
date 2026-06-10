@@ -1,11 +1,16 @@
+---
+title: Process Termination API Reference
+description: Reference for ProcessTerminator, ProcessTerminationRequestedException, and RabbitHole process-termination configuration.
+last_updated: 2026-06-10
+review_schedule: quarterly
+owner: modernization
+doc_type: reference
+---
+
 # Process termination API reference
 
 `ProcessTerminator` is the shared API for requesting process termination without
 allowing reusable code to call `System.exit` directly.
-
-This reference describes the intended API contract for the
-process-termination feature. Until the implementation lands, matching classes,
-tests, and migration call sites may not exist in every branch.
 
 ## Contents
 
@@ -112,14 +117,11 @@ around unrelated code.
 
 ## Thread-safety
 
-Handler storage is process-wide and must be safe for calls from the desktop
-launcher, Swing event dispatch thread, JavaFX thread, and uncaught-exception
-handler threads.
-
-The implementation must make handler updates visible across threads. Use a
-thread-safe holder such as `AtomicReference<ProcessTerminator.Handler>` or an
-equivalent visibility guarantee; do not store the handler in an unsynchronized
-plain static field.
+Handler storage is process-wide and safe for calls from the desktop launcher,
+Swing event dispatch thread, JavaFX thread, and uncaught-exception handler
+threads. Handler updates are visible across threads, so a termination request
+uses the currently installed handler even when the request is made outside the
+launcher thread.
 
 Operational rules:
 
@@ -164,13 +166,24 @@ across every module, including `alice-ide`, `core`, `core/ide`, `core/util`,
 `core-nonfree`, and `netbeans` production roots. Test sources are outside the
 production allowlist scan, but tests must not terminate the Maven test JVM.
 
-When a new production launcher truly needs to call `System.exit`, update the
-explicit allowlist in that test in the same change that introduces the launcher.
+The test recognizes direct process termination through `System.exit(...)`,
+`System::exit`, `Runtime.getRuntime().exit(...)`, and
+`Runtime.getRuntime().halt(...)`. Approval is exact: repository-relative source
+path, enclosing context, and normalized call text must match the allowlist.
+Adding another direct exit to an otherwise-approved file fails the test until the
+new call site is explicitly approved.
+
+When a new production launcher truly needs direct process termination, update
+the explicit allowlist in `SystemExitBoundaryTest` and
+[System.exit allowlist reference](./system-exit-allowlist.md) in the same
+change that introduces the launcher.
 
 Do not add `System.exit` to reusable classes, exception handlers, Croquet
 operations, dialogs, composites, utilities, or tests that run in the same JVM as
 the Maven test process.
 
 See [Process termination boundary](../concepts/process-termination-boundary.md)
-for the architectural rule and [requesting process termination](../howto/request-process-termination.md)
-for examples.
+for the architectural rule, [System.exit allowlist reference](./system-exit-allowlist.md)
+for approved direct termination sites, and
+[requesting process termination](../howto/request-process-termination.md) for
+examples.

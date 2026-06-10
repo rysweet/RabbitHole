@@ -42,7 +42,8 @@ public class GlrenderHotspotClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertEquals(summary, 18, stats.getAttemptedClassCount());
-    assertTrue(summary, stats.getLoadedClassCount() >= 14);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 10);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
   }
 }

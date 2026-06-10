@@ -3,6 +3,7 @@ package edu.cmu.cs.dennisc.render.gl.structural;
 import edu.cmu.cs.dennisc.render.gl.ClassLoadingSweepSupport;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class GlrenderAdaptersPackageClassLoadingSweepTest {
@@ -16,7 +17,8 @@ public class GlrenderAdaptersPackageClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertTrue(summary, stats.getAttemptedClassCount() >= 70);
-    assertTrue(summary, stats.getLoadedClassCount() >= 55);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 35);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
   }
 }

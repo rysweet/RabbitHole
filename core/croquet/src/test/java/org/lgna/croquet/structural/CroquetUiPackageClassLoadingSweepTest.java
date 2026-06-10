@@ -40,8 +40,9 @@ public class CroquetUiPackageClassLoadingSweepTest {
         + ", failures=" + stats.getFailures();
 
     assertEquals(summary, 20, stats.getAttemptedClassCount());
-    assertTrue(summary, stats.getLoadedClassCount() >= 14);
-    assertTrue(summary, stats.getInstantiatedClassCount() >= 6);
-    assertTrue(summary, stats.getStaticFieldAccessCount() >= 1);
+    assertEquals(summary, stats.getAttemptedClassCount(), stats.getLoadedClassCount());
+    assertTrue(summary, stats.getFailures().isEmpty());
+    assertEquals(summary, 0, stats.getInstantiatedClassCount());
+    assertEquals(summary, 0, stats.getStaticFieldAccessCount());
   }
 }
