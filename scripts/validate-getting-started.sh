@@ -6,7 +6,7 @@ SUBMODULE_FIX_COMMAND="git submodule update --init tweedle-lang"
 DEFAULT_LAUNCH_TIMEOUT_SECONDS=60
 MAX_LAUNCH_TIMEOUT_SECONDS=600
 LAUNCH_TIMEOUT_SECONDS="${RABBITHOLE_LAUNCH_TIMEOUT_SECONDS:-${DEFAULT_LAUNCH_TIMEOUT_SECONDS}}"
-MAVEN_RETRY_ATTEMPTS="${RABBITHOLE_MAVEN_RETRY_ATTEMPTS:-3}"
+MAVEN_RETRY_ATTEMPTS="${RABBITHOLE_MAVEN_RETRY_ATTEMPTS:-5}"
 
 TEMP_PATHS=()
 trap 'rm -rf "${TEMP_PATHS[@]}"' EXIT
@@ -117,6 +117,7 @@ run_maven_with_retries() {
   local status
 
   for attempt in $(seq 1 "${MAVEN_RETRY_ATTEMPTS}"); do
+    find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
     print_command "$@"
     if "$@"; then
       return 0
@@ -127,8 +128,7 @@ run_maven_with_retries() {
       return "${status}"
     fi
     info "Maven command failed with exit status ${status}; retrying (${attempt}/${MAVEN_RETRY_ATTEMPTS})."
-    find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
-    sleep $((attempt * 10))
+    sleep $((attempt * 60))
   done
 }
 
