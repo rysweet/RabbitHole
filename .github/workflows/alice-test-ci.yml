@@ -226,4 +226,4 @@ jobs:
             --expect success \
             --xvfb-run "${{ steps.setup-xvfb.outputs.xvfb-run }}" \
             -- \
-            scripts/validate-getting-started.sh --gui
+            env MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml scripts/validate-getting-started.sh --gui

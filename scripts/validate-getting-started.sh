@@ -87,6 +87,27 @@ require_common_prerequisites() {
   require_command mvn
 }
 
+require_maven_settings() {
+  local settings_path=$1
+  if [[ -z "${settings_path}" ]]; then
+    return 0
+  fi
+  if [[ "${settings_path}" = /* || "${settings_path}" = *..* ]]; then
+    fail "MAVEN_SETTINGS_PATH must be a repository-relative path without traversal."
+  fi
+  if [[ ! -f "${settings_path}" ]]; then
+    fail "MAVEN_SETTINGS_PATH does not name an existing file: ${settings_path}"
+  fi
+}
+
+maven_command() {
+  if [[ -n "${MAVEN_SETTINGS_PATH:-}" ]]; then
+    printf '%s\0%s\0%s\0' mvn --settings "${PWD}/${MAVEN_SETTINGS_PATH}"
+  else
+    printf '%s\0' mvn
+  fi
+}
+
 validate_launch_timeout_seconds() {
   if [[ ! "${LAUNCH_TIMEOUT_SECONDS}" =~ ^[0-9]+$ ]]; then
     fail "RABBITHOLE_LAUNCH_TIMEOUT_SECONDS must be an integer from 1 to ${MAX_LAUNCH_TIMEOUT_SECONDS}."
@@ -179,8 +200,10 @@ show_captured_output_tail() {
 }
 
 run_headless_lane() {
+  local maven_prefix=()
+  mapfile -d '' -t maven_prefix < <(maven_command)
   local mvn_cmd=(
-    mvn
+    "${maven_prefix[@]}"
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
@@ -189,7 +212,7 @@ run_headless_lane() {
     install
   )
   local headless_launch_maven=(
-    mvn
+    "${maven_prefix[@]}"
     -DincludeSims=false
     -Djava.awt.headless=true
     exec:java
@@ -281,8 +304,10 @@ JAVA
 }
 
 run_gui_launch() {
+  local maven_prefix=()
+  mapfile -d '' -t maven_prefix < <(maven_command)
   local gui_launch_maven=(
-    mvn
+    "${maven_prefix[@]}"
     -DincludeSims=false
     -Djava.awt.headless=false
     exec:java
@@ -312,8 +337,10 @@ run_gui_launch() {
 }
 
 run_gui_maven_validation() {
+  local maven_prefix=()
+  mapfile -d '' -t maven_prefix < <(maven_command)
   local mvn_cmd=(
-    mvn
+    "${maven_prefix[@]}"
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
@@ -391,6 +418,7 @@ if (( "$#" == 1 )); then
 fi
 
 require_common_prerequisites
+require_maven_settings "${MAVEN_SETTINGS_PATH:-}"
 validate_launch_timeout_seconds
 
 case "${mode}" in

@@ -212,13 +212,14 @@ validate_allowed_automation() {
   if [ "$cwd" = . ] &&
     [ "$#" -eq 9 ] &&
     [ "$1" = mvn ] &&
-    [ "$2" = -DfailIfNoTests=false ] &&
-    [ "$3" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
-    [ "$4" = -pl ] &&
-    [ "$5" = core/story-api-migration ] &&
-    [ "$6" = -am ] &&
-    [ "$7" = -Dtest=org.lgna.project.io.IoUtilitiesTest ] &&
-    [ "$8" = test ]; then
+    [ "$2" = -DincludeSims=false ] &&
+    [ "$3" = -Dinstall4j.skip ] &&
+    [ "$4" = -Dsurefire.failIfNoSpecifiedTests=false ] &&
+    [ "$5" = -pl ] &&
+    [ "$6" = core/story-api-migration ] &&
+    [ "$7" = -am ] &&
+    [ "$8" = -Dtest=org.lgna.project.io.IoUtilitiesTest ] &&
+    [ "$9" = test ]; then
     return 0
   fi
 
@@ -3907,6 +3908,8 @@ PY
       printf 'scenario=%s\n' "$scenario_id"
       printf 'automationMode=%s\n' "$automation_mode"
       printf 'outcome=gated-not-run\n'
+      printf 'executionStatus=not-run\n'
+      printf 'executionClaim=no-gui-execution\n'
       printf 'gate=ALICE_QA_RUN_GATED_SMOKES\n'
       if [ "$prepare_only" = "1" ]; then
         printf 'skipMode=prepare-only\n'
@@ -4020,20 +4023,8 @@ PY
     printf 'automationMode=%s\n' "$automation_mode"
     printf 'outcome=%s\n' "$outcome"
     printf 'exitCode=%s\n' "$exit_code"
-      printf 'commandLog=command.log\n'
-      printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
-      printf 'cwd=%s\n' "$cwd"
-      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ] ||
-        [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
-        printf 'timeoutPolicy=none\n'
-      fi
-      if [ "$scenario_id" = alice-desktop-save-menu-dialog-write-proof ]; then
-        printf 'saveProofEvidence=%s\n' robot-save-menu-dialog-write-readback-proof.json
-        printf 'saveProofEvidenceStatus=%s\n' "$save_proof_validation_status"
-        printf 'saveProofValidationLog=%s\n' save-proof-validation.log
-      elif [ "$scenario_id" != alice-desktop-project-io-smoke ]; then
-        printf 'timeoutSeconds=%s\n' "$run_timeout"
-      fi
+    printf 'executionStatus=executed\n'
+    printf 'executionClaim=gated-command-executed\n'
     printf 'commandLog=command.log\n'
     printf 'argv=%s\n' "$(format_argv "${argv[@]}")"
     printf 'cwd=%s\n' "$cwd"
@@ -4047,6 +4038,8 @@ PY
       printf 'runWindowEvidence=%s\n' "$RUN_WINDOW_CONTRACT_ARTIFACT"
       printf 'runWindowEvidenceStatus=%s\n' "$run_window_validation_status"
       printf 'runWindowValidationLog=%s\n' run-window-validation.log
+    elif [ "$scenario_id" = alice-desktop-project-io-smoke ]; then
+      printf 'timeoutPolicy=none\n'
     else
       printf 'timeoutSeconds=%s\n' "$run_timeout"
     fi

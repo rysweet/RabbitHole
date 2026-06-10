@@ -161,7 +161,7 @@ jobs:
 
       - name: Build NetBeans package without Sims assets
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
-        run: mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -pl netbeans -am package -DskipTests
+        run: mvn --settings .github/maven/jogamp-ci-settings.xml -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -pl netbeans -am package -DskipTests
 
       - name: Verify NetBeans package artifacts
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
