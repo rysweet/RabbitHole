@@ -54,7 +54,11 @@ WORKFLOWS = {
         "workflow_name": "Alice Coverage Reports",
         "job": "coverage",
         "maven_step": "Generate no-Sims aggregate and per-module coverage reports",
-        "maven_command": "mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify",
+        "maven_command": "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify",
+        "maven_fragments": [
+            "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify",
+            "Coverage Maven command failed; retrying",
+        ],
         "dependent_steps": [
             "Summarize and gate line coverage",
             "Upload coverage reports",
@@ -65,7 +69,11 @@ WORKFLOWS = {
         "workflow_name": "Alice NetBeans Package CI",
         "job": "package-netbeans",
         "maven_step": "Build NetBeans package without Sims assets",
-        "maven_command": "mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -pl netbeans -am package -DskipTests",
+        "maven_command": "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
+        "maven_fragments": [
+            "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
+            "NetBeans package Maven command failed; retrying",
+        ],
         "dependent_steps": [
             "Verify NetBeans package artifacts",
         ],
@@ -79,7 +87,7 @@ def validation_steps(spec: dict) -> list[dict]:
     return [
         {
             "name": spec["maven_step"],
-            "fragments": [f"run: {spec['maven_command']}"],
+            "fragments": spec.get("maven_fragments", [f"run: {spec['maven_command']}"]),
             "unique_command": spec["maven_command"],
             "requires_checkstyle_skip": spec["workflow_name"] != "Alice Checkstyle CI",
         }

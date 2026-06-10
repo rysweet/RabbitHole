@@ -215,6 +215,7 @@ run_headless_lane() {
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
+    -Dmdep.skip=true
     -Djava.awt.headless=true
     clean
     install
@@ -347,6 +348,7 @@ run_gui_maven_validation() {
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
+    -Dmdep.skip=true
     -DskipTests
     -Djava.awt.headless=false
     clean

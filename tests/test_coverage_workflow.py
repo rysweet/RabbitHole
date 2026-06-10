@@ -17,10 +17,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         summarize_step = workflow.index("name: Summarize and gate line coverage")
 
         self.assertLess(generate_step, summarize_step)
-        coverage_command = re.search(
-            r"run: (?P<command>mvn .* -Pcoverage verify)",
-            workflow,
-        )
+        coverage_command = re.search(r"mvn .* -Pcoverage verify", workflow)
         self.assertIsNotNone(coverage_command)
         assert coverage_command is not None
         for flag in (
@@ -31,7 +28,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
             "-Pcoverage",
         ):
             with self.subTest(flag=flag):
-                self.assertIn(flag, coverage_command.group("command"))
+                self.assertIn(flag, coverage_command.group(0))
 
     def test_coverage_workflow_defers_submodule_initialization_until_maven_runs(self) -> None:
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")

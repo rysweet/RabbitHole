@@ -97,6 +97,7 @@
               <goal>unpack</goal>
             </goals>
             <configuration>
+              <skip>${mdep.skip}</skip>
               <artifactItems>
                 <!-- linux-amd64 -->
                 <artifactItem>
@@ -216,4 +217,3 @@
   </build>
 
 </project>
-
