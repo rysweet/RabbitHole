@@ -1,6 +1,7 @@
 package org.alice.ide;
 
 import org.alice.ide.frametitle.IdeFrameTitleGenerator;
+import org.alice.ide.project.ProjectDocumentState;
 import org.alice.ide.projecturi.ProjectSnapshot;
 import org.alice.ide.projecturi.RecentProjectCountState;
 import org.alice.ide.recentprojects.RecentProjectsListData;
@@ -11,6 +12,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.lgna.croquet.Application;
 import org.lgna.croquet.Operation;
+import org.lgna.croquet.State;
 import org.lgna.croquet.history.UserActivity;
 import org.lgna.project.Project;
 import org.lgna.project.ast.AstUtilities;
@@ -139,6 +141,7 @@ public class ProjectApplicationSaveProjectToTest {
 
   private static TestProjectApplication applicationWith(Project project, UriProjectLoader loader) throws Exception {
     resetApplicationSingleton();
+    clearProjectDocumentListeners();
     TestProjectApplication application = new TestProjectApplication(project);
     installLoader(application, loader);
     return application;
@@ -148,6 +151,12 @@ public class ProjectApplicationSaveProjectToTest {
     Field field = Application.class.getDeclaredField("singleton");
     field.setAccessible(true);
     field.set(null, null);
+  }
+
+  private static void clearProjectDocumentListeners() throws Exception {
+    Field field = State.class.getDeclaredField("newSchoolValueListeners");
+    field.setAccessible(true);
+    ((List<?>) field.get(ProjectDocumentState.getInstance())).clear();
   }
 
   private static void installLoader(ProjectApplication application, UriProjectLoader loader) throws Exception {
