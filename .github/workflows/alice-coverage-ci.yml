@@ -165,7 +165,9 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
-            find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+            if [[ -d "${HOME}/.m2/repository" ]]; then
+              find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+            fi
             if mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify; then
               exit 0
             fi

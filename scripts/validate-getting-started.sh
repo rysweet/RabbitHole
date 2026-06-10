@@ -132,7 +132,9 @@ run_maven_with_retries() {
   local status
 
   for attempt in $(seq 1 "${MAVEN_RETRY_ATTEMPTS}"); do
-    find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+    if [[ -d "${HOME}/.m2/repository" ]]; then
+      find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+    fi
     print_command "$@"
     if "$@"; then
       return 0

@@ -165,7 +165,9 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5; do
-            find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+            if [[ -d "${HOME}/.m2/repository" ]]; then
+              find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
+            fi
             if mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests; then
               exit 0
             fi
