@@ -69,18 +69,31 @@ for field in sys.argv[1:]:
 PY
 }
 
-json_list_nul() {
+json_fields_and_list_nul() {
   local scenario_json=$1
-  local field=$2
-  SCENARIO_JSON="$scenario_json" python3 - "$field" <<'PY'
+  local list_field=$2
+  shift 2
+  SCENARIO_JSON="$scenario_json" python3 - "$list_field" "$@" <<'PY'
 import json
 import os
 import sys
 
-value = json.loads(os.environ["SCENARIO_JSON"])
-for part in sys.argv[1].split("."):
-    value = value[part]
-for item in value:
+scenario = json.loads(os.environ["SCENARIO_JSON"])
+
+def field_value(path):
+    value = scenario
+    optional = path.endswith("?")
+    if optional:
+        path = path[:-1]
+    for part in path.split("."):
+        if optional and isinstance(value, dict) and part not in value:
+            return ""
+        value = value[part]
+    return value
+
+for field in sys.argv[2:]:
+    sys.stdout.buffer.write(str(field_value(field)).encode("utf-8") + b"\0")
+for item in field_value(sys.argv[1]):
     sys.stdout.buffer.write(item.encode("utf-8") + b"\0")
 PY
 }
@@ -105,19 +118,6 @@ PY
   done
 
   printf '%s\n' python3
-}
-
-target_starter_fields() {
-  local scenario_json=$1
-  SCENARIO_JSON="$scenario_json" python3 - <<'PY'
-import json
-import os
-
-scenario = json.loads(os.environ["SCENARIO_JSON"])
-target = scenario.get("targetStarter") or {}
-print(target.get("displayName", ""))
-print(target.get("repositoryPath", ""))
-PY
 }
 
 validate_allowed_automation() {
@@ -2889,18 +2889,28 @@ run_xvfb_real_alice() {
 
   local automation_fields cwd configured_timeout ready_wait run_timeout display scenario_id automation_mode resolved_cwd
   local target_starter_display_name target_starter_repo_path
-  local -a target_fields
   local needs_select_project_wait=0 needs_tab_click_probe=0
   local xvfb_executable xdotool_executable
   local root_directory_prep_status root_directory_prep_blocker
   local -a argv
-  mapfile -t automation_fields < <(json_fields "$scenario_json" "automation.cwd" "automation.timeoutSeconds" "automation.readyWaitSeconds" "id" "automationMode")
+  mapfile -d '' -t automation_fields < <(
+    json_fields_and_list_nul \
+      "$scenario_json" \
+      "automation.argv" \
+      "automation.cwd" \
+      "automation.timeoutSeconds" \
+      "automation.readyWaitSeconds" \
+      "id" \
+      "automationMode" \
+      "targetStarter.displayName?" \
+      "targetStarter.repositoryPath?"
+  )
   cwd=${automation_fields[0]}
   configured_timeout=${automation_fields[1]}
   ready_wait="${ALICE_QA_READY_WAIT_SECONDS:-${automation_fields[2]}}"
   scenario_id=${automation_fields[3]}
   automation_mode=${automation_fields[4]}
-  mapfile -d '' -t argv < <(json_list_nul "$scenario_json" "automation.argv")
+  argv=("${automation_fields[@]:7}")
   case "$scenario_id" in
     alice-desktop-select-project-*|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO"|"$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO")
       needs_select_project_wait=1
@@ -2909,9 +2919,8 @@ run_xvfb_real_alice() {
   case "$scenario_id" in
     alice-desktop-select-project-tab-click-exec|alice-desktop-post-project-open-window-state|"$POST_OPEN_RUNTIME_DISPLAY_SCENARIO"|"$FIRST_LESSON_PROCEDURE_TARGET_SCENARIO")
       needs_tab_click_probe=1
-      mapfile -t target_fields < <(target_starter_fields "$scenario_json")
-      target_starter_display_name=${target_fields[0]:?}
-      target_starter_repo_path=${target_fields[1]:?}
+      target_starter_display_name=${automation_fields[5]:?}
+      target_starter_repo_path=${automation_fields[6]:?}
       ;;
     *)
       target_starter_display_name=
@@ -3867,23 +3876,20 @@ run_gated_command_smoke() {
   local save_proof_artifact save_proof_run_id save_proof_validation_status save_proof_validation_exit command_start_epoch
   local run_window_evidence_dir run_window_artifact run_window_validation_status run_window_validation_exit
   local -a argv command_argv
-  mapfile -t automation_fields < <(SCENARIO_JSON="$scenario_json" python3 - <<'PY'
-import json
-import os
-
-scenario = json.loads(os.environ["SCENARIO_JSON"])
-automation = scenario["automation"]
-print(automation["cwd"])
-print(automation.get("timeoutSeconds", ""))
-print(scenario["id"])
-print(scenario["automationMode"])
-PY
+  mapfile -d '' -t automation_fields < <(
+    json_fields_and_list_nul \
+      "$scenario_json" \
+      "automation.argv" \
+      "automation.cwd" \
+      "automation.timeoutSeconds?" \
+      "id" \
+      "automationMode"
   )
   cwd=${automation_fields[0]}
   configured_timeout=${automation_fields[1]}
   scenario_id=${automation_fields[2]}
   automation_mode=${automation_fields[3]}
-  mapfile -d '' -t argv < <(json_list_nul "$scenario_json" "automation.argv")
+  argv=("${automation_fields[@]:4}")
   run_timeout="${timeout_override:-$configured_timeout}"
 
   validate_allowed_automation "$cwd" "${argv[@]}"
