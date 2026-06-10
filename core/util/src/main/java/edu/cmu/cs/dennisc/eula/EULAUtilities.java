@@ -42,18 +42,12 @@
  *******************************************************************************/
 package edu.cmu.cs.dennisc.eula;
 
-import edu.cmu.cs.dennisc.eula.swing.JEulaPane;
-import edu.cmu.cs.dennisc.java.awt.WindowUtilities;
 import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
 import edu.cmu.cs.dennisc.java.util.Lists;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
-import edu.cmu.cs.dennisc.javax.swing.JDialogBuilder;
-import edu.cmu.cs.dennisc.javax.swing.WindowStack;
+import edu.cmu.cs.dennisc.ui.prompt.EulaPromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 
-import javax.swing.JDialog;
-import javax.swing.JOptionPane;
-import java.awt.BorderLayout;
-import java.awt.Component;
 import java.util.List;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
@@ -82,33 +76,7 @@ public class EULAUtilities {
     }
     boolean isLicenseAccepted = userPreferences.getBoolean(preferencesKey, false);
     if (!isLicenseAccepted) {
-      JEulaPane eulaPane = new JEulaPane(license);
-      Component owner = WindowStack.peek();
-      //      if( owner.isVisible() ) {
-      //        //pass
-      //      } else {
-      //        owner.setVisible( true );
-      //      }
-      while (true) {
-        JDialog dialog = new JDialogBuilder().owner(owner).isModal(true).title(title).build();
-        dialog.getContentPane().add(eulaPane, BorderLayout.CENTER);
-        dialog.pack();
-        if ((owner != null) && owner.isVisible()) {
-          WindowUtilities.setLocationOnScreenToCenteredWithin(dialog, owner);
-        }
-        dialog.setVisible(true);
-        isLicenseAccepted = eulaPane.isAccepted();
-        if (isLicenseAccepted) {
-          break;
-        } else {
-          String message = "You must accept the license agreement in order to use " + name + ".\n\nWould you like to return to the license agreement?";
-          if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(owner, message, "Return to license agreement?", JOptionPane.YES_NO_OPTION)) {
-            //pass
-          } else {
-            break;
-          }
-        }
-      }
+      isLicenseAccepted = UiPrompts.requestEulaAcceptance(new EulaPromptRequest(title, license, name));
     }
     if (isLicenseAccepted) {
       userPreferences.putBoolean(preferencesKey, true);

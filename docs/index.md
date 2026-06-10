@@ -20,8 +20,10 @@ expectations.
 - [Dual-baseline replay harness](./dual-baseline-replay-harness.md)
 - [Contributing](./contributing.md)
 - [Repository hygiene](./repository-hygiene.md)
+- [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
 - [Concepts](#concepts)
 - [How-to guides](#how-to-guides)
+- [Tutorials](#tutorials)
 - [Reference](#reference)
 - [Architecture Atlas](#architecture-atlas)
 
@@ -33,6 +35,7 @@ expectations.
 - how save, export, golden corpus, migration, desktop proof, and QA contracts work
 - how the text-only RabbitHole baseline parity snapshots catch generated-output drift
 - how the dual-baseline replay harness compares RabbitHole against a local preserved Alice baseline when configured
+- how reusable code requests UI prompts without opening Swing dialogs in headless contexts
 
 ## Documentation map
 
@@ -57,10 +60,16 @@ expectations.
 - [Formal Specification Lane](./concepts/formal-spec-lane.md)
 - [Migration Hotspot Characterization](./concepts/migration-hotspot-characterization.md)
 - [Process Termination Boundary](./concepts/process-termination-boundary.md)
+- [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
 
 ### How-to guides
 
 - [Request Process Termination Safely](./howto/request-process-termination.md)
+- [Use the UI Prompt Boundary](./howto/use-ui-prompt-boundary.md)
+
+### Tutorials
+
+- [Add a UI Prompt Boundary Adapter](./tutorials/add-ui-prompt-boundary-adapter.md)
 
 ### Reference
 
@@ -69,6 +78,7 @@ expectations.
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
 - [Process Termination API](./reference/process-termination-api.md)
+- [UI Prompt Boundary API](./reference/ui-prompt-boundary-api.md)
 
 ### Architecture Atlas
 

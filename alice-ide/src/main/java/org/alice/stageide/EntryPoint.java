@@ -54,9 +54,11 @@ import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.javax.swing.UIManagerUtilities;
 import edu.cmu.cs.dennisc.javax.swing.WindowStack;
 import edu.cmu.cs.dennisc.render.gl.RendererNativeLibraryLoader;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import edu.wustl.lookingglass.utilities.memory.HeapWatchDog;
 import javafx.application.Application;
 import javafx.stage.Stage;
+import org.lgna.story.resourceutilities.SwingUiPromptBoundary;
 import org.lgna.croquet.ProcessTerminationRequestedException;
 import org.lgna.croquet.ProcessTerminator;
 import org.lgna.project.ProjectVersion;
@@ -80,6 +82,7 @@ public class EntryPoint extends Application {
     ProcessTerminator.Handler previous = ProcessTerminator.setHandler(System::exit);
     try {
       requireGraphicalEnvironmentForDesktopLaunch(GraphicsEnvironment.isHeadless());
+      UiPrompts.install(SwingUiPromptBoundary.INSTANCE);
 
       final CrashDetector crashDetector = new CrashDetector(EntryPoint.class);
       if (crashDetector.isPreviouslyOpenedButNotSucessfullyClosed()) {

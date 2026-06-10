@@ -42,9 +42,13 @@
  *******************************************************************************/
 package org.lgna.story.resourceutilities;
 
+import edu.cmu.cs.dennisc.ui.prompt.MessagePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.MessageSeverity;
+import edu.cmu.cs.dennisc.ui.prompt.ResourcePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.ResourcePromptResult;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import edu.cmu.cs.dennisc.nebulous.Manager;
 
-import javax.swing.JOptionPane;
 import java.io.File;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -145,14 +149,10 @@ public enum NebulousStorytellingResources {
     if (loaded == 0 && simsPathsLoaded.isEmpty()) {
       //Clear previously cached info
       clearSimsResourceInfo();
-      File galleryDir = FindResourcesPanel.getInstance().getGalleryDir();
-      if (galleryDir == null) {
-        FindResourcesPanel.getInstance().show(null);
-        galleryDir = FindResourcesPanel.getInstance().getGalleryDir();
-      }
-      if (galleryDir != null) {
+      ResourcePromptResult result = UiPrompts.requestResourceLocation(simsResourcePrompt(resourcePaths, false));
+      if (result.selectedGalleryDirectory().isPresent()) {
         //Save the directory to the preference
-        String[] dirArray = {galleryDir.getAbsolutePath()};
+        String[] dirArray = {result.selectedGalleryDirectory().get().getAbsolutePath()};
         StorytellingResources.INSTANCE.setGalleryResourceDirs(dirArray);
         //Try finding the resources again
         resourcePaths = findSimsBundles();
@@ -161,23 +161,8 @@ public enum NebulousStorytellingResources {
     }
     if (loaded == 0 && simsPathsLoaded.isEmpty()) {
       clearSimsResourceInfo();
-      StringBuilder sb = new StringBuilder();
-      sb.append("Cannot find The Sims (TM) 2 Art Assets.");
-      if (resourcePaths.isEmpty()) {
-        sb.append("\nNo gallery directories were detected. Make sure Alice is properly installed and has been run at least once.");
-      } else {
-        sb.append("\nSearched in ");
-        String separator = "";
-        for (File path : resourcePaths) {
-          sb.append(separator).append("'").append(path).append("'");
-          if (separator.isEmpty()) {
-            separator = ", ";
-          }
-        }
-        String phrase = resourcePaths.size() > 1 ? "these directories exist" : "this directory exists";
-        sb.append("\nVerify that ").append(phrase).append(" and verify that Alice is properly installed.");
-      }
-      JOptionPane.showMessageDialog(null, sb.toString());
+      ResourcePromptRequest request = simsResourcePrompt(resourcePaths, false);
+      UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, simsMissingResourceMessage(request)));
 
     } else {
       String[] galleryDirs = new String[simsPathsLoaded.size()];
@@ -191,5 +176,35 @@ public enum NebulousStorytellingResources {
       }
       setNebulousResourceDir(galleryDirs);
     }
+  }
+
+  private static ResourcePromptRequest simsResourcePrompt(List<File> searchedDirectories, boolean alwaysPrompt) {
+    return new ResourcePromptRequest(
+        "Locate Resources",
+        "The Sims (TM) 2 Art Assets",
+        NEBULOUS_RESOURCE_INSTALL_PATH,
+        searchedDirectories == null ? Collections.emptyList() : searchedDirectories,
+        "Cannot find The Sims (TM) 2 Art Assets.",
+        alwaysPrompt);
+  }
+
+  private static String simsMissingResourceMessage(ResourcePromptRequest request) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(request.missingMessage());
+    if (request.searchedDirectories().isEmpty()) {
+      sb.append("\nNo gallery directories were detected. Make sure Alice is properly installed and has been run at least once.");
+    } else {
+      sb.append("\nSearched in ");
+      String separator = "";
+      for (File path : request.searchedDirectories()) {
+        sb.append(separator).append("'").append(path).append("'");
+        if (separator.isEmpty()) {
+          separator = ", ";
+        }
+      }
+      String phrase = request.searchedDirectories().size() > 1 ? "these directories exist" : "this directory exists";
+      sb.append("\nVerify that ").append(phrase).append(" and verify that Alice is properly installed.");
+    }
+    return sb.toString();
   }
 }

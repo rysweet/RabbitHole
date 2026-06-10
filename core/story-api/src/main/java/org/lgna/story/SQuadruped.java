@@ -42,12 +42,13 @@
  *******************************************************************************/
 package org.lgna.story;
 
+import edu.cmu.cs.dennisc.ui.prompt.MessagePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.MessageSeverity;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import org.lgna.project.annotations.MethodTemplate;
 import org.lgna.project.annotations.Visibility;
 import org.lgna.story.implementation.QuadrupedImp;
 import org.lgna.story.resources.QuadrupedResource;
-
-import javax.swing.JOptionPane;
 
 /**
  * @author dculyba
@@ -68,13 +69,13 @@ public class SQuadruped extends SJointedModel implements Articulable {
   @Override
   @MethodTemplate(visibility = Visibility.TUCKED_AWAY)
   public void walkTo(SThing entity) {
-    JOptionPane.showMessageDialog(null, "todo: walkTo");
+    UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, "todo: walkTo"));
   }
 
   @Override
   @MethodTemplate(visibility = Visibility.TUCKED_AWAY)
   public void touch(SThing entity) {
-    JOptionPane.showMessageDialog(null, "todo: touch");
+    UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, "todo: touch"));
   }
 
   @MethodTemplate(visibility = Visibility.TUCKED_AWAY)

@@ -65,6 +65,9 @@ import edu.cmu.cs.dennisc.scenegraph.scale.Resizer;
 import edu.cmu.cs.dennisc.scenegraph.scale.Scalable;
 import edu.cmu.cs.dennisc.scenegraph.util.BoundingBoxDecorator;
 import edu.cmu.cs.dennisc.texture.Texture;
+import edu.cmu.cs.dennisc.ui.prompt.MessagePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.MessageSeverity;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import org.alice.math.immutable.AffineMatrix4x4;
 import org.alice.math.immutable.AxisAlignedBox;
 import org.alice.math.immutable.Dimension3;
@@ -75,7 +78,6 @@ import org.lgna.story.implementation.overlay.BubbleImp;
 import org.lgna.story.implementation.overlay.SpeechBubbleImp;
 import org.lgna.story.implementation.overlay.ThoughtBubbleImp;
 
-import javax.swing.JOptionPane;
 import java.awt.*;
 import java.awt.geom.Dimension2D;
 import java.awt.geom.Point2D;
@@ -405,7 +407,7 @@ public abstract class ModelImp extends TransformableImp implements Scalable {
       perform(new BubbleAnimation(inOutDuration, duration, inOutDuration, bubbleImp));
     } else {
       //todo
-      JOptionPane.showMessageDialog(null, "unable to display bubble");
+      UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, "unable to display bubble"));
     }
   }
 

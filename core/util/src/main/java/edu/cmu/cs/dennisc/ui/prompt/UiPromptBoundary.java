@@ -40,84 +40,12 @@
  * THE USE OF OR OTHER DEALINGS WITH THE SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
-package org.lgna.story;
+package edu.cmu.cs.dennisc.ui.prompt;
 
-import edu.cmu.cs.dennisc.ui.prompt.MessagePromptRequest;
-import edu.cmu.cs.dennisc.ui.prompt.MessageSeverity;
-import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
-import org.lgna.project.annotations.MethodTemplate;
-import org.lgna.project.annotations.Visibility;
-import org.lgna.story.implementation.SwimmerImp;
-import org.lgna.story.resources.SwimmerResource;
+public interface UiPromptBoundary {
+  ResourcePromptResult requestResourceLocation(ResourcePromptRequest request);
 
-public class SSwimmer extends SJointedModel {
-  private final SwimmerImp implementation;
+  void showMessage(MessagePromptRequest request);
 
-  @Override
-  @MethodTemplate(visibility = Visibility.COMPLETELY_HIDDEN)
-  public SwimmerImp getImplementation() {
-    return this.implementation;
-  }
-
-  public SSwimmer(SwimmerResource resource) {
-    this.implementation = resource.createImplementation(this);
-  }
-
-  @MethodTemplate(visibility = Visibility.TUCKED_AWAY)
-  public void swimTo(SThing entity) {
-    UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, "todo: swimTo"));
-  }
-
-  @MethodTemplate(visibility = Visibility.TUCKED_AWAY)
-  public SJoint getRoot() {
-    return getJoint(SwimmerResource.ROOT);
-  }
-
-  public SJoint getNeck() {
-    return getJoint(SwimmerResource.NECK);
-  }
-
-  public SJoint getHead() {
-    return getJoint(SwimmerResource.HEAD);
-  }
-
-  public SJoint getMouth() {
-    return getJoint(SwimmerResource.MOUTH);
-  }
-
-  public SJoint getLeftEye() {
-    return getJoint(SwimmerResource.LEFT_EYE);
-  }
-
-  public SJoint getRightEye() {
-    return getJoint(SwimmerResource.RIGHT_EYE);
-  }
-
-  public SJoint getLeftEyelid() {
-    return getJoint(SwimmerResource.LEFT_EYELID);
-  }
-
-  public SJoint getRightEyelid() {
-    return getJoint(SwimmerResource.RIGHT_EYELID);
-  }
-
-  public SJoint getFrontLeftFin() {
-    return getJoint(SwimmerResource.FRONT_LEFT_FIN);
-  }
-
-  public SJoint getFrontRightFin() {
-    return getJoint(SwimmerResource.FRONT_RIGHT_FIN);
-  }
-
-  public SJoint getSpineBase() {
-    return getJoint(SwimmerResource.SPINE_BASE);
-  }
-
-  public SJoint getSpineMiddle() {
-    return getJoint(SwimmerResource.SPINE_MIDDLE);
-  }
-
-  public SJoint getTail() {
-    return getJoint(SwimmerResource.TAIL);
-  }
+  boolean requestEulaAcceptance(EulaPromptRequest request);
 }

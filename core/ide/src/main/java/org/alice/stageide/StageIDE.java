@@ -53,6 +53,7 @@ import edu.cmu.cs.dennisc.javax.swing.icons.ColorIcon;
 import edu.cmu.cs.dennisc.javax.swing.option.Dialogs;
 import edu.cmu.cs.dennisc.pattern.Criterion;
 import edu.cmu.cs.dennisc.render.gl.GlrRenderFactory;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import org.alice.ide.IDE;
 import org.alice.ide.IdeApp;
 import org.alice.ide.Theme;
@@ -107,6 +108,7 @@ import org.lgna.story.implementation.StoryApiDirectoryUtilities;
 import org.lgna.story.resources.JointedModelResource;
 import org.lgna.story.resources.ModelResource;
 import org.lgna.story.resourceutilities.AbstractThumbnailMaker;
+import org.lgna.story.resourceutilities.SwingUiPromptBoundary;
 
 import javax.swing.Icon;
 import javax.swing.SwingUtilities;
@@ -148,6 +150,7 @@ public class StageIDE extends IDE {
 
   @Override
   public void initialize(String[] args) {
+    UiPrompts.install(SwingUiPromptBoundary.INSTANCE);
     super.initialize(args);
     StoryApiDirectoryUtilities.setUserGalleryDirectory(this.getGalleryDirectory());
   }
@@ -201,6 +204,7 @@ public class StageIDE extends IDE {
 
   @Override
   protected void promptForLicenseAgreements() {
+    UiPrompts.install(SwingUiPromptBoundary.INSTANCE);
     final String IS_LICENSE_ACCEPTED_PREFERENCE_KEY = "isLicenseAccepted";
     try {
       EULAUtilities.promptUserToAcceptEULAIfNecessary(License.class, IS_LICENSE_ACCEPTED_PREFERENCE_KEY, "License Agreement (Part 1 of 2): Alice 3", License.TEXT, "Alice");

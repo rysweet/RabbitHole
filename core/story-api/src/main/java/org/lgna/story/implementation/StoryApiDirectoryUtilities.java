@@ -43,9 +43,12 @@
 package org.lgna.story.implementation;
 
 import edu.cmu.cs.dennisc.java.io.FileUtilities;
-import org.lgna.story.resourceutilities.FindResourcesPanel;
+import edu.cmu.cs.dennisc.ui.prompt.ResourcePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.ResourcePromptResult;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.prefs.Preferences;
 
 /**
@@ -127,8 +130,15 @@ public class StoryApiDirectoryUtilities {
   }
 
   private static void askUserForModelGallery() {
-    FindResourcesPanel.getInstance().show(null);
-    StoryApiDirectoryUtilities.modelGalleryDirectory = FindResourcesPanel.getInstance().getGalleryDir();
+    ResourcePromptRequest request = new ResourcePromptRequest(
+        "Locate Resources",
+        "Alice gallery resources",
+        "assets/alice",
+        Collections.emptyList(),
+        "Cannot find the Alice gallery resources.",
+        true);
+    ResourcePromptResult result = UiPrompts.requestResourceLocation(request);
+    StoryApiDirectoryUtilities.modelGalleryDirectory = result.selectedGalleryDirectory().orElse(null);
   }
 
   public static File getSoundGalleryDirectory() {

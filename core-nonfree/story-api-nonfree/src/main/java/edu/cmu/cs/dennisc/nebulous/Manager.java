@@ -48,9 +48,12 @@ import edu.cmu.cs.dennisc.eula.EULAUtilities;
 import edu.cmu.cs.dennisc.eula.LicenseRejectedException;
 import edu.cmu.cs.dennisc.java.lang.LoadLibraryReportStyle;
 import edu.cmu.cs.dennisc.java.lang.SystemUtilities;
+import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.render.gl.imp.RenderContext;
+import edu.cmu.cs.dennisc.ui.prompt.MessagePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.MessageSeverity;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 
-import javax.swing.JOptionPane;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
@@ -88,14 +91,14 @@ public class Manager {
     try {
       initializeIfNecessary();
     } catch (LicenseRejectedException lre) {
-      JOptionPane.showMessageDialog(null, "license rejected");
+      UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, "license rejected"));
       //throw new RuntimeException( lre );
     } catch (Throwable t) {
       // To keep the user from having to dismiss the same dialog repeatedly only show the dialog if it has
       // been more than a second since the last dialog or the last error.
       if (System.currentTimeMillis() - lastErrorOrNotification > 1000) {
-        JOptionPane.showMessageDialog(null, "failed to initialize art assets");
-        t.printStackTrace();
+        UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.INFO, null, "failed to initialize art assets"));
+        Logger.throwable(t);
       }
       lastErrorOrNotification = System.currentTimeMillis();
     }

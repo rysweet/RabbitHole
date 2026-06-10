@@ -44,6 +44,7 @@ package org.alice.nonfree;
 
 import edu.cmu.cs.dennisc.eula.EULAUtilities;
 import edu.cmu.cs.dennisc.eula.LicenseRejectedException;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import edu.cmu.cs.dennisc.nebulous.License;
 import edu.cmu.cs.dennisc.nebulous.Manager;
 import org.alice.ide.croquet.models.StandardExpressionState;
@@ -91,6 +92,7 @@ import org.lgna.story.implementation.EntityImp;
 import org.lgna.story.implementation.RoomImp;
 import org.lgna.story.resources.ModelResource;
 import org.lgna.story.resources.sims2.PersonResource;
+import org.lgna.story.resourceutilities.SwingUiPromptBoundary;
 
 import java.util.List;
 import java.util.Map;
@@ -109,6 +111,7 @@ public class IdeNonfree extends NebulousIde {
 
   @Override
   public void promptForLicenseAgreements(String licenseKey) throws LicenseRejectedException {
+    UiPrompts.install(SwingUiPromptBoundary.INSTANCE);
     EULAUtilities.promptUserToAcceptEULAIfNecessary(License.class, licenseKey, "License Agreement (Part 2 of 2): The Sims (TM) 2 Art Assets", License.TEXT, "The Sims (TM) 2 Art Assets");
   }
 
