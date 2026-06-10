@@ -190,6 +190,7 @@ class GettingStartedValidatorHeadlessContract(unittest.TestCase):
         text = re.sub(r"\s+", " ", script_text())
 
         self.assertIn("mvn", text)
+        self.assertIn("run_maven_with_retries", text)
         for token in HEADLESS_MAVEN_FLAGS:
             with self.subTest(token=token):
                 self.assertIn(token, text)
@@ -280,6 +281,7 @@ class GettingStartedValidatorGuiContract(unittest.TestCase):
         for token in HEADED_MAVEN_FLAGS:
             with self.subTest(token=token):
                 self.assertIn(token, normalized)
+        self.assertIn("run_maven_with_retries", body)
         self.assertLess(
             lane_body.index("run_gui_maven_validation"),
             lane_body.index("run_gui_launch"),

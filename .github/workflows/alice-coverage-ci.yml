@@ -161,7 +161,19 @@ jobs:
 
       - name: Generate no-Sims aggregate and per-module coverage reports
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
-        run: mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify; then
+              exit 0
+            fi
+            if [[ "${attempt}" == "3" ]]; then
+              exit 1
+            fi
+            printf 'Coverage Maven command failed; retrying (%s/3).\n' "${attempt}"
+            sleep $((attempt * 10))
+          done
 
       - name: Summarize and gate line coverage
         if: always() && (github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true')
