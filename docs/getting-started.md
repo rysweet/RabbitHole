@@ -166,7 +166,7 @@ the workflow `run` block, that looks like this:
 ```bash
 RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 \
 scripts/validate-gui-with-xvfb.sh \
-  --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-3600}" \
+  --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" \
   --expect success \
   --xvfb-run "${xvfb_run}" \
   -- \
@@ -277,7 +277,7 @@ Key output files:
 | Build everything | `mvn compile install` |
 | Run all tests | `mvn test` |
 | Run CI-like headless tests | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
-| Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-3600}" --expect success -- ./scripts/validate-getting-started.sh --gui` |
+| Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" --expect success -- ./scripts/validate-getting-started.sh --gui` |
 | Run Checkstyle | `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml` |
 | Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify` |
 | Start the IDE after a full build | `cd alice-ide && mvn exec:java -Dalice-ide` |

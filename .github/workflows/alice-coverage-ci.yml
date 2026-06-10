@@ -16,7 +16,7 @@ concurrency:
 jobs:
   coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -165,13 +165,14 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
-            if mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify; then
+            if mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -Pcoverage verify; then
               exit 0
             fi
             if [[ "${attempt}" == "3" ]]; then
               exit 1
             fi
             printf 'Coverage Maven command failed; retrying (%s/3).\n' "${attempt}"
+            find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
             sleep $((attempt * 10))
           done
 

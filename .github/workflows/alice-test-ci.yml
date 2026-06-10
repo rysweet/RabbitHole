@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -188,7 +188,7 @@ jobs:
           sed 's/^/- /' "${RUNNER_TEMP}/ci-changed-files.txt"
 
   headed-ubuntu-xvfb:
-    timeout-minutes: 75
+    timeout-minutes: 120
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -222,7 +222,7 @@ jobs:
         run: |
           set -euo pipefail
           scripts/validate-gui-with-xvfb.sh \
-            --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-3600}" \
+            --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" \
             --expect success \
             --xvfb-run "${{ steps.setup-xvfb.outputs.xvfb-run }}" \
             -- \

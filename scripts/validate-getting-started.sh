@@ -127,6 +127,7 @@ run_maven_with_retries() {
       return "${status}"
     fi
     info "Maven command failed with exit status ${status}; retrying (${attempt}/${MAVEN_RETRY_ATTEMPTS})."
+    find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
     sleep $((attempt * 10))
   done
 }
@@ -210,6 +211,7 @@ show_captured_output_tail() {
 run_headless_lane() {
   local mvn_cmd=(
     mvn
+    -U
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
@@ -219,6 +221,7 @@ run_headless_lane() {
   )
   local headless_launch_maven=(
     mvn
+    -U
     -DincludeSims=false
     -Djava.awt.headless=true
     exec:java
@@ -311,6 +314,7 @@ JAVA
 run_gui_launch() {
   local gui_launch_maven=(
     mvn
+    -U
     -DincludeSims=false
     -Djava.awt.headless=false
     exec:java

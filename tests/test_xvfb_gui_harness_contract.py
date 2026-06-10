@@ -197,7 +197,7 @@ class XvfbGuiHarnessWorkflowContract(unittest.TestCase):
         self.assertIn("--timeout-seconds", headed_job)
         self.assertIn("RABBITHOLE_LAUNCH_TIMEOUT_SECONDS: '60'", headed_job)
         self.assertIn("RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS", headed_job)
-        self.assertIn(":-3600", headed_job)
+        self.assertIn(":-7200", headed_job)
         self.assertIn("--expect success", headed_job)
         self.assertIn("--xvfb-run", headed_job)
         self.assertIn("steps.setup-xvfb.outputs.xvfb-run", headed_job)
