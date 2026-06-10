@@ -446,7 +446,7 @@ class GettingStartedValidationCiContract(unittest.TestCase):
         workflow = read_text(ALICE_TEST_WORKFLOW_PATH)
         test_job = workflow_job_block(workflow, "test")
 
-        self.assertIn("run: ./scripts/validate-getting-started.sh --headless", test_job)
+        self.assertIn("MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml ./scripts/validate-getting-started.sh --headless", test_job)
         self.assertNotIn("steps.setup-xvfb.outputs.xvfb-run", test_job)
         self.assertNotIn("--auto-servernum", test_job)
         self.assertIn("-Djava.awt.headless=true", test_job)

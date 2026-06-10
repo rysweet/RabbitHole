@@ -165,12 +165,12 @@ jobs:
 
       - name: Run Getting Started headless validation
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
-        run: ./scripts/validate-getting-started.sh --headless
+        run: MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml ./scripts/validate-getting-started.sh --headless
 
       - name: Run dual-baseline replay harness fallback
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: |
-          mvn -pl core/story-api-migration \
+          mvn --settings .github/maven/jogamp-ci-settings.xml -pl core/story-api-migration \
             -DincludeSims=false \
             -Dinstall4j.skip \
             -Dcheckstyle.skip \
@@ -226,4 +226,4 @@ jobs:
             --expect success \
             --xvfb-run "${{ steps.setup-xvfb.outputs.xvfb-run }}" \
             -- \
-            scripts/validate-getting-started.sh --gui
+            env MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml scripts/validate-getting-started.sh --gui

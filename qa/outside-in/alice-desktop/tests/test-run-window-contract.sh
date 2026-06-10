@@ -228,8 +228,10 @@ status=$?
 assert_success "$status" "runner lists the scenario catalog with the Run-window contract lane"
 assert_contains "$tmp_root/list.out" "$SCENARIO_ID" "runner list includes the Run-window contract scenario"
 
+set +e
 "$RUNNER" run "$SCENARIO_ID" --timeout-seconds 12 --evidence-dir "$tmp_root/timeout-rejected" >"$tmp_root/timeout-rejected.out" 2>"$tmp_root/timeout-rejected.err"
 status=$?
+set -e
 assert_exit_code "$status" 2 "runner rejects Run-window workflow timeout overrides"
 assert_contains "$tmp_root/timeout-rejected.err" 'Run-window contract workflow does not accept --timeout-seconds' "timeout override rejection names the Run-window contract workflow"
 

@@ -14,8 +14,10 @@ package_marker="$REPO_ROOT/installer/target/qa-package-install-smoke-marker.txt"
 trap 'rm -rf "$tmp_root"; rm -f "$package_marker"' EXIT
 
 gated_evidence="$tmp_root/gated-evidence"
+set +e
 "$RUNNER" run alice-desktop-netbeans-package-smoke --evidence-dir "$gated_evidence" >"$tmp_root/gated.out" 2>"$tmp_root/gated.err"
 status=$?
+set -e
 assert_exit_code "$status" 3 "gated command scenario is non-success by default when the gate is unset"
 run_dir=$(single_child_dir "$gated_evidence/alice-desktop-netbeans-package-smoke")
 status=$?
@@ -29,8 +31,10 @@ assert_contains "$run_dir/status.txt" '^skipMode=missing-gate$' "gated status re
 assert_contains "$tmp_root/gated.err" 'pass --prepare-only' "default gated skip tells callers how to prepare intentionally"
 
 package_evidence="$tmp_root/package-evidence"
+set +e
 "$RUNNER" run alice-desktop-package-install-smoke --evidence-dir "$package_evidence" >"$tmp_root/package.out" 2>"$tmp_root/package.err"
 status=$?
+set -e
 assert_exit_code "$status" 3 "package/install smoke is non-success by default when the gate is unset"
 package_run_dir=$(single_child_dir "$package_evidence/alice-desktop-package-install-smoke")
 status=$?

@@ -15,6 +15,8 @@ expectations.
 - [Getting started](./getting-started.md)
 - [Architecture](./architecture.md)
 - [Testing](./testing.md)
+- [Verify CI GUI, Eatme, and Xvfb Readiness](./howto/verify-ci-gui-eatme-xvfb-readiness.md)
+- [Eatme Reopen Project Tool](./tools-eatme-reopen-project.md)
 - [Generated source validation](./reference/generated-source-validation.md)
 - [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [RabbitHole baseline parity](./rabbithole-baseline-parity.md)
@@ -37,6 +39,7 @@ expectations.
 - how the text-only RabbitHole baseline parity snapshots catch generated-output drift
 - how the dual-baseline replay harness compares RabbitHole against a local preserved Alice baseline when configured
 - how reusable code requests UI prompts without opening Swing dialogs in headless contexts
+- how GUI-capable CI lanes, Eatme wrappers, and Xvfb outside-in evidence are verified
 
 ## Documentation map
 
@@ -45,6 +48,8 @@ expectations.
 - [Getting started](./getting-started.md)
 - [Architecture](./architecture.md)
 - [Testing](./testing.md)
+- [Verify CI GUI, Eatme, and Xvfb Readiness](./howto/verify-ci-gui-eatme-xvfb-readiness.md)
+- [Eatme Reopen Project Tool](./tools-eatme-reopen-project.md)
 - [Generated source validation](./reference/generated-source-validation.md)
 - [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [RabbitHole baseline parity](./rabbithole-baseline-parity.md)
@@ -75,6 +80,7 @@ expectations.
 - [Replace Reflection Sweeps with Explicit Contracts](./howto/replace-reflection-sweeps.md)
 - [Replace Test Sleeps with Deterministic Waits](./howto/replace-test-sleeps.md)
 - [Verify Generated Source Validation](./howto/verify-generated-source-validation.md)
+- [Verify CI GUI, Eatme, and Xvfb Readiness](./howto/verify-ci-gui-eatme-xvfb-readiness.md)
 
 ### Tutorials
 
@@ -84,6 +90,8 @@ expectations.
 
 - [Generated Source Validation](./reference/generated-source-validation.md)
 - [JavaFX Xvfb Launcher Reference](./reference/javafx-xvfb-launcher.md)
+- [CI GUI, Eatme, and Xvfb Validation](./reference/ci-gui-eatme-xvfb-validation.md)
+- [Eatme Reopen Project Tool](./tools-eatme-reopen-project.md)
 - [Modernization Scorecard Generator](./reference/modernization-scorecard-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)

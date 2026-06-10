@@ -9,6 +9,7 @@ LAUNCH_TIMEOUT_SECONDS="${RABBITHOLE_LAUNCH_TIMEOUT_SECONDS:-${DEFAULT_LAUNCH_TI
 MAVEN_RETRY_ATTEMPTS="${RABBITHOLE_MAVEN_RETRY_ATTEMPTS:-5}"
 
 TEMP_PATHS=()
+MAVEN_CMD=(mvn)
 trap 'rm -rf "${TEMP_PATHS[@]}"' EXIT
 
 usage() {
@@ -86,6 +87,20 @@ require_common_prerequisites() {
   require_tweedle_submodule
   require_command java
   require_command mvn
+}
+
+configure_maven_command() {
+  local settings_path=${MAVEN_SETTINGS_PATH:-}
+  if [[ -z "${settings_path}" ]]; then
+    return 0
+  fi
+  if [[ "${settings_path}" = /* || "${settings_path}" = *..* ]]; then
+    fail "MAVEN_SETTINGS_PATH must be a repository-relative path without traversal."
+  fi
+  if [[ ! -f "${settings_path}" ]]; then
+    fail "MAVEN_SETTINGS_PATH does not name an existing file: ${settings_path}"
+  fi
+  MAVEN_CMD=(mvn --settings "${PWD}/${settings_path}")
 }
 
 validate_launch_timeout_seconds() {
@@ -210,7 +225,7 @@ show_captured_output_tail() {
 
 run_headless_lane() {
   local mvn_cmd=(
-    mvn
+    "${MAVEN_CMD[@]}"
     -U
     -DincludeSims=false
     -Dinstall4j.skip
@@ -221,7 +236,7 @@ run_headless_lane() {
     install
   )
   local headless_launch_maven=(
-    mvn
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Djava.awt.headless=true
     exec:java
@@ -313,7 +328,7 @@ JAVA
 
 run_gui_launch() {
   local gui_launch_maven=(
-    mvn
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Djava.awt.headless=false
     exec:java
@@ -344,7 +359,7 @@ run_gui_launch() {
 
 run_gui_maven_validation() {
   local mvn_cmd=(
-    mvn
+    "${MAVEN_CMD[@]}"
     -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
@@ -422,6 +437,7 @@ if (( "$#" == 1 )); then
 fi
 
 require_common_prerequisites
+configure_maven_command
 validate_launch_timeout_seconds
 validate_maven_retry_attempts
 

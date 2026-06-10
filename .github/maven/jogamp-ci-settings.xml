@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <mirrors>
+    <mirror>
+      <id>jogamp-ci-approved-repositories</id>
+      <name>CI-approved SciJava mirror for JOGL and GlueGen resolution</name>
+      <url>https://maven.scijava.org/content/repositories/public</url>
+      <mirrorOf>jogamp.org</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <profiles>
+    <profile>
+      <id>jogamp-ci-dependency-resolution</id>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <name>Maven Central</name>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+        <repository>
+          <id>central-fallback</id>
+          <name>Maven Central canonical fallback</name>
+          <url>https://repo1.maven.org/maven2</url>
+          <releases>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+        <repository>
+          <id>jogamp.org</id>
+          <name>JogAmp fallback for JOGL and GlueGen artifacts; mirrored in CI by jogamp-ci-approved-repositories</name>
+          <url>https://jogamp.org/deployment/maven/</url>
+          <releases>
+            <enabled>true</enabled>
+            <checksumPolicy>fail</checksumPolicy>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>jogamp-ci-dependency-resolution</activeProfile>
+  </activeProfiles>
+</settings>

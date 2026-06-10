@@ -201,8 +201,10 @@ assert_contains "$RUNNER" "desktop-procedure-edit" "runner records the downstrea
 assert_contains "$RUNNER" "$PROCEDURE_SELECTOR" "runner probes for the scene.eatmeFirstLesson live desktop target"
 
 evidence_dir="$tmp_root/no-xvfb-evidence"
+set +e
 ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$evidence_dir" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
 status=$?
+set -e
 assert_exit_code "$status" 2 "missing Xvfb produces a structured blocker for the first-lesson procedure target scenario"
 
 run_dir=$(single_child_dir "$evidence_dir/$SCENARIO_ID")

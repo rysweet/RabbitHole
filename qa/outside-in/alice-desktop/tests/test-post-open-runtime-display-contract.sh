@@ -177,12 +177,14 @@ assert_contains "$RUNNER" 'python=\$\(python_with_module pyatspi\)' "runner uses
 assert_contains "$RUNNER" '"\$python" "\$POST_PROJECT_OPEN_PROBE"' "post-open setup probe escapes uvx Python when needed"
 assert_contains "$RUNNER" '"\$python" "\$POST_OPEN_RUNTIME_DISPLAY_PROBE"' "runtime/display probe escapes uvx Python when needed"
 assert_contains "$VALIDATOR" '"alice-desktop-post-open-runtime-display-accessibility-evidence"' "validator requires targetStarter for runtime/display post-open setup"
-assert_contains "$RUNNER" 'target_starter_display_name=\$\{target_fields\[0\]:\?\}' "runner fails closed when runtime/display targetStarter display name is missing"
-assert_contains "$RUNNER" 'target_starter_repo_path=\$\{target_fields\[1\]:\?\}' "runner fails closed when runtime/display targetStarter repository path is missing"
+assert_contains "$RUNNER" 'target_starter_display_name=\$\{automation_fields\[5\]:\?\}' "runner fails closed when runtime/display targetStarter display name is missing"
+assert_contains "$RUNNER" 'target_starter_repo_path=\$\{automation_fields\[6\]:\?\}' "runner fails closed when runtime/display targetStarter repository path is missing"
 
 evidence_dir="$tmp_root/no-xvfb-evidence"
+set +e
 ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run "$SCENARIO_ID" --evidence-dir "$evidence_dir" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
 status=$?
+set -e
 assert_exit_code "$status" 2 "missing Xvfb produces a structured blocker for the runtime/display scenario"
 run_dir=$(single_child_dir "$evidence_dir/$SCENARIO_ID")
 run_dir_status=$?

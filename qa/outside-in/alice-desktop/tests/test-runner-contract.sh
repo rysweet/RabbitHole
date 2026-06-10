@@ -43,24 +43,32 @@ assert_file_exists "$path_run_dir/status.txt" "path-based run writes evidence un
 
 outside_path="$tmp_root/outside.yaml"
 printf 'id: alice-desktop-save-load\n' > "$outside_path"
+set +e
 "$RUNNER" run "$outside_path" --evidence-dir "$tmp_root/outside-evidence" >"$tmp_root/outside.out" 2>"$tmp_root/outside.err"
 status=$?
+set -e
 assert_failure "$status" "runner rejects scenario paths outside the active catalog"
 assert_contains "$tmp_root/outside.err" 'inside active scenario directory' "outside path error names catalog boundary"
 
 bad_timeout_evidence="$tmp_root/bad-timeout-evidence"
+set +e
 "$RUNNER" run alice-desktop-scene-creation --evidence-dir "$bad_timeout_evidence" --timeout-seconds not-a-number >"$tmp_root/bad-timeout.out" 2>"$tmp_root/bad-timeout.err"
 status=$?
+set -e
 assert_failure "$status" "runner rejects non-integer timeout values for every mode"
 assert_contains "$tmp_root/bad-timeout.err" 'timeout.*positive integer|invalid timeout' "invalid timeout error is actionable"
 
+set +e
 "$RUNNER" run alice-desktop-not-a-scenario --evidence-dir "$tmp_root/unknown-evidence" >"$tmp_root/unknown.out" 2>"$tmp_root/unknown.err"
 status=$?
+set -e
 assert_failure "$status" "runner rejects unknown scenario ids"
 assert_contains "$tmp_root/unknown.err" 'not found|unknown scenario|alice-desktop-not-a-scenario' "unknown scenario error names requested id"
 
+set +e
 ALICE_QA_DISABLE_XVFB=1 "$RUNNER" run alice-desktop-launch --evidence-dir "$tmp_root/no-xvfb-evidence" >"$tmp_root/no-xvfb.out" 2>"$tmp_root/no-xvfb.err"
 status=$?
+set -e
 assert_exit_code "$status" 2 "xvfb launch reports unsupported display setup without pretending success"
 no_xvfb_run_dir=$(single_child_dir "$tmp_root/no-xvfb-evidence/alice-desktop-launch")
 status=$?

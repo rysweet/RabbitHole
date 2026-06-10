@@ -29,14 +29,14 @@ WORKFLOWS = {
             {
                 "name": "Run Getting Started headless validation",
                 "fragments": [
-                    "run: ./scripts/validate-getting-started.sh --headless",
+                    "MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml ./scripts/validate-getting-started.sh --headless",
                 ],
                 "requires_checkstyle_skip": False,
             },
             {
                 "name": "Run dual-baseline replay harness fallback",
                 "fragments": [
-                    "mvn -pl core/story-api-migration",
+                    "mvn --settings .github/maven/jogamp-ci-settings.xml -pl core/story-api-migration",
                     "-DincludeSims=false",
                     "-Dinstall4j.skip",
                     "-Dcheckstyle.skip",
@@ -69,9 +69,9 @@ WORKFLOWS = {
         "workflow_name": "Alice NetBeans Package CI",
         "job": "package-netbeans",
         "maven_step": "Build NetBeans package without Sims assets",
-        "maven_command": "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
+        "maven_command": "mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
         "maven_fragments": [
-            "mvn -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
+            "mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
             "NetBeans package Maven command failed; retrying",
         ],
         "dependent_steps": [
