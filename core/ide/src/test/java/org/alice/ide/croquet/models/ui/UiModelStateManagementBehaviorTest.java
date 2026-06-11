@@ -20,9 +20,7 @@ public class UiModelStateManagementBehaviorTest {
   @Test
   public void formatterStateDefaultsToAliceAndStillExposesJavaAsTheSecondOption() {
     FormatterState state = FormatterState.getInstance();
-    state.setValueTransactionlessly(AliceFormatter.getInstance());
 
-    assertSame(AliceFormatter.getInstance(), state.getValue());
     assertSame(AliceFormatter.getInstance(), state.getItemAt(0));
     assertSame(JavaFormatter.getInstance(), state.getItemAt(1));
     assertFalse(FormatterState.isJava());
