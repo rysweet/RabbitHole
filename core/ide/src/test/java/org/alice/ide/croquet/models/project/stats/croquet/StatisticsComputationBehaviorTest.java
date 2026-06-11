@@ -45,7 +45,9 @@ public class StatisticsComputationBehaviorTest extends ProjectContextTestCase {
 
   @After
   public void restoreFormatter() {
-    FormatterState.getInstance().setValueTransactionlessly(previousFormatter);
+    if (previousFormatter != null) {
+      FormatterState.getInstance().setValueTransactionlessly(previousFormatter);
+    }
   }
 
   @Test

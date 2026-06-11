@@ -10,7 +10,7 @@ MAVEN_RETRY_ATTEMPTS="${RABBITHOLE_MAVEN_RETRY_ATTEMPTS:-5}"
 
 TEMP_PATHS=()
 MAVEN_CMD=(mvn)
-trap 'rm -rf "${TEMP_PATHS[@]}"' EXIT
+trap 'if ((${#TEMP_PATHS[@]} > 0)); then rm -rf "${TEMP_PATHS[@]}"; fi' EXIT
 
 usage() {
   cat <<'USAGE'
