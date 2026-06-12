@@ -48,11 +48,7 @@ import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import org.lgna.project.ast.*;
 import org.lgna.project.virtualmachine.events.VirtualMachineListener;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +99,7 @@ public abstract class VirtualMachine {
         try {
           rv[i] = this.evaluate(expressions[i]);
         } catch (LgnaVmMethodInvocationException e) {
-          if (isForRunning) {
+          if (isForRunning()) {
             throw e;
           }
           handleSceneEditorMethodInvocationException(e);
@@ -120,7 +116,7 @@ public abstract class VirtualMachine {
     try {
       return invoke(target, method, arguments);
     } catch (LgnaVmMethodInvocationException e) {
-      if (isForRunning) {
+      if (isForRunning()) {
         throw e;
       }
       handleSceneEditorMethodInvocationException(e);
@@ -129,11 +125,11 @@ public abstract class VirtualMachine {
   }
 
   boolean isForRunning() {
-    return isForRunning;
+    return sceneEditorPolicy.isForRunning();
   }
 
   void handleSceneEditorMethodInvocationException(LgnaVmMethodInvocationException e) {
-    Logger.warning("Error while invoking scene setup method. Continuing past.", e.getMethod(), e);
+    sceneEditorPolicy.handleSceneEditorMethodInvocationException(e);
   }
 
   private NamedUserConstructor getConstructor(NamedUserType entryPointType, Object[] arguments) {
@@ -156,7 +152,7 @@ public abstract class VirtualMachine {
       Object value = evaluate(field.initializer.getValue());
       userInstance.setFieldValue(field, value);
     } catch (RuntimeException e) {
-      if (isForRunning) {
+      if (isForRunning()) {
         throw e;
       }
       Logger.warning("Error when setting up scene " + e.getMessage());
@@ -181,7 +177,7 @@ public abstract class VirtualMachine {
       } catch (ReturnException re) {
         throw new AssertionError();
       } catch (LgnaVmMethodInvocationException e) {
-        if (isForRunning) {
+        if (isForRunning()) {
           throw e;
         }
         handleSceneEditorMethodInvocationException(e);
@@ -218,34 +214,8 @@ public abstract class VirtualMachine {
     }
   }
 
-  private UserArrayInstance createUserArrayInstance(UserArrayType type, int[] lengths, Object[] values) {
-    return new UserArrayInstance(type, lengths, values);
-  }
-
-  private Object createJavaArrayInstance(JavaType type, int[] lengths, Object[] values) {
-    Class<?> cls = type.getClassReflectionProxy().getReification();
-    assert cls != null;
-    Class<?> componentCls = cls.getComponentType();
-    assert componentCls != null;
-    Object rv = Array.newInstance(componentCls, lengths);
-    for (int i = 0; i < values.length; i++) {
-      if (values[i] instanceof UserInstance userValue) {
-        values[i] = userValue.getJavaInstance();
-      }
-      Array.set(rv, i, values[i]);
-    }
-    return rv;
-  }
-
   protected Object createArrayInstance(AbstractType<?, ?, ?> type, int[] lengths, Object... values) {
-    assert type != null;
-    if (type instanceof UserArrayType arrayType) {
-      return this.createUserArrayInstance(arrayType, lengths, values);
-    } else if (type instanceof JavaType javaType) {
-      return this.createJavaArrayInstance(javaType, lengths, values);
-    } else {
-      throw new RuntimeException();
-    }
+    return arrayAccessHelper.createArrayInstance(type, lengths, values);
   }
 
   public Object[] evaluateArguments(AbstractCode code, NodeListProperty<SimpleArgument> arguments, NodeListProperty<SimpleArgument> variableArguments, NodeListProperty<JavaKeyedArgument> keyedArguments) {
@@ -253,71 +223,31 @@ public abstract class VirtualMachine {
   }
 
   protected Integer getArrayLength(Object array) {
-    if (array != null) {
-      if (array instanceof UserArrayInstance userArrayInstance) {
-        return userArrayInstance.getLength();
-      } else {
-        return Array.getLength(array);
-      }
-    } else {
-      throw new NullPointerException();
-    }
+    return arrayAccessHelper.getArrayLength(array);
   }
 
   protected Object getUserField(UserField field, Object instance) {
-    assert instance != null : field.getName();
-    assert instance instanceof UserInstance;
-    UserInstance userInstance = (UserInstance) instance;
-    return userInstance.getFieldValue(field);
+    return fieldAccessHelper.getUserField(field, instance);
   }
 
   protected void setUserField(UserField field, Object instance, Object value) {
-    assert instance instanceof UserInstance;
-    UserInstance userInstance = (UserInstance) instance;
-    userInstance.setFieldValue(field, value);
+    fieldAccessHelper.setUserField(field, instance, value);
   }
 
   protected Object getFieldDeclaredInJavaWithField(JavaField field, Object instance) {
-    instance = UserInstance.getJavaInstanceIfNecessary(instance);
-    Field fld = field.getFieldReflectionProxy().getReification();
-    assert fld != null : field.getFieldReflectionProxy();
-    return ReflectionUtilities.get(fld, instance);
+    return fieldAccessHelper.getFieldDeclaredInJavaWithField(field, instance);
   }
 
   protected void setFieldDeclaredInJavaWithField(JavaField field, Object instance, Object value) {
-    instance = UserInstance.getJavaInstanceIfNecessary(instance);
-    Field fld = field.getFieldReflectionProxy().getReification();
-    assert fld != null : field;
-    ReflectionUtilities.set(fld, instance, value);
+    fieldAccessHelper.setFieldDeclaredInJavaWithField(field, instance, value);
   }
 
   public Object get(AbstractField field, Object instance) {
-    assert field != null;
-    assert (instance != null) || field.isStatic() : field;
-    if (field instanceof UserField userField) {
-      return this.getUserField(userField, instance);
-    } else if (field instanceof JavaField javaField) {
-      return this.getFieldDeclaredInJavaWithField(javaField, instance);
-    } else {
-      throw new RuntimeException();
-    }
+    return fieldAccessHelper.get(field, instance);
   }
 
   public void set(AbstractField field, Object instance, Object value) {
-    assert field != null;
-    if (field instanceof UserField userField) {
-      this.setUserField(userField, instance, value);
-    } else if (field instanceof JavaField javaField) {
-      this.setFieldDeclaredInJavaWithField(javaField, instance, value);
-    } else {
-      throw new RuntimeException();
-    }
-  }
-
-  private void checkIndex(int index, int length) {
-    if ((index < 0) || (length <= index)) {
-      throw new LgnaVmArrayIndexOutOfBoundsException(this, index, length);
-    }
+    fieldAccessHelper.set(field, instance, value);
   }
 
   void checkNotNull(Object value, String message) {
@@ -327,132 +257,23 @@ public abstract class VirtualMachine {
   }
 
   public Object getItemAtIndex(AbstractType<?, ?, ?> arrayType, Object array, Integer index) {
-    assert arrayType != null;
-    assert arrayType.isArray();
-    if (array instanceof UserArrayInstance userArrayInstance) {
-      this.checkIndex(index, userArrayInstance.getLength());
-      return userArrayInstance.get(index);
-    } else {
-      this.checkIndex(index, Array.getLength(array));
-      return Array.get(array, index);
-    }
+    return arrayAccessHelper.getItemAtIndex(arrayType, array, index);
   }
 
   public void setItemAtIndex(AbstractType<?, ?, ?> arrayType, Object array, Integer index, Object value) {
-    assert arrayType != null;
-    assert arrayType.isArray() : arrayType;
-    if (array instanceof UserArrayInstance userArrayInstance) {
-      this.checkIndex(index, userArrayInstance.getLength());
-      userArrayInstance.set(index, value);
-    } else {
-      value = UserInstance.getJavaInstanceIfNecessary(value);
-      this.checkIndex(index, Array.getLength(array));
-      Array.set(array, index, value);
-    }
+    arrayAccessHelper.setItemAtIndex(arrayType, array, index, value);
   }
 
   public Object invokeUserMethod(Object instance, UserMethod method, Object... arguments) {
-    if (method.isStatic()) {
-      assert instance == null;
-    } else {
-      assert instance != null : method;
-      assert instance instanceof UserInstance : instance;
-    }
-    UserInstance userInstance = (UserInstance) instance;
-    Map<AbstractParameter, Object> map;
-    if (arguments.length == 0) {
-      map = Collections.emptyMap();
-    } else {
-      map = Maps.newHashMap();
-      for (int i = 0; i < arguments.length; i++) {
-        map.put(method.requiredParameters.get(i), arguments[i]);
-      }
-    }
-    this.pushMethodFrame(userInstance, method, map);
-    try {
-      this.execute(method.body.getValue());
-      if (method.isProcedure() || isStopped) {
-        return null;
-      } else {
-        throw new LgnaVmNoReturnException(this);
-      }
-    } catch (ReturnException re) {
-      return re.getValue();
-    } finally {
-      this.popFrame();
-    }
-  }
-
-  private static void checkArguments(Class<?>[] parameterTypes, Object[] arguments, IllegalArgumentException iae, String text) {
-    if (parameterTypes.length != arguments.length) {
-      throw new RuntimeException("wrong number of arguments.  expected: " + parameterTypes.length + "; received: " + arguments.length + ". " + text, iae);
-    }
-    int i = 0;
-    for (Class<?> parameterType : parameterTypes) {
-      Object argument = arguments[i];
-      if (argument != null) {
-        if (parameterType.isPrimitive()) {
-          //todo
-        } else {
-          if (!parameterType.isAssignableFrom(argument.getClass())) {
-            throw new RuntimeException("parameterType[" + i + "] " + parameterType.getName() + " is not assignable from argument[" + i + "]: " + argument + ". " + text, iae);
-          }
-        }
-      }
-      i++;
-    }
+    return methodInvoker.invokeUserMethod(instance, method, arguments);
   }
 
   public Object invokeMethodDeclaredInJava(Object instance, JavaMethod method, Object... arguments) {
-    instance = UserInstance.getJavaInstanceIfNecessary(instance);
-    UserInstance.updateArrayWithInstancesInJavaIfNecessary(arguments);
-    Method mthd = method.getMethodReflectionProxy().getReification();
-
-    Class<?>[] parameterTypes = mthd.getParameterTypes();
-    int lastParameterIndex = parameterTypes.length - 1;
-    if (lastParameterIndex == arguments.length) {
-      if (mthd.isVarArgs()) {
-        Object[] fixedArguments = new Object[parameterTypes.length];
-        System.arraycopy(arguments, 0, fixedArguments, 0, arguments.length);
-        assert parameterTypes[lastParameterIndex].isArray() : parameterTypes[lastParameterIndex];
-        fixedArguments[lastParameterIndex] = Array.newInstance(parameterTypes[lastParameterIndex].getComponentType(), 0);
-        arguments = fixedArguments;
-      }
-    }
-
-    if (ReflectionUtilities.isProtected(mthd)) {
-      Class<?> adapterCls = mapAbstractClsToAdapterCls.get(mthd.getDeclaringClass());
-      if (adapterCls != null) {
-        mthd = ReflectionUtilities.getMethod(adapterCls, mthd.getName(), mthd.getParameterTypes());
-      }
-    }
-    assert ReflectionUtilities.isPublic(mthd) : mthd;
-
-    try {
-      return mthd.invoke(instance, arguments);
-    } catch (IllegalArgumentException illegalArgumentException) {
-      checkArguments(mthd.getParameterTypes(), arguments, illegalArgumentException, ReflectionUtilities.getDetail(instance, mthd, arguments));
-      throw illegalArgumentException;
-    } catch (IllegalAccessException illegalAccessException) {
-      throw new RuntimeException(ReflectionUtilities.getDetail(instance, mthd, arguments), illegalAccessException);
-    } catch (InvocationTargetException ite) {
-      Throwable throwable = ite.getTargetException();
-      if (throwable instanceof RuntimeException re) {
-        throw re;
-      } else {
-        throw new RuntimeException(ReflectionUtilities.getDetail(instance, mthd, arguments), throwable);
-      }
-    }
+    return methodInvoker.invokeMethodDeclaredInJava(instance, method, arguments);
   }
 
   protected Object invoke(Object instance, AbstractMethod method, Object... arguments) {
-    assert method != null;
-
-    if (!method.isStatic()) {
-      checkNotNull(instance, "Instance method target is null");
-    }
-
-    return method.invoke(this, instance, arguments);
+    return methodInvoker.invoke(instance, method, arguments);
   }
 
   protected Object evaluate(Expression expression) {
@@ -484,16 +305,15 @@ public abstract class VirtualMachine {
   }
 
   public void setForSceneEditor() {
-    isForRunning = false;
+    sceneEditorPolicy.setForSceneEditor();
   }
 
   final CopyOnWriteArrayList<VirtualMachineListener> virtualMachineListeners = new CopyOnWriteArrayList<>();
   boolean isStopped = false;
+  final VmArrayAccessHelper arrayAccessHelper = new VmArrayAccessHelper(this);
+  final VmFieldAccessHelper fieldAccessHelper = new VmFieldAccessHelper();
+  final VmMethodInvoker methodInvoker = new VmMethodInvoker(this);
+  final VmSceneEditorPolicy sceneEditorPolicy = new VmSceneEditorPolicy();
   final VmExpressionEvaluator expressionEvaluator = new VmExpressionEvaluator(this);
   final VmStatementExecutor statementExecutor = new VmStatementExecutor(this);
-
-  // Marks this VM for use in running worlds. When true it allows errors to be thrown that interrupt execution.
-  // A value of false indicates this VM is used during scene loading or scene setup where thrown exceptions can
-  // cause these processes to break and should be simply logged and the setup code continued.
-  private boolean isForRunning = true;
 }

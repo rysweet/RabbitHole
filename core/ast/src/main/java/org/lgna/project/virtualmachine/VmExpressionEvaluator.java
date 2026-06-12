@@ -64,9 +64,11 @@ import java.util.Map;
 final class VmExpressionEvaluator {
 
   private final VirtualMachine vm;
+  private final VmMethodInvocationEvaluator methodInvocationEvaluator;
 
   VmExpressionEvaluator(VirtualMachine vm) {
     this.vm = vm;
+    this.methodInvocationEvaluator = new VmMethodInvocationEvaluator(vm, this);
   }
 
   Object evaluate(Expression expression) {
@@ -88,7 +90,7 @@ final class VmExpressionEvaluator {
       case RelationalInfixExpression relational -> evaluateRelationalInfixExpression(relational);
       case ShiftInfixExpression infixExpression -> evaluateShiftInfixExpression(infixExpression);
       case LogicalComplement complement -> evaluateLogicalComplement(complement);
-      case MethodInvocation invocation -> evaluateMethodInvocation(invocation);
+      case MethodInvocation invocation -> methodInvocationEvaluator.evaluate(invocation);
       case NullLiteral nullLiteral -> evaluateNullLiteral(nullLiteral);
       case StringConcatenation concatenation -> evaluateStringConcatenation(concatenation);
       case DoubleLiteral doubleLiteral -> evaluateDoubleLiteral(doubleLiteral);
@@ -334,32 +336,6 @@ final class VmExpressionEvaluator {
     Object leftOperand = this.evaluate(stringConcatenation.leftOperand.getValue());
     Object rightOperand = this.evaluate(stringConcatenation.rightOperand.getValue());
     return String.valueOf(leftOperand).concat(String.valueOf(rightOperand));
-  }
-
-  private Object evaluateMethodInvocation(MethodInvocation methodInvocation) {
-    if (methodInvocation.isValid()) {
-      AbstractMethod method = methodInvocation.method.getValue();
-      Object[] allArguments = this.evaluateArguments(method, methodInvocation.requiredArguments, methodInvocation.variableArguments, methodInvocation.keyedArguments);
-      Object[] contextArguments = allArguments.clone();
-      int parameterCount = method.getRequiredParameters().size();
-      if (method.getVariableLengthParameter() != null) {
-        parameterCount += 1;
-      }
-      if (method.getKeyedParameter() != null) {
-        parameterCount += 1;
-      }
-      assert parameterCount == allArguments.length : method.getName();
-      Object target = this.evaluate(methodInvocation.expression.getValue());
-      try {
-        return vm.invoke(target, method, allArguments);
-      } catch (LgnaVmMethodInvocationException e) {
-        throw e;
-      } catch (RuntimeException e) {
-        throw new LgnaVmMethodInvocationException(vm, methodInvocation, target, method, contextArguments, e);
-      }
-    } else {
-      throw new LgnaVmMethodInvocationException(vm, methodInvocation);
-    }
   }
 
   private Object evaluateNullLiteral(NullLiteral nullLiteral) {
