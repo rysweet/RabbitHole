@@ -219,7 +219,17 @@ def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
                     if match_index + 1 < len(catch_matches)
                     else len(line)
                 )
-                yield line_index + 1, [line[match.start():next_start]]
+                block_lines = [line[match.start():next_start]]
+                depth = brace_delta(block_lines[0])
+                scan_index = line_index + 1
+                while depth > 0 and scan_index < len(lines):
+                    next_line = lines[scan_index]
+                    if depth <= 1 and JAVA_CATCH_RE.search(next_line):
+                        break
+                    block_lines.append(next_line)
+                    depth += brace_delta(next_line)
+                    scan_index += 1
+                yield line_index + 1, block_lines
             line_index += 1
             continue
         block_lines = [line]
