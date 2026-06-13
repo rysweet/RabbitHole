@@ -201,7 +201,7 @@ def strip_block_comments(text: str) -> str:
 
 
 def strip_line_comments(text: str) -> str:
-    return re.sub(r"(?m)^\s*//.*$", "", text)
+    return re.sub(r"(?m)//.*$", "", text)
 
 
 def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
@@ -232,6 +232,8 @@ def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
             if started and depth <= 0:
                 break
             next_line = lines[scan_index]
+            if started and depth <= 1 and JAVA_CATCH_RE.search(next_line):
+                break
             block_lines.append(next_line)
             started = started or "{" in next_line
             depth += brace_delta(next_line)

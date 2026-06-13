@@ -247,6 +247,16 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
 
         self.assertEqual([], findings)
 
+    def test_trailing_line_commented_java_examples_are_ignored(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            "class ProjectLoader { int n = 0; // catch (Throwable t) { t.printStackTrace(); } }\n",
+        )
+
+        self.assertEqual([], findings)
+
     def test_adjacent_catch_clauses_report_the_logging_catch_line(self) -> None:
         inventory = load_inventory()
 
@@ -259,6 +269,34 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
         self.assertEqual(1, len(log_findings))
         self.assertIn("RuntimeException", log_findings[0].text)
         self.assertEqual(3, log_findings[0].line)
+
+    def test_multiline_adjacent_catches_report_later_logging_catch(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                """\
+                class ProjectLoader {
+                  void run() {
+                    try {
+                      load();
+                    } catch (IOException ioe) {
+                      return;
+                    } catch (RuntimeException re) {
+                      Logger.warning(re);
+                      repair();
+                    }
+                  }
+                }
+                """
+            ),
+        )
+
+        log_findings = [finding for finding in findings if finding.pattern == "log-and-continue"]
+        self.assertEqual(1, len(log_findings))
+        self.assertIn("RuntimeException", log_findings[0].text)
+        self.assertEqual(7, log_findings[0].line)
 
     def test_todo_markers_in_block_comments_remain_inventory_candidates(self) -> None:
         inventory = load_inventory()
