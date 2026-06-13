@@ -250,6 +250,24 @@ def find_matching(text: str, start: int, open_char: str, close_char: str) -> int
     return -1
 
 
+def split_top_level_statements(text: str) -> list[str]:
+    statements: list[str] = []
+    depth = 0
+    start = 0
+    for index, char in enumerate(text):
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+        elif char == ";" and depth == 0:
+            statements.append(text[start : index + 1].strip())
+            start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        statements.append(tail)
+    return statements
+
+
 def catch_body(block_lines: list[str]) -> str:
     text = "\n".join(block_lines)
     catch_start = text.find("catch")
@@ -264,22 +282,12 @@ def catch_body(block_lines: list[str]) -> str:
 
 
 def has_top_level_flow_change(text: str) -> bool:
-    depth = 0
-    statement = []
-    for char in text:
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-        if depth == 0:
-            statement.append(char)
-            if char == ";":
-                stripped = "".join(statement).strip()
-                if re.match(r"^(?:throw|return|break|continue)\b|^System\.exit\s*\(", stripped):
-                    return True
-                statement = []
-    stripped = "".join(statement).strip()
-    return bool(re.match(r"^(?:throw|return|break|continue)\b|^System\.exit\s*\(", stripped))
+    for statement in split_top_level_statements(text):
+        if re.match(r"^(?:throw|return|break|continue)\b|^System\.exit\s*\(", statement):
+            return True
+        if full_if_else_always_exits(statement):
+            return True
+    return False
 
 
 def full_if_else_always_exits(text: str) -> bool:
@@ -403,11 +411,12 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 def scan_text(path: str, text: str) -> list[Finding]:
     original_lines = text.splitlines()
-    code_lines = strip_line_comments(strip_block_comments(text)).splitlines()
+    code_text = strip_line_comments(strip_block_comments(text))
+    masked_code_lines = mask_string_literals(code_text).splitlines()
     return (
         scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))
-        + scan_line_patterns(path, code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
-        + scan_log_and_continue(path, code_lines)
+        + scan_line_patterns(path, masked_code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
+        + scan_log_and_continue(path, masked_code_lines)
     )
 
 

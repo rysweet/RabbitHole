@@ -269,6 +269,36 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
         log_findings = [finding for finding in findings if finding.pattern == "log-and-continue"]
         self.assertEqual(1, len(log_findings))
 
+    def test_log_then_full_conditional_exit_suppresses_log_and_continue_path(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                """\
+                class ProjectLoader {
+                  void run() {
+                    try {
+                      load();
+                    } catch (Exception ex) {
+                      Logger.warning(ex);
+                      if (recoverable) {
+                        return;
+                      } else {
+                        throw ex;
+                      }
+                    }
+                  }
+                }
+                """
+            ),
+        )
+
+        self.assertEqual(
+            [],
+            [finding for finding in findings if finding.pattern == "log-and-continue"],
+        )
+
     def test_line_comment_markers_inside_strings_are_preserved(self) -> None:
         inventory = load_inventory()
 
@@ -281,6 +311,16 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
             [],
             [finding for finding in findings if finding.pattern == "log-and-continue"],
         )
+
+    def test_forbidden_patterns_inside_strings_are_ignored(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            'class ProjectLoader { String example = "catch (Throwable t) { t.printStackTrace(); }"; }\n',
+        )
+
+        self.assertEqual([], findings)
 
     def test_block_commented_java_examples_are_ignored(self) -> None:
         inventory = load_inventory()
