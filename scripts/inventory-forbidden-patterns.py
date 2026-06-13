@@ -200,8 +200,119 @@ def strip_block_comments(text: str) -> str:
     return re.sub(r"/\*.*?\*/", lambda match: "\n" * match.group(0).count("\n"), text, flags=re.DOTALL)
 
 
+def mask_string_literals(text: str) -> str:
+    chars: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for char in text:
+        if quote is None:
+            if char in {'"', "'"}:
+                quote = char
+                chars.append(char)
+            else:
+                chars.append(char)
+            continue
+        if escaped:
+            escaped = False
+            chars.append(" ")
+        elif char == "\\":
+            escaped = True
+            chars.append(" ")
+        elif char == quote:
+            quote = None
+            chars.append(char)
+        elif char == "\n":
+            chars.append("\n")
+        else:
+            chars.append(" ")
+    return "".join(chars)
+
+
 def strip_line_comments(text: str) -> str:
-    return re.sub(r"(?m)//.*$", "", text)
+    lines = []
+    for line in text.splitlines():
+        masked = mask_string_literals(line)
+        comment_index = masked.find("//")
+        lines.append(line[:comment_index] if comment_index >= 0 else line)
+    return "\n".join(lines)
+
+
+def find_matching(text: str, start: int, open_char: str, close_char: str) -> int:
+    depth = 0
+    for index in range(start, len(text)):
+        char = text[index]
+        if char == open_char:
+            depth += 1
+        elif char == close_char:
+            depth -= 1
+            if depth == 0:
+                return index
+    return -1
+
+
+def catch_body(block_lines: list[str]) -> str:
+    text = "\n".join(block_lines)
+    catch_start = text.find("catch")
+    catch_text = text[catch_start:] if catch_start >= 0 else text
+    open_index = catch_text.find("{")
+    if open_index < 0:
+        return catch_text
+    close_index = find_matching(catch_text, open_index, "{", "}")
+    if close_index < 0:
+        return catch_text[open_index + 1 :]
+    return catch_text[open_index + 1 : close_index]
+
+
+def has_top_level_flow_change(text: str) -> bool:
+    depth = 0
+    statement = []
+    for char in text:
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+        if depth == 0:
+            statement.append(char)
+            if char == ";":
+                stripped = "".join(statement).strip()
+                if re.match(r"^(?:throw|return|break|continue)\b|^System\.exit\s*\(", stripped):
+                    return True
+                statement = []
+    stripped = "".join(statement).strip()
+    return bool(re.match(r"^(?:throw|return|break|continue)\b|^System\.exit\s*\(", stripped))
+
+
+def full_if_else_always_exits(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped.startswith("if"):
+        return False
+    condition_start = stripped.find("(")
+    if condition_start < 0:
+        return False
+    condition_end = find_matching(stripped, condition_start, "(", ")")
+    if condition_end < 0:
+        return False
+    true_start = stripped.find("{", condition_end)
+    if true_start < 0:
+        return False
+    true_end = find_matching(stripped, true_start, "{", "}")
+    if true_end < 0:
+        return False
+    remainder = stripped[true_end + 1 :].strip()
+    if not remainder.startswith("else"):
+        return False
+    false_start = remainder.find("{")
+    if false_start < 0:
+        return False
+    false_end = find_matching(remainder, false_start, "{", "}")
+    if false_end < 0 or remainder[false_end + 1 :].strip():
+        return False
+    return fragment_always_exits(stripped[true_start + 1 : true_end]) and fragment_always_exits(remainder[false_start + 1 : false_end])
+
+
+def fragment_always_exits(text: str) -> bool:
+    masked = mask_string_literals(text)
+    return has_top_level_flow_change(masked) or full_if_else_always_exits(masked)
 
 
 def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
@@ -255,39 +366,11 @@ def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
 
 
 def has_unconditional_flow_change(block_lines: list[str]) -> bool:
-    catch_start = block_lines[0].find("catch")
-    catch_fragment = block_lines[0][catch_start:] if catch_start >= 0 else block_lines[0]
-    catch_without_strings = re.sub(r'"[^"]*"|\'[^\']*\'', '""', catch_fragment)
-    if not re.search(r"\bif\b", catch_without_strings) and re.search(r"\{[^{}]*(?:throw|return|break|continue)\b[^{}]*\}", catch_fragment):
-        return True
-    depth = brace_delta(catch_fragment)
-    pending_unbraced_control = False
-    for line in block_lines[1:]:
-        stripped = line.strip()
-        if not stripped or COMMENT_OR_TEXT_PREFIX_RE.search(stripped):
-            depth += brace_delta(line)
-            continue
-        is_control_statement = re.match(
-            r"^(?:if|else\s+if|else|for|while|switch)\b", stripped
-        )
-        if depth <= 1 and re.match(
-            r"^(?:throw|return|break|continue)\b|^System\.exit\s*\(", stripped
-        ) and not pending_unbraced_control:
-            return True
-        pending_unbraced_control = bool(is_control_statement and "{" not in stripped)
-        depth += brace_delta(line)
-    return False
+    return fragment_always_exits(catch_body(block_lines))
 
 
 def has_full_conditional_flow_change(block_lines: list[str]) -> bool:
-    block_text = "\n".join(block_lines)
-    return bool(
-        re.search(
-            r"\bif\b[^{]*\{[^{}]*(?:return|throw|break|continue)\b[^{}]*\}\s*else\s*\{[^{}]*(?:return|throw|break|continue)\b",
-            block_text,
-            re.DOTALL,
-        )
-    )
+    return False
 
 
 def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
