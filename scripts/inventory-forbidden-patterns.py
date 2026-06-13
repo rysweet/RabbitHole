@@ -237,6 +237,95 @@ def strip_line_comments(text: str) -> str:
     return "\n".join(lines)
 
 
+def mask_non_code(text: str) -> str:
+    chars = list(text)
+    index = 0
+    state = "code"
+    quote = ""
+    escaped = False
+    while index < len(chars):
+        char = chars[index]
+        next_two = text[index : index + 2]
+        next_three = text[index : index + 3]
+
+        if state == "code":
+            if next_three == '"""':
+                chars[index:index + 3] = "   "
+                index += 3
+                state = "text-block"
+                continue
+            if next_two == "//":
+                chars[index:index + 2] = "  "
+                index += 2
+                state = "line-comment"
+                continue
+            if next_two == "/*":
+                chars[index:index + 2] = "  "
+                index += 2
+                state = "block-comment"
+                continue
+            if char in {'"', "'"}:
+                quote = char
+                chars[index] = " "
+                index += 1
+                state = "string"
+                escaped = False
+                continue
+            index += 1
+            continue
+
+        if state == "line-comment":
+            if char == "\n":
+                state = "code"
+            else:
+                chars[index] = " "
+            index += 1
+            continue
+
+        if state == "block-comment":
+            if next_two == "*/":
+                chars[index:index + 2] = "  "
+                index += 2
+                state = "code"
+                continue
+            if char != "\n":
+                chars[index] = " "
+            index += 1
+            continue
+
+        if state == "text-block":
+            if next_three == '"""':
+                chars[index:index + 3] = "   "
+                index += 3
+                state = "code"
+                continue
+            if char != "\n":
+                chars[index] = " "
+            index += 1
+            continue
+
+        if state == "string":
+            if char == "\n":
+                state = "code"
+                index += 1
+                continue
+            if escaped:
+                escaped = False
+                chars[index] = " "
+            elif char == "\\":
+                escaped = True
+                chars[index] = " "
+            elif char == quote:
+                chars[index] = " "
+                state = "code"
+            else:
+                chars[index] = " "
+            index += 1
+            continue
+
+    return "".join(chars)
+
+
 def find_matching(text: str, start: int, open_char: str, close_char: str) -> int:
     depth = 0
     for index in range(start, len(text)):
@@ -411,7 +500,7 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 def scan_text(path: str, text: str) -> list[Finding]:
     original_lines = text.splitlines()
-    code_text = strip_block_comments(mask_string_literals(strip_line_comments(text)))
+    code_text = mask_non_code(text)
     code_lines = code_text.splitlines()
     return (
         scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))
