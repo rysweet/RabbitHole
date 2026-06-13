@@ -89,6 +89,7 @@ expectations.
 ### Reference
 
 - [GL Graphics2D Contract](./reference/gl-graphics2d-contract.md)
+- [Forbidden Pattern Inventory](./reference/forbidden-pattern-inventory.md)
 - [Generated Source Validation](./reference/generated-source-validation.md)
 - [JavaFX Xvfb Launcher Reference](./reference/javafx-xvfb-launcher.md)
 - [CI GUI, Eatme, and Xvfb Validation](./reference/ci-gui-eatme-xvfb-validation.md)

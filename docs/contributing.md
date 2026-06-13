@@ -70,6 +70,10 @@ reports, local tool traces, and time-bound progress notes out of Git unless the
 content has been rewritten as a maintained reference. See
 [Repository hygiene](repository-hygiene.md) for the cleanup rules and checks.
 
+For modernization follow-up triage, use the maintained
+[forbidden pattern inventory](reference/forbidden-pattern-inventory.md) scanner
+and place generated inventory snapshots in issue or pull request comments.
+
 ## Merge-ready evidence
 
 Before moving a reviewed pull request out of draft, generate the maintained
