@@ -69,3 +69,21 @@ or local investigation that produced it. Keep generated evidence, scratch
 reports, local tool traces, and time-bound progress notes out of Git unless the
 content has been rewritten as a maintained reference. See
 [Repository hygiene](repository-hygiene.md) for the cleanup rules and checks.
+
+## Merge-ready evidence
+
+Before moving a reviewed pull request out of draft, generate the maintained
+merge-ready evidence section:
+
+```bash
+python3 scripts/generate-merge-ready-evidence.py \
+  --pr <pull-request-number> \
+  --scenario-directory <scenario-directory> \
+  --quality-audit-file <quality-audit-output> \
+  --patch-pr-description
+```
+
+Use `--dry-run` to preview the generated section without editing the pull
+request. The command prints evidence to standard output and updates the pull
+request description when patching is enabled; do not commit generated evidence
+files or local command transcripts.

@@ -59,11 +59,11 @@ public class LgnaVmClassCastException extends LgnaVmException {
   protected void appendDescription(StringBuilder sb) {
     String message = this.getMessage();
     if (message != null) {
-      sb.append(message);
+      appendHtmlEscaped(sb, message);
     }
     sb.append("expected: ");
-    sb.append(this.expectedCls.getName());
+    appendHtmlEscaped(sb, this.expectedCls.getName());
     sb.append("actual: ");
-    sb.append(this.actualCls.getName());
+    appendHtmlEscaped(sb, this.actualCls.getName());
   }
 }

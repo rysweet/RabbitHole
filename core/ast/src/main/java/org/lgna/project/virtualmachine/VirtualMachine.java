@@ -103,11 +103,7 @@ public abstract class VirtualMachine {
         try {
           rv[i] = this.evaluate(expressions[i]);
         } catch (LgnaVmMethodInvocationException e) {
-          if (isForRunning) {
-            throw e;
-          }
-          handleSceneEditorMethodInvocationException(e);
-          rv[i] = null;
+          rv[i] = handleMethodInvocationException(e);
         }
       }
       return rv;
@@ -120,20 +116,16 @@ public abstract class VirtualMachine {
     try {
       return invoke(target, method, arguments);
     } catch (LgnaVmMethodInvocationException e) {
-      if (isForRunning) {
-        throw e;
-      }
-      handleSceneEditorMethodInvocationException(e);
-      return null;
+      return handleMethodInvocationException(e);
     }
   }
 
-  boolean isForRunning() {
-    return isForRunning;
+  Object handleMethodInvocationException(LgnaVmMethodInvocationException e) {
+    return errorPolicy.handleMethodInvocationException(e);
   }
 
-  void handleSceneEditorMethodInvocationException(LgnaVmMethodInvocationException e) {
-    Logger.warning("Error while invoking scene setup method. Continuing past.", e.getMethod(), e);
+  void handleSceneSetupException(RuntimeException e) {
+    errorPolicy.handleSceneSetupException(e);
   }
 
   private NamedUserConstructor getConstructor(NamedUserType entryPointType, Object[] arguments) {
@@ -156,10 +148,7 @@ public abstract class VirtualMachine {
       Object value = evaluate(field.initializer.getValue());
       userInstance.setFieldValue(field, value);
     } catch (RuntimeException e) {
-      if (isForRunning) {
-        throw e;
-      }
-      Logger.warning("Error when setting up scene " + e.getMessage());
+      handleSceneSetupException(e);
     }
   }
 
@@ -181,10 +170,7 @@ public abstract class VirtualMachine {
       } catch (ReturnException re) {
         throw new AssertionError();
       } catch (LgnaVmMethodInvocationException e) {
-        if (isForRunning) {
-          throw e;
-        }
-        handleSceneEditorMethodInvocationException(e);
+        handleMethodInvocationException(e);
       }
     } finally {
       this.popFrame();
@@ -484,7 +470,7 @@ public abstract class VirtualMachine {
   }
 
   public void setForSceneEditor() {
-    isForRunning = false;
+    errorPolicy = VmExecutionErrorPolicy.SCENE_EDITOR_BEST_EFFORT;
   }
 
   final CopyOnWriteArrayList<VirtualMachineListener> virtualMachineListeners = new CopyOnWriteArrayList<>();
@@ -492,8 +478,5 @@ public abstract class VirtualMachine {
   final VmExpressionEvaluator expressionEvaluator = new VmExpressionEvaluator(this);
   final VmStatementExecutor statementExecutor = new VmStatementExecutor(this);
 
-  // Marks this VM for use in running worlds. When true it allows errors to be thrown that interrupt execution.
-  // A value of false indicates this VM is used during scene loading or scene setup where thrown exceptions can
-  // cause these processes to break and should be simply logged and the setup code continued.
-  private boolean isForRunning = true;
+  private VmExecutionErrorPolicy errorPolicy = VmExecutionErrorPolicy.FAIL_FAST;
 }

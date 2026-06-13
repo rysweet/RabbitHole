@@ -42,25 +42,28 @@
  *******************************************************************************/
 package org.lgna.project.virtualmachine;
 
-import org.lgna.project.ast.UserParameter;
+import edu.cmu.cs.dennisc.java.util.logging.Logger;
 
-/**
- * @author Dennis Cosgrove
- */
-public class LgnaVmIllegalParameterAccessException extends LgnaVmException {
-  private final UserParameter parameter;
+enum VmExecutionErrorPolicy {
+  FAIL_FAST,
+  SCENE_EDITOR_BEST_EFFORT;
 
-  public LgnaVmIllegalParameterAccessException(VirtualMachine vm, UserParameter parameter) {
-    super(vm);
-    this.parameter = parameter;
+  boolean isFailFast() {
+    return this == FAIL_FAST;
   }
 
-  public final UserParameter getParameter() {
-    return this.parameter;
+  Object handleMethodInvocationException(LgnaVmMethodInvocationException e) {
+    if (isFailFast()) {
+      throw e;
+    }
+    Logger.warning("Error while invoking scene setup method. Continuing past.", e.getMethod(), e);
+    return null;
   }
 
-  @Override
-  protected void appendDescription(StringBuilder sb) {
-    appendHtmlEscaped(sb, this.parameter != null ? this.parameter.getName() : "null");
+  void handleSceneSetupException(RuntimeException e) {
+    if (isFailFast()) {
+      throw e;
+    }
+    Logger.warning("Error when setting up scene " + e.getMessage());
   }
 }
