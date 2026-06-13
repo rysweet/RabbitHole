@@ -56,6 +56,17 @@ import java.util.Collections;
 import java.util.Map;
 
 final class VmMethodInvoker {
+  private static final Map<Class<?>, Class<?>> PRIMITIVE_WRAPPERS = Map.of(
+      Boolean.TYPE, Boolean.class,
+      Byte.TYPE, Byte.class,
+      Character.TYPE, Character.class,
+      Short.TYPE, Short.class,
+      Integer.TYPE, Integer.class,
+      Long.TYPE, Long.class,
+      Float.TYPE, Float.class,
+      Double.TYPE, Double.class,
+      Void.TYPE, Void.class);
+
   private final VirtualMachine vm;
 
   VmMethodInvoker(VirtualMachine vm) {
@@ -155,7 +166,10 @@ final class VmMethodInvoker {
       Object argument = arguments[i];
       if (argument != null) {
         if (parameterType.isPrimitive()) {
-          //todo
+          Class<?> wrapperType = PRIMITIVE_WRAPPERS.get(parameterType);
+          if ((wrapperType != null) && !wrapperType.isAssignableFrom(argument.getClass())) {
+            throw new RuntimeException("parameterType[" + i + "] " + parameterType.getName() + " is not assignable from argument[" + i + "]: " + argument + ". " + text, iae);
+          }
         } else {
           if (!parameterType.isAssignableFrom(argument.getClass())) {
             throw new RuntimeException("parameterType[" + i + "] " + parameterType.getName() + " is not assignable from argument[" + i + "]: " + argument + ". " + text, iae);
