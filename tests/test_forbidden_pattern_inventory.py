@@ -238,6 +238,47 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
             [finding for finding in findings if finding.pattern == "log-and-continue"],
         )
 
+    def test_system_exit_calls_are_inventory_candidates(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            "class ProjectLoader { void run() { System.exit(1); } }\n",
+        )
+
+        system_exit_findings = [
+            finding for finding in findings if finding.pattern == "system-exit"
+        ]
+        self.assertEqual(1, len(system_exit_findings))
+        self.assertEqual("high", system_exit_findings[0].severity)
+        self.assertEqual("candidate", system_exit_findings[0].disposition)
+
+    def test_system_exit_inside_non_code_regions_is_ignored(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                '''\
+                class ProjectLoader {
+                  String inline = "System.exit(1)";
+                  // System.exit(2);
+                  /*
+                   * System.exit(3);
+                   */
+                  String text = """
+                    System.exit(4);
+                  """;
+                }
+                '''
+            ),
+        )
+
+        self.assertEqual(
+            [],
+            [finding for finding in findings if finding.pattern == "system-exit"],
+        )
+
     def test_nested_conditional_then_log_remains_log_and_continue_candidate(self) -> None:
         inventory = load_inventory()
 
@@ -431,6 +472,32 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
         )
 
         self.assertEqual([], findings)
+
+    def test_escaped_java_text_block_delimiter_does_not_end_masking(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                r'''\
+                class ProjectLoader {
+                  String example = """
+                    text block with escaped delimiter \"""
+                    System.exit(1);
+                  """;
+                  void run() {
+                    System.exit(2);
+                  }
+                }
+                '''
+            ),
+        )
+
+        system_exit_findings = [
+            finding for finding in findings if finding.pattern == "system-exit"
+        ]
+        self.assertEqual(1, len(system_exit_findings))
+        self.assertIn("System.exit(2)", system_exit_findings[0].text)
 
     def test_adjacent_catch_clauses_report_the_logging_catch_line(self) -> None:
         inventory = load_inventory()

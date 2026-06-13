@@ -35,6 +35,7 @@ PATTERNS = {
         r"\bcatch\s*\(\s*(?:final\s+)?(?:java\.lang\.)?Throwable\b"
     ),
     "print-stack-trace": re.compile(r"\.printStackTrace\s*\("),
+    "system-exit": re.compile(r"\bSystem\.exit\s*\("),
     "todo-hack-marker": re.compile(r"\b(?:TODO|HACK)\b"),
 }
 LOG_CALL_RE = re.compile(
@@ -237,6 +238,15 @@ def strip_line_comments(text: str) -> str:
     return "\n".join(lines)
 
 
+def is_escaped_at(text: str, index: int) -> bool:
+    backslash_count = 0
+    cursor = index - 1
+    while cursor >= 0 and text[cursor] == "\\":
+        backslash_count += 1
+        cursor -= 1
+    return backslash_count % 2 == 1
+
+
 def mask_non_code(text: str) -> str:
     chars = list(text)
     index = 0
@@ -294,7 +304,7 @@ def mask_non_code(text: str) -> str:
             continue
 
         if state == "text-block":
-            if next_three == '"""':
+            if next_three == '"""' and not is_escaped_at(text, index):
                 chars[index:index + 3] = "   "
                 index += 3
                 state = "code"
@@ -504,7 +514,11 @@ def scan_text(path: str, text: str) -> list[Finding]:
     code_lines = code_text.splitlines()
     return (
         scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))
-        + scan_line_patterns(path, code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
+        + scan_line_patterns(
+            path,
+            code_lines,
+            patterns=("broad-throwable-catch", "print-stack-trace", "system-exit"),
+        )
         + scan_log_and_continue(path, code_lines)
     )
 
