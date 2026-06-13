@@ -181,6 +181,37 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
             [finding for finding in findings if finding.pattern == "log-and-continue"],
         )
 
+    def test_full_conditional_flow_change_suppresses_log_and_continue_path(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/glrender/src/main/java/edu/cmu/cs/dennisc/render/gl/RendererNativeLibraryLoader.java",
+            textwrap.dedent(
+                """\
+                class RendererNativeLibraryLoader {
+                  boolean loadLibrary(boolean isIgnoringError) {
+                    try {
+                      load();
+                    } catch (UnsatisfiedLinkError ule) {
+                      if (isIgnoringError) {
+                        return false;
+                      } else {
+                        System.err.println("jogl");
+                        throw ule;
+                      }
+                    }
+                    return true;
+                  }
+                }
+                """
+            ),
+        )
+
+        self.assertEqual(
+            [],
+            [finding for finding in findings if finding.pattern == "log-and-continue"],
+        )
+
     def test_palette_todo_placeholders_are_false_positives(self) -> None:
         inventory = load_inventory()
 

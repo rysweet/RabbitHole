@@ -242,13 +242,24 @@ def has_unconditional_flow_change(block_lines: list[str]) -> bool:
     return False
 
 
+def has_full_conditional_flow_change(block_lines: list[str]) -> bool:
+    block_text = "\n".join(block_lines)
+    return bool(
+        re.search(
+            r"if\s*\([^)]*\)\s*\{[^{}]*(?:return|throw|break|continue)\b[^{}]*\}\s*else\s*\{[^{}]*(?:return|throw|break|continue)\b",
+            block_text,
+            re.DOTALL,
+        )
+    )
+
+
 def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
     if not path.endswith(".java"):
         return []
     findings: list[Finding] = []
     for line_number, block_lines in iter_catch_blocks(lines):
         block_text = "\n".join(block_lines)
-        if not LOG_CALL_RE.search(block_text) or has_unconditional_flow_change(block_lines):
+        if not LOG_CALL_RE.search(block_text) or has_unconditional_flow_change(block_lines) or has_full_conditional_flow_change(block_lines):
             continue
         disposition, severity, reason = classify("log-and-continue", path, block_lines[0])
         if disposition != "false-positive" and source_kind(path) == "production-java":
