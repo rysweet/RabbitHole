@@ -166,10 +166,13 @@ def classify(pattern: str, path: str, line: str) -> tuple[str, str, str]:
     return "candidate", "medium", f"{kind} usage requires owner triage"
 
 
-def scan_line_patterns(path: str, lines: list[str]) -> list[Finding]:
+def scan_line_patterns(path: str, lines: list[str], patterns: Iterable[str] | None = None) -> list[Finding]:
+    selected_patterns = set(patterns) if patterns is not None else set(PATTERNS)
     findings: list[Finding] = []
     for line_number, line in enumerate(lines, start=1):
         for pattern, regex in PATTERNS.items():
+            if pattern not in selected_patterns:
+                continue
             if not regex.search(line):
                 continue
             disposition, severity, reason = classify(pattern, path, line)
@@ -288,8 +291,14 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 
 def scan_text(path: str, text: str) -> list[Finding]:
-    lines = strip_block_comments(text).splitlines()
-    return scan_line_patterns(path, lines) + scan_log_and_continue(path, lines)
+    text = text.replace("} catch", "}\ncatch")
+    original_lines = text.splitlines()
+    code_lines = strip_block_comments(text).splitlines()
+    return (
+        scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))
+        + scan_line_patterns(path, code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
+        + scan_log_and_continue(path, code_lines)
+    )
 
 
 def collect_findings(root: Path, paths: Iterable[str] | None = None) -> list[Finding]:

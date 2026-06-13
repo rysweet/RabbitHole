@@ -247,6 +247,30 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
 
         self.assertEqual([], findings)
 
+    def test_adjacent_catch_clauses_report_the_logging_catch_line(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            "class ProjectLoader { void run() { try { load(); } catch (IOException ioe) { return; } catch (RuntimeException re) { Logger.warning(re); repair(); } } }\n",
+        )
+
+        log_findings = [finding for finding in findings if finding.pattern == "log-and-continue"]
+        self.assertEqual(1, len(log_findings))
+        self.assertIn("RuntimeException", log_findings[0].text)
+
+    def test_todo_markers_in_block_comments_remain_inventory_candidates(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            "class ProjectLoader { /* TODO remove legacy branch after characterization */ }\n",
+        )
+
+        todo_findings = [finding for finding in findings if finding.pattern == "todo-hack-marker"]
+        self.assertEqual(1, len(todo_findings))
+        self.assertEqual("medium", todo_findings[0].severity)
+
     def test_palette_todo_placeholders_are_false_positives(self) -> None:
         inventory = load_inventory()
 
