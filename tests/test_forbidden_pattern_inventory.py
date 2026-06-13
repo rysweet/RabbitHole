@@ -252,12 +252,13 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
 
         findings = inventory.scan_text(
             "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
-            "class ProjectLoader { void run() { try { load(); } catch (IOException ioe) { return; } catch (RuntimeException re) { Logger.warning(re); repair(); } } }\n",
+            "\n\nclass ProjectLoader { void run() { try { load(); } catch (IOException ioe) { return; } catch (RuntimeException re) { Logger.warning(re); repair(); } } }\n",
         )
 
         log_findings = [finding for finding in findings if finding.pattern == "log-and-continue"]
         self.assertEqual(1, len(log_findings))
         self.assertIn("RuntimeException", log_findings[0].text)
+        self.assertEqual(3, log_findings[0].line)
 
     def test_todo_markers_in_block_comments_remain_inventory_candidates(self) -> None:
         inventory = load_inventory()

@@ -200,11 +200,26 @@ def strip_block_comments(text: str) -> str:
     return re.sub(r"/\*.*?\*/", lambda match: "\n" * match.group(0).count("\n"), text, flags=re.DOTALL)
 
 
+def strip_line_comments(text: str) -> str:
+    return re.sub(r"(?m)^\s*//.*$", "", text)
+
+
 def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
     line_index = 0
     while line_index < len(lines):
         line = lines[line_index]
         if not JAVA_CATCH_RE.search(line):
+            line_index += 1
+            continue
+        catch_matches = list(JAVA_CATCH_RE.finditer(line))
+        if len(catch_matches) > 1:
+            for match_index, match in enumerate(catch_matches):
+                next_start = (
+                    catch_matches[match_index + 1].start()
+                    if match_index + 1 < len(catch_matches)
+                    else len(line)
+                )
+                yield line_index + 1, [line[match.start():next_start]]
             line_index += 1
             continue
         block_lines = [line]
@@ -230,7 +245,8 @@ def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
 def has_unconditional_flow_change(block_lines: list[str]) -> bool:
     catch_start = block_lines[0].find("catch")
     catch_fragment = block_lines[0][catch_start:] if catch_start >= 0 else block_lines[0]
-    if "if" not in catch_fragment and re.search(r"\{[^{}]*(?:throw|return|break|continue)\b[^{}]*\}", catch_fragment):
+    catch_without_strings = re.sub(r'"[^"]*"|\'[^\']*\'', '""', catch_fragment)
+    if not re.search(r"\bif\b", catch_without_strings) and re.search(r"\{[^{}]*(?:throw|return|break|continue)\b[^{}]*\}", catch_fragment):
         return True
     depth = brace_delta(catch_fragment)
     pending_unbraced_control = False
@@ -291,9 +307,8 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 
 def scan_text(path: str, text: str) -> list[Finding]:
-    text = text.replace("} catch", "}\ncatch")
     original_lines = text.splitlines()
-    code_lines = strip_block_comments(text).splitlines()
+    code_lines = strip_line_comments(strip_block_comments(text)).splitlines()
     return (
         scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))
         + scan_line_patterns(path, code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
