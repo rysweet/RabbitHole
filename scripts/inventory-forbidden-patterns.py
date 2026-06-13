@@ -246,7 +246,7 @@ def has_full_conditional_flow_change(block_lines: list[str]) -> bool:
     block_text = "\n".join(block_lines)
     return bool(
         re.search(
-            r"if\s*\([^)]*\)\s*\{[^{}]*(?:return|throw|break|continue)\b[^{}]*\}\s*else\s*\{[^{}]*(?:return|throw|break|continue)\b",
+            r"\bif\b[^{]*\{[^{}]*(?:return|throw|break|continue)\b[^{}]*\}\s*else\s*\{[^{}]*(?:return|throw|break|continue)\b",
             block_text,
             re.DOTALL,
         )
