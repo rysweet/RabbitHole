@@ -354,6 +354,26 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
 
         self.assertEqual([], findings)
 
+    def test_line_comment_block_marker_does_not_hide_real_following_code(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                """\
+                class ProjectLoader {
+                  // /* comment opener example
+                  void run() { try { load(); } catch (Throwable t) { t.printStackTrace(); } }
+                  // */ comment closer example
+                }
+                """
+            ),
+        )
+
+        patterns = {finding.pattern for finding in findings}
+        self.assertIn("broad-throwable-catch", patterns)
+        self.assertIn("print-stack-trace", patterns)
+
     def test_adjacent_catch_clauses_report_the_logging_catch_line(self) -> None:
         inventory = load_inventory()
 

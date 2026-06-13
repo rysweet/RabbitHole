@@ -411,12 +411,12 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 def scan_text(path: str, text: str) -> list[Finding]:
     original_lines = text.splitlines()
-    code_text = strip_line_comments(strip_block_comments(text))
-    masked_code_lines = mask_string_literals(code_text).splitlines()
+    code_text = strip_block_comments(strip_line_comments(mask_string_literals(text)))
+    code_lines = code_text.splitlines()
     return (
         scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))
-        + scan_line_patterns(path, masked_code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
-        + scan_log_and_continue(path, masked_code_lines)
+        + scan_line_patterns(path, code_lines, patterns=("broad-throwable-catch", "print-stack-trace"))
+        + scan_log_and_continue(path, code_lines)
     )
 
 
