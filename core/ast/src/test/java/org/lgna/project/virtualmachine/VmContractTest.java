@@ -101,7 +101,7 @@ public class VmContractTest {
   );
 
   // =====================================================================
-  // Expected evaluate methods on VmExpressionEvaluator (33 total)
+  // Expected evaluate methods on VmExpressionEvaluator after method invocation extraction
   // =====================================================================
 
   private static final Set<String> EXPECTED_EVALUATOR_METHODS = Set.of(
@@ -120,7 +120,6 @@ public class VmContractTest {
       "evaluateShiftInfixExpression",
       "evaluateLogicalComplement",
       "evaluateStringConcatenation",
-      "evaluateMethodInvocation",
       "evaluateNullLiteral",
       "evaluateDoubleLiteral",
       "evaluateFloatLiteral",
@@ -574,15 +573,19 @@ public class VmContractTest {
   }
 
   @Test
+  public void virtualMachine_hasFocusedCollaboratorFields() {
+    assertDelegateField("VmArrayAccessHelper", "arrayAccessHelper");
+    assertDelegateField("VmFieldAccessHelper", "fieldAccessHelper");
+    assertDelegateField("VmMethodInvoker", "methodInvoker");
+  }
+
+  @Test
   public void delegateFields_arePackagePrivate() {
-    Class<?> evaluatorCls = requirePackageClass("VmExpressionEvaluator");
-    Class<?> executorCls = requirePackageClass("VmStatementExecutor");
-    Field evalField = findFieldByType(VM_CLASS, evaluatorCls);
-    Field execField = findFieldByType(VM_CLASS, executorCls);
-    assertNotNull("expressionEvaluator field must exist", evalField);
-    assertNotNull("statementExecutor field must exist", execField);
-    assertPackagePrivate("expressionEvaluator", evalField.getModifiers());
-    assertPackagePrivate("statementExecutor", execField.getModifiers());
+    assertDelegateFieldIsPackagePrivate("VmExpressionEvaluator", "expressionEvaluator");
+    assertDelegateFieldIsPackagePrivate("VmStatementExecutor", "statementExecutor");
+    assertDelegateFieldIsPackagePrivate("VmArrayAccessHelper", "arrayAccessHelper");
+    assertDelegateFieldIsPackagePrivate("VmFieldAccessHelper", "fieldAccessHelper");
+    assertDelegateFieldIsPackagePrivate("VmMethodInvoker", "methodInvoker");
   }
 
   // =====================================================================
@@ -782,6 +785,21 @@ public class VmContractTest {
         Modifier.isPublic(modifiers));
     assertFalse(memberName + " must not be protected",
         Modifier.isProtected(modifiers));
+  }
+
+  private static void assertDelegateField(String className, String fieldName) {
+    Class<?> cls = requirePackageClass(className);
+    Field field = findFieldByType(VM_CLASS, cls);
+    assertNotNull("VirtualMachine must have a " + className + " delegate field", field);
+    assertEquals(fieldName, field.getName());
+    assertTrue(fieldName + " field must be final", Modifier.isFinal(field.getModifiers()));
+  }
+
+  private static void assertDelegateFieldIsPackagePrivate(String className, String fieldName) {
+    Class<?> cls = requirePackageClass(className);
+    Field field = findFieldByType(VM_CLASS, cls);
+    assertNotNull(fieldName + " field must exist", field);
+    assertPackagePrivate(fieldName, field.getModifiers());
   }
 
   private static String sorted(Set<String> set) {
