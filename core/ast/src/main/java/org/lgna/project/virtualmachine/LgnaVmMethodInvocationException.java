@@ -42,7 +42,6 @@
  *******************************************************************************/
 package org.lgna.project.virtualmachine;
 
-import org.apache.commons.text.StringEscapeUtils;
 import org.lgna.project.ast.AbstractMethod;
 import org.lgna.project.ast.MethodInvocation;
 
@@ -92,23 +91,19 @@ public class LgnaVmMethodInvocationException extends LgnaVmException {
 
   @Override
   protected void appendDescription(StringBuilder sb) {
-    appendEscaped(sb, this.getMessage());
+    appendHtmlEscaped(sb, this.getMessage());
     if (this.method != null) {
       sb.append(": ");
-      appendEscaped(sb, this.method);
+      appendHtmlEscaped(sb, this.method);
     }
     Throwable cause = this.getCause();
     if (cause != null) {
       sb.append(" caused by ");
-      appendEscaped(sb, cause.getClass().getName());
+      appendHtmlEscaped(sb, cause.getClass().getName());
       if (cause.getMessage() != null) {
         sb.append(": ");
-        appendEscaped(sb, cause.getMessage());
+        appendHtmlEscaped(sb, cause.getMessage());
       }
     }
-  }
-
-  private static void appendEscaped(StringBuilder sb, Object value) {
-    sb.append(StringEscapeUtils.escapeHtml4(String.valueOf(value)));
   }
 }

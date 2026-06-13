@@ -216,9 +216,17 @@ public class ReleaseVirtualMachine extends VirtualMachine {
         }
         for (AbstractParameter parameter : this.mapParameterToValue.keySet()) {
           Object value = this.mapParameterToValue.get(parameter);
-          sb.append(parameter.getName());
+          if (isFormatted) {
+            LgnaVmException.appendHtmlEscaped(sb, parameter.getName());
+          } else {
+            sb.append(parameter.getName());
+          }
           sb.append("=");
-          sb.append(value);
+          if (isFormatted) {
+            LgnaVmException.appendFormattedValue(sb, value);
+          } else {
+            sb.append(value);
+          }
         }
       }
     }
@@ -244,7 +252,11 @@ public class ReleaseVirtualMachine extends VirtualMachine {
 
     @Override
     protected void appendRepr(StringBuilder sb, boolean isFormatted) {
-      sb.append(this.type.getName());
+      if (isFormatted) {
+        LgnaVmException.appendHtmlEscaped(sb, this.type.getName());
+      } else {
+        sb.append(this.type.getName());
+      }
       this.appendArgumentsRepr(sb, isFormatted);
     }
   }
@@ -276,7 +288,11 @@ public class ReleaseVirtualMachine extends VirtualMachine {
       if (isFormatted) {
         sb.append("<strong>");
       }
-      sb.append(this.method.getName());
+      if (isFormatted) {
+        LgnaVmException.appendHtmlEscaped(sb, this.method.getName());
+      } else {
+        sb.append(this.method.getName());
+      }
       if (isFormatted) {
         sb.append("</strong>");
       }
@@ -288,7 +304,11 @@ public class ReleaseVirtualMachine extends VirtualMachine {
       if (isFormatted) {
         sb.append("</i> ");
       }
-      sb.append(this.getThis());
+      if (isFormatted) {
+        LgnaVmException.appendFormattedValue(sb, this.getThis());
+      } else {
+        sb.append(this.getThis());
+      }
       sb.append(" ");
       this.appendArgumentsRepr(sb, isFormatted);
     }
@@ -309,7 +329,11 @@ public class ReleaseVirtualMachine extends VirtualMachine {
       if (isFormatted) {
         sb.append("<strong>");
       }
-      sb.append(this.singleAbstractMethod != null ? this.singleAbstractMethod.getName() : null);
+      if (isFormatted) {
+        LgnaVmException.appendHtmlEscaped(sb, this.singleAbstractMethod != null ? this.singleAbstractMethod.getName() : null);
+      } else {
+        sb.append(this.singleAbstractMethod != null ? this.singleAbstractMethod.getName() : null);
+      }
       if (isFormatted) {
         sb.append("</strong> ");
       }

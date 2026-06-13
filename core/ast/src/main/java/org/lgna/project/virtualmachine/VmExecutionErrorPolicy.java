@@ -44,18 +44,26 @@ package org.lgna.project.virtualmachine;
 
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 
-final class VmSceneEditorPolicy {
-  private boolean isForRunning = true;
+enum VmExecutionErrorPolicy {
+  FAIL_FAST,
+  SCENE_EDITOR_BEST_EFFORT;
 
-  boolean isForRunning() {
-    return isForRunning;
+  boolean isFailFast() {
+    return this == FAIL_FAST;
   }
 
-  void setForSceneEditor() {
-    isForRunning = false;
-  }
-
-  void handleSceneEditorMethodInvocationException(LgnaVmMethodInvocationException e) {
+  Object handleMethodInvocationException(LgnaVmMethodInvocationException e) {
+    if (isFailFast()) {
+      throw e;
+    }
     Logger.warning("Error while invoking scene setup method. Continuing past.", e.getMethod(), e);
+    return null;
+  }
+
+  void handleSceneSetupException(RuntimeException e) {
+    if (isFailFast()) {
+      throw e;
+    }
+    Logger.warning("Error when setting up scene " + e.getMessage());
   }
 }

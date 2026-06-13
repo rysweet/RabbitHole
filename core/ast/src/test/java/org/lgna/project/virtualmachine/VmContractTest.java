@@ -577,7 +577,6 @@ public class VmContractTest {
     assertDelegateField("VmArrayAccessHelper", "arrayAccessHelper");
     assertDelegateField("VmFieldAccessHelper", "fieldAccessHelper");
     assertDelegateField("VmMethodInvoker", "methodInvoker");
-    assertDelegateField("VmSceneEditorPolicy", "sceneEditorPolicy");
   }
 
   @Test
@@ -587,7 +586,6 @@ public class VmContractTest {
     assertDelegateFieldIsPackagePrivate("VmArrayAccessHelper", "arrayAccessHelper");
     assertDelegateFieldIsPackagePrivate("VmFieldAccessHelper", "fieldAccessHelper");
     assertDelegateFieldIsPackagePrivate("VmMethodInvoker", "methodInvoker");
-    assertDelegateFieldIsPackagePrivate("VmSceneEditorPolicy", "sceneEditorPolicy");
   }
 
   // =====================================================================

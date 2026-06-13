@@ -61,6 +61,6 @@ public class LgnaVmIllegalParameterAccessException extends LgnaVmException {
 
   @Override
   protected void appendDescription(StringBuilder sb) {
-    sb.append(this.parameter != null ? this.parameter.getName() : "null");
+    appendHtmlEscaped(sb, this.parameter != null ? this.parameter.getName() : "null");
   }
 }

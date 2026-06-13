@@ -61,6 +61,6 @@ public abstract class LgnaVmIllegalLocalException extends LgnaVmException {
 
   @Override
   protected void appendDescription(StringBuilder sb) {
-    sb.append(this.local != null ? this.local.getName() : "null");
+    appendHtmlEscaped(sb, this.local != null ? this.local.getName() : "null");
   }
 }

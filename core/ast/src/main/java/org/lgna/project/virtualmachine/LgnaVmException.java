@@ -44,6 +44,7 @@
 package org.lgna.project.virtualmachine;
 
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
+import org.apache.commons.text.StringEscapeUtils;
 import org.lgna.common.LgnaRuntimeException;
 
 /**
@@ -81,6 +82,14 @@ public abstract class LgnaVmException extends LgnaRuntimeException {
   }
 
   protected abstract void appendDescription(StringBuilder sb);
+
+  static void appendHtmlEscaped(StringBuilder sb, Object value) {
+    sb.append(StringEscapeUtils.escapeHtml4(String.valueOf(value)));
+  }
+
+  static void appendFormattedValue(StringBuilder sb, Object value) {
+    sb.append(value != null ? "[redacted]" : "null");
+  }
 
   @Override
   protected final void appendFormattedString(StringBuilder sb) {

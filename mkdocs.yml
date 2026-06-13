@@ -32,6 +32,7 @@ nav:
   - "Reference":
     - "GL Graphics2D Contract": "reference/gl-graphics2d-contract.md"
     - "Modernization Scorecard Generator": "reference/modernization-scorecard-generator.md"
+    - "Merge-ready Evidence Generator": "reference/merge-ready-evidence-generator.md"
     - "Modernization Corpus Manifest": "reference/modernization-corpus-manifest.md"
     - "Text Migration Registry Parity": "reference/text-migration-registry-parity.md"
   - "Architecture Atlas":

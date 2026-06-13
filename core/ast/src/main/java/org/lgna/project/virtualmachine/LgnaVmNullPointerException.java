@@ -54,7 +54,7 @@ public class LgnaVmNullPointerException extends LgnaVmException {
   protected void appendDescription(StringBuilder sb) {
     String message = this.getMessage();
     if (message != null) {
-      sb.append(message);
+      appendHtmlEscaped(sb, message);
     }
   }
 }
