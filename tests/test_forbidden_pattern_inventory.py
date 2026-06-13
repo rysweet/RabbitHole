@@ -212,6 +212,41 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
             [finding for finding in findings if finding.pattern == "log-and-continue"],
         )
 
+    def test_same_line_flow_change_suppresses_log_and_continue_path(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            "class ProjectLoader { void run() { try { load(); } catch (Exception ex) { Logger.warning(ex); return; } } }\n",
+        )
+
+        self.assertEqual(
+            [],
+            [finding for finding in findings if finding.pattern == "log-and-continue"],
+        )
+
+    def test_block_commented_java_examples_are_ignored(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                """\
+                class ProjectLoader {
+                  /*
+                   * try {
+                   *   load();
+                   * } catch (Throwable t) {
+                   *   Logger.warning("example", t);
+                   * }
+                   */
+                }
+                """
+            ),
+        )
+
+        self.assertEqual([], findings)
+
     def test_palette_todo_placeholders_are_false_positives(self) -> None:
         inventory = load_inventory()
 

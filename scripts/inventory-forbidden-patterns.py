@@ -193,6 +193,10 @@ def brace_delta(text: str) -> int:
     return text.count("{") - text.count("}")
 
 
+def strip_block_comments(text: str) -> str:
+    return re.sub(r"/\*.*?\*/", lambda match: "\n" * match.group(0).count("\n"), text, flags=re.DOTALL)
+
+
 def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
     line_index = 0
     while line_index < len(lines):
@@ -223,6 +227,8 @@ def iter_catch_blocks(lines: list[str]) -> Iterable[tuple[int, list[str]]]:
 def has_unconditional_flow_change(block_lines: list[str]) -> bool:
     catch_start = block_lines[0].find("catch")
     catch_fragment = block_lines[0][catch_start:] if catch_start >= 0 else block_lines[0]
+    if "if" not in catch_fragment and re.search(r"\{[^{}]*(?:throw|return|break|continue)\b[^{}]*\}", catch_fragment):
+        return True
     depth = brace_delta(catch_fragment)
     pending_unbraced_control = False
     for line in block_lines[1:]:
@@ -282,7 +288,7 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 
 def scan_text(path: str, text: str) -> list[Finding]:
-    lines = text.splitlines()
+    lines = strip_block_comments(text).splitlines()
     return scan_line_patterns(path, lines) + scan_log_and_continue(path, lines)
 
 
