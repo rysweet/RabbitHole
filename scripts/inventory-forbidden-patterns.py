@@ -411,7 +411,7 @@ def scan_log_and_continue(path: str, lines: list[str]) -> list[Finding]:
 
 def scan_text(path: str, text: str) -> list[Finding]:
     original_lines = text.splitlines()
-    code_text = strip_block_comments(strip_line_comments(mask_string_literals(text)))
+    code_text = strip_block_comments(mask_string_literals(strip_line_comments(text)))
     code_lines = code_text.splitlines()
     return (
         scan_line_patterns(path, original_lines, patterns=("todo-hack-marker",))

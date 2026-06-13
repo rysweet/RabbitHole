@@ -374,6 +374,25 @@ class ForbiddenPatternInventoryTest(unittest.TestCase):
         self.assertIn("broad-throwable-catch", patterns)
         self.assertIn("print-stack-trace", patterns)
 
+    def test_apostrophe_in_line_comment_does_not_hide_following_code(self) -> None:
+        inventory = load_inventory()
+
+        findings = inventory.scan_text(
+            "core/ide/src/main/java/org/alice/ide/ProjectLoader.java",
+            textwrap.dedent(
+                """\
+                class ProjectLoader {
+                  // don't hide the next real code line
+                  void run() { try { load(); } catch (Throwable t) { t.printStackTrace(); } }
+                }
+                """
+            ),
+        )
+
+        patterns = {finding.pattern for finding in findings}
+        self.assertIn("broad-throwable-catch", patterns)
+        self.assertIn("print-stack-trace", patterns)
+
     def test_adjacent_catch_clauses_report_the_logging_catch_line(self) -> None:
         inventory = load_inventory()
 
