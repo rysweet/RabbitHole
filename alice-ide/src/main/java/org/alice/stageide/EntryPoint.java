@@ -105,8 +105,10 @@ public class EntryPoint extends Application {
         javax.swing.UIManager.setLookAndFeel((useDarkMode ? new com.formdev.flatlaf.FlatDarkLaf() : new com.formdev.flatlaf.FlatLightLaf()));
         com.formdev.flatlaf.FlatLaf.updateUI();
       } catch (UnsupportedLookAndFeelException updateFlatLafThemeException) {
-        Logger.severe("Was unable to set look and feel theme: " + updateFlatLafThemeException.getMessage());
-        updateFlatLafThemeException.printStackTrace();
+        Logger.throwable(
+            updateFlatLafThemeException,
+            "Was unable to set look and feel theme:",
+            updateFlatLafThemeException.getMessage());
       }
 
       // Initialize this on the main thread, before Swing or JavaFX, and before opening a project in args.

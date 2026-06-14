@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -61,6 +62,18 @@ public class EntryPointTest {
         source.contains("System.exit(request.getStatus())"));
     assertTrue("EntryPoint must restore the previous process termination handler",
         source.contains("ProcessTerminator.setHandler(previous"));
+  }
+
+  @Test
+  public void lookAndFeelFallbackUsesStructuredLoggingInsteadOfDirectStackTracePrint() throws IOException {
+    String source = Files.readString(
+        findRepositoryRoot().resolve("alice-ide/src/main/java/org/alice/stageide/EntryPoint.java"),
+        StandardCharsets.UTF_8);
+
+    assertTrue("EntryPoint look-and-feel fallback should log the throwable with context",
+        source.contains("Logger.throwable("));
+    assertFalse("EntryPoint should not print startup fallback stack traces directly",
+        source.contains("updateFlatLafThemeException.printStackTrace()"));
   }
 
   private static Path findRepositoryRoot() {
