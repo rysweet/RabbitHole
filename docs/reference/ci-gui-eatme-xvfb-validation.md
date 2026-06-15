@@ -90,7 +90,8 @@ scripts/validate-gui-with-xvfb.sh \
   --timeout-seconds 1800 \
   --expect success \
   -- \
-  scripts/validate-getting-started.sh --gui
+  env MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml \
+    scripts/validate-getting-started.sh --gui
 ```
 
 ### Options
@@ -248,9 +249,11 @@ scripts/validate-gui-with-xvfb.sh \
   --timeout-seconds 1800 \
   --expect success \
   -- \
-  scripts/validate-getting-started.sh --gui
+  env MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml \
+    scripts/validate-getting-started.sh --gui
 
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
+mvn --settings .github/maven/jogamp-ci-settings.xml \
+  -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
   -pl netbeans -am package -DskipTests
 ```
 

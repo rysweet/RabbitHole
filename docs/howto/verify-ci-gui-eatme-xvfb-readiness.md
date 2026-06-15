@@ -35,7 +35,8 @@ sudo apt-get install -y --no-install-recommends xvfb
 Build the NetBeans package without Sims assets:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
+mvn --settings .github/maven/jogamp-ci-settings.xml \
+  -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
   -pl netbeans -am package -DskipTests
 ```
 
@@ -46,7 +47,8 @@ scripts/validate-gui-with-xvfb.sh \
   --timeout-seconds 1800 \
   --expect success \
   -- \
-  scripts/validate-getting-started.sh --gui
+  env MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml \
+    scripts/validate-getting-started.sh --gui
 ```
 
 These commands exercise the same dependency surfaces used by the
