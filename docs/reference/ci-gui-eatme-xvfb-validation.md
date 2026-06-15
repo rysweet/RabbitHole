@@ -1,7 +1,6 @@
 ---
 title: CI GUI, Eatme, and Xvfb Validation Reference
 description: Reference for RabbitHole CI dependency resolution, Eatme CLI tooling, and outside-in Xvfb evidence semantics.
-last_updated: 2026-06-10
 review_schedule: quarterly
 owner: maintainers
 doc_type: reference
@@ -20,17 +19,17 @@ runtime behavior or classroom-facing project semantics.
 
 | Area | Contract |
 | --- | --- |
-| JogAmp dependency resolution | Target behavior for #887: GUI and NetBeans lanes resolve JOGL and GlueGen without depending on a single transient `jogamp.org` availability point. |
+| JogAmp dependency resolution | GUI and NetBeans lanes resolve JOGL and GlueGen without depending on a single transient `jogamp.org` availability point. |
 | Eatme tooling | Repository-owned wrappers launch the Java Eatme entry points with the packaged Alice classpath and write bounded JSON evidence. |
 | Xvfb evidence tracking | Outside-in scenarios distinguish real execution, gated skips, prepare-only skips, blocked evidence, and manual evidence requirements. |
 
-## Issue-resolution evidence matrix
+## Follow-up evidence matrix
 
-| Issue | Evidence to collect | What may be claimed | What must not be claimed |
+| Follow-up area | Evidence to collect | What may be claimed | What must not be claimed |
 | --- | --- | --- | --- |
-| `#887` JogAmp CI mitigation | Maven logs from `headed-ubuntu-xvfb` and `package-netbeans` showing JOGL/GlueGen resolution through `.github/maven/jogamp-ci-settings.xml`, plus no TLS/checksum bypasses. | CI dependency resolution for GL-capable lanes mirrors `jogamp.org` to an approved HTTPS repository instead of treating `jogamp.org` as the only availability point. | Do not claim visible rendering correctness, classroom behavior changes, or full desktop validation from dependency-resolution evidence alone. |
-| `#888` Eatme wrappers/API | Wrapper package precondition, focused `Eatme*Test` results, JSON stdout, and bounded evidence artifacts for the wrapper under test. | The named Eatme seam produced its scoped proof artifact for the selected project/method/object. | Do not claim full first-lesson completion, grading, creative assessment, broad UI automation, or rendering correctness. |
-| `#891` Xvfb scenario evidence semantics | Scenario validation, runner contract tests, `status.txt`, `command.log` when executed, and blocker/checklist artifacts when not executed. | The runner correctly distinguishes executed success, failed execution, gated skips, prepare-only skips, blocked evidence, and manual evidence requirements. | Do not report `gated-not-run`, `blocked`, or `manual-evidence-required` as passing GUI execution. |
+| JogAmp CI mitigation | Maven logs from `headed-ubuntu-xvfb` and `package-netbeans` showing JOGL/GlueGen resolution through `.github/maven/jogamp-ci-settings.xml`, plus no TLS/checksum bypasses. | CI dependency resolution for GL-capable lanes mirrors `jogamp.org` to an approved HTTPS repository instead of treating `jogamp.org` as the only availability point. | Do not claim visible rendering correctness, classroom behavior changes, or full desktop validation from dependency-resolution evidence alone. |
+| Eatme wrappers/API | Wrapper package precondition, focused `Eatme*Test` results, JSON stdout, and bounded evidence artifacts for the wrapper under test. | The named Eatme seam produced its scoped proof artifact for the selected project/method/object. | Do not claim full first-lesson completion, grading, creative assessment, broad UI automation, or rendering correctness. |
+| Xvfb scenario evidence semantics | Scenario validation, runner contract tests, `status.txt`, `command.log` when executed, and blocker/checklist artifacts when not executed. | The runner correctly distinguishes executed success, failed execution, gated skips, blocked evidence, and manual evidence requirements. | Do not report `gated-not-run`, `blocked`, or `manual-evidence-required` as passing GUI execution. |
 
 ## Maven dependency resolution target
 
@@ -41,7 +40,7 @@ RabbitHole uses JOGL and GlueGen for GL-capable desktop paths:
 | JOGL | `org.jogamp.jogl:jogl-all:${jogl.version}` |
 | GlueGen runtime | `org.jogamp.gluegen:gluegen-rt:${gluegen.version}` |
 
-The finished #887 dependency-resolution mitigation must follow these rules:
+The dependency-resolution mitigation must follow these rules:
 
 1. Public artifacts resolve through Maven Central whenever available.
 2. The explicit JogAmp repository ID may remain in the project POM for local

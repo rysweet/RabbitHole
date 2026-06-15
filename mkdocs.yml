@@ -35,6 +35,7 @@ nav:
     - "Modernization Scorecard Generator": "reference/modernization-scorecard-generator.md"
     - "Merge-ready Evidence Generator": "reference/merge-ready-evidence-generator.md"
     - "Modernization Corpus Manifest": "reference/modernization-corpus-manifest.md"
+    - "Release Management Checklist": "reference/release-management-checklist.md"
     - "Text Migration Registry Parity": "reference/text-migration-registry-parity.md"
   - "Architecture Atlas":
     - "Atlas Overview": "atlas/index.md"

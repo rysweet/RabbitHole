@@ -97,6 +97,7 @@ expectations.
 - [Modernization Scorecard Generator](./reference/modernization-scorecard-generator.md)
 - [Merge-ready Evidence Generator](./reference/merge-ready-evidence-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
+- [Release Management Checklist](./reference/release-management-checklist.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
 - [Process Termination API](./reference/process-termination-api.md)
 - [UI Prompt Boundary API](./reference/ui-prompt-boundary-api.md)

@@ -50,9 +50,9 @@ scripts/validate-gui-with-xvfb.sh \
 ```
 
 These commands exercise the same dependency surfaces used by the
-`headed-ubuntu-xvfb` and `package-netbeans` GitHub Actions jobs. For #887,
-also keep the Maven resolution logs as evidence that JOGL and GlueGen resolved
-through `.github/maven/jogamp-ci-settings.xml`, which mirrors the `jogamp.org`
+`headed-ubuntu-xvfb` and `package-netbeans` GitHub Actions jobs. Also keep the
+Maven resolution logs as evidence that JOGL and GlueGen resolved through
+`.github/maven/jogamp-ci-settings.xml`, which mirrors the `jogamp.org`
 repository ID to the approved SciJava HTTPS repository in CI. Passing headless
 validation alone is not enough to verify GL-capable dependency resolution.
 
@@ -224,13 +224,13 @@ bash qa/outside-in/alice-desktop/tests/test-visible-rendering-evidence-contract.
 Do not describe a skipped, blocked, or manual checklist run as a passing GUI
 execution.
 
-## Issue closure evidence
+## Follow-up closure evidence
 
-| Issue | Minimum evidence before closing | Safe closure wording |
+| Follow-up area | Minimum evidence before closing | Safe closure wording |
 | --- | --- | --- |
-| `#887` | GUI and NetBeans Maven logs showing JOGL/GlueGen resolution through an approved repository, mirror, or cache path that is not solely `jogamp.org`, with no TLS or checksum bypass. | "GL-capable CI dependency resolution no longer depends on `jogamp.org` as the only availability point." |
-| `#888` | Package precondition plus `Eatme*Test` results and wrapper JSON/artifacts for the changed seam. | "The Eatme wrapper/API seam produces bounded evidence for the selected project operation." |
-| `#891` | Scenario validation, runner contract tests, and representative `status.txt` evidence for executed and non-executed outcomes. | "Outside-in runner evidence distinguishes execution, skips, blockers, and manual evidence requirements." |
+| JogAmp CI mitigation | GUI and NetBeans Maven logs showing JOGL/GlueGen resolution through an approved repository, mirror, or cache path that is not solely `jogamp.org`, with no TLS or checksum bypass. | "GL-capable CI dependency resolution no longer depends on `jogamp.org` as the only availability point." |
+| Eatme wrappers/API | Package precondition plus `Eatme*Test` results and wrapper JSON/artifacts for the changed seam. | "The Eatme wrapper/API seam produces bounded evidence for the selected project operation." |
+| Xvfb scenario evidence semantics | Scenario validation, runner contract tests, and representative `status.txt` evidence for executed and non-executed outcomes. | "Outside-in runner evidence distinguishes execution, skips, blockers, and manual evidence requirements." |
 
 Do not use dependency-resolution, Eatme, or runner-status evidence to claim full
 desktop rendering correctness or Alice runtime behavior changes.
