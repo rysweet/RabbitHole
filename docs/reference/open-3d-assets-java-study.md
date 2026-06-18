@@ -3,8 +3,8 @@
 This study evaluates whether the Alice web prototype open 3D asset pipeline can
 be used in RabbitHole, the Java Alice modernization repository.
 
-The TypeScript guide is merged in
-[alice-web-prototype PR #133](https://github.com/rysweet/alice-web-prototype/pull/133).
+The TypeScript guide is maintained in
+[`docs/creating-using-testing-3d-character-assets.md`](https://github.com/rysweet/alice-web-prototype/blob/main/docs/creating-using-testing-3d-character-assets.md).
 That guide documents the web prototype's open replacement path for proprietary
 Sims-style assets: procedural model profiles, glTF/GLB metadata, Blender export
 conventions, quality scoring, and gallery integration.
