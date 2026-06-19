@@ -22,6 +22,7 @@ runtime behavior or classroom-facing project semantics.
 | JogAmp dependency resolution | GUI and NetBeans lanes resolve JOGL and GlueGen without depending on a single transient `jogamp.org` availability point. |
 | Eatme tooling | Repository-owned wrappers launch the Java Eatme entry points with the packaged Alice classpath and write bounded JSON evidence. |
 | Xvfb evidence tracking | Outside-in scenarios distinguish real execution, gated skips, prepare-only skips, blocked evidence, and manual evidence requirements. |
+| Default open asset workflow | The focused `core/ide` Xvfb integration test places, visibly renders, manipulates, saves, reopens, and runs `alice-gallery://animals/bunny` with `-DincludeSims=false`. |
 
 ## Follow-up evidence matrix
 
@@ -256,6 +257,28 @@ mvn --settings .github/maven/jogamp-ci-settings.xml \
   -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
   -pl netbeans -am clean package -DskipTests
 ```
+
+Run the default open 3D asset workflow test when changing gallery placement,
+rendering, project save/reopen behavior, or Sims-default packaging:
+
+```bash
+scripts/validate-gui-with-xvfb.sh \
+  --timeout-seconds 1800 \
+  --expect success \
+  -- \
+  mvn --settings .github/maven/jogamp-ci-settings.xml \
+    -pl core/ide -am \
+    -Dinstall4j.skip \
+    -Dcheckstyle.skip \
+    -Djava.awt.headless=false \
+    -DincludeSims=false \
+    -Drabbithole.defaultAssetWorkflow.required=true \
+    -Dtest=RabbitHoleDefaultOpenAssetWorkflowTest \
+    test
+```
+
+See [Default Open 3D Asset Workflow Test](./default-open-3d-asset-workflow-test.md)
+for the assertion contract.
 
 ## Security and integrity rules
 

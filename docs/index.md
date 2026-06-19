@@ -26,6 +26,7 @@ expectations.
 - [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
 - [Open Asset Import Pipeline API](./reference/open-asset-import-pipeline-api.md)
 - [Use Open 3D Assets](./howto/use-open-3d-assets.md)
+- [Verify the Default Open 3D Asset Workflow](./howto/verify-default-open-3d-asset-workflow.md)
 - [Concepts](#concepts)
 - [How-to guides](#how-to-guides)
 - [Tutorials](#tutorials)
@@ -78,6 +79,7 @@ expectations.
 
 - [Import an Open 3D Asset](./howto/import-open-3d-asset.md)
 - [Use Open 3D Assets](./howto/use-open-3d-assets.md)
+- [Verify the Default Open 3D Asset Workflow](./howto/verify-default-open-3d-asset-workflow.md)
 - [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [Request Process Termination Safely](./howto/request-process-termination.md)
 - [Use the UI Prompt Boundary](./howto/use-ui-prompt-boundary.md)
@@ -104,6 +106,7 @@ expectations.
 - [Merge-ready Evidence Generator](./reference/merge-ready-evidence-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
 - [Open Asset Import Pipeline API](./reference/open-asset-import-pipeline-api.md)
+- [Default Open 3D Asset Workflow Test](./reference/default-open-3d-asset-workflow-test.md)
 - [Release Management Checklist](./reference/release-management-checklist.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
 - [Process Termination API](./reference/process-termination-api.md)

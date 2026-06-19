@@ -98,6 +98,30 @@ git submodule update --init tweedle-lang
 mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
+Run the display-backed default asset workflow under Xvfb:
+
+```bash
+scripts/validate-gui-with-xvfb.sh \
+  --timeout-seconds 1800 \
+  --expect success \
+  -- \
+  mvn --settings .github/maven/jogamp-ci-settings.xml \
+    -pl core/ide -am \
+    -Dinstall4j.skip \
+    -Dcheckstyle.skip \
+    -Djava.awt.headless=false \
+    -DincludeSims=false \
+    -Drabbithole.defaultAssetWorkflow.required=true \
+    -Dtest=RabbitHoleDefaultOpenAssetWorkflowTest \
+    test
+```
+
+This focused integration test places `alice-gallery://animals/bunny`, renders it
+visibly, manipulates it in 3D, saves and reopens the project, and runs the
+reopened world without Sims assets. See
+[Verify the Default Open 3D Asset Workflow](./verify-default-open-3d-asset-workflow.md)
+for the full guide.
+
 Run the focused NetBeans packaging/default-path tests:
 
 ```bash

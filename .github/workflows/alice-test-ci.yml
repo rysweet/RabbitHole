@@ -226,3 +226,23 @@ jobs:
             --xvfb-run "${{ steps.setup-xvfb.outputs.xvfb-run }}" \
             -- \
             env MAVEN_SETTINGS_PATH=.github/maven/jogamp-ci-settings.xml scripts/validate-getting-started.sh --gui
+
+      - name: Run default open 3D asset workflow under Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/validate-gui-with-xvfb.sh \
+            --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" \
+            --expect success \
+            --xvfb-run "${{ steps.setup-xvfb.outputs.xvfb-run }}" \
+            -- \
+            mvn --settings .github/maven/jogamp-ci-settings.xml -pl core/ide -am \
+              -Dinstall4j.skip \
+              -Dcheckstyle.skip \
+              -Djava.awt.headless=false \
+              -Dorg.alice.ide.rootDirectory="${GITHUB_WORKSPACE:-$PWD}/core/resources/target/distribution" \
+              -DincludeSims=false \
+              -Drabbithole.defaultAssetWorkflow.required=true \
+              -Dsurefire.failIfNoSpecifiedTests=false \
+              -Dtest=RabbitHoleDefaultOpenAssetWorkflowTest \
+              test

@@ -52,6 +52,28 @@ scripts/validate-gui-with-xvfb.sh \
   scripts/validate-getting-started.sh --gui
 ```
 
+Focused default open 3D asset workflow validation under Xvfb:
+
+```bash
+scripts/validate-gui-with-xvfb.sh \
+  --timeout-seconds 1800 \
+  --expect success \
+  -- \
+  mvn --settings .github/maven/jogamp-ci-settings.xml \
+    -pl core/ide -am \
+    -Dinstall4j.skip \
+    -Dcheckstyle.skip \
+    -Djava.awt.headless=false \
+    -DincludeSims=false \
+    -Drabbithole.defaultAssetWorkflow.required=true \
+    -Dtest=RabbitHoleDefaultOpenAssetWorkflowTest \
+    test
+```
+
+This lane proves the bundled Bunny asset can be placed, rendered visibly,
+manipulated in 3D, saved, reopened, and run without Sims assets. See
+[Verify the Default Open 3D Asset Workflow](./howto/verify-default-open-3d-asset-workflow.md).
+
 Run the golden Alice project corpus validator:
 
 ```bash
