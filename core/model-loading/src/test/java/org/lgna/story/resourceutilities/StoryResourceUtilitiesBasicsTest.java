@@ -9,6 +9,8 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
+import java.nio.file.Path;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
@@ -118,8 +120,18 @@ public class StoryResourceUtilitiesBasicsTest {
   }
 
   @Test
-  public void aliceModelImportDataCanBeInstantiated() {
-    assertNotNull(new AliceModelImportData());
+  public void aliceModelImportDataStoresTypedProofPath() {
+    Path sourceFile = Path.of("source.dae");
+    AliceModelImportData importData = new AliceModelImportData(
+        sourceFile,
+        new edu.cmu.cs.dennisc.scenegraph.SkeletonVisual(),
+        Path.of("proof.glb"),
+        Path.of("proof.a3r"),
+        Optional.empty(),
+        0,
+        0);
+
+    assertEquals(sourceFile, importData.getSourceFile());
   }
 
   private static double[] read(DoubleBuffer buffer) {

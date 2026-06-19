@@ -24,6 +24,7 @@ expectations.
 - [Contributing](./contributing.md)
 - [Repository hygiene](./repository-hygiene.md)
 - [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
+- [Open Asset Import Pipeline API](./reference/open-asset-import-pipeline-api.md)
 - [Concepts](#concepts)
 - [How-to guides](#how-to-guides)
 - [Tutorials](#tutorials)
@@ -40,6 +41,7 @@ expectations.
 - how the dual-baseline replay harness compares RabbitHole against a local preserved Alice baseline when configured
 - how reusable code requests UI prompts without opening Swing dialogs in headless contexts
 - how GUI-capable CI lanes, Eatme wrappers, and Xvfb outside-in evidence are verified
+- how normalized open COLLADA assets flow through Java model loading to `SkeletonVisual`, `.glb`, `.a3r`, and `.a3t` output
 
 ## Documentation map
 
@@ -73,6 +75,7 @@ expectations.
 
 ### How-to guides
 
+- [Import an Open 3D Asset](./howto/import-open-3d-asset.md)
 - [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [Request Process Termination Safely](./howto/request-process-termination.md)
 - [Use the UI Prompt Boundary](./howto/use-ui-prompt-boundary.md)
@@ -85,6 +88,7 @@ expectations.
 ### Tutorials
 
 - [Add a UI Prompt Boundary Adapter](./tutorials/add-ui-prompt-boundary-adapter.md)
+- [Import a COLLADA Open Asset](./tutorials/import-collada-open-asset.md)
 
 ### Reference
 
@@ -97,7 +101,7 @@ expectations.
 - [Modernization Scorecard Generator](./reference/modernization-scorecard-generator.md)
 - [Merge-ready Evidence Generator](./reference/merge-ready-evidence-generator.md)
 - [Modernization Corpus Manifest](./reference/modernization-corpus-manifest.md)
-- [Open 3D Assets Java Study](./reference/open-3d-assets-java-study.md)
+- [Open Asset Import Pipeline API](./reference/open-asset-import-pipeline-api.md)
 - [Release Management Checklist](./reference/release-management-checklist.md)
 - [Text Migration Registry Parity](./reference/text-migration-registry-parity.md)
 - [Process Termination API](./reference/process-termination-api.md)

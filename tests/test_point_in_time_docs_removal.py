@@ -77,6 +77,16 @@ POINT_IN_TIME_LANGUAGE_RE = re.compile(
     re.IGNORECASE,
 )
 
+REMOVED_POINT_IN_TIME_DOC_PATTERN_RE = re.compile(
+    r"(?:"
+    r"open-3d-assets-java-study"
+    r"|Open 3D Assets Java Study"
+    r"|Java applicability study"
+    r"|point-in-time open"
+    r")",
+    re.IGNORECASE,
+)
+
 DURABLE_CONTENT_SUFFIXES = {".md", ".yaml", ".yml", ".toml", ".sh", ".py"}
 DURABLE_CONTENT_ROOTS = (
     "README.md",
@@ -111,6 +121,7 @@ REQUIRED_IGNORES = (
 
 REMOVED_POINT_IN_TIME_DOCS = (
     "docs/reference/modernization-scorecard.md",
+    "docs/reference/open-3d-assets-java-study.md",
 )
 
 EXPECTED_DURABLE_DOCS = (
@@ -225,15 +236,27 @@ class DurableDocumentationRewriteContract(unittest.TestCase):
 
         self.assertEqual([], missing, "Cleanup deleted durable user-facing docs.")
 
-    def test_point_in_time_scorecard_snapshot_is_not_tracked(self) -> None:
+    def test_removed_point_in_time_docs_are_not_tracked(self) -> None:
         tracked = set(tracked_files())
         remaining = [path for path in REMOVED_POINT_IN_TIME_DOCS if path in tracked]
 
         self.assertEqual(
             [],
             remaining,
-            "Generated scorecard/status snapshots should be deleted or rewritten as "
-            "durable generator documentation.",
+            "Generated snapshots and point-in-time studies should be deleted or "
+            "rewritten as durable documentation.",
+        )
+
+    def test_removed_point_in_time_doc_patterns_do_not_reappear(self) -> None:
+        matches = matching_lines(
+            REMOVED_POINT_IN_TIME_DOC_PATTERN_RE,
+            durable_content_paths(),
+        )
+
+        self.assertEqual(
+            [],
+            matches,
+            "Removed point-in-time study paths and titles should not reappear in durable docs.",
         )
 
     def test_durable_docs_do_not_contain_concrete_tracking_references(self) -> None:

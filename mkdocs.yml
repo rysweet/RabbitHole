@@ -29,13 +29,17 @@ nav:
   - "Concepts":
     - "Formal Specification Lane": "concepts/formal-spec-lane.md"
     - "Migration Hotspot Characterization": "concepts/migration-hotspot-characterization.md"
+  - "How-to guides":
+    - "Import an Open 3D Asset": "howto/import-open-3d-asset.md"
+  - "Tutorials":
+    - "Import a COLLADA Open Asset": "tutorials/import-collada-open-asset.md"
   - "Reference":
     - "GL Graphics2D Contract": "reference/gl-graphics2d-contract.md"
     - "Forbidden Pattern Inventory": "reference/forbidden-pattern-inventory.md"
     - "Modernization Scorecard Generator": "reference/modernization-scorecard-generator.md"
     - "Merge-ready Evidence Generator": "reference/merge-ready-evidence-generator.md"
     - "Modernization Corpus Manifest": "reference/modernization-corpus-manifest.md"
-    - "Open 3D Assets Java Study": "reference/open-3d-assets-java-study.md"
+    - "Open Asset Import Pipeline API": "reference/open-asset-import-pipeline-api.md"
     - "Release Management Checklist": "reference/release-management-checklist.md"
     - "Text Migration Registry Parity": "reference/text-migration-registry-parity.md"
   - "Architecture Atlas":
