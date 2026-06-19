@@ -127,7 +127,7 @@
       <activation>
         <property>
           <name>includeSims</name>
-          <value>!false</value>
+          <value>true</value>
         </property>
       </activation>
       <dependencies>

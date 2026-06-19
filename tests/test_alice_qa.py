@@ -348,7 +348,7 @@ class AliceQaWrapperContract(unittest.TestCase):
         self.assertIn("PASS: archive-player-boundary", result.stdout)
         self.assertIn("validate-scenarios", log)
         self.assertIn("git submodule update --init tweedle-lang", log)
-        self.assertIn("mvn -DincludeSims=false -Dinstall4j.skip", log)
+        self.assertIn("mvn -Dinstall4j.skip", log)
         self.assertIn("-DfailIfNoTests=false", log)
         self.assertIn("-Dsurefire.failIfNoSpecifiedTests=false", log)
         self.assertIn("-pl core/story-api-migration", log)

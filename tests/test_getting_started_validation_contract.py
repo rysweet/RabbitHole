@@ -22,7 +22,6 @@ ALICE_TEST_WORKFLOW_PATH = (
 SETUP_XVFB_ACTION_PATH = REPO_ROOT / ".github" / "actions" / "setup-xvfb" / "action.yml"
 
 HEADLESS_MAVEN_FLAGS = (
-    "-DincludeSims=false",
     "-Dinstall4j.skip",
     "-Dcheckstyle.skip",
     "-Dmdep.skip=true",
@@ -31,12 +30,10 @@ HEADLESS_MAVEN_FLAGS = (
     "install",
 )
 LAUNCH_MAVEN_FLAGS = (
-    "-DincludeSims=false",
     "exec:java",
     "-Dalice-ide",
 )
 HEADED_MAVEN_FLAGS = (
-    "-DincludeSims=false",
     "-Dinstall4j.skip",
     "-Dcheckstyle.skip",
     "-DskipTests",
@@ -45,7 +42,6 @@ HEADED_MAVEN_FLAGS = (
     "install",
 )
 HEADED_GUI_LAUNCH_FLAGS = (
-    "-DincludeSims=false",
     "-Djava.awt.headless=false",
     "exec:java",
     "-Dalice-ide",
@@ -187,7 +183,7 @@ class GettingStartedValidatorCheckoutContract(unittest.TestCase):
 
 
 class GettingStartedValidatorHeadlessContract(unittest.TestCase):
-    def test_headless_lane_runs_documented_no_sims_build_command(self) -> None:
+    def test_headless_lane_runs_documented_open_asset_build_command(self) -> None:
         text = re.sub(r"\s+", " ", script_text())
 
         self.assertIn("mvn", text)
@@ -204,7 +200,7 @@ class GettingStartedValidatorHeadlessContract(unittest.TestCase):
         )
         self.assertNotRegex(source, r"(?m)^\s*(mvn|./mvnw)\s+\$\{")
 
-    def test_headless_launch_probe_uses_documented_no_sims_launch_path(self) -> None:
+    def test_headless_launch_probe_uses_documented_open_asset_launch_path(self) -> None:
         text = re.sub(r"\s+", " ", script_text())
 
         self.assertIn("alice-ide", text)

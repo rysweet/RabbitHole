@@ -317,7 +317,7 @@ class ModernizationScorecardComponentTest(unittest.TestCase):
         missing = generator.evaluate_coverage_target(None, target_percent=70.0)
         low = generator.evaluate_coverage_target(
             generator.Coverage(
-                name="no-Sims reactor",
+                name="open-asset reactor",
                 covered=699,
                 missed=301,
                 source=Path("coverage-report/target/site/jacoco-aggregate/jacoco.csv"),
@@ -326,7 +326,7 @@ class ModernizationScorecardComponentTest(unittest.TestCase):
         )
         met = generator.evaluate_coverage_target(
             generator.Coverage(
-                name="no-Sims reactor",
+                name="open-asset reactor",
                 covered=700,
                 missed=300,
                 source=Path("coverage-report/target/site/jacoco-aggregate/jacoco.csv"),

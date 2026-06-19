@@ -74,7 +74,7 @@ Run: git submodule update --init tweedle-lang
 | --- | --- | --- |
 | `./scripts/validate-getting-started.sh` | Default local or CI validation | Runs the headless lane. |
 | `./scripts/validate-getting-started.sh --headless` | Explicit CI-safe validation | Same as the default lane. |
-| `./scripts/validate-getting-started.sh --gui` | GUI validation | Runs the documented no-Sims GUI launch path with `java.awt.headless=false`. Requires either a real desktop display or an Xvfb display such as the headed Ubuntu CI lane. Exits non-zero if no GUI is available or the platform is blocked. |
+| `./scripts/validate-getting-started.sh --gui` | GUI validation | Runs the documented default open-asset GUI launch path with `java.awt.headless=false`. Requires either a real desktop display or an Xvfb display such as the headed Ubuntu CI lane. Exits non-zero if no GUI is available or the platform is blocked. |
 | `./scripts/validate-getting-started.sh --all` | Local full validation | Runs headless validation, then runs GUI validation only when supported; unsupported GUI lanes are reported as skipped or blocked without failing after headless validation passes. |
 | `./scripts/validate-getting-started.sh --help` | Usage reference | Prints supported flags and exits. |
 
@@ -91,19 +91,19 @@ wrong lane.
 ### Headless lane
 
 The headless lane is CI-safe and verifies CLI/docs-safe launch behavior with
-`java.awt.headless=true`. It checks the documented no-Sims install path with the
-same Maven flags users should run on machines without Sims assets or a desktop
+`java.awt.headless=true`. It checks the documented default open-asset install
+path with the same Maven flags users should run on machines without a desktop
 display:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
-It then probes the documented no-Sims launch command:
+It then probes the documented default launch command:
 
 ```bash
 cd alice-ide
-mvn -DincludeSims=false exec:java -Dalice-ide
+mvn exec:java -Dalice-ide
 ```
 
 For the headless validation probe, the script adds `-Djava.awt.headless=true`
@@ -112,7 +112,7 @@ headless lane:
 
 ```bash
 cd alice-ide
-mvn -DincludeSims=false -Djava.awt.headless=true exec:java -Dalice-ide
+mvn -Djava.awt.headless=true exec:java -Dalice-ide
 ```
 
 The launch probe is successful only when Alice stops at the expected desktop
@@ -130,8 +130,8 @@ headless.
 
 ### GUI lane
 
-The GUI lane runs the same no-Sims launch path on a machine that can provide a
-Java AWT display:
+The GUI lane runs the same default open-asset launch path on a machine that can
+provide a Java AWT display:
 
 ```bash
 ./scripts/validate-getting-started.sh --gui
@@ -174,11 +174,11 @@ scripts/validate-gui-with-xvfb.sh \
 ```
 
 The workflow uses the shared action output, not a hard-coded filesystem path.
-The validator first installs no-Sims artifacts with `java.awt.headless=false`
-and tests skipped, then runs the GUI launch probe. The validator's
+The validator first installs default open-asset artifacts with
+`java.awt.headless=false` and tests skipped, then runs the GUI launch probe. The validator's
 `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60` setting keeps the GUI startup probe
 bounded, while the harness timeout is a larger whole-command deadline so
-dependency downloads or no-Sims installation do not consume the launch window. A
+dependency downloads or open-asset installation do not consume the launch window. A
 hung Alice startup is a CI failure, not a skipped GUI validation.
 
 ### macOS Apple Silicon GUI blocker
@@ -198,10 +198,11 @@ Build every Maven module and install the artifacts in your local Maven cache:
 mvn compile install
 ```
 
-If you want the no-Sims path used by the headless validation lane:
+The default build path uses open assets and does not require Sims/nonfree
+artifacts:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip clean install
+mvn -Dinstall4j.skip clean install
 ```
 
 ## Run tests
@@ -212,10 +213,10 @@ Run the full test suite:
 mvn test
 ```
 
-Run the no-Sims, headless-friendly install lane used in CI:
+Run the default open-asset, headless-friendly install lane used in CI:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
 Run Checkstyle on the whole reactor:
@@ -234,23 +235,23 @@ cd alice-ide
 mvn exec:java -Dalice-ide
 ```
 
-If you built or installed with `-DincludeSims=false`, pass the same flag when
+To opt into the legacy Sims assets, pass `-DincludeSims=true` when building and
 launching:
 
 ```bash
 cd alice-ide
-mvn -DincludeSims=false exec:java -Dalice-ide
+mvn -DincludeSims=true exec:java -Dalice-ide
 ```
 
-Without that flag, Maven re-activates the Sims profile and tries to resolve the
-nonfree Sims dependency that the no-Sims build intentionally skipped.
+Without that flag, Maven keeps the default open-asset path and does not resolve
+nonfree Sims dependencies.
 
 ## Coverage and quick diagnostics
 
-Generate the no-Sims JaCoCo report used by the modernization coverage lane:
+Generate the open-asset JaCoCo report used by the modernization coverage lane:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
@@ -276,11 +277,11 @@ Key output files:
 | --- | --- |
 | Build everything | `mvn compile install` |
 | Run all tests | `mvn test` |
-| Run CI-like headless tests | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
+| Run CI-like headless tests | `mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean test` |
 | Preview GUI validation with local Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" --expect success -- ./scripts/validate-getting-started.sh --gui` |
 | Run Checkstyle | `mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml` |
-| Generate coverage | `mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify` |
-| Start the IDE after a full build | `cd alice-ide && mvn exec:java -Dalice-ide` |
-| Start the IDE after a no-Sims build | `cd alice-ide && mvn -DincludeSims=false exec:java -Dalice-ide` |
+| Generate coverage | `mvn -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify` |
+| Start the IDE with default open assets | `cd alice-ide && mvn exec:java -Dalice-ide` |
+| Start the IDE with optional Sims assets | `cd alice-ide && mvn -DincludeSims=true exec:java -Dalice-ide` |
 | Validate Getting Started, headless | `./scripts/validate-getting-started.sh --headless` |
 | Validate Getting Started, GUI | `./scripts/validate-getting-started.sh --gui` |

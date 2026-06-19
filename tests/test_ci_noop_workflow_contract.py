@@ -37,7 +37,6 @@ WORKFLOWS = {
                 "name": "Run dual-baseline replay harness fallback",
                 "fragments": [
                     "mvn --settings .github/maven/jogamp-ci-settings.xml -pl core/story-api-migration",
-                    "-DincludeSims=false",
                     "-Dinstall4j.skip",
                     "-Dcheckstyle.skip",
                     "-Djava.awt.headless=true",
@@ -53,10 +52,10 @@ WORKFLOWS = {
         "path": WORKFLOW_DIR / "alice-coverage-ci.yml",
         "workflow_name": "Alice Coverage Reports",
         "job": "coverage",
-        "maven_step": "Generate no-Sims aggregate and per-module coverage reports",
-        "maven_command": "mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify",
+        "maven_step": "Generate open-asset aggregate and per-module coverage reports",
+        "maven_command": "mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify",
         "maven_fragments": [
-            "mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify",
+            "mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify",
             "Coverage Maven command failed; retrying",
         ],
         "dependent_steps": [
@@ -68,10 +67,10 @@ WORKFLOWS = {
         "path": WORKFLOW_DIR / "alice-netbeans-package-ci.yml",
         "workflow_name": "Alice NetBeans Package CI",
         "job": "package-netbeans",
-        "maven_step": "Build NetBeans package without Sims assets",
-        "maven_command": "mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
+        "maven_step": "Build NetBeans package with default open assets",
+        "maven_command": "mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am clean package -DskipTests",
         "maven_fragments": [
-            "mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests",
+            "mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am clean package -DskipTests",
             "NetBeans package Maven command failed; retrying",
         ],
         "dependent_steps": [

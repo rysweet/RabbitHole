@@ -19,8 +19,8 @@ Usage: ./scripts/validate-getting-started.sh [--headless|--gui|--all|--help]
 Validates the documented RabbitHole Getting Started flow for this checkout.
 
 Modes:
-  --headless  CI-safe default. Checks Git/submodule setup, runs the no-Sims
-              Maven test lane, then verifies the no-Sims launch reaches the
+  --headless  CI-safe default. Checks Git/submodule setup, runs the open-asset
+              Maven test lane, then verifies the default launch reaches the
               expected GUI-required boundary in headless mode.
   --gui       GUI lane. Requires a real or Xvfb graphical environment and
               fails when GUI validation is unavailable or blocked.
@@ -229,7 +229,6 @@ run_headless_lane() {
   local mvn_cmd=(
     "${MAVEN_CMD[@]}"
     -U
-    -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
     -Dmdep.skip=true
@@ -239,20 +238,19 @@ run_headless_lane() {
   )
   local headless_launch_maven=(
     "${MAVEN_CMD[@]}"
-    -DincludeSims=false
     -Djava.awt.headless=true
     exec:java
     -Dalice-ide
   )
   local launch_output
 
-  info "Running headless no-Sims Maven validation."
+  info "Running headless open-asset Maven validation."
   run_maven_with_retries "${mvn_cmd[@]}"
 
   launch_output="$(mktemp)"
   add_temp_path "${launch_output}"
 
-  info "Probing no-Sims Alice launch in headless mode."
+  info "Probing default open-asset Alice launch in headless mode."
   print_command "${headless_launch_maven[@]}"
   local launch_status=0
   run_with_timeout "${launch_output}" "${LAUNCH_TIMEOUT_SECONDS}" "alice-ide" "${headless_launch_maven[@]}" || launch_status=$?
@@ -331,7 +329,6 @@ JAVA
 run_gui_launch() {
   local gui_launch_maven=(
     "${MAVEN_CMD[@]}"
-    -DincludeSims=false
     -Djava.awt.headless=false
     exec:java
     -Dalice-ide
@@ -341,7 +338,7 @@ run_gui_launch() {
   launch_output="$(mktemp)"
   add_temp_path "${launch_output}"
 
-  info "Launching Alice no-Sims GUI path. The probe succeeds if the process starts and remains alive for ${LAUNCH_TIMEOUT_SECONDS}s."
+  info "Launching Alice default open-asset GUI path. The probe succeeds if the process starts and remains alive for ${LAUNCH_TIMEOUT_SECONDS}s."
   print_command "${gui_launch_maven[@]}"
   local launch_status=0
   run_with_timeout "${launch_output}" "${LAUNCH_TIMEOUT_SECONDS}" "alice-ide" "${gui_launch_maven[@]}" || launch_status=$?
@@ -362,7 +359,6 @@ run_gui_launch() {
 run_gui_maven_validation() {
   local mvn_cmd=(
     "${MAVEN_CMD[@]}"
-    -DincludeSims=false
     -Dinstall4j.skip
     -Dcheckstyle.skip
     -DskipTests
@@ -371,7 +367,7 @@ run_gui_maven_validation() {
     install
   )
 
-  info "Running GUI no-Sims Maven validation."
+  info "Running GUI open-asset Maven validation."
   run_maven_with_retries "${mvn_cmd[@]}"
 }
 

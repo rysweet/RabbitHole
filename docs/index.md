@@ -25,6 +25,7 @@ expectations.
 - [Repository hygiene](./repository-hygiene.md)
 - [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
 - [Open Asset Import Pipeline API](./reference/open-asset-import-pipeline-api.md)
+- [Use Open 3D Assets](./howto/use-open-3d-assets.md)
 - [Concepts](#concepts)
 - [How-to guides](#how-to-guides)
 - [Tutorials](#tutorials)
@@ -76,6 +77,7 @@ expectations.
 ### How-to guides
 
 - [Import an Open 3D Asset](./howto/import-open-3d-asset.md)
+- [Use Open 3D Assets](./howto/use-open-3d-assets.md)
 - [Verify Text Migration Registry Parity](./howto/verify-text-migration-parity.md)
 - [Request Process Termination Safely](./howto/request-process-termination.md)
 - [Use the UI Prompt Boundary](./howto/use-ui-prompt-boundary.md)

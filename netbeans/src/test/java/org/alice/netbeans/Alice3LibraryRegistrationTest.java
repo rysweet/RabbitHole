@@ -107,6 +107,13 @@ public class Alice3LibraryRegistrationTest {
   }
 
   @Test
+  public void includeSimsProfilesRequireExplicitOptIn() throws Exception {
+    assertIncludeSimsProfileRequiresExplicitTrue(Path.of("../pom.xml"));
+    assertIncludeSimsProfileRequiresExplicitTrue(Path.of("../alice-ide/pom.xml"));
+    assertIncludeSimsProfileRequiresExplicitTrue(Path.of("pom.xml"));
+  }
+
+  @Test
   public void includeSimsLibraryDefinitionIncludesNonfreeClasspathEntries() throws Exception {
     Assume.assumeTrue("includeSims guard only applies with -DincludeSims=true", includeSims());
 
@@ -116,16 +123,16 @@ public class Alice3LibraryRegistrationTest {
   }
 
   @Test
-  public void noSimsLibraryAndManifestOmitNonfreeArtifacts() throws Exception {
-    Assume.assumeFalse("no-Sims guard only applies with -DincludeSims=false", includeSims());
+  public void defaultLibraryAndManifestOmitNonfreeArtifacts() throws Exception {
+    Assume.assumeFalse("default open-asset guard only applies without -DincludeSims=true", includeSims());
 
     assertNoNonfreeMarkers("Alice3Library classpath", resourcesForVolume("classpath"));
     assertNoNonfreeMarkers("NetBeans module manifest classpath", moduleManifestClassPathEntries());
   }
 
   @Test
-  public void noSimsRuntimeClasspathOmitsNonfreeJars() {
-    Assume.assumeFalse("no-Sims guard only applies with -DincludeSims=false", includeSims());
+  public void defaultRuntimeClasspathOmitsNonfreeJars() {
+    Assume.assumeFalse("default open-asset guard only applies without -DincludeSims=true", includeSims());
 
     List<String> jarNames = Arrays.stream(System.getProperty(
             "surefire.test.class.path",
@@ -138,16 +145,19 @@ public class Alice3LibraryRegistrationTest {
   }
 
   @Test
-  public void noSimsResourceDistributionOmitsSimsAssets() throws Exception {
-    Assume.assumeFalse("no-Sims guard only applies with -DincludeSims=false", includeSims());
+  public void defaultResourceDistributionUsesOpenAliceAssetsAndOmitsSimsAssets() throws Exception {
+    Assume.assumeFalse("default open-asset guard only applies without -DincludeSims=true", includeSims());
 
-    Path applicationResources = Path.of("../core/resources/target/distribution/application");
-    assertTrue("resource distribution should be built before NetBeans tests", Files.exists(applicationResources));
+    Path applicationResources = Path.of("../core/resources/src/application/resources");
+    assertTrue("default application resources should exist", Files.exists(applicationResources));
+    assertTrue(
+        "default resource distribution should include open Alice gallery assets",
+        Files.exists(applicationResources.resolve("gallery/assets/alice")));
     assertFalse(
-        "no-Sims resource distribution must not contain Sims assets",
+        "default resource distribution must not contain Sims assets",
         Files.exists(applicationResources.resolve("gallery/assets/sims")));
     assertFalse(
-        "no-Sims resource distribution must not contain Sims EULA",
+        "default resource distribution must not contain Sims EULA",
         Files.exists(applicationResources.resolve("EULA_TheSimsTM2ArtAsset.txt")));
   }
 
@@ -220,7 +230,25 @@ public class Alice3LibraryRegistrationTest {
     }
   }
 
+  private static void assertIncludeSimsProfileRequiresExplicitTrue(Path pomPath) throws Exception {
+    String pom = Files.readString(pomPath, StandardCharsets.UTF_8);
+    int profileStart = pom.indexOf("<id>includeSims</id>");
+    assertTrue("Missing includeSims profile in " + pomPath, profileStart >= 0);
+    int activationStart = pom.indexOf("<activation>", profileStart);
+    int activationEnd = pom.indexOf("</activation>", activationStart);
+    assertTrue("Missing includeSims activation in " + pomPath, activationStart >= 0);
+    assertTrue("Missing includeSims activation end in " + pomPath, activationEnd > activationStart);
+
+    String activation = pom.substring(activationStart, activationEnd);
+    assertTrue(
+        "includeSims profile must activate only when -DincludeSims=true in " + pomPath,
+        activation.contains("<name>includeSims</name>") && activation.contains("<value>true</value>"));
+    assertFalse(
+        "includeSims profile must not be active by default in " + pomPath,
+        activation.contains("<value>!false</value>"));
+  }
+
   private static boolean includeSims() {
-    return !"false".equals(System.getProperty("includeSims"));
+    return "true".equals(System.getProperty("includeSims"));
   }
 }

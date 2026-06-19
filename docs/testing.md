@@ -33,10 +33,10 @@ Run everything:
 mvn test
 ```
 
-Run the no-Sims, headless-friendly install lane:
+Run the default open-asset, headless-friendly install lane:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
 The headed Ubuntu GUI validation lane runs under Xvfb:
@@ -57,7 +57,6 @@ Run the golden Alice project corpus validator:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -70,7 +69,6 @@ Run the RabbitHole baseline parity harness:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl netbeans -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -85,7 +83,6 @@ compiler/story source shape or NetBeans project generation.
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/ast -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -93,7 +90,6 @@ mvn -pl core/ast -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 mvn -pl core/story-api-migration -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -101,7 +97,6 @@ mvn -pl core/story-api-migration -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 mvn -pl core/ide -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -109,7 +104,6 @@ mvn -pl core/ide -am \
   -Dsurefire.failIfNoSpecifiedTests=false \
   test
 mvn -pl netbeans -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -123,7 +117,6 @@ Run the dual-baseline replay harness in CI-safe fallback mode:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -137,7 +130,6 @@ Run the strict text migration JSON drift check:
 export NODE_OPTIONS=--max-old-space-size=32768
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -160,7 +152,6 @@ Run the full text migration registry parity lane:
 export NODE_OPTIONS=--max-old-space-size=32768
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -183,7 +174,6 @@ Run the same harness against a local preserved baseline checkout:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -201,7 +191,7 @@ mvn checkstyle:check -Dcheckstyle.config.location=checkstyle.xml
 Run coverage:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify
 python3 scripts/summarize-jacoco-coverage.py \
   --output coverage-summary.md \
   --evidence-manifest coverage-evidence-manifest.json \
@@ -225,7 +215,7 @@ immediately after cloning.
 
 `tests/test_getting_started_validation_contract.py` protects the documented
 command surface from drift by checking the validator flags, submodule failure
-guidance, no-Sims launch command, and GUI skip/block behavior described here.
+guidance, default open-asset launch command, and GUI skip/block behavior described here.
 Those contract tests also assert the shared Xvfb action, reusable Xvfb harness,
 separate headed job, bounded startup timeout, and preserved headless lane.
 `python3 alice_qa.py getting-started validate` is the wrapper entry point for
@@ -233,22 +223,22 @@ running the same validator from the checkout under review.
 
 | Lane | Command | Intended environment | Success condition |
 | --- | --- | --- | --- |
-| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the no-Sims Maven install command passes with `java.awt.headless=true`, and the no-Sims launch probe reaches the expected GUI-required message. |
-| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" --expect success --xvfb-run "${xvfb_run}" -- scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The no-Sims build/install passes under Xvfb with `java.awt.headless=false` and tests skipped, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
-| Local GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The no-Sims Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
+| Headless | `./scripts/validate-getting-started.sh` or `./scripts/validate-getting-started.sh --headless` | CI and local shells without a display | Git checkout and `tweedle-lang/Grammar` are present, the default open-asset Maven install command passes with `java.awt.headless=true`, and the default launch probe reaches the expected GUI-required message. |
+| Headed Ubuntu Xvfb | `RABBITHOLE_LAUNCH_TIMEOUT_SECONDS=60 scripts/validate-gui-with-xvfb.sh --timeout-seconds "${RABBITHOLE_XVFB_VALIDATION_TIMEOUT_SECONDS:-7200}" --expect success --xvfb-run "${xvfb_run}" -- scripts/validate-getting-started.sh --gui`, where `xvfb_run` is the shared action output | Ubuntu CI runner without a physical display | The default open-asset build/install passes under Xvfb with `java.awt.headless=false` and tests skipped, and the Alice desktop launch starts far enough under Xvfb to prove the documented display-dependent GUI launch path without hanging. |
+| Local GUI | `./scripts/validate-getting-started.sh --gui` | Local desktop with real Java AWT display support | The default open-asset Alice desktop launch starts far enough to prove the documented GUI launch path is usable on that platform. |
 | All | `./scripts/validate-getting-started.sh --all` | Local validation before sharing setup changes | Headless validation passes; GUI validation runs when supported and reports a clear skip or blocker when unsupported without failing the command. |
 
 The headless lane runs this Maven command:
 
 ```bash
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true clean install
 ```
 
-The launch probe uses this documented no-Sims launch command:
+The launch probe uses this documented default open-asset launch command:
 
 ```bash
 cd alice-ide
-mvn -DincludeSims=false exec:java -Dalice-ide
+mvn exec:java -Dalice-ide
 ```
 
 The headless validator adds `-Djava.awt.headless=true` to that launch probe so
@@ -381,7 +371,6 @@ resource handling:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -394,7 +383,6 @@ Run the full `story-api-migration` test lane:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -434,7 +422,6 @@ intentional behavior change:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl netbeans -am \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -480,7 +467,6 @@ Fallback mode:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -493,7 +479,6 @@ Strict mode with a Maven property:
 ```bash
 git submodule update --init tweedle-lang
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \
@@ -507,7 +492,6 @@ Strict mode with an environment variable:
 ```bash
 export RABBITHOLE_BASELINE_CHECKOUT=/absolute/path/to/preserved-alice-baseline
 mvn -pl core/story-api-migration \
-  -DincludeSims=false \
   -Dinstall4j.skip \
   -Dcheckstyle.skip \
   -Djava.awt.headless=true \

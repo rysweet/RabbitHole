@@ -13,9 +13,9 @@ from typing import Any, List, Optional, Tuple
 
 
 AGGREGATE_CSV = Path("coverage-report/target/site/jacoco-aggregate/jacoco.csv")
-COVERAGE_MODEL = "no-sims"
+COVERAGE_MODEL = "open-assets-default"
 JACOCO_SOURCE = "jacoco"
-MAVEN_COVERAGE_COMMAND = "mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify"
+MAVEN_COVERAGE_COMMAND = "mvn -Dinstall4j.skip -Pcoverage verify"
 VCS_DIR_NAMES = {".git", ".hg", ".svn"}
 
 
@@ -94,7 +94,7 @@ def module_name(csv_path: Path, root: Path) -> str:
 
 def collect_reports(root: Path) -> Tuple[Optional[Coverage], List[Coverage]]:
     aggregate_path = root / AGGREGATE_CSV
-    aggregate = read_line_coverage(aggregate_path, "no-Sims reactor") if aggregate_path.exists() else None
+    aggregate = read_line_coverage(aggregate_path, "open-asset reactor") if aggregate_path.exists() else None
 
     module_reports: List[Coverage] = []
     for path in sorted(root.glob("**/target/site/jacoco/jacoco.csv")):
@@ -281,7 +281,7 @@ def render_markdown(aggregate: Optional[Coverage], module_reports: List[Coverage
     lines = ["# JaCoCo line coverage", ""]
     if aggregate is not None:
         lines.extend([
-            "## Aggregate no-Sims coverage",
+            "## Aggregate open-asset coverage",
             "",
             "| Scope | Line coverage | Covered | Missed | Total |",
             "| --- | ---: | ---: | ---: | ---: |",
@@ -290,7 +290,7 @@ def render_markdown(aggregate: Optional[Coverage], module_reports: List[Coverage
         ])
     else:
         lines.extend([
-            "## Aggregate no-Sims coverage",
+            "## Aggregate open-asset coverage",
             "",
             "Aggregate report not found at `coverage-report/target/site/jacoco-aggregate/jacoco.csv`.",
             "",

@@ -111,7 +111,7 @@
               <goal>report-aggregate</goal>
             </goals>
             <configuration>
-              <title>Alice no-Sims aggregate coverage</title>
+              <title>Alice open-asset aggregate coverage</title>
             </configuration>
           </execution>
         </executions>

@@ -72,8 +72,8 @@ outside-in validation of the checkout under review:
 
 The CI-safe headless lane checks CLI/docs-safe launch behavior with
 `java.awt.headless=true`: Git checkout state, the initialized `tweedle-lang`
-grammar submodule, the documented no-Sims Maven install command, and the no-Sims
-Alice launch command up to the expected GUI-required boundary. The headed
+grammar submodule, the documented open-asset Maven install command, and the
+default Alice launch command up to the expected GUI-required boundary. The headed
 Ubuntu Xvfb lane checks GUI/display-dependent behavior on Ubuntu without a
 physical display by running the GUI lane through
 `scripts/validate-gui-with-xvfb.sh`, backed by the shared Xvfb action, with
@@ -96,22 +96,18 @@ After successfully compiling and installing the Alice jars into the mvn
 repository, you can launch the Alice IDE.
 
     cd alice-ide
-    mvn exec:java -Dalice-ide                     # full build (includes Sims)
-    mvn -DincludeSims=false exec:java -Dalice-ide # no-Sims build
-
-If you installed with `-DincludeSims=false`, you **must** pass the same flag
-when launching. See [Working without the Sims*](#working-without-the-sims) for
-the reason.
+    mvn exec:java -Dalice-ide                         # default open assets
+    mvn -DincludeSims=true exec:java -Dalice-ide       # optional Sims assets
 
 Run unit tests
 
     cd ${alice3}
     mvn test
 
-Generate no-Sims aggregate and per-module coverage reports:
+Generate open-asset aggregate and per-module coverage reports:
 
     cd ${alice3}
-    mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify
+    mvn -Dinstall4j.skip -Pcoverage verify
     python3 scripts/summarize-jacoco-coverage.py \
       --output coverage-summary.md \
       --evidence-manifest coverage-evidence-manifest.json \
@@ -127,8 +123,8 @@ Generate no-Sims aggregate and per-module coverage reports:
 The aggregate HTML report is written to `coverage-report/target/site/jacoco-aggregate/index.html`.
 Per-module HTML reports are written under each module's `target/site/jacoco/index.html` when JaCoCo
 produces module-level data. CI uploads those reports, `coverage-summary.md`, and
-`coverage-evidence-manifest.json` as the `alice-coverage-evidence-no-sims` artifact for pull
-requests. CI enforces an 8.0% aggregate no-Sims line coverage floor plus conservative module floors
+`coverage-evidence-manifest.json` as the `alice-coverage-evidence-open-assets` artifact for pull
+requests. CI enforces an 8.0% aggregate open-asset line coverage floor plus conservative module floors
 for covered modernization areas; raise them as characterization coverage grows toward the 70%
 mission target. The 70% target is claimable only from measured aggregate JaCoCo data, not from
 module-only evidence.
@@ -208,35 +204,28 @@ Then the project should be ready to run.
 
 Final note: If you were delegating IDE build/run actions to Maven in the previous step, please uncheck that option. Or you might run into some graphics errors running Alice.
 
-## Working without the Sims*
+## Open assets by default and optional Sims assets
 
-The compile, package, and install phases can all be limited to not include the Sims assets.
-To do that disable the `includeSims` maven profile.
-
-It is a good idea to `clean` if you have previously made a full build.
-This may prevent leftover Sims artifacts getting bundled in.
+RabbitHole defaults to the redistributable open 3D asset path. A fresh compile,
+package, install, or IDE launch does not require Sims/nonfree artifacts.
 
     cd ${alice3}
-    mvn -DincludeSims=false -Dinstall4j.skip clean package
+    mvn -Dinstall4j.skip clean package
 Or:
 
     cd ${alice3}
-    mvn -DincludeSims=false clean install
+    mvn clean install
 
-`-DincludeSims=false` is **also required when launching** the IDE, not just
-during build:
+To opt into the legacy Sims assets, pass `-DincludeSims=true` during build and
+launch:
 
     cd alice-ide
-    mvn -DincludeSims=false exec:java -Dalice-ide
+    mvn -DincludeSims=true exec:java -Dalice-ide
 
 `alice-ide/pom.xml` declares its dependency on `org.alice.nonfree:ide-nonfree`
 inside the same `includeSims` profile (whose activation is
-`<value>!false</value>`, i.e. active unless the property is explicitly set to
-`false`). If the launch command omits the flag, Maven re-activates the
-profile and tries to resolve `ide-nonfree:9.1.0-SNAPSHOT`, which fails for
-any developer who built without the Sims modules.
-
-**This is still experimental, so there may be errors.*
+`<value>true</value>`). If the launch command omits the flag, Maven keeps the
+open-asset default and does not resolve `ide-nonfree:9.1.0-SNAPSHOT`.
 
 ## How to contribute
 

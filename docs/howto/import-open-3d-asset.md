@@ -169,7 +169,7 @@ running lanes that reach Tweedle:
 
 ```bash
 git submodule update --init tweedle-lang
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true test
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true test
 ```
 
 The focused test should assert:

@@ -55,7 +55,6 @@ NODE_OPTIONS_MEMORY_FLAG = "--max-old-space-size=32768"
 TWEEDLE_SUBMODULE_COMMAND = ("git", "submodule", "update", "--init", "tweedle-lang")
 ARCHIVE_PLAYER_BOUNDARY_COMMAND = (
     "mvn",
-    "-DincludeSims=false",
     "-Dinstall4j.skip",
     "-pl",
     "core/story-api-migration",

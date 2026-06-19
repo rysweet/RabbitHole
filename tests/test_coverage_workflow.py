@@ -12,7 +12,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         workflow = COVERAGE_WORKFLOW.read_text(encoding="utf-8")
 
         generate_step = workflow.index(
-            "name: Generate no-Sims aggregate and per-module coverage reports"
+            "name: Generate open-asset aggregate and per-module coverage reports"
         )
         summarize_step = workflow.index("name: Summarize and gate line coverage")
 
@@ -21,7 +21,6 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         self.assertIsNotNone(coverage_command)
         assert coverage_command is not None
         for flag in (
-            "-DincludeSims=false",
             "-Dinstall4j.skip",
             "-Dcheckstyle.skip",
             "-Dmaven.test.failure.ignore=true",
@@ -133,7 +132,7 @@ class CoverageWorkflowContractTest(unittest.TestCase):
         ]
 
         self.assertIn("if: always()", body)
-        self.assertIn("name: alice-coverage-evidence-no-sims", body)
+        self.assertIn("name: alice-coverage-evidence-open-assets", body)
         self.assertIn("if-no-files-found: warn", body)
         for artifact in expected_artifacts:
             with self.subTest(artifact=artifact):

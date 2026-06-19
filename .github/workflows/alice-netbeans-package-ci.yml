@@ -159,7 +159,7 @@ jobs:
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: mvn -v
 
-      - name: Build NetBeans package without Sims assets
+      - name: Build NetBeans package with default open assets
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         shell: bash
         run: |
@@ -168,7 +168,7 @@ jobs:
             if [[ -d "${HOME}/.m2/repository" ]]; then
               find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
             fi
-            if mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am package -DskipTests; then
+            if mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmdep.skip=true -pl netbeans -am clean package -DskipTests; then
               exit 0
             fi
             if [[ "${attempt}" == "5" ]]; then

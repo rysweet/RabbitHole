@@ -171,7 +171,7 @@ behavior:
 
 ```bash
 git submodule update --init tweedle-lang
-mvn -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true test
+mvn -Dinstall4j.skip -Dcheckstyle.skip -Djava.awt.headless=true test
 ```
 
 ## Where to go from here

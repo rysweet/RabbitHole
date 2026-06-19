@@ -236,7 +236,7 @@ def iter_module_jacoco_csvs(root: Path) -> Iterable[Path]:
 def collect_coverage_reports(root: Path) -> tuple[Coverage | None, list[Coverage]]:
     aggregate_path = root / AGGREGATE_CSV
     aggregate = (
-        read_jacoco_line_coverage(aggregate_path, "no-Sims reactor")
+        read_jacoco_line_coverage(aggregate_path, "open-asset reactor")
         if aggregate_path.exists()
         else None
     )
@@ -580,7 +580,7 @@ def render_scorecard(root: Path) -> str:
         "## Coverage ratchets",
         "",
         "Coverage ratchets are executable CI floors, not the long-term target. They are",
-        "parsed from `.github/workflows/alice-coverage-ci.yml`, which runs the no-Sims",
+        "parsed from `.github/workflows/alice-coverage-ci.yml`, which runs the open-asset",
         "coverage summary with Git LFS disabled.",
         "",
         "| Scope | Current CI floor | Source |",
@@ -615,7 +615,7 @@ def render_scorecard(root: Path) -> str:
     if aggregate is None:
         lines.extend(
             [
-                "| Aggregate JaCoCo CSV | Missing | The no-Sims Maven coverage lane has not produced aggregate coverage data in this checkout. |",
+                "| Aggregate JaCoCo CSV | Missing | The open-asset Maven coverage lane has not produced aggregate coverage data in this checkout. |",
                 "| Aggregate line coverage | Not measured | The scorecard cannot report a current aggregate percent without the CSV. |",
                 f"| Aggregate CI ratchet | {format_floor(ratchets.aggregate_minimum_percent)} | The CI floor is still reported because it comes from the workflow. |",
             ]
@@ -780,14 +780,14 @@ def render_scorecard(root: Path) -> str:
         ]
     )
     if aggregate is None:
-        lines.append("| Aggregate coverage measurement | Missing aggregate JaCoCo CSV | Run the no-Sims coverage lane and regenerate the scorecard. |")
+        lines.append("| Aggregate coverage measurement | Missing aggregate JaCoCo CSV | Run the open-asset coverage lane and regenerate the scorecard. |")
     elif aggregate.percent < (ratchets.aggregate_minimum_percent or 0.0):
         lines.append("| Aggregate coverage measurement | Measured below the CI ratchet | Restore aggregate coverage above the executable floor. |")
     else:
         lines.append("| Aggregate coverage measurement | Available | Keep regenerating the scorecard from current JaCoCo CSVs before claiming progress. |")
     if missing_ratcheted_modules:
         lines.append(
-            f"| Ratcheted module measurements | Missing module JaCoCo CSVs for {len(missing_ratcheted_modules)} ratcheted modules in this checkout | Run the no-Sims coverage lane and confirm each ratcheted module still emits a report. |"
+            f"| Ratcheted module measurements | Missing module JaCoCo CSVs for {len(missing_ratcheted_modules)} ratcheted modules in this checkout | Run the open-asset coverage lane and confirm each ratcheted module still emits a report. |"
         )
     else:
         lines.append("| Ratcheted module measurements | Available for all ratcheted modules | Keep module CSVs attached to the coverage workflow artifacts. |")

@@ -159,7 +159,7 @@ jobs:
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: mvn -v
 
-      - name: Generate no-Sims aggregate and per-module coverage reports
+      - name: Generate open-asset aggregate and per-module coverage reports
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         shell: bash
         run: |
@@ -168,7 +168,7 @@ jobs:
             if [[ -d "${HOME}/.m2/repository" ]]; then
               find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
             fi
-            if mvn --settings .github/maven/jogamp-ci-settings.xml -U -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify; then
+            if mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify; then
               exit 0
             fi
             if [[ "${attempt}" == "5" ]]; then
@@ -197,7 +197,7 @@ jobs:
         if: always() && (github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true')
         uses: actions/upload-artifact@v4
         with:
-          name: alice-coverage-evidence-no-sims
+          name: alice-coverage-evidence-open-assets
           path: |
             coverage-summary.md
             coverage-evidence-manifest.json

@@ -171,7 +171,6 @@ jobs:
         if: github.event_name != 'pull_request' || steps.change-scope.outputs.maven-required == 'true'
         run: |
           mvn --settings .github/maven/jogamp-ci-settings.xml -pl core/story-api-migration \
-            -DincludeSims=false \
             -Dinstall4j.skip \
             -Dcheckstyle.skip \
             -Djava.awt.headless=true \

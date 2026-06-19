@@ -62,7 +62,7 @@ profiles.
 | Workflow | Job | Purpose |
 | --- | --- | --- |
 | `.github/workflows/alice-test-ci.yml` | `headed-ubuntu-xvfb` | Runs Getting Started GUI validation under Xvfb. |
-| `.github/workflows/alice-netbeans-package-ci.yml` | `package-netbeans` | Builds and checks the NetBeans package without Sims assets. |
+| `.github/workflows/alice-netbeans-package-ci.yml` | `package-netbeans` | Builds and checks the NetBeans package with default open assets. |
 
 Both jobs initialize the Tweedle grammar submodule before Maven validation:
 
@@ -254,7 +254,7 @@ scripts/validate-gui-with-xvfb.sh \
 
 mvn --settings .github/maven/jogamp-ci-settings.xml \
   -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
-  -pl netbeans -am package -DskipTests
+  -pl netbeans -am clean package -DskipTests
 ```
 
 ## Security and integrity rules

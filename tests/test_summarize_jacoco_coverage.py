@@ -42,7 +42,7 @@ class CoverageSummaryComponentTest(unittest.TestCase):
 
         self.assertIsNotNone(aggregate)
         assert aggregate is not None
-        self.assertEqual("no-Sims reactor", aggregate.name)
+        self.assertEqual("open-asset reactor", aggregate.name)
         self.assertEqual(75.0, aggregate.percent)
         self.assertEqual(["core/ast"], [coverage.name for coverage in module_reports])
 
@@ -84,10 +84,10 @@ class CoverageSummaryComponentTest(unittest.TestCase):
             )
 
         self.assertEqual(1, manifest["schemaVersion"])
-        self.assertEqual("no-sims", manifest["coverageModel"])
+        self.assertEqual("open-assets-default", manifest["coverageModel"])
         self.assertEqual("jacoco", manifest["source"])
         self.assertEqual(
-            "mvn -DincludeSims=false -Dinstall4j.skip -Pcoverage verify",
+            "mvn -Dinstall4j.skip -Pcoverage verify",
             manifest["mavenCommand"],
         )
         self.assertEqual(
@@ -179,7 +179,7 @@ class CoverageSummaryComponentTest(unittest.TestCase):
                 aggregate_target_percent=70.0,
             )
             low_aggregate = coverage_script.Coverage(
-                name="no-Sims reactor",
+                name="open-asset reactor",
                 covered=65,
                 missed=35,
                 source=root / "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
@@ -193,7 +193,7 @@ class CoverageSummaryComponentTest(unittest.TestCase):
                 aggregate_target_percent=70.0,
             )
             met_aggregate = coverage_script.Coverage(
-                name="no-Sims reactor",
+                name="open-asset reactor",
                 covered=70,
                 missed=30,
                 source=root / "coverage-report/target/site/jacoco-aggregate/jacoco.csv",
