@@ -159,8 +159,8 @@ The pipeline writes files directly to `outputDirectory`.
 | Output | Required | Producer | Use |
 | --- | --- | --- | --- |
 | `<modelName>.glb` | Yes | `JointedModelGltfExporter` | glTF proof output for interchange and inspection. |
-| `<modelName>.a3r` | Yes | `JointedModelAliceExporter` | Alice visual resource structure output. |
-| `<modelName>.a3t` | No | `JointedModelAliceExporter` | Alice texture resource output when texture data exists. |
+| `<modelName>.a3r` lowercased by Alice resource naming | Yes | `JointedModelAliceExporter` | Alice visual resource structure output. |
+| `<modelName>.a3t` lowercased by Alice resource naming | No | `JointedModelAliceExporter` | Alice texture resource output when texture data exists. |
 
 Output files are overwritten for the same `modelName` and output directory.
 Callers that need retention should choose a clean output directory before

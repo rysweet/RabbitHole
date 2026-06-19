@@ -28,11 +28,12 @@ public class OpenAssetImportPipelineTest {
 
     assertEquals(sourceFile.toRealPath(), imported.getSourceFile());
     assertEquals(outputDirectory.resolve("OpenAssetProof.glb"), imported.getGltfBinaryFile());
-    assertEquals(outputDirectory.resolve("OpenAssetProof.a3r"), imported.getAliceStructureFile());
-    assertEquals(outputDirectory.resolve("OpenAssetProof.a3t"), imported.getAliceTextureFile().orElseThrow());
+    assertEquals(outputDirectory.resolve("openassetproof.a3r"), imported.getAliceStructureFile());
+    assertEquals(outputDirectory.resolve("openassetproof.a3t"), imported.getAliceTextureFile().orElseThrow());
 
     SkeletonVisual visual = imported.getSkeletonVisual();
     assertNotNull(visual);
+    assertNotNull(visual.skeleton.getValue());
     assertTrue(imported.getMeshCount() + imported.getWeightedMeshCount() > 0);
     assertEquals(imported.getMeshCount(), visual.geometries.getValue().length);
     assertEquals(imported.getWeightedMeshCount(), visual.weightedMeshes.getValue().length);

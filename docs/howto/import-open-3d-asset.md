@@ -149,8 +149,8 @@ Expected output names are derived from the supplied model name:
 | Model name | Output |
 | --- | --- |
 | `SimpleRiggedCharacter` | `SimpleRiggedCharacter.glb` |
-| `SimpleRiggedCharacter` | `SimpleRiggedCharacter.a3r` |
-| `SimpleRiggedCharacter` | `SimpleRiggedCharacter.a3t`, when texture data exists |
+| `SimpleRiggedCharacter` | `simpleriggedcharacter.a3r` |
+| `SimpleRiggedCharacter` | `simpleriggedcharacter.a3t`, when texture data exists |
 
 Use the `.glb` file for interchange proof and visual inspection. Use the `.a3r`
 and `.a3t` files to prove the imported visual can be serialized into Alice's

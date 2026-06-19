@@ -16,8 +16,8 @@ public class AliceModelImportDataTest {
     Path sourceFile = Path.of("target/open-asset/source/open-asset.dae").toAbsolutePath();
     SkeletonVisual skeletonVisual = ExporterTestFixtures.createVisual(true);
     Path gltfBinaryFile = Path.of("target/open-asset/output/OpenAssetProof.glb").toAbsolutePath();
-    Path aliceStructureFile = Path.of("target/open-asset/output/OpenAssetProof.a3r").toAbsolutePath();
-    Optional<Path> aliceTextureFile = Optional.of(Path.of("target/open-asset/output/OpenAssetProof.a3t").toAbsolutePath());
+    Path aliceStructureFile = Path.of("target/open-asset/output/openassetproof.a3r").toAbsolutePath();
+    Optional<Path> aliceTextureFile = Optional.of(Path.of("target/open-asset/output/openassetproof.a3t").toAbsolutePath());
 
     AliceModelImportData data = new AliceModelImportData(
         sourceFile,
@@ -56,8 +56,8 @@ public class AliceModelImportDataTest {
     Path sourceFile = Path.of("target/open-asset/source/open-asset.dae");
     SkeletonVisual skeletonVisual = ExporterTestFixtures.createVisual(true);
     Path gltfBinaryFile = Path.of("target/open-asset/output/OpenAssetProof.glb");
-    Path aliceStructureFile = Path.of("target/open-asset/output/OpenAssetProof.a3r");
-    Optional<Path> aliceTextureFile = Optional.of(Path.of("target/open-asset/output/OpenAssetProof.a3t"));
+    Path aliceStructureFile = Path.of("target/open-asset/output/openassetproof.a3r");
+    Optional<Path> aliceTextureFile = Optional.of(Path.of("target/open-asset/output/openassetproof.a3t"));
 
     assertThrows(NullPointerException.class, () -> new AliceModelImportData(
         null, skeletonVisual, gltfBinaryFile, aliceStructureFile, aliceTextureFile, 1, 1));
@@ -76,8 +76,8 @@ public class AliceModelImportDataTest {
     Path sourceFile = Path.of("target/open-asset/source/open-asset.dae");
     SkeletonVisual skeletonVisual = ExporterTestFixtures.createVisual(true);
     Path gltfBinaryFile = Path.of("target/open-asset/output/OpenAssetProof.glb");
-    Path aliceStructureFile = Path.of("target/open-asset/output/OpenAssetProof.a3r");
-    Optional<Path> aliceTextureFile = Optional.of(Path.of("target/open-asset/output/OpenAssetProof.a3t"));
+    Path aliceStructureFile = Path.of("target/open-asset/output/openassetproof.a3r");
+    Optional<Path> aliceTextureFile = Optional.of(Path.of("target/open-asset/output/openassetproof.a3t"));
 
     assertThrows(IllegalArgumentException.class, () -> new AliceModelImportData(
         sourceFile, skeletonVisual, gltfBinaryFile, aliceStructureFile, aliceTextureFile, -1, 0));

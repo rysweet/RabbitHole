@@ -6,6 +6,7 @@ import edu.cmu.cs.dennisc.scenegraph.SkeletonVisual;
 import edu.cmu.cs.dennisc.scenegraph.TexturedAppearance;
 import edu.cmu.cs.dennisc.scenegraph.WeightedMesh;
 import org.alice.tweedle.file.ModelManifest;
+import org.lgna.story.implementation.alice.AliceResourceUtilities;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,10 +47,10 @@ public final class OpenAssetImportPipeline {
     logger.log(Level.INFO, "Importing COLLADA open asset proof from {0}", sourceFile);
     SkeletonVisual skeletonVisual = new JointedModelColladaImporter(sourceFile.toFile(), logger).loadSkeletonVisual();
     Path gltfBinaryFile = outputDirectory.resolve(trimmedModelName + ".glb");
-    Path aliceStructureFile = outputDirectory.resolve(trimmedModelName + ".a3r");
-    Path aliceTextureFile = outputDirectory.resolve(trimmedModelName + ".a3t");
 
     ModelManifest.ModelVariant variant = createVariant(trimmedModelName);
+    Path aliceStructureFile = outputDirectory.resolve(AliceResourceUtilities.getVisualResourceFileNameFromModelName(variant.structure));
+    Path aliceTextureFile = outputDirectory.resolve(AliceResourceUtilities.getTextureResourceFileName(variant.structure, variant.textureSet));
     writeGltf(skeletonVisual, variant, trimmedModelName, outputDirectory, gltfBinaryFile);
     Optional<Path> textureOutput = writeAliceResources(skeletonVisual, variant, outputDirectory, aliceStructureFile, aliceTextureFile);
 

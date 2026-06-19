@@ -116,8 +116,8 @@ Expected files:
 
 ```text
 target/open-asset-import/SimpleRiggedCharacter.glb
-target/open-asset-import/SimpleRiggedCharacter.a3r
-target/open-asset-import/SimpleRiggedCharacter.a3t
+target/open-asset-import/simpleriggedcharacter.a3r
+target/open-asset-import/simpleriggedcharacter.a3t
 ```
 
 The `.a3t` file appears when the imported visual contains texture data. The
