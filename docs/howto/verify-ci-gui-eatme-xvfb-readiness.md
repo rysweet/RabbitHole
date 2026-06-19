@@ -37,7 +37,7 @@ Build the NetBeans package without Sims assets:
 ```bash
 mvn --settings .github/maven/jogamp-ci-settings.xml \
   -DincludeSims=false -Dinstall4j.skip -Dcheckstyle.skip \
-  -pl netbeans -am package -DskipTests
+  -pl netbeans -am clean package -DskipTests
 ```
 
 Run the GUI Getting Started validation under the shared Xvfb harness:
