@@ -7,6 +7,7 @@ import org.junit.Test;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -26,10 +27,11 @@ public class OpenAssetImportPipelineTest {
     AliceModelImportData imported = new OpenAssetImportPipeline(Logger.getLogger("test"))
         .importCollada(sourceFile, outputDirectory, "OpenAssetProof");
 
+    Path normalizedOutputDirectory = outputDirectory.toAbsolutePath().normalize();
     assertEquals(sourceFile.toRealPath(), imported.getSourceFile());
-    assertEquals(outputDirectory.resolve("OpenAssetProof.glb"), imported.getGltfBinaryFile());
-    assertEquals(outputDirectory.resolve("openassetproof.a3r"), imported.getAliceStructureFile());
-    assertEquals(outputDirectory.resolve("openassetproof.a3t"), imported.getAliceTextureFile().orElseThrow());
+    assertEquals(normalizedOutputDirectory.resolve("OpenAssetProof.glb"), imported.getGltfBinaryFile());
+    assertEquals(normalizedOutputDirectory.resolve("openassetproof.a3r"), imported.getAliceStructureFile());
+    assertEquals(normalizedOutputDirectory.resolve("openassetproof.a3t"), imported.getAliceTextureFile().orElseThrow());
 
     SkeletonVisual visual = imported.getSkeletonVisual();
     assertNotNull(visual);
@@ -84,6 +86,21 @@ public class OpenAssetImportPipelineTest {
     assertThrows(NullPointerException.class, () -> pipeline.importCollada(sourceFile, outputDirectory, null));
     assertThrows(IllegalArgumentException.class, () -> pipeline.importCollada(sourceFile, outputDirectory, ""));
     assertThrows(IllegalArgumentException.class, () -> pipeline.importCollada(sourceFile, outputDirectory, "   "));
+    assertFalse(Files.exists(outputDirectory));
+  }
+
+  @Test
+  public void importColladaRejectsPathLikeModelNamesBeforeWritingOutputs() {
+    OpenAssetImportPipeline pipeline = new OpenAssetImportPipeline(Logger.getLogger("test"));
+    Path sourceFile = Path.of("target/open-asset-import-pipeline/path-like/source.dae");
+    Path outputDirectory = Path.of("target/open-asset-import-pipeline/path-like/output");
+
+    for (String modelName : List.of("../Escape", "/tmp/Escape", "nested/Escape", "nested\\Escape", ".", "..")) {
+      assertThrows(
+          "Expected path-like modelName to be rejected: " + modelName,
+          IllegalArgumentException.class,
+          () -> pipeline.importCollada(sourceFile, outputDirectory, modelName));
+    }
     assertFalse(Files.exists(outputDirectory));
   }
 

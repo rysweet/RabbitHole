@@ -81,11 +81,11 @@ Imports one normalized COLLADA model and writes proof outputs.
 | --- | --- | --- |
 | `colladaModelPath` | Yes | Path to a `.dae` file. Texture references are resolved relative to this file's parent directory. |
 | `outputDirectory` | Yes | Directory for generated `.glb`, `.a3r`, and optional `.a3t` files. The pipeline creates it when it does not exist. |
-| `modelName` | Yes | Alice-friendly model name used for generated output names and glTF root naming. |
+| `modelName` | Yes | Alice-friendly single file-name segment used for generated output names and glTF root naming. Absolute paths, nested paths, `.` and `..` are rejected. |
 
 Behavior:
 
-1. Validates non-null arguments and a non-blank `modelName`.
+1. Validates non-null arguments and a non-blank, single-segment `modelName`.
 2. Imports the model with `JointedModelColladaImporter.loadSkeletonVisual()`.
 3. Exports a binary glTF proof file with `JointedModelGltfExporter`.
 4. Exports Alice structure and texture resources with `JointedModelAliceExporter`.
@@ -199,6 +199,7 @@ outputs cannot be produced.
 | Output directory cannot be created | `IOException` |
 | Generated output cannot be written | `IOException` |
 | Invalid Java arguments | `NullPointerException` or `IllegalArgumentException` |
+| Path-like `modelName` | `IllegalArgumentException` |
 
 Importer warnings continue to use the logger supplied to the pipeline
 constructor.

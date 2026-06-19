@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,22 +38,24 @@ public final class OpenAssetImportPipeline {
     if (trimmedModelName.isEmpty()) {
       throw new IllegalArgumentException("modelName must not be blank");
     }
+    validateModelName(trimmedModelName);
 
     Path sourceFile = validateSourceFile(colladaModelPath);
-    Files.createDirectories(outputDirectory);
-    if (!Files.isDirectory(outputDirectory)) {
-      throw new IOException("Output path is not a directory: " + outputDirectory);
+    Path normalizedOutputDirectory = outputDirectory.toAbsolutePath().normalize();
+    Files.createDirectories(normalizedOutputDirectory);
+    if (!Files.isDirectory(normalizedOutputDirectory)) {
+      throw new IOException("Output path is not a directory: " + normalizedOutputDirectory);
     }
 
     logger.log(Level.INFO, "Importing COLLADA open asset proof from {0}", sourceFile);
     SkeletonVisual skeletonVisual = new JointedModelColladaImporter(sourceFile.toFile(), logger).loadSkeletonVisual();
-    Path gltfBinaryFile = outputDirectory.resolve(trimmedModelName + ".glb");
 
     ModelManifest.ModelVariant variant = createVariant(trimmedModelName);
-    Path aliceStructureFile = outputDirectory.resolve(AliceResourceUtilities.getVisualResourceFileNameFromModelName(variant.structure));
-    Path aliceTextureFile = outputDirectory.resolve(AliceResourceUtilities.getTextureResourceFileName(variant.structure, variant.textureSet));
-    writeGltf(skeletonVisual, variant, trimmedModelName, outputDirectory, gltfBinaryFile);
-    Optional<Path> textureOutput = writeAliceResources(skeletonVisual, variant, outputDirectory, aliceStructureFile, aliceTextureFile);
+    Path gltfBinaryFile = resolveOutputFile(normalizedOutputDirectory, trimmedModelName + ".glb");
+    Path aliceStructureFile = resolveOutputFile(normalizedOutputDirectory, AliceResourceUtilities.getVisualResourceFileNameFromModelName(variant.structure));
+    Path aliceTextureFile = resolveOutputFile(normalizedOutputDirectory, AliceResourceUtilities.getTextureResourceFileName(variant.structure, variant.textureSet));
+    writeGltf(skeletonVisual, variant, trimmedModelName, normalizedOutputDirectory, gltfBinaryFile);
+    Optional<Path> textureOutput = writeAliceResources(skeletonVisual, variant, normalizedOutputDirectory, aliceStructureFile, aliceTextureFile);
 
     int meshCount = countMeshes(skeletonVisual.geometries.getValue());
     int weightedMeshCount = countWeightedMeshes(skeletonVisual.weightedMeshes.getValue());
@@ -79,6 +82,26 @@ public final class OpenAssetImportPipeline {
       throw new ModelLoadingException("COLLADA input path is not a file: " + normalizedPath);
     }
     return normalizedPath.toRealPath();
+  }
+
+  private static void validateModelName(String modelName) {
+    Path path = Paths.get(modelName);
+    if (path.isAbsolute()
+        || path.getNameCount() != 1
+        || modelName.contains("/")
+        || modelName.contains("\\")
+        || ".".equals(modelName)
+        || "..".equals(modelName)) {
+      throw new IllegalArgumentException("modelName must be a single file-name segment");
+    }
+  }
+
+  private static Path resolveOutputFile(Path outputDirectory, String fileName) {
+    Path outputFile = outputDirectory.resolve(fileName).normalize();
+    if (!outputFile.startsWith(outputDirectory)) {
+      throw new IllegalArgumentException("output file must stay within outputDirectory: " + fileName);
+    }
+    return outputFile;
   }
 
   private void writeGltf(
