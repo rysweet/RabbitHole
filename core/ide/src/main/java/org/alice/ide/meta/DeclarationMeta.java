@@ -82,10 +82,21 @@ public class DeclarationMeta {
   private static AbstractDeclaration prevDeclaration;
 
   static {
-    ProjectDocumentFrame projectDocumentFrame = IDE.getActiveInstance().getDocumentFrame();
-    projectDocumentFrame.getPerspectiveState().addNewSchoolValueListener(perspectiveListener);
-    projectDocumentFrame.getDeclarationsEditorComposite().getTabState().addNewSchoolValueListener(declarationTabListener);
-    prevDeclaration = getDeclaration();
+    // The listener wiring below requires a live IDE singleton. When this class is
+    // force-initialized without one -- e.g. the headless coverage sweep, or a
+    // transitive static reference reached during headless tests -- skip the wiring
+    // instead of throwing from <clinit>. A throwing <clinit> raises
+    // ExceptionInInitializerError once and then poisons the class JVM-wide
+    // (NoClassDefFoundError on every later use), which breaks unrelated tests in
+    // the same reused fork. In production an IDE is always active before this
+    // class is first used, so the wiring runs exactly as before.
+    IDE ide = IDE.getActiveInstance();
+    if (ide != null) {
+      ProjectDocumentFrame projectDocumentFrame = ide.getDocumentFrame();
+      projectDocumentFrame.getPerspectiveState().addNewSchoolValueListener(perspectiveListener);
+      projectDocumentFrame.getDeclarationsEditorComposite().getTabState().addNewSchoolValueListener(declarationTabListener);
+      prevDeclaration = getDeclaration();
+    }
   }
 
   public static void addTypeMetaStateValueListener(ValueListener<AbstractType<?, ?, ?>> typeListener) {

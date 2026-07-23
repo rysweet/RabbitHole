@@ -25,7 +25,14 @@ org.alice.ide.identifier.IdentifierNameGenerator
 org.alice.ide.instancefactory.ThisFieldAccessFactory
 org.alice.ide.issue.CurrentProjectAttachment
 org.alice.ide.issue.GraphicsPropertiesAttachment
-org.alice.ide.meta.DeclarationMeta
+# org.alice.ide.meta.DeclarationMeta is intentionally NOT swept. Its static
+# initializer calls IDE.getActiveInstance().getDocumentFrame(), which throws NPE
+# when no IDE singleton is active (the headless sweep runs without one). That
+# turns the class's <clinit> into an ExceptionInInitializerError, permanently
+# poisoning it for the rest of the JVM (NoClassDefFoundError on every later use)
+# and breaking DeclarationMetaBehaviorTest in the same reused fork. The class is
+# already covered by DeclarationMetaBehaviorTest, which installs a FakeIde first.
+# Do not re-add it here.
 org.alice.ide.name.validators.TypeNameValidator
 org.alice.ide.properties.adapter.AbstractPropertyAdapter
 org.alice.ide.properties.adapter.SceneFogDensityAdapter
