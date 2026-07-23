@@ -161,6 +161,15 @@ Here's an example command to copy the pre-push hook:
 
     cp hooks/pre-push .git/hooks/pre-push
 
+The `pre-commit` hook runs the test suite (headless, in parallel) before each
+commit so headless-only failures are caught locally instead of in CI:
+
+    cp hooks/pre-commit .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+
+It delegates to `scripts/run-headless-tests.sh`; bypass it for work-in-progress
+commits with `git commit --no-verify`.
+
 ## IDE
 **IntelliJ IDEA** is suggested for coding/building Alice 3. There is a free community edition
 or JetBrains offers a product pack for students using an edu email address [here](https://www.jetbrains.com/community/education/#students

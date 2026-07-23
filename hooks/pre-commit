@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Pre-commit hook: always run the test suite the same way CI does (headless,
+# maximum parallelism) before allowing a commit.
+#
+# Rationale: the local pre-push hook only runs Checkstyle. Nothing ran the tests
+# locally, so headless-only failures reached CI unnoticed. This hook closes that
+# gap by delegating to scripts/run-headless-tests.sh -- the single source of
+# truth shared with CI.
+#
+# Install: copy this file to .git/hooks/pre-commit (see docs/contributing.md).
+#
+# Bypass (use sparingly, e.g. WIP commits): git commit --no-verify
+#
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+RUNNER="${REPO_ROOT}/scripts/run-headless-tests.sh"
+
+if [ ! -x "${RUNNER}" ]; then
+	printf >&2 "\n%s\n\n" "pre-commit: ${RUNNER} not found or not executable; cannot run tests."
+	exit 1
+fi
+
+printf "%s\n" "pre-commit: running headless test suite (parallel). Use 'git commit --no-verify' to bypass."
+exec "${RUNNER}"

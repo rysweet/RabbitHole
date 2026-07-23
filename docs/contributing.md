@@ -21,6 +21,28 @@ chmod +x .git/hooks/pre-push
 
 That hook runs Git LFS checks and Maven Checkstyle before a push.
 
+## Install the local pre-commit test hook
+
+RabbitHole also keeps a `pre-commit` hook in `hooks/` that runs the test suite
+before each commit, so headless-only failures are caught locally instead of in CI.
+
+```bash
+cp hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+The hook delegates to `scripts/run-headless-tests.sh`, which mirrors the CI
+environment (`-Djava.awt.headless=true`) and runs tests with maximum
+process-level parallelism (`mvn -T 1C`, one isolated test JVM per core). Bypass
+it for work-in-progress commits with `git commit --no-verify`.
+
+You can run the same suite manually at any time:
+
+```bash
+scripts/run-headless-tests.sh                # full reactor
+scripts/run-headless-tests.sh -pl core/ide -am   # scope to a module and its deps
+```
+
 ## Required checks
 
 Run these from the repository root:

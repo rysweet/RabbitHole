@@ -98,6 +98,13 @@
     <java.awt.headless>true</java.awt.headless>
     <argLine></argLine>
 
+    <!-- Surefire fork controls. Defaults preserve historical behavior
+         (single reused fork). Overridable from the command line to enable
+         process-isolation parallelism, e.g. the headless pre-commit test
+         gate uses -Dsurefire.forkCount=1C -Dsurefire.reuseForks=false. -->
+    <surefire.forkCount>1</surefire.forkCount>
+    <surefire.reuseForks>true</surefire.reuseForks>
+
     <javafx.version>21.0.7</javafx.version>
   </properties>
 
@@ -534,10 +541,12 @@
             <dependency>
               <groupId>org.apache.maven.surefire</groupId>
               <artifactId>surefire-junit47</artifactId>
-              <version>3.5.2</version>
+              <version>3.5.3</version>
             </dependency>
           </dependencies>
           <configuration>
+            <forkCount>${surefire.forkCount}</forkCount>
+            <reuseForks>${surefire.reuseForks}</reuseForks>
             <argLine>@{argLine} -Djava.awt.headless=${java.awt.headless}</argLine>
           </configuration>
         </plugin>
