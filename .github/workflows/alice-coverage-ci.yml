@@ -168,7 +168,7 @@ jobs:
             if [[ -d "${HOME}/.m2/repository" ]]; then
               find "${HOME}/.m2/repository" -name '*.lastUpdated' -delete
             fi
-            if scripts/ci-duration-note.sh "Coverage Maven attempt ${attempt}" -- mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Pcoverage verify; then
+            if scripts/ci-duration-note.sh "Coverage Maven attempt ${attempt}" -- mvn --settings .github/maven/jogamp-ci-settings.xml -U -Dinstall4j.skip -Dcheckstyle.skip -Dmaven.test.failure.ignore=true -Dmdep.skip=true -Dlicense.skipAggregateDownloadLicenses=true -Pcoverage verify; then
               exit 0
             fi
             if [[ "${attempt}" == "5" ]]; then

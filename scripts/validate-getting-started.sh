@@ -232,6 +232,7 @@ run_headless_lane() {
     -Dinstall4j.skip
     -Dcheckstyle.skip
     -Dmdep.skip=true
+    -Dlicense.skipAggregateDownloadLicenses=true
     -Djava.awt.headless=true
     clean
     install
@@ -362,6 +363,7 @@ run_gui_maven_validation() {
     -Dinstall4j.skip
     -Dcheckstyle.skip
     -DskipTests
+    -Dlicense.skipAggregateDownloadLicenses=true
     -Djava.awt.headless=false
     clean
     install
