@@ -12,13 +12,20 @@
 #   - Forces -Djava.awt.headless=true so GraphicsEnvironment.isHeadless() matches
 #     the CI runner even on a developer machine that has a display attached.
 #
-# Parallelism (fastest wall-clock, chosen strategy = process isolation):
+# Parallelism (maximum wall-clock throughput while still mirroring CI):
 #   - mvn -T 1C            : build/test reactor modules in parallel (1 thread/core).
-#   - surefire.forkCount=1C: up to one test JVM per core.
-#   - surefire.reuseForks=false: a fresh JVM per test class (strong isolation).
-#     NOTE: strong isolation maximizes speed but HIDES cross-test shared-static
-#     state bugs in this gate. CI runs surefire with its default reused fork, which
-#     still surfaces those. Do not rely on this gate to catch static-poisoning bugs.
+#   - surefire.forkCount=1C: up to one test JVM per core (process-level parallelism).
+#   - surefire.reuseForks=true: each fork JVM is reused across the test classes it
+#     runs. This is what CI does, so the gate reproduces CI behavior -- including
+#     cross-test shared-static state bugs (e.g. static-initializer poisoning), which
+#     is the bug class that first motivated this gate.
+#
+#     Measured on core/ide (~70% of all tests, 11067 tests): reuseForks=true is
+#     ~2.7x FASTER wall-clock than reuseForks=false, because these tests are very
+#     fine-grained and a fresh JVM per class is dominated by JVM/classload startup.
+#     reuseForks=false ALSO hides the static-poisoning bugs CI catches, so it is
+#     wrong for a CI-mirroring gate on both counts. Override only if you have a
+#     specific isolation need (MAVEN_REUSE_FORKS=false).
 #
 # Usage:
 #   scripts/run-headless-tests.sh                 # full reactor (default)
@@ -26,8 +33,9 @@
 #   Any extra arguments are passed straight through to Maven.
 #
 # Overrides (environment variables):
-#   MAVEN_FORK_COUNT     default 1C   (surefire.forkCount)
-#   MAVEN_REACTOR_THREADS default 1C  (mvn -T value)
+#   MAVEN_FORK_COUNT     default 1C    (surefire.forkCount)
+#   MAVEN_REUSE_FORKS    default true  (surefire.reuseForks; mirrors CI)
+#   MAVEN_REACTOR_THREADS default 1C   (mvn -T value)
 #   SKIP_SUBMODULE_INIT  set to 1 to skip the tweedle-lang submodule init
 #
 set -euo pipefail
@@ -36,6 +44,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "${REPO_ROOT}"
 
 FORK_COUNT="${MAVEN_FORK_COUNT:-1C}"
+REUSE_FORKS="${MAVEN_REUSE_FORKS:-true}"
 REACTOR_THREADS="${MAVEN_REACTOR_THREADS:-1C}"
 
 # Repo guardrail: the Tweedle grammar submodule must be initialized before broad
@@ -51,7 +60,7 @@ MVN_ARGS=(
   -T "${REACTOR_THREADS}"
   -Djava.awt.headless=true
   -Dsurefire.forkCount="${FORK_COUNT}"
-  -Dsurefire.reuseForks=false
+  -Dsurefire.reuseForks="${REUSE_FORKS}"
   -Dcheckstyle.skip
   -Dinstall4j.skip
 )
