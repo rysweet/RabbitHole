@@ -45,6 +45,7 @@ expectations.
 - how reusable code requests UI prompts without opening Swing dialogs in headless contexts
 - how GUI-capable CI lanes, Eatme wrappers, the deterministic object-transform workflow, and Xvfb outside-in evidence are verified
 - how normalized open COLLADA assets flow through Java model loading to `SkeletonVisual`, `.glb`, `.a3r`, and `.a3t` output
+- how every external build input is pinned to an exact, immutable identifier for reproducible, tamper-evident builds
 
 ## Documentation map
 
@@ -76,6 +77,7 @@ expectations.
 - [UI Prompt Boundary](./concepts/ui-prompt-boundary.md)
 - [Scoped Clipboard Operation Registries](./concepts/scoped-clipboard-operation-registries.md)
 - [Reflection Sweep Contracts](./concepts/reflection-sweep-contracts.md)
+- [Supply-Chain Dependency Pinning](./concepts/supply-chain-dependency-pinning.md)
 
 ### How-to guides
 
@@ -92,6 +94,7 @@ expectations.
 - [Verify Generated Source Validation](./howto/verify-generated-source-validation.md)
 - [Verify CI GUI, Eatme, and Xvfb Readiness](./howto/verify-ci-gui-eatme-xvfb-readiness.md)
 - [Verify PGP Signatures of Maven Artifacts](./howto/run-pgpverify.md)
+- [Pin and Audit Dependencies](./howto/pin-and-audit-dependencies.md)
 
 ### Tutorials
 
@@ -122,6 +125,7 @@ expectations.
 - [Deterministic Test Waits](./reference/deterministic-test-waits.md)
 - [Hybrid Tweedle/XML Archive Format](./tweedle-hybrid-format.md)
 - [Tweedle Decoder-Gap Backlog](./tweedle-decode-gaps.md)
+- [Dependency Pinning Audit](./reference/dependency-pinning-audit.md)
 
 ### Architecture Atlas
 
