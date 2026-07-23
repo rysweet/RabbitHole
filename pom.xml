@@ -100,8 +100,9 @@
 
     <!-- Surefire fork controls. Defaults preserve historical behavior
          (single reused fork). Overridable from the command line to enable
-         process-isolation parallelism, e.g. the headless pre-commit test
-         gate uses -Dsurefire.forkCount=1C -Dsurefire.reuseForks=false. -->
+         process-level parallelism, e.g. the headless pre-commit test gate
+         uses -Dsurefire.forkCount=1C (one reused test JVM per core, matching
+         CI's reuseForks default). -->
     <surefire.forkCount>1</surefire.forkCount>
     <surefire.reuseForks>true</surefire.reuseForks>
 
