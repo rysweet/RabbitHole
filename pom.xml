@@ -859,6 +859,12 @@
     <pluginRepository>
       <id>ej-technologies</id>
       <url>https://maven.ej-technologies.com/repository</url>
+      <releases>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
     </pluginRepository>
   </pluginRepositories>
 
@@ -867,23 +873,47 @@
       <id>jogamp.org</id>
       <name>JogAmp</name>
       <url>https://jogamp.org/deployment/maven/</url>
+      <releases>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
     </repository>
 
     <repository>
       <id>org.alice</id>
       <name>Alice Repository</name>
       <url>https://maven.alice.org/alice</url>
+      <releases>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
     </repository>
     <repository>
       <id>org.alice.external</id>
       <name>Alice External Repository</name>
       <url>https://maven.alice.org/external</url>
+      <releases>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
     </repository>
 
     <repository>
       <id>thirdparty-releases</id>
       <name>JBoss Thirdparty Releases</name>
       <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-releases</url>
+      <releases>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
     </repository>
 
     <repository>
@@ -891,6 +921,12 @@
       <name>Atlassian Public Repository</name>
       <layout>default</layout>
       <url>https://maven.atlassian.com/maven-external</url>
+      <releases>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
     </repository>
   </repositories>
 </project>
