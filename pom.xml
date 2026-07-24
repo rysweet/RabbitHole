@@ -839,6 +839,57 @@
       </build>
     </profile>
 
+    <!--
+      Opt-in PGP signature verification for dependencies and plugins (issue #980).
+
+      This profile is CONSERVATIVE by design so the default build is never affected:
+        * It is only active when explicitly requested via -Ppgpverify.
+        * It is configured in a non-failing (warn) posture: missing signatures,
+          missing keys, and weak signatures are logged as warnings, not build failures.
+
+      Run it with:
+        mvn -Ppgpverify verify
+      or as a standalone check:
+        mvn -Ppgpverify org.simplify4u.plugins:pgpverify-maven-plugin:check
+
+      See docs/howto/run-pgpverify.md for details and the path to a fail-closed posture.
+    -->
+    <profile>
+      <id>pgpverify</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.simplify4u.plugins</groupId>
+            <artifactId>pgpverify-maven-plugin</artifactId>
+            <version>1.19.1</version>
+            <executions>
+              <execution>
+                <id>pgpverify-check</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!--
+                Non-failing (warn) posture: never break a build on missing/weak
+                signatures or missing trusted keys. Flip these to true (and tighten
+                the keysMap below) to move toward a fail-closed posture.
+              -->
+              <failNoSignature>false</failNoSignature>
+              <failNoKey>false</failNoKey>
+              <failWeakSignature>false</failWeakSignature>
+              <verifyPomFiles>true</verifyPomFiles>
+              <verifyPlugins>true</verifyPlugins>
+              <verifyPluginDependencies>true</verifyPluginDependencies>
+              <keysMapLocation>${maven.multiModuleProjectDirectory}/.mvn/pgp-keys-map.list</keysMapLocation>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <profile>
       <id>buildInstaller</id>
       <activation>

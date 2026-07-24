@@ -1,0 +1,34 @@
+# PGP keys map for pgpverify-maven-plugin (issue #980)
+#
+# Format (one rule per line):
+#   groupId:artifactId:version = fingerprint[, fingerprint...]
+# Special values:
+#   <key>                       trust any valid signature from a known key
+#   noSig                       artifact is expected to have no signature
+#   noKey                       accept a signature even if the key is not resolvable
+#
+# See: https://www.simplify4u.org/pgpverify-maven-plugin/keysmap-format.html
+#
+# -----------------------------------------------------------------------------
+# CURRENT POSTURE: permissive / non-blocking.
+#
+# This map intentionally starts permissive so that enabling -Ppgpverify never
+# breaks a build. Combined with failNoSignature/failNoKey/failWeakSignature=false
+# in the pgpverify profile, unsigned or unverifiable artifacts are only warned
+# about, not rejected.
+#
+# The org.alice reactor produces unsigned -SNAPSHOT artifacts; they are declared
+# as noSig so they do not generate spurious warnings. Do NOT change their
+# versions (repo guardrail).
+# -----------------------------------------------------------------------------
+
+# Local reactor / SNAPSHOT artifacts are unsigned by design.
+org.alice = noSig
+org.lgna = noSig
+edu.cmu.cs.dennisc = noSig
+
+# Everything else: accept any valid key for now. Tighten this over time by
+# replacing the wildcard with explicit fingerprints per artifact/repository
+# (jogamp.org, org.alice, org.alice.external, thirdparty-releases,
+# atlassian-public) as part of the path to a fail-closed posture.
+* = <key>, noKey, noSig
