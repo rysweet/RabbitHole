@@ -42,6 +42,7 @@ nav:
     - "Open Asset Import Pipeline API": "reference/open-asset-import-pipeline-api.md"
     - "Release Management Checklist": "reference/release-management-checklist.md"
     - "Text Migration Registry Parity": "reference/text-migration-registry-parity.md"
+    - "Automated Dependency Updates": "reference/automated-dependency-updates.md"
   - "Architecture Atlas":
     - "Atlas Overview": "atlas/index.md"
     - "Repository Surface": "atlas/repo-surface/README.md"
