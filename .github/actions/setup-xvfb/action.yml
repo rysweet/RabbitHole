@@ -9,6 +9,14 @@ outputs:
 runs:
   using: composite
   steps:
+    # Reproducibility note (issue #984):
+    # These packages come from the official Ubuntu archive and are GPG-signed
+    # by the distro, so their integrity is already verified by apt. We keep the
+    # package list explicit and use --no-install-recommends to minimize the
+    # install surface. Exact apt version pinning is intentionally NOT used: the
+    # Ubuntu archive only retains the latest point releases, so pinned versions
+    # age out and break CI on GitHub-hosted runners. The residual risk of an
+    # unpinned (but signed) install is an accepted trade-off for CI stability.
     - name: Install Xvfb
       shell: bash
       run: |
