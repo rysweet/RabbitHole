@@ -50,8 +50,8 @@ jobs:
 
       - name: Build (Maven)
         run: >-
-          JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-          mvn -DskipTests -Dcheckstyle.skip
+          mvn --settings .github/maven/jogamp-ci-settings.xml -U
+          -DskipTests -Dcheckstyle.skip
           -Dlicense.skipAggregateDownloadLicenses=true
           -Dinstall4j.skip -Djava.awt.headless=true -q install
 
