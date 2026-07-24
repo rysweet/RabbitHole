@@ -51,6 +51,20 @@ public class Decoder {
   private static final List<String> JAVA_TYPE_PACKAGES = List.of(
       "org.lgna.story.",
       "org.lgna.story.resources.",
+      // Gallery model resource enums (e.g. TerrainResource, WaterTankResource) live in
+      // per-category subpackages of org.lgna.story.resources; the Tweedle encoder emits them by
+      // simple name, so the decoder must search these subpackages to resolve resource-typed
+      // method parameters and fields.
+      "org.lgna.story.resources.aircraft.",
+      "org.lgna.story.resources.biped.",
+      "org.lgna.story.resources.fish.",
+      "org.lgna.story.resources.flyer.",
+      "org.lgna.story.resources.marinemammal.",
+      "org.lgna.story.resources.prop.",
+      "org.lgna.story.resources.quadruped.",
+      "org.lgna.story.resources.slitherer.",
+      "org.lgna.story.resources.train.",
+      "org.lgna.story.resources.watercraft.",
       "org.lgna.common.resources.",
       "java.lang.");
   static final Map<String, Class<?>> TWEEDLE_TYPE_ALIASES = Map.of(

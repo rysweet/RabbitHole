@@ -39,36 +39,63 @@ fallback.
 
 | Type | Gap category | Decoder message |
 | --- | --- | --- |
-| `Program` | Program type parse | `Unable to parse Tweedle type.` |
-| `Scene` | Non-literal field initializer | `Non-literal Tweedle field initializers are not yet supported by the AST decoder: ground` |
+| `Program` | Comments | `Tweedle comments are not yet supported by the AST decoder.` |
+| `Scene` | Comments | `Tweedle comments are not yet supported by the AST decoder.` |
 | `ElephantStable` | Constructor body | `Tweedle constructor bodies are not yet supported by the AST decoder: ElephantStable` |
 | `Prop` | Constructor body | `Tweedle constructor bodies are not yet supported by the AST decoder: Prop` |
-| `SandDunes` | Unsupported method parameter | `Unsupported Tweedle method parameter: TerrainResource` |
-| `WaterTank` | Unsupported method parameter | `Unsupported Tweedle method parameter: WaterTankResource` |
+| `SandDunes` | Constructor body (arg-bearing `this` call) | `Tweedle argument-bearing explicit this method calls are not supported by the AST decoder: setSandDunesResource.this.setJointedModelResource` |
+| `WaterTank` | Constructor body (arg-bearing `this` call) | `Tweedle argument-bearing explicit this method calls are not supported by the AST decoder: setWaterTankResource.this.setJointedModelResource` |
+
+> **Census currency.** This table reflects the state after the resource-typed
+> method-parameter gap was closed (see item 4 below). `SandDunes`/`WaterTank`
+> previously failed at parameter-type resolution
+> (`Unsupported Tweedle method parameter: TerrainResource`); resolving that gap
+> revealed the deeper constructor-body statement gap they now report. `Program`
+> and `Scene` currently fail first on the comment gap (item 5); their earlier
+> reported messages (top-level parse / non-literal field initializer) sit behind
+> that and will re-surface once comments are handled.
 
 ### Grouped by decoder capability to add (Phase 5 backlog)
 
-1. **Program type parse** (`Program`). The top-level program type does not parse.
-   This is the highest-leverage gap: closing it lets whole *projects* prefer the
-   Tweedle read path instead of always falling back to XML.
-2. **Non-literal field initializers** (`Scene.ground`). The decoder only accepts
-   literal field initializers; field initializers that are expressions (e.g. a
-   reference to another declaration) are rejected.
-3. **Constructor bodies** (`ElephantStable`, `Prop`). The decoder does not yet
-   reconstruct statements inside a user-type constructor body.
-4. **Resource-typed method parameters** (`SandDunes` → `TerrainResource`,
-   `WaterTank` → `WaterTankResource`). Method parameters whose type is a resource
-   enum/type are not yet resolved by the decoder.
-5. **Comments** (any type containing a `Comment` statement). The Tweedle grammar
-   routes `//` line comments and `/* … */` block comments to the lexer's hidden
-   channel, so a `Comment` node the encoder emits is dropped on parse. Rather than
-   decode to an AST that is silently missing the comment, the decoder now rejects
-   comment-bearing source. This gap is not exercised by `indiaMinimum.a3p`; it is
-   characterized separately by `TweedleCommentDecodeGapTest`
+1. **Comments** (`Program`, `Scene`, and any type containing a `Comment`
+   statement). The Tweedle grammar routes `//` line comments and `/* … */` block
+   comments to the lexer's hidden channel, so a `Comment` node the encoder emits
+   is dropped on parse. Rather than decode to an AST that is silently missing the
+   comment, the decoder rejects comment-bearing source. Closing it requires a
+   first-class comment representation in `org.alice.tweedle.ast` (and grammar
+   support in the `tweedle-lang` submodule), which is out of scope for the hybrid
+   export work. Characterized separately by `TweedleCommentDecodeGapTest`
    (`core/ast/src/test/java/org/alice/serialization/tweedle/TweedleCommentDecodeGapTest.java`).
-   Closing it requires a first-class comment representation in
-   `org.alice.tweedle.ast` (and grammar support in the `tweedle-lang` submodule),
-   which is out of scope for the hybrid export work.
+2. **Constructor bodies** (`ElephantStable`, `Prop`). The decoder does not yet
+   reconstruct statements inside a user-type constructor body.
+3. **Argument-bearing explicit `this` method calls in constructor bodies**
+   (`SandDunes` → `this.setJointedModelResource(...)`, `WaterTank` likewise).
+   Constructor-body decoding currently accepts only assignments and
+   zero-argument `this`/same-class calls; a `this`-qualified call **with
+   arguments** (as gallery models emit to set their jointed-model resource) is
+   rejected. Closing this needs argument-expression decoding plus method
+   resolution by name+signature on the current type (see
+   `StatementDecoder.unsupportedArgumentBearingExplicitThisMethodCall`). This is
+   the next-highest-leverage in-scope gap: it blocks the two resource-backed
+   model types and overlaps the constructor-body work in item 2.
+4. **Resource-typed method parameters** (`SandDunes` → `TerrainResource`,
+   `WaterTank` → `WaterTankResource`). **CLOSED.** Gallery model resource enums
+   live in per-category subpackages of `org.lgna.story.resources` (e.g.
+   `org.lgna.story.resources.prop.TerrainResource`), but the Tweedle encoder
+   emits them by simple name. `Decoder.JAVA_TYPE_PACKAGES` previously searched
+   only `org.lgna.story.resources` (not its subpackages), so simple resource
+   names failed to resolve. The decoder now also searches the resource
+   subpackages (`aircraft`, `biped`, `fish`, `flyer`, `marinemammal`, `prop`,
+   `quadruped`, `slitherer`, `train`, `watercraft`). This is purely additive —
+   `resolveType` consults the terminals set and type aliases first, so the
+   subpackage search only runs for names that would otherwise have thrown.
+5. **Non-literal field initializers** (`Scene.ground`, once the comment gap is
+   lifted). The decoder only accepts literal field initializers; field
+   initializers that are expressions (e.g. a reference to another declaration)
+   are rejected.
+6. **Program type parse** (`Program`, once the comment gap is lifted). The
+   top-level program type does not parse. Highest-leverage once reachable:
+   closing it lets whole *projects* prefer the Tweedle read path.
 
 ## Next fixtures to add
 
