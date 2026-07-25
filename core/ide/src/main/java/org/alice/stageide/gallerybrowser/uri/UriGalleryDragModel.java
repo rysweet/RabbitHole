@@ -49,7 +49,6 @@ import edu.cmu.cs.dennisc.java.util.Maps;
 import edu.cmu.cs.dennisc.java.util.ResourceBundleUtilities;
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
 import edu.cmu.cs.dennisc.java.util.zip.ZipUtilities;
-import edu.cmu.cs.dennisc.xml.XMLUtilities;
 import org.alice.ide.ast.export.type.*;
 import org.alice.ide.ast.type.merge.croquet.MembersToolPalette;
 import org.alice.ide.croquet.models.ui.formatter.FormatterState;
@@ -67,9 +66,7 @@ import org.lgna.croquet.icon.IconFactory;
 import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.JavaType;
 import org.lgna.story.resources.ModelResource;
-import org.w3c.dom.Document;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -116,14 +113,10 @@ public final class UriGalleryDragModel extends ResourceGalleryDragModel {
   private TypeSummary getTypeSummary() {
     if (this.typeSummary == null) {
       Map<String, byte[]> mapFilenameToExtractedData = this.getFilenameToExtractedData();
-      byte[] data = mapFilenameToExtractedData.get(TypeSummaryDataSource.FILENAME);
-      if (data != null) {
-        Document xmlDocument = XMLUtilities.read(new ByteArrayInputStream(data));
-        try {
-          this.typeSummary = TypeXmlUtitlities.decode(xmlDocument);
-        } catch (VersionNotSupportedException vnse) {
-          throw new RuntimeException(vnse);
-        }
+      try {
+        this.typeSummary = TypeSummaryReader.read(mapFilenameToExtractedData);
+      } catch (VersionNotSupportedException vnse) {
+        throw new RuntimeException(vnse);
       }
     }
     return this.typeSummary;

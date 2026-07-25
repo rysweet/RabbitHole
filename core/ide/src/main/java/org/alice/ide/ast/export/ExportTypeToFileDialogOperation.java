@@ -47,6 +47,7 @@ import edu.cmu.cs.dennisc.javax.swing.option.Dialogs;
 import org.alice.ide.IDE;
 import org.alice.ide.ast.export.type.TypeSummary;
 import org.alice.ide.ast.export.type.TypeSummaryDataSource;
+import org.alice.ide.ast.export.type.TypeSummaryJsonDataSource;
 import org.alice.ide.icons.Icons;
 import org.alice.stageide.StageIDE;
 import org.lgna.croquet.CancelException;
@@ -85,7 +86,8 @@ public class ExportTypeToFileDialogOperation extends Operation {
   }
 
   protected void handleFile(File file) throws CancelException, IOException {
-    IoUtilities.writeType(file, type, new TypeSummaryDataSource(new TypeSummary(this.type)));
+    TypeSummary typeSummary = new TypeSummary(this.type);
+    IoUtilities.writeType(file, type, new TypeSummaryDataSource(typeSummary), new TypeSummaryJsonDataSource(typeSummary));
   }
 
   @Override
