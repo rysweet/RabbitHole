@@ -217,6 +217,48 @@ public class IoUtilitiesTest {
   }
 
   @Test
+  public void hybridProjectManifestRecordsBoundedTypeDependencies() throws Exception {
+    NamedUserType sceneType = sceneType("DependencyScene");
+    NamedUserType programType = programType("DependencyProgram");
+    UserField sceneField = new UserField();
+    sceneField.name.setValue("scene");
+    sceneField.valueType.setValue(sceneType);
+    programType.fields.add(sceneField);
+    Set<NamedUserType> namedUserTypes = new HashSet<>();
+    namedUserTypes.add(sceneType);
+    Project project = new Project(
+        programType,
+        namedUserTypes,
+        new HashSet<>(),
+        Project.SceneCameraType.WindowCamera);
+    File projectFile = temporaryFolder.newFile("hybrid-dependencies.a3p");
+
+    IoUtilities.writeProject(projectFile, project);
+
+    try (ZipFile zipFile = new ZipFile(projectFile)) {
+      ProjectManifest manifest = readProjectManifest(zipFile);
+
+      TypeReference programReference = findTypeReference(manifest, "DependencyProgram");
+      assertNotNull(programReference);
+      assertNotNull(
+          "A type that references another user type must record it in the manifest dependency list",
+          programReference.dependencies);
+      assertTrue(
+          "Program's bounded dependencies must include the referenced scene type",
+          programReference.dependencies.contains("DependencyScene"));
+      assertFalse(
+          "A type must not list itself as a dependency",
+          programReference.dependencies.contains("DependencyProgram"));
+
+      TypeReference sceneReference = findTypeReference(manifest, "DependencyScene");
+      assertNotNull(sceneReference);
+      assertNull(
+          "A type with no user-type references must omit the dependencies field",
+          sceneReference.dependencies);
+    }
+  }
+
+  @Test
   public void hybridTypeTweedlePayloadIsBoundedToTheExportedType() throws Exception {
     NamedUserType referencedType = sceneType("ReferencedScene");
     NamedUserType exportedType = programType("BoundedGalleryType");

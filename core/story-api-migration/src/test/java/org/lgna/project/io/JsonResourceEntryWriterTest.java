@@ -221,6 +221,29 @@ public class JsonResourceEntryWriterTest {
   // Helpers
   // ═══════════════════════════════════════════════════════════════════════════
 
+  @Test
+  public void dependencyNamesIncludesReferencedUserSupertypeButNotSelf() {
+    NamedUserType base = programType("BaseProp");
+    NamedUserType derived = new NamedUserType();
+    derived.name.setValue("DerivedProp");
+    derived.superType.setValue(base);
+
+    List<String> dependencies = JsonResourceEntryWriter.dependencyNames(derived);
+
+    assertNotNull("A type extending a user type must record that dependency", dependencies);
+    assertTrue("Dependencies must include the referenced user supertype", dependencies.contains("BaseProp"));
+    assertFalse("A type must not list itself as a dependency", dependencies.contains("DerivedProp"));
+  }
+
+  @Test
+  public void dependencyNamesReturnsNullWhenOnlyBuiltInTypesAreReferenced() {
+    NamedUserType type = programType("Standalone");
+
+    assertNull(
+        "A type that references only built-in (JavaType) types has no user dependencies",
+        JsonResourceEntryWriter.dependencyNames(type));
+  }
+
   private static NamedUserType programType(String name) {
     NamedUserType type = new NamedUserType();
     type.name.setValue(name);

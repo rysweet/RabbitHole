@@ -478,6 +478,37 @@ public class ManifestEncoderTest {
     assertEquals("Alien_DEFAULT_texture_1_diffuseMap", decoded.resources.get(0).name);
   }
 
+  @Test
+  public void typeReferenceDependenciesRoundTripThroughJson() throws IOException {
+    ModelManifest original = new ModelManifest();
+    original.resources = new java.util.ArrayList<>();
+    TypeReference typeReference = new TypeReference("Balloon", "src/Balloon.twe", "tweedle");
+    typeReference.dependencies = java.util.Arrays.asList("Basket", "SBird");
+    original.resources.add(typeReference);
+
+    String json = ManifestEncoderDecoder.toJson(original);
+    ModelManifest decoded = ManifestEncoderDecoder.fromJsonOrThrow(json, ModelManifest.class);
+
+    assertEquals(1, decoded.resources.size());
+    assertTrue(decoded.resources.get(0) instanceof TypeReference);
+    TypeReference decodedReference = (TypeReference) decoded.resources.get(0);
+    assertEquals(java.util.Arrays.asList("Basket", "SBird"), decodedReference.dependencies);
+  }
+
+  @Test
+  public void typeReferenceWithoutDependenciesOmitsTheFieldFromJson() {
+    ModelManifest original = new ModelManifest();
+    original.resources = new java.util.ArrayList<>();
+    original.resources.add(new TypeReference("Balloon", "src/Balloon.twe", "tweedle"));
+
+    String json = ManifestEncoderDecoder.toJson(original);
+
+    assertFalse(
+        "A dependency-free type reference must not emit a dependencies field, so "
+            + "legacy archives and dependency-free types stay byte-identical.",
+        json.contains("dependencies"));
+  }
+
   private LibraryManifest getSimpleLibraryManifest() {
     LibraryManifest lib = new LibraryManifest();
     lib.metadata = new Manifest.MetaData();

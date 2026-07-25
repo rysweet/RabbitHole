@@ -106,10 +106,32 @@ final class JsonResourceEntryWriter {
 
     if (manifestResourceNames.add(typeName)) {
       final String fileName = "src/" + typeName + '.' + TWEEDLE_EXTENSION;
-      manifest.resources.add(new TypeReference(typeName, fileName, TWEEDLE_FORMAT));
+      TypeReference typeReference = new TypeReference(typeName, fileName, TWEEDLE_FORMAT);
+      typeReference.dependencies = dependencyNames(ut);
+      manifest.resources.add(typeReference);
       return new ByteArrayDataSource(fileName, serializedClass(ut));
     }
     return null;
+  }
+
+  /**
+   * Collect the names of the other user-authored types that {@code type}
+   * references. Uses a bounded, non-tunneling crawl so the result is the type's
+   * direct dependency set (supertype, field types, parameter/return types, and
+   * types named in its bodies) without recursing into those types' own members.
+   * Returns {@code null} when there are no dependencies so the manifest omits the
+   * field entirely. Package-private for direct unit testing.
+   */
+  static List<String> dependencyNames(NamedUserType type) {
+    IsInstanceCrawler<NamedUserType> crawler = IsInstanceCrawler.createInstance(NamedUserType.class);
+    type.crawl(crawler, CrawlPolicy.INCLUDE_REFERENCES_BUT_DO_NOT_TUNNEL);
+    SortedSet<String> names = new TreeSet<>();
+    for (NamedUserType referenced : crawler.getList()) {
+      if (referenced != type) {
+        names.add(referenced.getName());
+      }
+    }
+    return names.isEmpty() ? null : new ArrayList<>(names);
   }
 
   Collection<? extends DataSource> createEntriesForResourceTypes(Manifest manifest, Set<JointedModelResource> resources) {

@@ -43,7 +43,10 @@
 package org.alice.stageide.gallerybrowser.uri;
 
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
+import edu.cmu.cs.dennisc.javax.swing.option.Dialogs;
+import org.alice.ide.ProjectStack;
 import org.alice.ide.ast.type.croquet.ImportTypeWizard;
+import org.alice.ide.ast.type.merge.core.ImportDependencyResolver;
 import org.alice.ide.ast.type.merge.core.MergeUtilities;
 import org.alice.nonfree.NebulousIde;
 import org.alice.stageide.ast.declaration.AddResourceKeyManagedFieldComposite;
@@ -55,6 +58,7 @@ import org.lgna.croquet.Application;
 import org.lgna.croquet.Operation;
 import org.lgna.croquet.SingleThreadIteratingOperation;
 import org.lgna.croquet.history.UserActivity;
+import org.lgna.project.Project;
 import org.lgna.project.VersionNotSupportedException;
 import org.lgna.project.ast.NamedUserType;
 import org.lgna.project.io.IoUtilities;
@@ -63,6 +67,7 @@ import org.lgna.project.io.TypeResourcesPair;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -140,6 +145,9 @@ public abstract class ResourceKeyUriIteratingOperation extends SingleThreadItera
     }
     if (typeResourcesPair != null) {
       NamedUserType importedRootType = typeResourcesPair.getType();
+      if (!confirmMissingDependencies(importedRootType)) {
+        return null;
+      }
       Set<Resource> importedResources = typeResourcesPair.getResources();
       NamedUserType srcType = importedRootType;
       NamedUserType dstType = MergeUtilities.findMatchingTypeInExistingTypes(srcType);
@@ -148,6 +156,35 @@ public abstract class ResourceKeyUriIteratingOperation extends SingleThreadItera
     } else {
       return null;
     }
+  }
+
+  /**
+   * When the imported type declares bounded dependencies on user types that are
+   * not present in the current project (nor built-in story-API types), prompt
+   * the author to continue (importing anyway, leaving those references
+   * unresolved) or cancel. Returns {@code true} to proceed, {@code false} to
+   * cancel. When no project is active or nothing is missing, proceeds silently.
+   */
+  private static boolean confirmMissingDependencies(NamedUserType importedRootType) {
+    Project project = ProjectStack.peekProject();
+    Set<String> availableTypeNames = new HashSet<>();
+    if (project != null) {
+      for (NamedUserType existingType : project.getNamedUserTypes()) {
+        String name = existingType.getName();
+        if (name != null) {
+          availableTypeNames.add(name);
+        }
+      }
+    }
+    Set<String> missing = ImportDependencyResolver.findMissingDependencyNames(importedRootType, availableTypeNames);
+    if (missing.isEmpty()) {
+      return true;
+    }
+    String message = "The class \"" + importedRootType.getName()
+        + "\" depends on types that are not present in this project:\n    "
+        + String.join(", ", missing)
+        + "\n\nImport anyway? Those references will remain unresolved until the missing classes are added.";
+    return Dialogs.confirm("Import: missing dependencies", message);
   }
 
   @Override
