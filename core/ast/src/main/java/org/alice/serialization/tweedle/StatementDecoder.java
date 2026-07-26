@@ -28,8 +28,10 @@ import org.lgna.project.ast.UserParameter;
 import org.lgna.project.ast.WhileLoop;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 class StatementDecoder {
   private static final String ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS =
@@ -66,8 +68,8 @@ class StatementDecoder {
           && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
         statements.add(preserveEnabledState(
             statement,
-            decodeZeroArgumentSameClassMethodCallStatement(
-                declaringType, constructor.getName(), methodCall, zeroArgumentMethods)));
+            decodeSameClassMethodCallStatement(
+                declaringType, constructor.getName(), methodCall, zeroArgumentMethods, parameters, locals, fields)));
       } else {
         throw unsupportedConstructorBody(constructor);
       }
@@ -126,8 +128,8 @@ class StatementDecoder {
           && expressionStatement.getExpression() instanceof MethodCallExpression methodCall) {
         statements.add(preserveEnabledState(
             statement,
-            decodeZeroArgumentSameClassMethodCallStatement(
-                declaringType, method.getName(), methodCall, zeroArgumentMethods)));
+            decodeSameClassMethodCallStatement(
+                declaringType, method.getName(), methodCall, zeroArgumentMethods, allParameters, locals, fields)));
       } else if (statement instanceof org.alice.tweedle.ast.ReturnStatement returnStatement
           && i == body.size() - 1) {
         statements.add(preserveEnabledState(
@@ -144,21 +146,20 @@ class StatementDecoder {
     return new BlockStatement(statements.toArray(Statement[]::new));
   }
 
-  private Statement decodeZeroArgumentSameClassMethodCallStatement(
+  private Statement decodeSameClassMethodCallStatement(
       NamedUserType declaringType,
       String ownerName,
       MethodCallExpression methodCall,
-      Map<String, UserMethod> zeroArgumentMethods) {
-    boolean hasArguments = !methodCall.getArguments().isEmpty();
-    if (methodCall.hasExplicitTarget()) {
-      if (!(methodCall.getTarget() instanceof ThisExpression)) {
-        throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
-      }
-      if (hasArguments) {
-        throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
-      }
-    } else if (hasArguments) {
+      Map<String, UserMethod> zeroArgumentMethods,
+      UserParameter[] parameters,
+      List<UserLocal> locals,
+      List<UserField> fields) {
+    if (methodCall.hasExplicitTarget() && !(methodCall.getTarget() instanceof ThisExpression)) {
       throw unsupportedZeroArgumentThisMethodCall(ownerName, methodCall);
+    }
+    if (!methodCall.getArguments().isEmpty()) {
+      return decodeArgumentBearingSameClassMethodCallStatement(
+          declaringType, ownerName, methodCall, parameters, locals, fields);
     }
     UserMethod targetMethod = zeroArgumentMethods.get(methodCall.getMethodName());
     if (targetMethod == null) {
@@ -167,6 +168,66 @@ class StatementDecoder {
     return AstUtilities.createMethodInvocationStatement(
         org.lgna.project.ast.ThisExpression.createInstanceThatCanExistWithoutAnAncestorType(declaringType),
         targetMethod);
+  }
+
+  private Statement decodeArgumentBearingSameClassMethodCallStatement(
+      NamedUserType declaringType,
+      String ownerName,
+      MethodCallExpression methodCall,
+      UserParameter[] parameters,
+      List<UserLocal> locals,
+      List<UserField> fields) {
+    Map<String, TweedleExpression> arguments = methodCall.getArguments();
+    UserMethod targetMethod =
+        resolveSameClassMethodByArgumentLabels(declaringType, methodCall.getMethodName(), arguments.keySet());
+    if (targetMethod == null) {
+      throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
+    }
+    List<UserParameter> requiredParameters = targetMethod.getRequiredParameters();
+    Expression[] argumentExpressions = new Expression[requiredParameters.size()];
+    for (int i = 0; i < requiredParameters.size(); i++) {
+      UserParameter parameter = requiredParameters.get(i);
+      TweedleExpression argumentExpression = arguments.get(parameter.getName());
+      if (argumentExpression == null) {
+        throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
+      }
+      Expression decoded =
+          expressionDecoder.decodeValueExpression(ownerName, argumentExpression, parameters, locals, fields);
+      if (!parameter.getValueType().isAssignableFrom(decoded.getType())) {
+        throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
+      }
+      argumentExpressions[i] = decoded;
+    }
+    return AstUtilities.createMethodInvocationStatement(
+        org.lgna.project.ast.ThisExpression.createInstanceThatCanExistWithoutAnAncestorType(declaringType),
+        targetMethod,
+        argumentExpressions);
+  }
+
+  private UserMethod resolveSameClassMethodByArgumentLabels(
+      NamedUserType declaringType, String methodName, Set<String> argumentLabels) {
+    UserMethod match = null;
+    for (UserMethod candidate : declaringType.getDeclaredMethods()) {
+      if (candidate.isStatic() || !candidate.getName().equals(methodName)) {
+        continue;
+      }
+      List<UserParameter> requiredParameters = candidate.getRequiredParameters();
+      if (requiredParameters.size() != argumentLabels.size()) {
+        continue;
+      }
+      Set<String> parameterNames = new HashSet<>();
+      for (UserParameter parameter : requiredParameters) {
+        parameterNames.add(parameter.getName());
+      }
+      if (!parameterNames.equals(argumentLabels)) {
+        continue;
+      }
+      if (match != null) {
+        return null;
+      }
+      match = candidate;
+    }
+    return match;
   }
 
   private ConditionalStatement decodeIfStatement(
@@ -219,8 +280,8 @@ class StatementDecoder {
       } else if (expression instanceof MethodCallExpression methodCall) {
         decoded.add(preserveEnabledState(
             statement,
-            decodeZeroArgumentSameClassMethodCallStatement(
-                declaringType, method.getName(), methodCall, zeroArgumentMethods)));
+            decodeSameClassMethodCallStatement(
+                declaringType, method.getName(), methodCall, zeroArgumentMethods, parameters, locals, fields)));
       } else {
         throw unsupportedSimpleIfBody(method);
       }

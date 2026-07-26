@@ -68,16 +68,31 @@ fallback.
    (`core/ast/src/test/java/org/alice/serialization/tweedle/TweedleCommentDecodeGapTest.java`).
 2. **Constructor bodies** (`ElephantStable`, `Prop`). The decoder does not yet
    reconstruct statements inside a user-type constructor body.
-3. **Argument-bearing explicit `this` method calls in constructor bodies**
-   (`SandDunes` → `this.setJointedModelResource(...)`, `WaterTank` likewise).
-   Constructor-body decoding currently accepts only assignments and
-   zero-argument `this`/same-class calls; a `this`-qualified call **with
-   arguments** (as gallery models emit to set their jointed-model resource) is
-   rejected. Closing this needs argument-expression decoding plus method
-   resolution by name+signature on the current type (see
-   `StatementDecoder.unsupportedArgumentBearingExplicitThisMethodCall`). This is
-   the next-highest-leverage in-scope gap: it blocks the two resource-backed
-   model types and overlaps the constructor-body work in item 2.
+3. **Argument-bearing explicit `this` method calls.** Same-class calls — a
+   `this`-qualified (or implicit) call to a **method declared on the current
+   type**, with arguments — are now decoded: `StatementDecoder` resolves the
+   target user method by matching the call's argument **labels** (Tweedle emits
+   named arguments) against a same-class method's required-parameter names, then
+   decodes each argument expression and binds it. This works in method bodies,
+   constructor bodies, and `if` bodies, and is characterized by the
+   `argumentBearing…MethodInvocation` cases in `TweedleEncoderDecoderTest`.
+   Resolution stays a **loud fallback**: if no unique same-class method matches
+   the label set (or an argument is missing / not assignable), the decoder still
+   throws `unsupportedArgumentBearingExplicitThisMethodCall`.
+
+   **The corpus's 168 arg-bearing fallbacks are NOT closed by this**, and the
+   reason is the key finding of this investigation: every one of them is the
+   *same* call — `this.setJointedModelResource(resource: …)` — and
+   `setJointedModelResource` is **not declared on the user type** (same-class
+   resolution finds zero candidates). It is an **inherited story-API method** on
+   the gallery-model supertype, and its `resource:` argument is a gallery model
+   resource. Closing it therefore needs (a) method resolution up the **superclass
+   / library** hierarchy — not just the current type — and (b) decoding a
+   **resource-typed argument**, which is the very capability whose absence makes
+   the five `UNREADABLE` projects fail (`ResourceTypeHelper.createInstanceCreation`
+   / gallery-node resolution). In other words the 168 arg-bearing fallbacks and
+   the `UNREADABLE` resource-helper gap are the **same underlying problem**, and
+   both are blocked outside the IDE by the headless gallery-resolution wall.
 4. **Resource-typed method parameters** (`SandDunes` → `TerrainResource`,
    `WaterTank` → `WaterTankResource`). **CLOSED.** Gallery model resource enums
    live in per-category subpackages of `org.lgna.story.resources` (e.g.
@@ -148,17 +163,26 @@ census, now weighted by real curriculum frequency:
 
 | Count | Decoder capability to add |
 | --- | --- |
-| 168 | Argument-bearing explicit `this(...)` method calls |
+| 168 | Argument-bearing `this(...)` calls — **all** are inherited `setJointedModelResource(resource:)` (needs superclass/library resolution + resource-arg decoding) |
 | 165 | Constructor bodies |
 | 49  | Comments |
 | 11  | Top-level Tweedle type parse (`Program`) |
 | 7   | Non-literal method return expressions |
 | 2   | Unsupported method parameter type |
 
-This weighting sharpens the Phase 5 priority order: **constructor bodies** and
-**argument-bearing `this(...)` calls** together account for 333 / 402 (83 %) of
-all curriculum fallbacks — closing those two capabilities would move the large
-majority of curriculum types onto the bounded Tweedle path.
+Same-class argument-bearing `this(...)` calls are now decoded (item 3 above), but
+that closes **none** of the 168 corpus fallbacks: instrumenting the harness shows
+all 168 are the single inherited call `this.setJointedModelResource(resource: …)`
+with zero same-class candidates. So the earlier assumption that constructor-body
++ argument-bearing-`this` work would "move the large majority of curriculum types
+onto the bounded path" is **too optimistic** — the dominant arg-bearing gap is
+really the *inherited resource-setter* case, which is entangled with the
+`UNREADABLE` resource-helper / gallery-resolution gap (see below) and blocked
+outside the IDE. Bounded coverage across the corpus is still 0 %, because every
+readable type also carries at least one such gap (boundedness is a conjunction),
+so closing any single capability in isolation flips no type. The realistic path
+to bounded curriculum types runs through the **inherited resource-setter +
+gallery-resolution** capability, not the two capabilities the raw counts suggest.
 
 ### `UNREADABLE` projects (harness limitation, not an export defect)
 
