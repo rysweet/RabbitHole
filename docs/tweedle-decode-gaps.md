@@ -97,13 +97,90 @@ fallback.
    top-level program type does not parse. Highest-leverage once reachable:
    closing it lets whole *projects* prefer the Tweedle read path.
 
+## Corpus-wide census — `starter-projects/*.a3p`
+
+PLAN Phase 6 (#992) generalises the single-fixture census above to the full,
+licensed, in-repo curriculum corpus: the **34** `.a3p` starter projects checked
+into `core/resources/src/application/resources/starter-projects/`. The
+characterization test
+`TweedleCorpusRoundTripCharacterizationTest`
+(`core/story-api-migration/src/test/java/org/lgna/project/io/TweedleCorpusRoundTripCharacterizationTest.java`)
+walks that directory, reads each project headlessly, encodes every
+`NamedUserType` to Tweedle, attempts to decode it back, and reports per file how
+many types import **bounded (Tweedle decode succeeds)** vs **fallback (decode
+raises a gap → the reader routes through the XML payload)**.
+
+Reproduce (headless, offline):
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-<arch> GIT_LFS_SKIP_SMUDGE=1
+mvn -o -Djavafx.platform=linux -Dinstall4j.skip -Dcheckstyle.skip \
+    -Djava.awt.headless=true \
+    -pl core/story-api-migration surefire:test \
+    -Dtest=TweedleCorpusRoundTripCharacterizationTest
+```
+
+### Result (current `develop`)
+
+**29 of 34** projects are readable in a pure-headless harness; **5** are recorded
+`UNREADABLE` (see below). Across the 29 readable projects:
+
+| Metric | Value |
+| --- | --- |
+| Types exercised | **402** |
+| Bounded (Tweedle decode) | **0** |
+| Fallback (XML) | **402** |
+| Bounded coverage | **0.0 %** |
+
+Every type in the real curriculum corpus currently routes through the XML
+fallback — consistent with the `indiaMinimum` census (`0 / 6`). This directly
+validates the **"never worse than today"** contract: bounded Tweedle import is
+not yet reachable for any curriculum type, but every archive still round-trips
+via its in-archive XML payload. Bounded coverage will rise automatically as the
+Phase 5 decoder gaps below are closed; the harness asserts only its own
+invariants (corpus present, projects read, types exercised), never a specific
+ratio, so it stays green and non-brittle as coverage improves.
+
+### Corpus-wide decoder-gap distribution
+
+The 402 fallbacks group into the same Phase 5 capabilities as the single-fixture
+census, now weighted by real curriculum frequency:
+
+| Count | Decoder capability to add |
+| --- | --- |
+| 168 | Argument-bearing explicit `this(...)` method calls |
+| 165 | Constructor bodies |
+| 49  | Comments |
+| 11  | Top-level Tweedle type parse (`Program`) |
+| 7   | Non-literal method return expressions |
+| 2   | Unsupported method parameter type |
+
+This weighting sharpens the Phase 5 priority order: **constructor bodies** and
+**argument-bearing `this(...)` calls** together account for 333 / 402 (83 %) of
+all curriculum fallbacks — closing those two capabilities would move the large
+majority of curriculum types onto the bounded Tweedle path.
+
+### `UNREADABLE` projects (harness limitation, not an export defect)
+
+Five older-format projects — `iceFull`, `pacificnorthwest`, `snow`, `snowFull`,
+`snowMinimum` — cannot be read by the *pure-headless* harness. They require a
+model-resource migration step
+(`ResourceTypeHelper.createInstanceCreation(...)`) whose helper is not wired up
+outside the IDE, so the read raises `NullPointerException: ... this.helper is
+null`. This is a **test-environment migration limitation**, not a hybrid-export
+or decode defect: the same projects open normally in the IDE. The harness records
+them as `UNREADABLE` and continues, so the census stays meaningful for the 29
+projects that a headless reader can load. Supplying a headless `ResourceTypeHelper`
+to the corpus harness is a possible future enhancement (out of Phase 6 scope).
+
 ## Next fixtures to add
 
-Per PLAN Phase 0, extend the census beyond `indiaMinimum.a3p` with representative
-**curriculum `.a3p`** samples (see `../alice-3-curriculum-md/`) once a licensed,
-checked-in sample set is available (PLAN §10 open question). Each new fixture
-should be run through the same characterization test and its gaps folded into the
-table above.
+The PLAN Phase 0 "next fixtures" open question is now **resolved**: the licensed
+curriculum corpus is checked in (34 `.a3p` starter projects) and validated by
+`TweedleCorpusRoundTripCharacterizationTest` above. Any *additional* external
+curriculum `.a3p` samples (see `../alice-3-curriculum-md/`) can be dropped into
+`core/resources/src/application/resources/starter-projects/` and are picked up
+by the same directory-walking harness automatically — no test change required.
 
 ## Relationship to the hybrid reader
 

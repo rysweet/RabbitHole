@@ -118,6 +118,8 @@ expectations.
 - [Reflection Smoke Support](./reference/reflection-smoke-support.md)
 - [System.exit Allowlist](./reference/system-exit-allowlist.md)
 - [Deterministic Test Waits](./reference/deterministic-test-waits.md)
+- [Hybrid Tweedle/XML Archive Format](./tweedle-hybrid-format.md)
+- [Tweedle Decoder-Gap Backlog](./tweedle-decode-gaps.md)
 
 ### Architecture Atlas
 
