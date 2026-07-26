@@ -449,12 +449,16 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
   public void generatedJsonPlayerArchiveWithArgumentBearingExplicitThisMethodCallReportsUnsupportedDecodeBoundary() throws Exception {
     File projectArchive = temporaryFolder.newFile("generated-json-player-argument-this-call-boundary.a3w");
 
+    // Same-class argument-bearing this-calls that resolve (matching label set) now
+    // decode; this boundary fixture uses an UNRESOLVED arg-bearing call (the label
+    // `other` does not match the `value` parameter) so the loud decode boundary is
+    // still exercised at the archive/readProject level.
     writeJsonProjectArchive(
         projectArchive,
         "GeneratedProgramWithArgumentThisCallBoundary",
         """
             class GeneratedProgramWithArgumentThisCallBoundary extends SProgram {
-              void caller() { this.helper(value: 1); }
+              void caller() { this.helper(other: 1); }
               void helper(WholeNumber value) { }
             }
             """,
@@ -475,6 +479,42 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
     assertFalse(message.contains("this.helper(value: 1)"));
     assertFalse(message.contains("void helper(WholeNumber value)"));
     assertFalse(message.contains("\n"));
+  }
+
+  @Test
+  public void generatedJsonPlayerArchiveDecodesArgumentBearingSameClassThisMethodCall() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-player-argument-this-call-decodes.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedProgramWithArgumentThisCall",
+        """
+            class GeneratedProgramWithArgumentThisCall extends SProgram {
+              void caller() { this.helper(value: 1); }
+              void helper(WholeNumber value) { }
+            }
+            """,
+        "GeneratedArgumentThisCallScene",
+        "class GeneratedArgumentThisCallScene extends SScene {}");
+
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readProgramType = readProject.getProgramType();
+    assertNotNull(
+        "Resolvable same-class argument-bearing this-call program should decode", readProgramType);
+    UserMethod caller = userMethodNamed(readProgramType, "caller");
+    UserMethod helper = userMethodNamed(readProgramType, "helper");
+    assertEquals(1, caller.body.getValue().statements.size());
+    assertTrue(caller.body.getValue().statements.get(0) instanceof ExpressionStatement);
+    ExpressionStatement statement = (ExpressionStatement) caller.body.getValue().statements.get(0);
+    assertTrue(statement.expression.getValue() instanceof MethodInvocation);
+    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertSame(helper, invocation.method.getValue());
+    assertEquals(1, invocation.requiredArguments.size());
+    assertEquals(
+        "GeneratedArgumentThisCallScene",
+        namedUserTypeNamed(readProject, "GeneratedArgumentThisCallScene").getName());
   }
 
   @Test
