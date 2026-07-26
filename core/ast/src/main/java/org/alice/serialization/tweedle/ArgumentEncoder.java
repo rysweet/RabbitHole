@@ -1,7 +1,9 @@
 package org.alice.serialization.tweedle;
 
 import edu.cmu.cs.dennisc.java.util.logging.Logger;
-import edu.cmu.cs.dennisc.javax.swing.option.Dialogs;
+import edu.cmu.cs.dennisc.ui.prompt.MessagePromptRequest;
+import edu.cmu.cs.dennisc.ui.prompt.MessageSeverity;
+import edu.cmu.cs.dennisc.ui.prompt.UiPrompts;
 import org.lgna.project.ast.*;
 import org.lgna.project.code.ProcessableNode;
 
@@ -102,7 +104,12 @@ class ArgumentEncoder {
     final String paramType = parameter.getValueType().getName().toLowerCase();
     final String message = "Unable to read label from parameter on method: %s\nUsing the type as label: %s\nGenerated code may contain errors.".formatted(parameter.getCode().toString(), paramType);
     //TODO I18n
-    Dialogs.showError("Unlabeled parameter", message);
+    // Reusable serialization code must not open Swing dialogs directly (see
+    // docs/concepts/ui-prompt-boundary.md). Route through the UI prompt boundary
+    // so the desktop IDE still surfaces the warning while headless/library
+    // callers (corpus harness, batch export) stay silent instead of throwing
+    // HeadlessException.
+    UiPrompts.showMessage(new MessagePromptRequest(MessageSeverity.ERROR, "Unlabeled parameter", message));
     Logger.errln(message);
     return paramType;
   }
