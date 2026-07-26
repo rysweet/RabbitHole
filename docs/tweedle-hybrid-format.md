@@ -99,6 +99,33 @@ today; closing the Phase 5 gaps progressively shifts types onto the bounded path
 with no reader change. The live census and Phase 5 backlog live in
 [`tweedle-decode-gaps.md`](tweedle-decode-gaps.md).
 
+## Archive size overhead
+
+Because the hybrid layout is additive — it carries the Tweedle payload **and**
+the authoritative XML AST **and** the summary sidecars — a hybrid archive is
+necessarily larger than a hypothetical XML-only equivalent. The overhead is
+modest, though: the compact `src/*.twe` source and the small JSON/XML summaries
+are dwarfed by the verbose XML AST they accompany.
+
+For a representative small single-class `.a3c` (measured uncompressed by
+`HybridArchiveSizeOverheadCharacterizationTest`):
+
+| Region | Bytes | Note |
+| --- | --- | --- |
+| `type.xml` (XML payload) | ≈ 7.7 KB | Legacy-equivalent, authoritative fallback |
+| `src/<Type>.twe` (Tweedle) | ≈ 0.5 KB | Additive bounded source |
+| `typeSummary.json` + `typeSummary.xml` | ≈ 0.8 KB | Additive gallery-tile sidecars |
+| `manifest.json` + `version.txt` | ≈ 0.6 KB | Shared metadata |
+| **Hybrid total** | ≈ 9.6 KB | ≈ **1.25×** the XML payload |
+
+So the additive Tweedle + summary cost is on the order of **15–25 %** of the XML
+payload for small types; ZIP compression narrows the on-disk gap further, and the
+ratio shrinks as the XML AST grows for larger classes. The characterization test
+guards this with a generous ceiling (hybrid total ≤ 8× the XML payload) so a
+runaway-size regression — for example the bounded Tweedle side accidentally
+pulling in the whole object graph — fails the build, without pinning brittle
+exact byte counts.
+
 ## Related
 
 - [`tweedle-decode-gaps.md`](tweedle-decode-gaps.md) — decoder-gap backlog and the

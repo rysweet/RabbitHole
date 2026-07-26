@@ -79,6 +79,7 @@ expectations.
 
 ### How-to guides
 
+- [Extract a Class for a Lesson](./howto/extract-a-class-for-a-lesson.md)
 - [Import an Open 3D Asset](./howto/import-open-3d-asset.md)
 - [Use Open 3D Assets](./howto/use-open-3d-assets.md)
 - [Verify the Default Open 3D Asset Workflow](./howto/verify-default-open-3d-asset-workflow.md)
