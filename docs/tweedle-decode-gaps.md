@@ -170,8 +170,25 @@ outside the IDE, so the read raises `NullPointerException: ... this.helper is
 null`. This is a **test-environment migration limitation**, not a hybrid-export
 or decode defect: the same projects open normally in the IDE. The harness records
 them as `UNREADABLE` and continues, so the census stays meaningful for the 29
-projects that a headless reader can load. Supplying a headless `ResourceTypeHelper`
-to the corpus harness is a possible future enhancement (out of Phase 6 scope).
+projects that a headless reader can load.
+
+**Root cause is deeper than a missing helper.** Wiring the real IDE helper
+(`StorytellingResourcesTreeUtils.INSTANCE`, which lives in `core/ide` and is
+unreachable from `core/story-api-migration` by a deliberate dependency wall)
+into the reader — exactly as `AbstractFileProjectLoader` does at open time —
+eliminates the `this.helper is null` failure but does **not** make these five
+read headlessly. They then fail one step later with
+`NullPointerException: ... "instantiation" is null`, because
+`StorytellingResourcesTreeUtils.createInstanceCreation(...)` returns `null` when
+the headless gallery tree has no node for a referenced art-gallery model
+resource — the EA/Sims2 gallery assets are not resolvable in the headless,
+LFS-skipped census environment. So full-corpus headless readability is gated by
+**gallery-resource availability**, not merely helper wiring. This is pinned by
+`StarterProjectCorpusResourceHelperReadabilityTest` (core/ide), which asserts,
+non-brittly, that supplying the helper is non-regressive (still ≥ 29 readable)
+and eliminates the `this.helper` cause, while tolerating the residual
+gallery-resolution failures so it stays green whether or not the gallery assets
+are present.
 
 ## Next fixtures to add
 

@@ -37,10 +37,13 @@ import static org.junit.Assert.fail;
  *
  * <p>The printed report is the corpus census folded into
  * {@code docs/tweedle-decode-gaps.md}. As decoder gaps close (PLAN Phase 5),
- * the bounded ratio rises automatically — so this test asserts only harness
- * invariants (the corpus is present, projects read, types are exercised), not
- * a specific decode ratio. It is therefore a stable, non-brittle
- * characterization test rather than a coverage ratchet.
+ * the bounded ratio rises automatically. Beyond the harness invariants (the
+ * corpus is present, projects read, types are exercised) this test also
+ * asserts a non-brittle <b>upward-ratchet regression floor</b>
+ * ({@link #assertUpwardRatchet}): readable-project count, types exercised,
+ * and bounded-decode count may only ever grow, never regress. It does
+ * <b>not</b> pin an exact decode ratio, so improvements never break it while
+ * a decode or read regression will.
  *
  * <p>Headless: no JavaFX, no 3D rendering, no UI. Reads projects directly from
  * the source tree via a directory-walk accessor (not the test classpath), so
@@ -107,6 +110,48 @@ public class TweedleCorpusRoundTripCharacterizationTest {
     assertTrue(
         "The corpus census must exercise at least one NamedUserType across all readable projects",
         totalTypesExercised > 0);
+
+    assertUpwardRatchet(results);
+  }
+
+  // ── Non-brittle regression floor (upward ratchet) ──────────────────────
+  //
+  // These baselines are recorded from the current census. All assertions use
+  // >= so the guard only ever fires on a REGRESSION (fewer projects readable,
+  // fewer types exercised, or lower bounded coverage) — never on an
+  // improvement. When decoder gaps close (PLAN Phase 5) and bounded coverage
+  // rises, bump BASELINE_BOUNDED_TYPES upward to lock in the gain. This makes
+  // the characterization test double as a decode-coverage ratchet without
+  // pinning exact numbers.
+
+  /** Projects the pure headless harness can read today (5 need the IDE resource helper). */
+  private static final int BASELINE_READABLE_PROJECTS = 29;
+  /** NamedUserTypes exercised across the readable projects today. */
+  private static final int BASELINE_TYPES_EXERCISED = 402;
+  /** Types that decode via Tweedle today. Bump up as Phase 5 gaps close. */
+  private static final int BASELINE_BOUNDED_TYPES = 0;
+
+  private void assertUpwardRatchet(List<ProjectResult> results) {
+    int readableProjects = (int) results.stream().filter(ProjectResult::readable).count();
+    int typesExercised =
+        results.stream().filter(ProjectResult::readable).mapToInt(r -> r.totalTypes).sum();
+    int boundedTypes =
+        results.stream().filter(ProjectResult::readable).mapToInt(r -> r.boundedTypes).sum();
+
+    assertTrue(
+        "Readable-project count regressed: expected >= " + BASELINE_READABLE_PROJECTS
+            + " but read " + readableProjects
+            + " (a project stopped reading — investigate before lowering this floor)",
+        readableProjects >= BASELINE_READABLE_PROJECTS);
+    assertTrue(
+        "Types-exercised count regressed: expected >= " + BASELINE_TYPES_EXERCISED
+            + " but exercised " + typesExercised,
+        typesExercised >= BASELINE_TYPES_EXERCISED);
+    assertTrue(
+        "Bounded (Tweedle) decode coverage regressed: expected >= " + BASELINE_BOUNDED_TYPES
+            + " types but decoded " + boundedTypes
+            + " (a previously-decoding type stopped decoding — a decoder regression)",
+        boundedTypes >= BASELINE_BOUNDED_TYPES);
   }
 
   private ProjectResult characterize(Path archive) {
