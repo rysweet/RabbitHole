@@ -2,6 +2,7 @@ package org.alice.serialization.tweedle;
 
 /** Audit note: this characterization-heavy test is ~2395 LOC and should be split into focused suites in a future refactoring. */
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.lgna.common.resources.AudioResource;
 import org.lgna.common.resources.ImageResource;
@@ -1495,6 +1496,47 @@ public class TweedleEncoderDecoderTest {
           void caller() { this.missing(value: 1); }
         }
         """, "caller.this.missing");
+  }
+
+  // ── WS1 pin-tests: inherited/library resource-setter resolution ──────────
+  // Design record: docs/tweedle-inherited-resolution-spec.md. These pin the
+  // single dominant corpus gap — all 168 arg-bearing corpus fallbacks are the
+  // inherited call this.setJointedModelResource(resource: <galleryNode>), which
+  // same-class resolution (#1007) cannot reach. NO corpus-coverage is claimed.
+
+  @Test
+  public void inheritedArgumentBearingResourceSetterCurrentlyReportsUnsupportedBoundary() {
+    // Characterizes TODAY's loud fallback: setJointedModelResource is not
+    // declared on the user type (it is inherited from the gallery-model
+    // supertype), so same-class label-set resolution finds zero candidates and
+    // the decoder raises the argument-bearing explicit-this boundary.
+    assertUnsupportedArgumentBearingExplicitThisMethodCallDecode("""
+        class SyntheticModel {
+          void setup() { this.setJointedModelResource(resource: 1); }
+        }
+        """, "setup.this.setJointedModelResource");
+  }
+
+  @Ignore("Pins DESIRED inherited/library resolution + resource-arg decode; not yet"
+      + " implemented and entangled with the headless gallery-resolution wall —"
+      + " see docs/tweedle-inherited-resolution-spec.md")
+  @Test
+  public void inheritedArgumentBearingResourceSetterDecodesToInvocationDesired() throws Exception {
+    // DESIRED: the decoder ascends the supertype/library hierarchy, matches the
+    // inherited setJointedModelResource by its required-parameter label set
+    // {resource}, decodes the gallery-node resource argument, and emits a bound
+    // MethodInvocation targeting the inherited method.
+    NamedUserType type = decodeUserType("""
+        class SyntheticModel extends SJointedModel {
+          void setup() { this.setJointedModelResource(resource: TerrainResource.SAND_DUNES); }
+        }
+        """);
+
+    UserMethod setup = userMethodNamed(type, "setup");
+    MethodInvocation invocation = onlyMethodInvocation(setup);
+    assertTrue(invocation.expression.getValue() instanceof ThisExpression);
+    assertEquals("setJointedModelResource", invocation.method.getValue().getName());
+    assertEquals(1, invocation.requiredArguments.size());
   }
 
   @Test

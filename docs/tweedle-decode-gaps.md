@@ -93,6 +93,15 @@ fallback.
    / gallery-node resolution). In other words the 168 arg-bearing fallbacks and
    the `UNREADABLE` resource-helper gap are the **same underlying problem**, and
    both are blocked outside the IDE by the headless gallery-resolution wall.
+
+   > **Design record.** The resolution algorithm for this inherited/library
+   > case, its label-set-match safety property, and the resource/gallery-node
+   > argument decode contract are specified in
+   > [`tweedle-inherited-resolution-spec.md`](./tweedle-inherited-resolution-spec.md).
+   > That spec's desired behavior is pinned by `@Ignore`'d / characterization
+   > tests in `TweedleEncoderDecoderTest` (core/ast) and
+   > `HistoricalArchiveRoundTripCharacterizationTest` (core/story-api-migration);
+   > it makes no corpus-coverage claim (corpus stays 0 % bounded).
 4. **Resource-typed method parameters** (`SandDunes` → `TerrainResource`,
    `WaterTank` → `WaterTankResource`). **CLOSED.** Gallery model resource enums
    live in per-category subpackages of `org.lgna.story.resources` (e.g.
@@ -163,7 +172,7 @@ census, now weighted by real curriculum frequency:
 
 | Count | Decoder capability to add |
 | --- | --- |
-| 168 | Argument-bearing `this(...)` calls — **all** are inherited `setJointedModelResource(resource:)` (needs superclass/library resolution + resource-arg decoding) |
+| 168 | Argument-bearing `this(...)` calls — **all** are inherited `setJointedModelResource(resource:)` (needs superclass/library resolution + resource-arg decoding; see [inherited-resolution spec](./tweedle-inherited-resolution-spec.md)) |
 | 165 | Constructor bodies |
 | 49  | Comments |
 | 11  | Top-level Tweedle type parse (`Program`) |

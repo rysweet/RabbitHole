@@ -11,6 +11,7 @@ import org.alice.tweedle.file.ResourceReference;
 import org.alice.tweedle.file.TypeManifest;
 import org.alice.tweedle.file.TypeReference;
 import org.junit.Rule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.lgna.common.Resource;
@@ -75,6 +76,43 @@ public class HistoricalArchiveRoundTripCharacterizationTest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  // ── WS1 pin-test: inherited/library resource-setter round-trip ───────────
+  // Design record: docs/tweedle-inherited-resolution-spec.md. Pins the DESIRED
+  // end-to-end decode of the corpus's single dominant arg-bearing gap — the
+  // inherited call this.setJointedModelResource(resource: <galleryNode>). It is
+  // @Ignore'd (not yet implemented, entangled with the headless
+  // gallery-resolution wall) and makes NO corpus-coverage claim.
+  @Ignore("Pins DESIRED inherited resource-setter archive decode; not yet"
+      + " implemented — see docs/tweedle-inherited-resolution-spec.md")
+  @Test
+  public void generatedJsonArchiveDecodesInheritedResourceSetterCallDesired() throws Exception {
+    File projectArchive = temporaryFolder.newFile("generated-json-inherited-resource-setter.a3w");
+
+    writeJsonProjectArchive(
+        projectArchive,
+        "GeneratedInheritedResourceProgram",
+        "class GeneratedInheritedResourceProgram extends SProgram {}",
+        "GeneratedInheritedResourceModel",
+        """
+            class GeneratedInheritedResourceModel extends SJointedModel {
+              void setup() { this.setJointedModelResource(resource: TerrainResource.SAND_DUNES); }
+            }
+            """);
+
+    Project readProject = IoUtilities.readProject(projectArchive);
+
+    NamedUserType readModelType = namedUserTypeNamed(readProject, "GeneratedInheritedResourceModel");
+    UserMethod setup = readModelType.getDeclaredMethods().stream()
+        .filter(method -> "setup".equals(method.getName()))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("Missing method: setup"));
+    BlockStatement body = setup.body.getValue();
+    ExpressionStatement statement = (ExpressionStatement) body.statements.get(0);
+    MethodInvocation invocation = (MethodInvocation) statement.expression.getValue();
+    assertEquals("setJointedModelResource", invocation.method.getValue().getName());
+    assertEquals(1, invocation.requiredArguments.size());
+  }
 
   @Test
   public void generatedClassArchiveCharacterizesXmlFallbackTypeRoundTripWithoutExternalFixture() throws Exception {
