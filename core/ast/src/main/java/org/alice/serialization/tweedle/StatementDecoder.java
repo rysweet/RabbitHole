@@ -28,20 +28,20 @@ import org.lgna.project.ast.UserParameter;
 import org.lgna.project.ast.WhileLoop;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 class StatementDecoder {
   private static final String ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS =
       "argument-bearing explicit this method calls";
   private final Decoder decoder;
   private final ExpressionDecoder expressionDecoder;
+  private final MethodCallResolver methodCallResolver;
 
-  StatementDecoder(Decoder decoder, ExpressionDecoder expressionDecoder) {
+  StatementDecoder(Decoder decoder, ExpressionDecoder expressionDecoder, MethodCallResolver methodCallResolver) {
     this.decoder = decoder;
     this.expressionDecoder = expressionDecoder;
+    this.methodCallResolver = methodCallResolver;
   }
 
   ConstructorBlockStatement decodeConstructorBody(
@@ -179,7 +179,7 @@ class StatementDecoder {
       List<UserField> fields) {
     Map<String, TweedleExpression> arguments = methodCall.getArguments();
     UserMethod targetMethod =
-        resolveSameClassMethodByArgumentLabels(declaringType, methodCall.getMethodName(), arguments.keySet());
+        methodCallResolver.resolveSameClassMethodByArgumentLabels(declaringType, methodCall.getMethodName(), arguments.keySet());
     if (targetMethod == null) {
       throw unsupportedArgumentBearingExplicitThisMethodCall(ownerName, methodCall);
     }
@@ -202,32 +202,6 @@ class StatementDecoder {
         org.lgna.project.ast.ThisExpression.createInstanceThatCanExistWithoutAnAncestorType(declaringType),
         targetMethod,
         argumentExpressions);
-  }
-
-  private UserMethod resolveSameClassMethodByArgumentLabels(
-      NamedUserType declaringType, String methodName, Set<String> argumentLabels) {
-    UserMethod match = null;
-    for (UserMethod candidate : declaringType.getDeclaredMethods()) {
-      if (candidate.isStatic() || !candidate.getName().equals(methodName)) {
-        continue;
-      }
-      List<UserParameter> requiredParameters = candidate.getRequiredParameters();
-      if (requiredParameters.size() != argumentLabels.size()) {
-        continue;
-      }
-      Set<String> parameterNames = new HashSet<>();
-      for (UserParameter parameter : requiredParameters) {
-        parameterNames.add(parameter.getName());
-      }
-      if (!parameterNames.equals(argumentLabels)) {
-        continue;
-      }
-      if (match != null) {
-        return null;
-      }
-      match = candidate;
-    }
-    return match;
   }
 
   private ConditionalStatement decodeIfStatement(
@@ -403,7 +377,7 @@ class StatementDecoder {
       if (!(fieldAccess.getTarget() instanceof ThisExpression)) {
         throw new UnsupportedTweedleDecodeException(
             "Only this.field Tweedle assignment targets are supported by the AST decoder: "
-                + method.getName() + "." + decoder.describeMemberAccess(fieldAccess));
+                + method.getName() + "." + methodCallResolver.describeMemberAccess(fieldAccess));
       }
       UserField field = decoder.findField(fields, fieldAccess.getFieldName());
       if (field == null) {
@@ -456,7 +430,7 @@ class StatementDecoder {
       if (!(fieldAccess.getTarget() instanceof ThisExpression)) {
         throw new UnsupportedTweedleDecodeException(
             "Only this.field Tweedle constructor assignment targets are supported by the AST decoder: "
-                + constructor.getName() + "." + decoder.describeMemberAccess(fieldAccess));
+                + constructor.getName() + "." + methodCallResolver.describeMemberAccess(fieldAccess));
       }
       UserField field = decoder.findField(fields, fieldAccess.getFieldName());
       if (field == null) {
@@ -519,7 +493,7 @@ class StatementDecoder {
         "Only explicit zero-argument this-method calls or implicit zero-argument same-class method calls "
             + "declared on the current Tweedle type "
             + "are supported by the AST decoder: "
-            + ownerName + "." + decoder.describeMethodCall(methodCall));
+            + ownerName + "." + methodCallResolver.describeMethodCall(methodCall));
   }
 
   private UnsupportedTweedleDecodeException unsupportedArgumentBearingExplicitThisMethodCall(
@@ -527,7 +501,7 @@ class StatementDecoder {
       MethodCallExpression methodCall) {
     return new UnsupportedTweedleDecodeException(
         "Tweedle " + ARGUMENT_BEARING_EXPLICIT_THIS_METHOD_CALLS + " are not supported by the AST decoder: "
-            + ownerName + "." + decoder.describeMethodCall(methodCall));
+            + ownerName + "." + methodCallResolver.describeMethodCall(methodCall));
   }
 
   private UnsupportedTweedleDecodeException unsupportedConstructorBody(TweedleConstructor constructor) {

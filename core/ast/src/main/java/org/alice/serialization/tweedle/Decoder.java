@@ -10,10 +10,6 @@ import org.alice.tweedle.TweedleOptionalParameter;
 import org.alice.tweedle.TweedleRequiredParameter;
 import org.alice.tweedle.TweedleType;
 import org.alice.tweedle.TweedleVoidType;
-import org.alice.tweedle.ast.IdentifierReference;
-import org.alice.tweedle.ast.MethodCallExpression;
-import org.alice.tweedle.ast.TweedleExpression;
-import org.alice.tweedle.ast.ThisExpression;
 import org.alice.tweedle.unlinked.TweedleUnlinkedParser;
 import org.lgna.project.ast.AbstractDeclaration;
 import org.lgna.project.ast.AbstractNode;
@@ -77,6 +73,7 @@ public class Decoder {
   private final ExpressionDecoder expressionDecoder;
   private final StatementDecoder statementDecoder;
   private final FieldDecoder fieldDecoder;
+  private final MethodCallResolver methodCallResolver;
 
   Decoder(Set<AbstractDeclaration> terminals) {
     this(terminals, true);
@@ -89,8 +86,9 @@ public class Decoder {
         .map(AbstractType.class::cast)
         .filter(type -> type.getName() != null)
         .collect(Collectors.toMap(AbstractType::getName, type -> type, (existing, replacement) -> existing));
-    this.expressionDecoder = new ExpressionDecoder(this);
-    this.statementDecoder = new StatementDecoder(this, expressionDecoder);
+    this.methodCallResolver = new MethodCallResolver();
+    this.expressionDecoder = new ExpressionDecoder(this, methodCallResolver);
+    this.statementDecoder = new StatementDecoder(this, expressionDecoder, methodCallResolver);
     this.fieldDecoder = new FieldDecoder(this, expressionDecoder);
   }
 
@@ -292,37 +290,6 @@ public class Decoder {
       }
     }
     throw unsupportedType(typeName, usage);
-  }
-
-  String describeMemberAccess(org.alice.tweedle.ast.FieldAccess fieldAccess) {
-    TweedleExpression target = fieldAccess.getTarget();
-    if (target instanceof ThisExpression) {
-      return "this." + fieldAccess.getFieldName();
-    }
-    if (target instanceof IdentifierReference identifierReference) {
-      return identifierReference.getName() + "." + fieldAccess.getFieldName();
-    }
-    return "<unsupported>." + fieldAccess.getFieldName();
-  }
-
-  String describeMethodCall(MethodCallExpression methodCall) {
-    if (!methodCall.hasExplicitTarget()) {
-      return methodCall.getMethodName();
-    }
-    TweedleExpression target = methodCall.getTarget();
-    if (target instanceof ThisExpression) {
-      return "this." + methodCall.getMethodName();
-    }
-    if (target instanceof IdentifierReference identifierReference) {
-      return identifierReference.getName() + "." + methodCall.getMethodName();
-    }
-    if (target instanceof org.alice.tweedle.ast.FieldAccess fieldAccess) {
-      return describeMemberAccess(fieldAccess) + "." + methodCall.getMethodName();
-    }
-    if (target instanceof MethodCallExpression targetMethodCall) {
-      return describeMethodCall(targetMethodCall) + "." + methodCall.getMethodName();
-    }
-    return "<unsupported>." + methodCall.getMethodName();
   }
 
   // -- Private helpers --

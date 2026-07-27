@@ -39,9 +39,11 @@ import java.util.List;
 
 class ExpressionDecoder {
   private final Decoder decoder;
+  private final MethodCallResolver methodCallResolver;
 
-  ExpressionDecoder(Decoder decoder) {
+  ExpressionDecoder(Decoder decoder, MethodCallResolver methodCallResolver) {
     this.decoder = decoder;
+    this.methodCallResolver = methodCallResolver;
   }
 
   Expression decodeValueExpression(
@@ -361,6 +363,6 @@ class ExpressionDecoder {
       org.alice.tweedle.ast.FieldAccess fieldAccess) {
     return new UnsupportedTweedleDecodeException(
         "Only this.field Tweedle method return member expressions are supported by the AST decoder: "
-            + method.getName() + "." + decoder.describeMemberAccess(fieldAccess));
+            + method.getName() + "." + methodCallResolver.describeMemberAccess(fieldAccess));
   }
 }
