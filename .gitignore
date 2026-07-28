@@ -60,3 +60,6 @@ qa/outside-in/alice-desktop/evidence/
 worktrees/
 test.classpath
 */core/ide/test.classpath
+
+# Native libraries downloaded by setup-aarch64.sh
+/platform-natives/

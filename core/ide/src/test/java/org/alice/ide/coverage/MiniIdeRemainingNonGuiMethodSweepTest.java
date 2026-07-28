@@ -80,7 +80,6 @@ public class MiniIdeRemainingNonGuiMethodSweepTest {
         "org.alice.stageide.program.ProgramContext",
         "org.alice.ide.common.AssignmentExpressionPane",
         "org.alice.stageide.sceneeditor.viewmanager.CameraMarkerTracker",
-        "org.alice.ide.meta.DeclarationMeta",
         "org.alice.media.audio.MixingFloatAudioInputStream",
         "org.alice.stageide.gallerybrowser.uri.ResourceKeyUriIteratingOperation",
         "org.alice.ide.croquet.edits.ast.FillInMoreEdit",

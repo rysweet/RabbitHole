@@ -265,6 +265,7 @@ public class MoreCoverageBehaviorTest {
     @Override public int getDefaultReadBuffer() { return 0; }
     @Override public int getDefaultPixelDataType() { return 0; }
     @Override public int getDefaultPixelDataFormat() { return 0; }
+    @Override public com.jogamp.common.os.DynamicLibraryBundle getDynamicLibraryBundle() { return null; }
     @Override public String getGLDebugMessageExtension() { return null; }
     @Override public boolean isGLDebugSynchronous() { return false; }
     @Override public void setGLDebugSynchronous(boolean synchronous) { }

@@ -8,6 +8,7 @@ import com.jogamp.opengl.GLCapabilitiesChooser;
 import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.GLDrawable;
 import com.jogamp.opengl.GLOffscreenAutoDrawable;
+import com.jogamp.common.os.DynamicLibraryBundle;
 import edu.cmu.cs.dennisc.render.RenderCapabilities;
 import edu.cmu.cs.dennisc.render.gl.imp.adapters.AdapterFactory;
 import edu.cmu.cs.dennisc.render.gl.imp.adapters.ChangeHandler;
@@ -317,6 +318,8 @@ public class CoverageBoostBehaviorTest {
     public int getDefaultPixelDataType() { return 0; }
     @Override
     public int getDefaultPixelDataFormat() { return 0; }
+    @Override
+    public DynamicLibraryBundle getDynamicLibraryBundle() { return null; }
     @Override
     public String getGLDebugMessageExtension() { return null; }
     @Override

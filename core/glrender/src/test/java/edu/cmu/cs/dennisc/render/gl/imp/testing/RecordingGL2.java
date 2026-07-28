@@ -152,6 +152,7 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     }
   }
 
+  // Generated from com.jogamp.opengl.GL2; run GenerateRecordingGL2 after JOGL upgrades.
   @Override public int getBoundBuffer(int p0) {
     record("getBoundBuffer", new Object[] {p0});
     return 0;
@@ -192,7 +193,7 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     return 0;
   }
 
-  @Override public com.jogamp.opengl.GL getDownstreamGL() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL getDownstreamGL() {
     record("getDownstreamGL", new Object[] {});
     return null;
   }
@@ -202,77 +203,77 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL getGL() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL getGL() {
     record("getGL", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL2 getGL2() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL2 getGL2() {
     record("getGL2", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL2ES1 getGL2ES1() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL2ES1 getGL2ES1() {
     record("getGL2ES1", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL2ES2 getGL2ES2() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL2ES2 getGL2ES2() {
     record("getGL2ES2", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL2ES3 getGL2ES3() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL2ES3 getGL2ES3() {
     record("getGL2ES3", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL2GL3 getGL2GL3() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL2GL3 getGL2GL3() {
     record("getGL2GL3", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL3 getGL3() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL3 getGL3() {
     record("getGL3", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL3ES3 getGL3ES3() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL3ES3 getGL3ES3() {
     record("getGL3ES3", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL3bc getGL3bc() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL3bc getGL3bc() {
     record("getGL3bc", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL4 getGL4() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL4 getGL4() {
     record("getGL4", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL4ES3 getGL4ES3() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL4ES3 getGL4ES3() {
     record("getGL4ES3", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL4bc getGL4bc() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL4bc getGL4bc() {
     record("getGL4bc", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GLES1 getGLES1() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLES1 getGLES1() {
     record("getGLES1", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GLES2 getGLES2() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLES2 getGLES2() {
     record("getGLES2", new Object[] {});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GLES3 getGLES3() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLES3 getGLES3() {
     record("getGLES3", new Object[] {});
     return null;
   }
@@ -292,7 +293,7 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     return null;
   }
 
-  @Override public com.jogamp.opengl.GL getRootGL() throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GL getRootGL() {
     record("getRootGL", new Object[] {});
     return null;
   }
@@ -304,6 +305,11 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glAccum(int p0, float p1) {
     record("glAccum", new Object[] {p0, p1});
+  }
+
+  @Override public boolean glAcquireKeyedMutexWin32EXT(int p0, long p1, int p2) {
+    record("glAcquireKeyedMutexWin32EXT", new Object[] {p0, p1, p2});
+    return false;
   }
 
   @Override public void glActiveShaderProgram(int p0, int p1) {
@@ -320,6 +326,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glAlphaFunc(int p0, float p1) {
     record("glAlphaFunc", new Object[] {p0, p1});
+  }
+
+  @Override public void glAlphaToCoverageDitherControlNV(int p0) {
+    record("glAlphaToCoverageDitherControlNV", new Object[] {p0});
   }
 
   @Override public void glApplyFramebufferAttachmentCMAAINTEL() {
@@ -344,6 +354,26 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glArrayElement", new Object[] {p0});
   }
 
+  @Override public int glAsyncCopyBufferSubDataNVX(int p0, int[] p1, int p2, long[] p3, int p4, int p5, int p6, int p7, int p8, long p9, long p10, long p11, int p12, int[] p13, int p14, long[] p15, int p16) {
+    record("glAsyncCopyBufferSubDataNVX", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16});
+    return 0;
+  }
+
+  @Override public int glAsyncCopyBufferSubDataNVX(int p0, java.nio.IntBuffer p1, java.nio.LongBuffer p2, int p3, int p4, int p5, int p6, long p7, long p8, long p9, int p10, java.nio.IntBuffer p11, java.nio.LongBuffer p12) {
+    record("glAsyncCopyBufferSubDataNVX", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12});
+    return 0;
+  }
+
+  @Override public int glAsyncCopyImageSubDataNVX(int p0, int[] p1, int p2, long[] p3, int p4, int p5, int p6, int p7, int p8, int p9, int p10, int p11, int p12, int p13, int p14, int p15, int p16, int p17, int p18, int p19, int p20, int p21, int p22, int[] p23, int p24, long[] p25, int p26) {
+    record("glAsyncCopyImageSubDataNVX", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26});
+    return 0;
+  }
+
+  @Override public int glAsyncCopyImageSubDataNVX(int p0, java.nio.IntBuffer p1, java.nio.LongBuffer p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9, int p10, int p11, int p12, int p13, int p14, int p15, int p16, int p17, int p18, int p19, int p20, java.nio.IntBuffer p21, java.nio.LongBuffer p22) {
+    record("glAsyncCopyImageSubDataNVX", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22});
+    return 0;
+  }
+
   @Override public void glAttachObjectARB(long p0, long p1) {
     record("glAttachObjectARB", new Object[] {p0, p1});
   }
@@ -366,10 +396,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glBeginOcclusionQueryNV(int p0) {
     record("glBeginOcclusionQueryNV", new Object[] {p0});
-  }
-
-  @Override public void glBeginPerfMonitorAMD(int p0) {
-    record("glBeginPerfMonitorAMD", new Object[] {p0});
   }
 
   @Override public void glBeginPerfQueryINTEL(int p0) {
@@ -565,6 +591,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glBlitFramebuffer", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9});
   }
 
+  @Override public void glBlitFramebufferLayerEXT(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9, int p10, int p11) {
+    record("glBlitFramebufferLayerEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11});
+  }
+
+  @Override public void glBlitFramebufferLayersEXT(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9) {
+    record("glBlitFramebufferLayersEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9});
+  }
+
   @Override public void glBufferAddressRangeNV(int p0, int p1, long p2, long p3) {
     record("glBufferAddressRangeNV", new Object[] {p0, p1, p2, p3});
   }
@@ -579,6 +613,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glBufferParameteri(int p0, int p1, int p2) {
     record("glBufferParameteri", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glBufferStorageExternalEXT(int p0, long p1, long p2, java.nio.Buffer p3, int p4) {
+    record("glBufferStorageExternalEXT", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glBufferStorageMemEXT(int p0, long p1, int p2, long p3) {
+    record("glBufferStorageMemEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glBufferSubData(int p0, long p1, long p2, java.nio.Buffer p3) {
@@ -699,6 +741,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glClientAttribDefaultEXT", new Object[] {p0});
   }
 
+  @Override public void glClientWaitSemaphoreui64NVX(int p0, int[] p1, int p2, long[] p3, int p4) {
+    record("glClientWaitSemaphoreui64NVX", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glClientWaitSemaphoreui64NVX(int p0, java.nio.IntBuffer p1, java.nio.LongBuffer p2) {
+    record("glClientWaitSemaphoreui64NVX", new Object[] {p0, p1, p2});
+  }
+
   @Override public void glClipPlane(int p0, double[] p1, int p2) {
     record("glClipPlane", new Object[] {p0, p1, p2});
   }
@@ -755,12 +805,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColor3h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glColor3hv(short[] p0, int p1) {
-    record("glColor3hv", new Object[] {p0, p1});
-  }
-
   @Override public void glColor3hv(java.nio.ShortBuffer p0) {
     record("glColor3hv", new Object[] {p0});
+  }
+
+  @Override public void glColor3hv(short[] p0, int p1) {
+    record("glColor3hv", new Object[] {p0, p1});
   }
 
   @Override public void glColor3i(int p0, int p1, int p2) {
@@ -779,12 +829,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColor3s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glColor3sv(short[] p0, int p1) {
-    record("glColor3sv", new Object[] {p0, p1});
-  }
-
   @Override public void glColor3sv(java.nio.ShortBuffer p0) {
     record("glColor3sv", new Object[] {p0});
+  }
+
+  @Override public void glColor3sv(short[] p0, int p1) {
+    record("glColor3sv", new Object[] {p0, p1});
   }
 
   @Override public void glColor3ub(byte p0, byte p1, byte p2) {
@@ -815,12 +865,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColor3us", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glColor3usv(short[] p0, int p1) {
-    record("glColor3usv", new Object[] {p0, p1});
-  }
-
   @Override public void glColor3usv(java.nio.ShortBuffer p0) {
     record("glColor3usv", new Object[] {p0});
+  }
+
+  @Override public void glColor3usv(short[] p0, int p1) {
+    record("glColor3usv", new Object[] {p0, p1});
   }
 
   @Override public void glColor4b(byte p0, byte p1, byte p2, byte p3) {
@@ -863,12 +913,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColor4h", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glColor4hv(short[] p0, int p1) {
-    record("glColor4hv", new Object[] {p0, p1});
-  }
-
   @Override public void glColor4hv(java.nio.ShortBuffer p0) {
     record("glColor4hv", new Object[] {p0});
+  }
+
+  @Override public void glColor4hv(short[] p0, int p1) {
+    record("glColor4hv", new Object[] {p0, p1});
   }
 
   @Override public void glColor4i(int p0, int p1, int p2, int p3) {
@@ -887,12 +937,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColor4s", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glColor4sv(short[] p0, int p1) {
-    record("glColor4sv", new Object[] {p0, p1});
-  }
-
   @Override public void glColor4sv(java.nio.ShortBuffer p0) {
     record("glColor4sv", new Object[] {p0});
+  }
+
+  @Override public void glColor4sv(short[] p0, int p1) {
+    record("glColor4sv", new Object[] {p0, p1});
   }
 
   @Override public void glColor4ub(byte p0, byte p1, byte p2, byte p3) {
@@ -923,12 +973,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColor4us", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glColor4usv(short[] p0, int p1) {
-    record("glColor4usv", new Object[] {p0, p1});
-  }
-
   @Override public void glColor4usv(java.nio.ShortBuffer p0) {
     record("glColor4usv", new Object[] {p0});
+  }
+
+  @Override public void glColor4usv(short[] p0, int p1) {
+    record("glColor4usv", new Object[] {p0, p1});
   }
 
   @Override public void glColorFormatNV(int p0, int p1, int p2) {
@@ -951,16 +1001,16 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glColorMaterial", new Object[] {p0, p1});
   }
 
+  @Override public void glColorPointer(com.jogamp.opengl.GLArrayData p0) {
+    record("glColorPointer", new Object[] {p0});
+  }
+
   @Override public void glColorPointer(int p0, int p1, int p2, java.nio.Buffer p3) {
     record("glColorPointer", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glColorPointer(int p0, int p1, int p2, long p3) {
     record("glColorPointer", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glColorPointer(com.jogamp.opengl.GLArrayData p0) {
-    record("glColorPointer", new Object[] {p0});
   }
 
   @Override public void glColorSubTable(int p0, int p1, int p2, int p3, int p4, java.nio.Buffer p5) {
@@ -1109,6 +1159,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glConservativeRasterParameterfNV(int p0, float p1) {
     record("glConservativeRasterParameterfNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glConservativeRasterParameteriNV(int p0, int p1) {
+    record("glConservativeRasterParameteriNV", new Object[] {p0, p1});
   }
 
   @Override public void glConvolutionFilter1D(int p0, int p1, int p2, int p3, int p4, java.nio.Buffer p5) {
@@ -1263,6 +1317,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glCreateCommandListsNV", new Object[] {p0, p1});
   }
 
+  @Override public void glCreateMemoryObjectsEXT(int p0, int[] p1, int p2) {
+    record("glCreateMemoryObjectsEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glCreateMemoryObjectsEXT(int p0, java.nio.IntBuffer p1) {
+    record("glCreateMemoryObjectsEXT", new Object[] {p0, p1});
+  }
+
   @Override public void glCreatePerfQueryINTEL(int p0, int[] p1, int p2) {
     record("glCreatePerfQueryINTEL", new Object[] {p0, p1, p2});
   }
@@ -1279,6 +1341,11 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
   @Override public long glCreateProgramObjectARB() {
     record("glCreateProgramObjectARB", new Object[] {});
     return 0L;
+  }
+
+  @Override public int glCreateProgressFenceNVX() {
+    record("glCreateProgressFenceNVX", new Object[] {});
+    return 0;
   }
 
   @Override public int glCreateShader(int p0) {
@@ -1380,6 +1447,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glDeleteLists", new Object[] {p0, p1});
   }
 
+  @Override public void glDeleteMemoryObjectsEXT(int p0, int[] p1, int p2) {
+    record("glDeleteMemoryObjectsEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glDeleteMemoryObjectsEXT(int p0, java.nio.IntBuffer p1) {
+    record("glDeleteMemoryObjectsEXT", new Object[] {p0, p1});
+  }
+
   @Override public void glDeleteNamesAMD(int p0, int p1, int[] p2, int p3) {
     record("glDeleteNamesAMD", new Object[] {p0, p1, p2, p3});
   }
@@ -1398,14 +1473,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glDeleteOcclusionQueriesNV(int p0, java.nio.IntBuffer p1) {
     record("glDeleteOcclusionQueriesNV", new Object[] {p0, p1});
-  }
-
-  @Override public void glDeletePerfMonitorsAMD(int p0, int[] p1, int p2) {
-    record("glDeletePerfMonitorsAMD", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glDeletePerfMonitorsAMD(int p0, java.nio.IntBuffer p1) {
-    record("glDeletePerfMonitorsAMD", new Object[] {p0, p1});
   }
 
   @Override public void glDeletePerfQueryINTEL(int p0) {
@@ -1440,12 +1507,28 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glDeleteQueries", new Object[] {p0, p1});
   }
 
+  @Override public void glDeleteQueryResourceTagNV(int p0, int[] p1, int p2) {
+    record("glDeleteQueryResourceTagNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glDeleteQueryResourceTagNV(int p0, java.nio.IntBuffer p1) {
+    record("glDeleteQueryResourceTagNV", new Object[] {p0, p1});
+  }
+
   @Override public void glDeleteRenderbuffers(int p0, int[] p1, int p2) {
     record("glDeleteRenderbuffers", new Object[] {p0, p1, p2});
   }
 
   @Override public void glDeleteRenderbuffers(int p0, java.nio.IntBuffer p1) {
     record("glDeleteRenderbuffers", new Object[] {p0, p1});
+  }
+
+  @Override public void glDeleteSemaphoresEXT(int p0, int[] p1, int p2) {
+    record("glDeleteSemaphoresEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glDeleteSemaphoresEXT(int p0, java.nio.IntBuffer p1) {
+    record("glDeleteSemaphoresEXT", new Object[] {p0, p1});
   }
 
   @Override public void glDeleteShader(int p0) {
@@ -1604,12 +1687,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glDrawBuffersATI", new Object[] {p0, p1});
   }
 
-  @Override public void glDrawCommandsAddressNV(int p0, long[] p1, int p2, int[] p3, int p4, int p5) {
-    record("glDrawCommandsAddressNV", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
   @Override public void glDrawCommandsAddressNV(int p0, java.nio.LongBuffer p1, java.nio.IntBuffer p2, int p3) {
     record("glDrawCommandsAddressNV", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glDrawCommandsAddressNV(int p0, long[] p1, int p2, int[] p3, int p4, int p5) {
+    record("glDrawCommandsAddressNV", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
   @Override public void glDrawCommandsNV(int p0, int p1, com.jogamp.common.nio.PointerBuffer p2, int[] p3, int p4, int p5) {
@@ -1620,12 +1703,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glDrawCommandsNV", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glDrawCommandsStatesAddressNV(long[] p0, int p1, int[] p2, int p3, int[] p4, int p5, int[] p6, int p7, int p8) {
-    record("glDrawCommandsStatesAddressNV", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8});
-  }
-
   @Override public void glDrawCommandsStatesAddressNV(java.nio.LongBuffer p0, java.nio.IntBuffer p1, java.nio.IntBuffer p2, java.nio.IntBuffer p3, int p4) {
     record("glDrawCommandsStatesAddressNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glDrawCommandsStatesAddressNV(long[] p0, int p1, int[] p2, int p3, int[] p4, int p5, int[] p6, int p7, int p8) {
+    record("glDrawCommandsStatesAddressNV", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8});
   }
 
   @Override public void glDrawCommandsStatesNV(int p0, com.jogamp.common.nio.PointerBuffer p1, int[] p2, int p3, int[] p4, int p5, int[] p6, int p7, int p8) {
@@ -1782,10 +1865,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glEndOcclusionQueryNV() {
     record("glEndOcclusionQueryNV", new Object[] {});
-  }
-
-  @Override public void glEndPerfMonitorAMD(int p0) {
-    record("glEndPerfMonitorAMD", new Object[] {p0});
   }
 
   @Override public void glEndPerfQueryINTEL(int p0) {
@@ -1956,12 +2035,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glFogCoordh", new Object[] {p0});
   }
 
-  @Override public void glFogCoordhv(short[] p0, int p1) {
-    record("glFogCoordhv", new Object[] {p0, p1});
-  }
-
   @Override public void glFogCoordhv(java.nio.ShortBuffer p0) {
     record("glFogCoordhv", new Object[] {p0});
+  }
+
+  @Override public void glFogCoordhv(short[] p0, int p1) {
+    record("glFogCoordhv", new Object[] {p0, p1});
   }
 
   @Override public void glFogf(int p0, float p1) {
@@ -1988,10 +2067,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glFogiv", new Object[] {p0, p1});
   }
 
-  @Override public void glFragmentCoverageColorNV(int p0) {
-    record("glFragmentCoverageColorNV", new Object[] {p0});
-  }
-
   @Override public void glFrameTerminatorGREMEDY() {
     record("glFrameTerminatorGREMEDY", new Object[] {});
   }
@@ -2008,6 +2083,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glFramebufferDrawBuffersEXT", new Object[] {p0, p1, p2});
   }
 
+  @Override public void glFramebufferFetchBarrierEXT() {
+    record("glFramebufferFetchBarrierEXT", new Object[] {});
+  }
+
   @Override public void glFramebufferParameteri(int p0, int p1, int p2) {
     record("glFramebufferParameteri", new Object[] {p0, p1, p2});
   }
@@ -2020,12 +2099,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glFramebufferRenderbuffer", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glFramebufferSampleLocationsfvNV(int p0, int p1, int p2, float[] p3, int p4) {
-    record("glFramebufferSampleLocationsfvNV", new Object[] {p0, p1, p2, p3, p4});
+  @Override public void glFramebufferSamplePositionsfvAMD(int p0, int p1, int p2, float[] p3, int p4) {
+    record("glFramebufferSamplePositionsfvAMD", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glFramebufferSampleLocationsfvNV(int p0, int p1, int p2, java.nio.FloatBuffer p3) {
-    record("glFramebufferSampleLocationsfvNV", new Object[] {p0, p1, p2, p3});
+  @Override public void glFramebufferSamplePositionsfvAMD(int p0, int p1, int p2, java.nio.FloatBuffer p3) {
+    record("glFramebufferSamplePositionsfvAMD", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glFramebufferTexture1D(int p0, int p1, int p2, int p3, int p4) {
@@ -2105,14 +2184,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGenOcclusionQueriesNV", new Object[] {p0, p1});
   }
 
-  @Override public void glGenPerfMonitorsAMD(int p0, int[] p1, int p2) {
-    record("glGenPerfMonitorsAMD", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glGenPerfMonitorsAMD(int p0, java.nio.IntBuffer p1) {
-    record("glGenPerfMonitorsAMD", new Object[] {p0, p1});
-  }
-
   @Override public void glGenProgramPipelines(int p0, int[] p1, int p2) {
     record("glGenProgramPipelines", new Object[] {p0, p1, p2});
   }
@@ -2137,12 +2208,28 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGenQueries", new Object[] {p0, p1});
   }
 
+  @Override public void glGenQueryResourceTagNV(int p0, int[] p1, int p2) {
+    record("glGenQueryResourceTagNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGenQueryResourceTagNV(int p0, java.nio.IntBuffer p1) {
+    record("glGenQueryResourceTagNV", new Object[] {p0, p1});
+  }
+
   @Override public void glGenRenderbuffers(int p0, int[] p1, int p2) {
     record("glGenRenderbuffers", new Object[] {p0, p1, p2});
   }
 
   @Override public void glGenRenderbuffers(int p0, java.nio.IntBuffer p1) {
     record("glGenRenderbuffers", new Object[] {p0, p1});
+  }
+
+  @Override public void glGenSemaphoresEXT(int p0, int[] p1, int p2) {
+    record("glGenSemaphoresEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGenSemaphoresEXT(int p0, java.nio.IntBuffer p1) {
+    record("glGenSemaphoresEXT", new Object[] {p0, p1});
   }
 
   @Override public int glGenSymbolsEXT(int p0, int p1, int p2, int p3) {
@@ -2316,12 +2403,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetBufferParameteriv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetBufferParameterui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetBufferParameterui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetBufferParameterui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetBufferParameterui64vNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetBufferParameterui64vNV(int p0, int p1, long[] p2, int p3) {
+    record("glGetBufferParameterui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetBufferSubData(int p0, long p1, long p2, java.nio.Buffer p3) {
@@ -2515,6 +2602,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetFramebufferAttachmentParameteriv", new Object[] {p0, p1, p2, p3});
   }
 
+  @Override public void glGetFramebufferParameterfvAMD(int p0, int p1, int p2, int p3, int p4, float[] p5, int p6) {
+    record("glGetFramebufferParameterfvAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6});
+  }
+
+  @Override public void glGetFramebufferParameterfvAMD(int p0, int p1, int p2, int p3, int p4, java.nio.FloatBuffer p5) {
+    record("glGetFramebufferParameterfvAMD", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
   @Override public void glGetFramebufferParameteriv(int p0, int p1, int[] p2, int p3) {
     record("glGetFramebufferParameteriv", new Object[] {p0, p1, p2, p3});
   }
@@ -2573,6 +2668,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetInfoLogARB", new Object[] {p0, p1, p2, p3});
   }
 
+  @Override public void glGetInteger64v(int p0, java.nio.LongBuffer p1) {
+    record("glGetInteger64v", new Object[] {p0, p1});
+  }
+
+  @Override public void glGetInteger64v(int p0, long[] p1, int p2) {
+    record("glGetInteger64v", new Object[] {p0, p1, p2});
+  }
+
   @Override public void glGetIntegerIndexedv(int p0, int p1, int[] p2, int p3) {
     record("glGetIntegerIndexedv", new Object[] {p0, p1, p2, p3});
   }
@@ -2589,20 +2692,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetIntegeri_v", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetIntegerui64i_vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetIntegerui64i_vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetIntegerui64i_vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetIntegerui64i_vNV", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetIntegerui64vNV(int p0, long[] p1, int p2) {
-    record("glGetIntegerui64vNV", new Object[] {p0, p1, p2});
+  @Override public void glGetIntegerui64i_vNV(int p0, int p1, long[] p2, int p3) {
+    record("glGetIntegerui64i_vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetIntegerui64vNV(int p0, java.nio.LongBuffer p1) {
     record("glGetIntegerui64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glGetIntegerui64vNV(int p0, long[] p1, int p2) {
+    record("glGetIntegerui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glGetIntegerv(int p0, int[] p1, int p2) {
@@ -2613,12 +2716,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetIntegerv", new Object[] {p0, p1});
   }
 
-  @Override public void glGetInternalformati64v(int p0, int p1, int p2, int p3, long[] p4, int p5) {
-    record("glGetInternalformati64v", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
   @Override public void glGetInternalformati64v(int p0, int p1, int p2, int p3, java.nio.LongBuffer p4) {
     record("glGetInternalformati64v", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glGetInternalformati64v(int p0, int p1, int p2, int p3, long[] p4, int p5) {
+    record("glGetInternalformati64v", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
   @Override public void glGetInternalformativ(int p0, int p1, int p2, int p3, int[] p4, int p5) {
@@ -2769,6 +2872,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetMaterialiv", new Object[] {p0, p1, p2});
   }
 
+  @Override public void glGetMemoryObjectParameterivEXT(int p0, int p1, int[] p2, int p3) {
+    record("glGetMemoryObjectParameterivEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glGetMemoryObjectParameterivEXT(int p0, int p1, java.nio.IntBuffer p2) {
+    record("glGetMemoryObjectParameterivEXT", new Object[] {p0, p1, p2});
+  }
+
   @Override public void glGetMinmax(int p0, boolean p1, int p2, int p3, java.nio.Buffer p4) {
     record("glGetMinmax", new Object[] {p0, p1, p2, p3, p4});
   }
@@ -2909,12 +3020,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetNamedBufferParameterivEXT", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetNamedBufferParameterui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetNamedBufferParameterui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetNamedBufferParameterui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetNamedBufferParameterui64vNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetNamedBufferParameterui64vNV(int p0, int p1, long[] p2, int p3) {
+    record("glGetNamedBufferParameterui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetNamedBufferSubDataEXT(int p0, long p1, long p2, java.nio.Buffer p3) {
@@ -2927,6 +3038,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glGetNamedFramebufferAttachmentParameterivEXT(int p0, int p1, int p2, java.nio.IntBuffer p3) {
     record("glGetNamedFramebufferAttachmentParameterivEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glGetNamedFramebufferParameterfvAMD(int p0, int p1, int p2, int p3, int p4, float[] p5, int p6) {
+    record("glGetNamedFramebufferParameterfvAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6});
+  }
+
+  @Override public void glGetNamedFramebufferParameterfvAMD(int p0, int p1, int p2, int p3, int p4, java.nio.FloatBuffer p5) {
+    record("glGetNamedFramebufferParameterfvAMD", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
   @Override public void glGetNamedFramebufferParameteriv(int p0, int p1, int[] p2, int p3) {
@@ -3061,50 +3180,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetPerfCounterInfoINTEL", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10});
   }
 
-  @Override public void glGetPerfMonitorCounterDataAMD(int p0, int p1, int p2, int[] p3, int p4, int[] p5, int p6) {
-    record("glGetPerfMonitorCounterDataAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6});
-  }
-
-  @Override public void glGetPerfMonitorCounterDataAMD(int p0, int p1, int p2, java.nio.IntBuffer p3, java.nio.IntBuffer p4) {
-    record("glGetPerfMonitorCounterDataAMD", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glGetPerfMonitorCounterInfoAMD(int p0, int p1, int p2, java.nio.Buffer p3) {
-    record("glGetPerfMonitorCounterInfoAMD", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glGetPerfMonitorCounterStringAMD(int p0, int p1, int p2, int[] p3, int p4, byte[] p5, int p6) {
-    record("glGetPerfMonitorCounterStringAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6});
-  }
-
-  @Override public void glGetPerfMonitorCounterStringAMD(int p0, int p1, int p2, java.nio.IntBuffer p3, java.nio.ByteBuffer p4) {
-    record("glGetPerfMonitorCounterStringAMD", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glGetPerfMonitorCountersAMD(int p0, int[] p1, int p2, int[] p3, int p4, int p5, int[] p6, int p7) {
-    record("glGetPerfMonitorCountersAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
-  }
-
-  @Override public void glGetPerfMonitorCountersAMD(int p0, java.nio.IntBuffer p1, java.nio.IntBuffer p2, int p3, java.nio.IntBuffer p4) {
-    record("glGetPerfMonitorCountersAMD", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glGetPerfMonitorGroupStringAMD(int p0, int p1, int[] p2, int p3, byte[] p4, int p5) {
-    record("glGetPerfMonitorGroupStringAMD", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
-  @Override public void glGetPerfMonitorGroupStringAMD(int p0, int p1, java.nio.IntBuffer p2, java.nio.ByteBuffer p3) {
-    record("glGetPerfMonitorGroupStringAMD", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glGetPerfMonitorGroupsAMD(int[] p0, int p1, int p2, int[] p3, int p4) {
-    record("glGetPerfMonitorGroupsAMD", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glGetPerfMonitorGroupsAMD(java.nio.IntBuffer p0, int p1, java.nio.IntBuffer p2) {
-    record("glGetPerfMonitorGroupsAMD", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glGetPerfQueryDataINTEL(int p0, int p1, int p2, java.nio.Buffer p3, int[] p4, int p5) {
     record("glGetPerfQueryDataINTEL", new Object[] {p0, p1, p2, p3, p4, p5});
   }
@@ -3153,16 +3228,16 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetPixelMapuiv", new Object[] {p0, p1});
   }
 
-  @Override public void glGetPixelMapusv(int p0, short[] p1, int p2) {
-    record("glGetPixelMapusv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glGetPixelMapusv(int p0, java.nio.ShortBuffer p1) {
     record("glGetPixelMapusv", new Object[] {p0, p1});
   }
 
   @Override public void glGetPixelMapusv(int p0, long p1) {
     record("glGetPixelMapusv", new Object[] {p0, p1});
+  }
+
+  @Override public void glGetPixelMapusv(int p0, short[] p1, int p2) {
+    record("glGetPixelMapusv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glGetPixelTransformParameterfvEXT(int p0, int p1, float[] p2, int p3) {
@@ -3329,20 +3404,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetQueryIndexediv", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glGetQueryObjecti64v(int p0, int p1, long[] p2, int p3) {
-    record("glGetQueryObjecti64v", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetQueryObjecti64v(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetQueryObjecti64v", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetQueryObjecti64vEXT(int p0, int p1, long[] p2, int p3) {
-    record("glGetQueryObjecti64vEXT", new Object[] {p0, p1, p2, p3});
+  @Override public void glGetQueryObjecti64v(int p0, int p1, long[] p2, int p3) {
+    record("glGetQueryObjecti64v", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetQueryObjecti64vEXT(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetQueryObjecti64vEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetQueryObjecti64vEXT(int p0, int p1, long[] p2, int p3) {
+    record("glGetQueryObjecti64vEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetQueryObjectiv(int p0, int p1, int[] p2, int p3) {
@@ -3353,20 +3428,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetQueryObjectiv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetQueryObjectui64v(int p0, int p1, long[] p2, int p3) {
-    record("glGetQueryObjectui64v", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetQueryObjectui64v(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetQueryObjectui64v", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetQueryObjectui64vEXT(int p0, int p1, long[] p2, int p3) {
-    record("glGetQueryObjectui64vEXT", new Object[] {p0, p1, p2, p3});
+  @Override public void glGetQueryObjectui64v(int p0, int p1, long[] p2, int p3) {
+    record("glGetQueryObjectui64v", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetQueryObjectui64vEXT(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetQueryObjectui64vEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetQueryObjectui64vEXT(int p0, int p1, long[] p2, int p3) {
+    record("glGetQueryObjectui64vEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetQueryObjectuiv(int p0, int p1, int[] p2, int p3) {
@@ -3407,6 +3482,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glGetSamplerParameterIuiv(int p0, int p1, java.nio.IntBuffer p2) {
     record("glGetSamplerParameterIuiv", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetSemaphoreParameterui64vEXT(int p0, int p1, java.nio.LongBuffer p2) {
+    record("glGetSemaphoreParameterui64vEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetSemaphoreParameterui64vEXT(int p0, int p1, long[] p2, int p3) {
+    record("glGetSemaphoreParameterui64vEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetSeparableFilter(int p0, int p1, int p2, java.nio.Buffer p3, java.nio.Buffer p4, java.nio.Buffer p5) {
@@ -3677,14 +3760,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetUniformfvARB", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetUniformi64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetUniformi64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glGetUniformi64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glGetUniformi64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glGetUniformiv(int p0, int p1, int[] p2, int p3) {
     record("glGetUniformiv", new Object[] {p0, p1, p2, p3});
   }
@@ -3701,12 +3776,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetUniformivARB", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetUniformui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetUniformui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetUniformui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetUniformui64vNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetUniformui64vNV(int p0, int p1, long[] p2, int p3) {
+    record("glGetUniformui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetUniformuiv(int p0, int p1, int[] p2, int p3) {
@@ -3715,6 +3790,22 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glGetUniformuiv(int p0, int p1, java.nio.IntBuffer p2) {
     record("glGetUniformuiv", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetUnsignedBytei_vEXT(int p0, int p1, byte[] p2, int p3) {
+    record("glGetUnsignedBytei_vEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glGetUnsignedBytei_vEXT(int p0, int p1, java.nio.ByteBuffer p2) {
+    record("glGetUnsignedBytei_vEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetUnsignedBytevEXT(int p0, byte[] p1, int p2) {
+    record("glGetUnsignedBytevEXT", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetUnsignedBytevEXT(int p0, java.nio.ByteBuffer p1) {
+    record("glGetUnsignedBytevEXT", new Object[] {p0, p1});
   }
 
   @Override public void glGetVariantBooleanvEXT(int p0, int p1, byte[] p2, int p3) {
@@ -3773,28 +3864,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetVertexAttribIiv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetVertexAttribIivEXT(int p0, int p1, int[] p2, int p3) {
-    record("glGetVertexAttribIivEXT", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glGetVertexAttribIivEXT(int p0, int p1, java.nio.IntBuffer p2) {
-    record("glGetVertexAttribIivEXT", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glGetVertexAttribIuiv(int p0, int p1, int[] p2, int p3) {
     record("glGetVertexAttribIuiv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetVertexAttribIuiv(int p0, int p1, java.nio.IntBuffer p2) {
     record("glGetVertexAttribIuiv", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glGetVertexAttribIuivEXT(int p0, int p1, int[] p2, int p3) {
-    record("glGetVertexAttribIuivEXT", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glGetVertexAttribIuivEXT(int p0, int p1, java.nio.IntBuffer p2) {
-    record("glGetVertexAttribIuivEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glGetVertexAttribLdv(int p0, int p1, double[] p2, int p3) {
@@ -3805,20 +3880,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetVertexAttribLdv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetVertexAttribLi64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetVertexAttribLi64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetVertexAttribLi64vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetVertexAttribLi64vNV", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetVertexAttribLui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glGetVertexAttribLui64vNV", new Object[] {p0, p1, p2, p3});
+  @Override public void glGetVertexAttribLi64vNV(int p0, int p1, long[] p2, int p3) {
+    record("glGetVertexAttribLi64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetVertexAttribLui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glGetVertexAttribLui64vNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetVertexAttribLui64vNV(int p0, int p1, long[] p2, int p3) {
+    record("glGetVertexAttribLui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetVertexAttribdv(int p0, int p1, double[] p2, int p3) {
@@ -3961,12 +4036,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glGetnPixelMapuiv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glGetnPixelMapusv(int p0, int p1, short[] p2, int p3) {
-    record("glGetnPixelMapusv", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glGetnPixelMapusv(int p0, int p1, java.nio.ShortBuffer p2) {
     record("glGetnPixelMapusv", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glGetnPixelMapusv(int p0, int p1, short[] p2, int p3) {
+    record("glGetnPixelMapusv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glGetnPolygonStipple(int p0, byte[] p1, int p2) {
@@ -4023,6 +4098,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glHistogram(int p0, int p1, int p2, boolean p3) {
     record("glHistogram", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glImportMemoryFdEXT(int p0, long p1, int p2, int p3) {
+    record("glImportMemoryFdEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glImportSemaphoreFdEXT(int p0, int p1, int p2) {
+    record("glImportSemaphoreFdEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public long glImportSyncEXT(int p0, long p1, int p2) {
@@ -4090,12 +4173,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glIndexs", new Object[] {p0});
   }
 
-  @Override public void glIndexsv(short[] p0, int p1) {
-    record("glIndexsv", new Object[] {p0, p1});
-  }
-
   @Override public void glIndexsv(java.nio.ShortBuffer p0) {
     record("glIndexsv", new Object[] {p0});
+  }
+
+  @Override public void glIndexsv(short[] p0, int p1) {
+    record("glIndexsv", new Object[] {p0, p1});
   }
 
   @Override public void glIndexub(byte p0) {
@@ -4198,6 +4281,11 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     return false;
   }
 
+  @Override public boolean glIsMemoryObjectEXT(int p0) {
+    record("glIsMemoryObjectEXT", new Object[] {p0});
+    return false;
+  }
+
   @Override public boolean glIsNameAMD(int p0, int p1) {
     record("glIsNameAMD", new Object[] {p0, p1});
     return false;
@@ -4235,6 +4323,11 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public boolean glIsRenderbuffer(int p0) {
     record("glIsRenderbuffer", new Object[] {p0});
+    return false;
+  }
+
+  @Override public boolean glIsSemaphoreEXT(int p0) {
+    record("glIsSemaphoreEXT", new Object[] {p0});
     return false;
   }
 
@@ -4276,6 +4369,18 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
   @Override public boolean glIsVertexAttribEnabledAPPLE(int p0, int p1) {
     record("glIsVertexAttribEnabledAPPLE", new Object[] {p0, p1});
     return false;
+  }
+
+  @Override public void glLGPUCopyImageSubDataNVX(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9, int p10, int p11, int p12, int p13, int p14, int p15, int p16) {
+    record("glLGPUCopyImageSubDataNVX", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16});
+  }
+
+  @Override public void glLGPUInterlockNVX() {
+    record("glLGPUInterlockNVX", new Object[] {});
+  }
+
+  @Override public void glLGPUNamedBufferSubDataNVX(int p0, int p1, long p2, long p3, java.nio.Buffer p4) {
+    record("glLGPUNamedBufferSubDataNVX", new Object[] {p0, p1, p2, p3, p4});
   }
 
   @Override public void glLightModelf(int p0, float p1) {
@@ -4600,12 +4705,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMatrixIndexuivARB", new Object[] {p0, p1});
   }
 
-  @Override public void glMatrixIndexusvARB(int p0, short[] p1, int p2) {
-    record("glMatrixIndexusvARB", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMatrixIndexusvARB(int p0, java.nio.ShortBuffer p1) {
     record("glMatrixIndexusvARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glMatrixIndexusvARB(int p0, short[] p1, int p2) {
+    record("glMatrixIndexusvARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMatrixLoadIdentityEXT(int p0) {
@@ -4716,8 +4821,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMatrixTranslatefEXT", new Object[] {p0, p1, p2, p3});
   }
 
+  @Override public void glMaxShaderCompilerThreadsKHR(int p0) {
+    record("glMaxShaderCompilerThreadsKHR", new Object[] {p0});
+  }
+
   @Override public void glMemoryBarrier(int p0) {
     record("glMemoryBarrier", new Object[] {p0});
+  }
+
+  @Override public void glMemoryObjectParameterivEXT(int p0, int p1, int[] p2, int p3) {
+    record("glMemoryObjectParameterivEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMemoryObjectParameterivEXT(int p0, int p1, java.nio.IntBuffer p2) {
+    record("glMemoryObjectParameterivEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMinSampleShading(float p0) {
@@ -4840,12 +4957,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord1h", new Object[] {p0, p1});
   }
 
-  @Override public void glMultiTexCoord1hv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord1hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord1hv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord1hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord1hv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord1hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord1i(int p0, int p1) {
@@ -4864,12 +4981,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord1s", new Object[] {p0, p1});
   }
 
-  @Override public void glMultiTexCoord1sv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord1sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord1sv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord1sv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord1sv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord1sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord2bOES(int p0, byte p1, byte p2) {
@@ -4912,12 +5029,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord2h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glMultiTexCoord2hv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord2hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord2hv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord2hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord2hv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord2hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord2i(int p0, int p1, int p2) {
@@ -4936,12 +5053,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord2s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glMultiTexCoord2sv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord2sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord2sv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord2sv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord2sv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord2sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord3bOES(int p0, byte p1, byte p2, byte p3) {
@@ -4984,12 +5101,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord3h", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glMultiTexCoord3hv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord3hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord3hv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord3hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord3hv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord3hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord3i(int p0, int p1, int p2, int p3) {
@@ -5008,12 +5125,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord3s", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glMultiTexCoord3sv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord3sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord3sv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord3sv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord3sv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord3sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord4bOES(int p0, byte p1, byte p2, byte p3, byte p4) {
@@ -5056,12 +5173,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord4h", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glMultiTexCoord4hv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord4hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord4hv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord4hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord4hv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord4hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoord4i(int p0, int p1, int p2, int p3, int p4) {
@@ -5080,12 +5197,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexCoord4s", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glMultiTexCoord4sv(int p0, short[] p1, int p2) {
-    record("glMultiTexCoord4sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glMultiTexCoord4sv(int p0, java.nio.ShortBuffer p1) {
     record("glMultiTexCoord4sv", new Object[] {p0, p1});
+  }
+
+  @Override public void glMultiTexCoord4sv(int p0, short[] p1, int p2) {
+    record("glMultiTexCoord4sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glMultiTexCoordPointerEXT(int p0, int p1, int p2, int p3, java.nio.Buffer p4) {
@@ -5220,6 +5337,90 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glMultiTexSubImage3DEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11});
   }
 
+  @Override public void glMulticastBarrierNV() {
+    record("glMulticastBarrierNV", new Object[] {});
+  }
+
+  @Override public void glMulticastBlitFramebufferNV(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9, int p10, int p11) {
+    record("glMulticastBlitFramebufferNV", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11});
+  }
+
+  @Override public void glMulticastBufferSubDataNV(int p0, int p1, long p2, long p3, java.nio.Buffer p4) {
+    record("glMulticastBufferSubDataNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastCopyBufferSubDataNV(int p0, int p1, int p2, int p3, long p4, long p5, long p6) {
+    record("glMulticastCopyBufferSubDataNV", new Object[] {p0, p1, p2, p3, p4, p5, p6});
+  }
+
+  @Override public void glMulticastCopyImageSubDataNV(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9, int p10, int p11, int p12, int p13, int p14, int p15, int p16) {
+    record("glMulticastCopyImageSubDataNV", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16});
+  }
+
+  @Override public void glMulticastFramebufferSampleLocationsfvNV(int p0, int p1, int p2, int p3, float[] p4, int p5) {
+    record("glMulticastFramebufferSampleLocationsfvNV", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
+  @Override public void glMulticastFramebufferSampleLocationsfvNV(int p0, int p1, int p2, int p3, java.nio.FloatBuffer p4) {
+    record("glMulticastFramebufferSampleLocationsfvNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastGetQueryObjecti64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
+    record("glMulticastGetQueryObjecti64vNV", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastGetQueryObjecti64vNV(int p0, int p1, int p2, long[] p3, int p4) {
+    record("glMulticastGetQueryObjecti64vNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastGetQueryObjectivNV(int p0, int p1, int p2, int[] p3, int p4) {
+    record("glMulticastGetQueryObjectivNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastGetQueryObjectivNV(int p0, int p1, int p2, java.nio.IntBuffer p3) {
+    record("glMulticastGetQueryObjectivNV", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastGetQueryObjectui64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
+    record("glMulticastGetQueryObjectui64vNV", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastGetQueryObjectui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
+    record("glMulticastGetQueryObjectui64vNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastGetQueryObjectuivNV(int p0, int p1, int p2, int[] p3, int p4) {
+    record("glMulticastGetQueryObjectuivNV", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastGetQueryObjectuivNV(int p0, int p1, int p2, java.nio.IntBuffer p3) {
+    record("glMulticastGetQueryObjectuivNV", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastScissorArrayvNVX(int p0, int p1, int p2, int[] p3, int p4) {
+    record("glMulticastScissorArrayvNVX", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastScissorArrayvNVX(int p0, int p1, int p2, java.nio.IntBuffer p3) {
+    record("glMulticastScissorArrayvNVX", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastViewportArrayvNVX(int p0, int p1, int p2, float[] p3, int p4) {
+    record("glMulticastViewportArrayvNVX", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glMulticastViewportArrayvNVX(int p0, int p1, int p2, java.nio.FloatBuffer p3) {
+    record("glMulticastViewportArrayvNVX", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastViewportPositionWScaleNVX(int p0, int p1, float p2, float p3) {
+    record("glMulticastViewportPositionWScaleNVX", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glMulticastWaitSyncNV(int p0, int p1) {
+    record("glMulticastWaitSyncNV", new Object[] {p0, p1});
+  }
+
   @Override public void glNamedBufferDataEXT(int p0, long p1, java.nio.Buffer p2, int p3) {
     record("glNamedBufferDataEXT", new Object[] {p0, p1, p2, p3});
   }
@@ -5234,6 +5435,14 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glNamedBufferStorageEXT(int p0, long p1, java.nio.Buffer p2, int p3) {
     record("glNamedBufferStorageEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glNamedBufferStorageExternalEXT(int p0, long p1, long p2, java.nio.Buffer p3, int p4) {
+    record("glNamedBufferStorageExternalEXT", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glNamedBufferStorageMemEXT(int p0, long p1, int p2, long p3) {
+    record("glNamedBufferStorageMemEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glNamedBufferSubDataEXT(int p0, long p1, long p2, java.nio.Buffer p3) {
@@ -5252,12 +5461,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glNamedFramebufferRenderbufferEXT", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glNamedFramebufferSampleLocationsfvNV(int p0, int p1, int p2, float[] p3, int p4) {
-    record("glNamedFramebufferSampleLocationsfvNV", new Object[] {p0, p1, p2, p3, p4});
+  @Override public void glNamedFramebufferSamplePositionsfvAMD(int p0, int p1, int p2, float[] p3, int p4) {
+    record("glNamedFramebufferSamplePositionsfvAMD", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glNamedFramebufferSampleLocationsfvNV(int p0, int p1, int p2, java.nio.FloatBuffer p3) {
-    record("glNamedFramebufferSampleLocationsfvNV", new Object[] {p0, p1, p2, p3});
+  @Override public void glNamedFramebufferSamplePositionsfvAMD(int p0, int p1, int p2, java.nio.FloatBuffer p3) {
+    record("glNamedFramebufferSamplePositionsfvAMD", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glNamedFramebufferTexture1DEXT(int p0, int p1, int p2, int p3, int p4) {
@@ -5282,6 +5491,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glNamedFramebufferTextureLayerEXT(int p0, int p1, int p2, int p3, int p4) {
     record("glNamedFramebufferTextureLayerEXT", new Object[] {p0, p1, p2, p3, p4});
+  }
+
+  @Override public void glNamedFramebufferTextureMultiviewOVR(int p0, int p1, int p2, int p3, int p4, int p5) {
+    record("glNamedFramebufferTextureMultiviewOVR", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
   @Override public void glNamedProgramLocalParameter4dEXT(int p0, int p1, int p2, double p3, double p4, double p5, double p6) {
@@ -5364,6 +5577,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glNamedRenderbufferStorageEXT", new Object[] {p0, p1, p2, p3});
   }
 
+  @Override public void glNamedRenderbufferStorageMultisampleAdvancedAMD(int p0, int p1, int p2, int p3, int p4, int p5) {
+    record("glNamedRenderbufferStorageMultisampleAdvancedAMD", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
   @Override public void glNamedRenderbufferStorageMultisampleCoverageEXT(int p0, int p1, int p2, int p3, int p4, int p5) {
     record("glNamedRenderbufferStorageMultisampleCoverageEXT", new Object[] {p0, p1, p2, p3, p4, p5});
   }
@@ -5416,12 +5633,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glNormal3h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glNormal3hv(short[] p0, int p1) {
-    record("glNormal3hv", new Object[] {p0, p1});
-  }
-
   @Override public void glNormal3hv(java.nio.ShortBuffer p0) {
     record("glNormal3hv", new Object[] {p0});
+  }
+
+  @Override public void glNormal3hv(short[] p0, int p1) {
+    record("glNormal3hv", new Object[] {p0, p1});
   }
 
   @Override public void glNormal3i(int p0, int p1, int p2) {
@@ -5440,16 +5657,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glNormal3s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glNormal3sv(short[] p0, int p1) {
-    record("glNormal3sv", new Object[] {p0, p1});
-  }
-
   @Override public void glNormal3sv(java.nio.ShortBuffer p0) {
     record("glNormal3sv", new Object[] {p0});
   }
 
+  @Override public void glNormal3sv(short[] p0, int p1) {
+    record("glNormal3sv", new Object[] {p0, p1});
+  }
+
   @Override public void glNormalFormatNV(int p0, int p1) {
     record("glNormalFormatNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glNormalPointer(com.jogamp.opengl.GLArrayData p0) {
+    record("glNormalPointer", new Object[] {p0});
   }
 
   @Override public void glNormalPointer(int p0, int p1, java.nio.Buffer p2) {
@@ -5458,10 +5679,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glNormalPointer(int p0, int p1, long p2) {
     record("glNormalPointer", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glNormalPointer(com.jogamp.opengl.GLArrayData p0) {
-    record("glNormalPointer", new Object[] {p0});
   }
 
   @Override public void glObjectLabel(int p0, int p1, int p2, byte[] p3, int p4) {
@@ -5546,16 +5763,16 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glPixelMapuiv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glPixelMapusv(int p0, int p1, short[] p2, int p3) {
-    record("glPixelMapusv", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glPixelMapusv(int p0, int p1, java.nio.ShortBuffer p2) {
     record("glPixelMapusv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glPixelMapusv(int p0, int p1, long p2) {
     record("glPixelMapusv", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glPixelMapusv(int p0, int p1, short[] p2, int p3) {
+    record("glPixelMapusv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glPixelStoref(int p0, float p1) {
@@ -5922,18 +6139,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glProgramUniform1i", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glProgramUniform1i64NV(int p0, int p1, long p2) {
-    record("glProgramUniform1i64NV", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glProgramUniform1i64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform1i64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform1i64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform1i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glProgramUniform1iv(int p0, int p1, int p2, int[] p3, int p4) {
     record("glProgramUniform1iv", new Object[] {p0, p1, p2, p3, p4});
   }
@@ -5944,18 +6149,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glProgramUniform1ui(int p0, int p1, int p2) {
     record("glProgramUniform1ui", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glProgramUniform1ui64NV(int p0, int p1, long p2) {
-    record("glProgramUniform1ui64NV", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glProgramUniform1ui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform1ui64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform1ui64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform1ui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glProgramUniform1uiv(int p0, int p1, int p2, int[] p3, int p4) {
@@ -6006,18 +6199,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glProgramUniform2i", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glProgramUniform2i64NV(int p0, int p1, long p2, long p3) {
-    record("glProgramUniform2i64NV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glProgramUniform2i64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform2i64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform2i64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform2i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glProgramUniform2iv(int p0, int p1, int p2, int[] p3, int p4) {
     record("glProgramUniform2iv", new Object[] {p0, p1, p2, p3, p4});
   }
@@ -6028,18 +6209,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glProgramUniform2ui(int p0, int p1, int p2, int p3) {
     record("glProgramUniform2ui", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glProgramUniform2ui64NV(int p0, int p1, long p2, long p3) {
-    record("glProgramUniform2ui64NV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glProgramUniform2ui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform2ui64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform2ui64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform2ui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glProgramUniform2uiv(int p0, int p1, int p2, int[] p3, int p4) {
@@ -6090,18 +6259,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glProgramUniform3i", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glProgramUniform3i64NV(int p0, int p1, long p2, long p3, long p4) {
-    record("glProgramUniform3i64NV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform3i64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform3i64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform3i64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform3i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glProgramUniform3iv(int p0, int p1, int p2, int[] p3, int p4) {
     record("glProgramUniform3iv", new Object[] {p0, p1, p2, p3, p4});
   }
@@ -6112,18 +6269,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glProgramUniform3ui(int p0, int p1, int p2, int p3, int p4) {
     record("glProgramUniform3ui", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform3ui64NV(int p0, int p1, long p2, long p3, long p4) {
-    record("glProgramUniform3ui64NV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform3ui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform3ui64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform3ui64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform3ui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glProgramUniform3uiv(int p0, int p1, int p2, int[] p3, int p4) {
@@ -6174,18 +6319,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glProgramUniform4i", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
-  @Override public void glProgramUniform4i64NV(int p0, int p1, long p2, long p3, long p4, long p5) {
-    record("glProgramUniform4i64NV", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
-  @Override public void glProgramUniform4i64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform4i64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform4i64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform4i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glProgramUniform4iv(int p0, int p1, int p2, int[] p3, int p4) {
     record("glProgramUniform4iv", new Object[] {p0, p1, p2, p3, p4});
   }
@@ -6196,18 +6329,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glProgramUniform4ui(int p0, int p1, int p2, int p3, int p4, int p5) {
     record("glProgramUniform4ui", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
-  @Override public void glProgramUniform4ui64NV(int p0, int p1, long p2, long p3, long p4, long p5) {
-    record("glProgramUniform4ui64NV", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
-  @Override public void glProgramUniform4ui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniform4ui64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glProgramUniform4ui64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
-    record("glProgramUniform4ui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glProgramUniform4uiv(int p0, int p1, int p2, int[] p3, int p4) {
@@ -6438,12 +6559,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glProgramUniformui64NV", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glProgramUniformui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
-    record("glProgramUniformui64vNV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
   @Override public void glProgramUniformui64vNV(int p0, int p1, int p2, java.nio.LongBuffer p3) {
     record("glProgramUniformui64vNV", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glProgramUniformui64vNV(int p0, int p1, int p2, long[] p3, int p4) {
+    record("glProgramUniformui64vNV", new Object[] {p0, p1, p2, p3, p4});
   }
 
   @Override public void glProgramVertexLimitNV(int p0, int p1) {
@@ -6504,6 +6625,24 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glQueryObjectParameteruiAMD", new Object[] {p0, p1, p2, p3});
   }
 
+  @Override public int glQueryResourceNV(int p0, int p1, int p2, int[] p3, int p4) {
+    record("glQueryResourceNV", new Object[] {p0, p1, p2, p3, p4});
+    return 0;
+  }
+
+  @Override public int glQueryResourceNV(int p0, int p1, int p2, java.nio.IntBuffer p3) {
+    record("glQueryResourceNV", new Object[] {p0, p1, p2, p3});
+    return 0;
+  }
+
+  @Override public void glQueryResourceTagNV(int p0, byte[] p1, int p2) {
+    record("glQueryResourceTagNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glQueryResourceTagNV(int p0, java.nio.ByteBuffer p1) {
+    record("glQueryResourceTagNV", new Object[] {p0, p1});
+  }
+
   @Override public void glRasterPos2d(double p0, double p1) {
     record("glRasterPos2d", new Object[] {p0, p1});
   }
@@ -6544,12 +6683,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glRasterPos2s", new Object[] {p0, p1});
   }
 
-  @Override public void glRasterPos2sv(short[] p0, int p1) {
-    record("glRasterPos2sv", new Object[] {p0, p1});
-  }
-
   @Override public void glRasterPos2sv(java.nio.ShortBuffer p0) {
     record("glRasterPos2sv", new Object[] {p0});
+  }
+
+  @Override public void glRasterPos2sv(short[] p0, int p1) {
+    record("glRasterPos2sv", new Object[] {p0, p1});
   }
 
   @Override public void glRasterPos3d(double p0, double p1, double p2) {
@@ -6592,12 +6731,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glRasterPos3s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glRasterPos3sv(short[] p0, int p1) {
-    record("glRasterPos3sv", new Object[] {p0, p1});
-  }
-
   @Override public void glRasterPos3sv(java.nio.ShortBuffer p0) {
     record("glRasterPos3sv", new Object[] {p0});
+  }
+
+  @Override public void glRasterPos3sv(short[] p0, int p1) {
+    record("glRasterPos3sv", new Object[] {p0, p1});
   }
 
   @Override public void glRasterPos4d(double p0, double p1, double p2, double p3) {
@@ -6640,12 +6779,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glRasterPos4s", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glRasterPos4sv(short[] p0, int p1) {
-    record("glRasterPos4sv", new Object[] {p0, p1});
-  }
-
   @Override public void glRasterPos4sv(java.nio.ShortBuffer p0) {
     record("glRasterPos4sv", new Object[] {p0});
+  }
+
+  @Override public void glRasterPos4sv(short[] p0, int p1) {
+    record("glRasterPos4sv", new Object[] {p0, p1});
   }
 
   @Override public void glRasterSamplesEXT(int p0, boolean p1) {
@@ -6708,16 +6847,25 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glRects", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glRectsv(short[] p0, int p1, short[] p2, int p3) {
-    record("glRectsv", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glRectsv(java.nio.ShortBuffer p0, java.nio.ShortBuffer p1) {
     record("glRectsv", new Object[] {p0, p1});
   }
 
+  @Override public void glRectsv(short[] p0, int p1, short[] p2, int p3) {
+    record("glRectsv", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public boolean glReleaseKeyedMutexWin32EXT(int p0, long p1) {
+    record("glReleaseKeyedMutexWin32EXT", new Object[] {p0, p1});
+    return false;
+  }
+
   @Override public void glReleaseShaderCompiler() {
     record("glReleaseShaderCompiler", new Object[] {});
+  }
+
+  @Override public void glRenderGpuMaskNV(int p0) {
+    record("glRenderGpuMaskNV", new Object[] {p0});
   }
 
   @Override public int glRenderMode(int p0) {
@@ -6733,6 +6881,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glRenderbufferStorageMultisample", new Object[] {p0, p1, p2, p3, p4});
   }
 
+  @Override public void glRenderbufferStorageMultisampleAdvancedAMD(int p0, int p1, int p2, int p3, int p4, int p5) {
+    record("glRenderbufferStorageMultisampleAdvancedAMD", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
   @Override public void glRenderbufferStorageMultisampleCoverageNV(int p0, int p1, int p2, int p3, int p4, int p5) {
     record("glRenderbufferStorageMultisampleCoverageNV", new Object[] {p0, p1, p2, p3, p4, p5});
   }
@@ -6743,10 +6895,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glResetMinmax(int p0) {
     record("glResetMinmax", new Object[] {p0});
-  }
-
-  @Override public void glResolveDepthValuesNV() {
-    record("glResolveDepthValuesNV", new Object[] {});
   }
 
   @Override public void glResumeTransformFeedback() {
@@ -6845,12 +6993,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glSecondaryColor3h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glSecondaryColor3hv(short[] p0, int p1) {
-    record("glSecondaryColor3hv", new Object[] {p0, p1});
-  }
-
   @Override public void glSecondaryColor3hv(java.nio.ShortBuffer p0) {
     record("glSecondaryColor3hv", new Object[] {p0});
+  }
+
+  @Override public void glSecondaryColor3hv(short[] p0, int p1) {
+    record("glSecondaryColor3hv", new Object[] {p0, p1});
   }
 
   @Override public void glSecondaryColor3i(int p0, int p1, int p2) {
@@ -6869,12 +7017,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glSecondaryColor3s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glSecondaryColor3sv(short[] p0, int p1) {
-    record("glSecondaryColor3sv", new Object[] {p0, p1});
-  }
-
   @Override public void glSecondaryColor3sv(java.nio.ShortBuffer p0) {
     record("glSecondaryColor3sv", new Object[] {p0});
+  }
+
+  @Override public void glSecondaryColor3sv(short[] p0, int p1) {
+    record("glSecondaryColor3sv", new Object[] {p0, p1});
   }
 
   @Override public void glSecondaryColor3ub(byte p0, byte p1, byte p2) {
@@ -6905,12 +7053,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glSecondaryColor3us", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glSecondaryColor3usv(short[] p0, int p1) {
-    record("glSecondaryColor3usv", new Object[] {p0, p1});
-  }
-
   @Override public void glSecondaryColor3usv(java.nio.ShortBuffer p0) {
     record("glSecondaryColor3usv", new Object[] {p0});
+  }
+
+  @Override public void glSecondaryColor3usv(short[] p0, int p1) {
+    record("glSecondaryColor3usv", new Object[] {p0, p1});
   }
 
   @Override public void glSecondaryColorFormatNV(int p0, int p1, int p2) {
@@ -6929,12 +7077,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glSelectBuffer", new Object[] {p0, p1});
   }
 
-  @Override public void glSelectPerfMonitorCountersAMD(int p0, boolean p1, int p2, int p3, int[] p4, int p5) {
-    record("glSelectPerfMonitorCountersAMD", new Object[] {p0, p1, p2, p3, p4, p5});
+  @Override public void glSemaphoreParameterui64vEXT(int p0, int p1, java.nio.LongBuffer p2) {
+    record("glSemaphoreParameterui64vEXT", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glSelectPerfMonitorCountersAMD(int p0, boolean p1, int p2, int p3, java.nio.IntBuffer p4) {
-    record("glSelectPerfMonitorCountersAMD", new Object[] {p0, p1, p2, p3, p4});
+  @Override public void glSemaphoreParameterui64vEXT(int p0, int p1, long[] p2, int p3) {
+    record("glSemaphoreParameterui64vEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glSeparableFilter2D(int p0, int p1, int p2, int p3, int p4, int p5, java.nio.Buffer p6, java.nio.Buffer p7) {
@@ -7001,6 +7149,22 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glShaderSourceARB", new Object[] {p0, p1, p2, p3});
   }
 
+  @Override public void glSignalSemaphoreEXT(int p0, int p1, int[] p2, int p3, int p4, int[] p5, int p6, int[] p7, int p8) {
+    record("glSignalSemaphoreEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8});
+  }
+
+  @Override public void glSignalSemaphoreEXT(int p0, int p1, java.nio.IntBuffer p2, int p3, java.nio.IntBuffer p4, java.nio.IntBuffer p5) {
+    record("glSignalSemaphoreEXT", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
+  @Override public void glSignalSemaphoreui64NVX(int p0, int p1, int[] p2, int p3, long[] p4, int p5) {
+    record("glSignalSemaphoreui64NVX", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
+  @Override public void glSignalSemaphoreui64NVX(int p0, int p1, java.nio.IntBuffer p2, java.nio.LongBuffer p3) {
+    record("glSignalSemaphoreui64NVX", new Object[] {p0, p1, p2, p3});
+  }
+
   @Override public void glStateCaptureNV(int p0, int p1) {
     record("glStateCaptureNV", new Object[] {p0, p1});
   }
@@ -7039,10 +7203,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glStringMarkerGREMEDY(int p0, java.nio.Buffer p1) {
     record("glStringMarkerGREMEDY", new Object[] {p0, p1});
-  }
-
-  @Override public void glSubpixelPrecisionBiasNV(int p0, int p1) {
-    record("glSubpixelPrecisionBiasNV", new Object[] {p0, p1});
   }
 
   @Override public void glSwizzleEXT(int p0, int p1, int p2, int p3, int p4, int p5) {
@@ -7105,12 +7265,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord1h", new Object[] {p0});
   }
 
-  @Override public void glTexCoord1hv(short[] p0, int p1) {
-    record("glTexCoord1hv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord1hv(java.nio.ShortBuffer p0) {
     record("glTexCoord1hv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord1hv(short[] p0, int p1) {
+    record("glTexCoord1hv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord1i(int p0) {
@@ -7129,12 +7289,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord1s", new Object[] {p0});
   }
 
-  @Override public void glTexCoord1sv(short[] p0, int p1) {
-    record("glTexCoord1sv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord1sv(java.nio.ShortBuffer p0) {
     record("glTexCoord1sv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord1sv(short[] p0, int p1) {
+    record("glTexCoord1sv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord2bOES(byte p0, byte p1) {
@@ -7177,12 +7337,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord2h", new Object[] {p0, p1});
   }
 
-  @Override public void glTexCoord2hv(short[] p0, int p1) {
-    record("glTexCoord2hv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord2hv(java.nio.ShortBuffer p0) {
     record("glTexCoord2hv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord2hv(short[] p0, int p1) {
+    record("glTexCoord2hv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord2i(int p0, int p1) {
@@ -7201,12 +7361,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord2s", new Object[] {p0, p1});
   }
 
-  @Override public void glTexCoord2sv(short[] p0, int p1) {
-    record("glTexCoord2sv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord2sv(java.nio.ShortBuffer p0) {
     record("glTexCoord2sv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord2sv(short[] p0, int p1) {
+    record("glTexCoord2sv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord3bOES(byte p0, byte p1, byte p2) {
@@ -7249,12 +7409,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord3h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glTexCoord3hv(short[] p0, int p1) {
-    record("glTexCoord3hv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord3hv(java.nio.ShortBuffer p0) {
     record("glTexCoord3hv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord3hv(short[] p0, int p1) {
+    record("glTexCoord3hv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord3i(int p0, int p1, int p2) {
@@ -7273,12 +7433,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord3s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glTexCoord3sv(short[] p0, int p1) {
-    record("glTexCoord3sv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord3sv(java.nio.ShortBuffer p0) {
     record("glTexCoord3sv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord3sv(short[] p0, int p1) {
+    record("glTexCoord3sv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord4bOES(byte p0, byte p1, byte p2, byte p3) {
@@ -7321,12 +7481,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord4h", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glTexCoord4hv(short[] p0, int p1) {
-    record("glTexCoord4hv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord4hv(java.nio.ShortBuffer p0) {
     record("glTexCoord4hv", new Object[] {p0});
+  }
+
+  @Override public void glTexCoord4hv(short[] p0, int p1) {
+    record("glTexCoord4hv", new Object[] {p0, p1});
   }
 
   @Override public void glTexCoord4i(int p0, int p1, int p2, int p3) {
@@ -7345,16 +7505,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexCoord4s", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glTexCoord4sv(short[] p0, int p1) {
-    record("glTexCoord4sv", new Object[] {p0, p1});
-  }
-
   @Override public void glTexCoord4sv(java.nio.ShortBuffer p0) {
     record("glTexCoord4sv", new Object[] {p0});
   }
 
+  @Override public void glTexCoord4sv(short[] p0, int p1) {
+    record("glTexCoord4sv", new Object[] {p0, p1});
+  }
+
   @Override public void glTexCoordFormatNV(int p0, int p1, int p2) {
     record("glTexCoordFormatNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glTexCoordPointer(com.jogamp.opengl.GLArrayData p0) {
+    record("glTexCoordPointer", new Object[] {p0});
   }
 
   @Override public void glTexCoordPointer(int p0, int p1, int p2, java.nio.Buffer p3) {
@@ -7363,10 +7527,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glTexCoordPointer(int p0, int p1, int p2, long p3) {
     record("glTexCoordPointer", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glTexCoordPointer(com.jogamp.opengl.GLArrayData p0) {
-    record("glTexCoordPointer", new Object[] {p0});
   }
 
   @Override public void glTexEnvf(int p0, int p1, float p2) {
@@ -7537,6 +7697,22 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTexStorage3DMultisample", new Object[] {p0, p1, p2, p3, p4, p5, p6});
   }
 
+  @Override public void glTexStorageMem2DEXT(int p0, int p1, int p2, int p3, int p4, int p5, long p6) {
+    record("glTexStorageMem2DEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6});
+  }
+
+  @Override public void glTexStorageMem2DMultisampleEXT(int p0, int p1, int p2, int p3, int p4, boolean p5, int p6, long p7) {
+    record("glTexStorageMem2DMultisampleEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
+  }
+
+  @Override public void glTexStorageMem3DEXT(int p0, int p1, int p2, int p3, int p4, int p5, int p6, long p7) {
+    record("glTexStorageMem3DEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
+  }
+
+  @Override public void glTexStorageMem3DMultisampleEXT(int p0, int p1, int p2, int p3, int p4, int p5, boolean p6, int p7, long p8) {
+    record("glTexStorageMem3DMultisampleEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8});
+  }
+
   @Override public void glTexStorageSparseAMD(int p0, int p1, int p2, int p3, int p4, int p5, int p6) {
     record("glTexStorageSparseAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6});
   }
@@ -7563,10 +7739,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glTexSubImage3D(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9, long p10) {
     record("glTexSubImage3D", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10});
-  }
-
-  @Override public void glTextureBarrierNV() {
-    record("glTextureBarrierNV", new Object[] {});
   }
 
   @Override public void glTextureBufferEXT(int p0, int p1, int p2, int p3) {
@@ -7701,6 +7873,22 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glTextureStorage3DMultisampleEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
   }
 
+  @Override public void glTextureStorageMem2DEXT(int p0, int p1, int p2, int p3, int p4, int p5, long p6) {
+    record("glTextureStorageMem2DEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6});
+  }
+
+  @Override public void glTextureStorageMem2DMultisampleEXT(int p0, int p1, int p2, int p3, int p4, boolean p5, int p6, long p7) {
+    record("glTextureStorageMem2DMultisampleEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
+  }
+
+  @Override public void glTextureStorageMem3DEXT(int p0, int p1, int p2, int p3, int p4, int p5, int p6, long p7) {
+    record("glTextureStorageMem3DEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
+  }
+
+  @Override public void glTextureStorageMem3DMultisampleEXT(int p0, int p1, int p2, int p3, int p4, int p5, boolean p6, int p7, long p8) {
+    record("glTextureStorageMem3DMultisampleEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8});
+  }
+
   @Override public void glTextureStorageSparseAMD(int p0, int p1, int p2, int p3, int p4, int p5, int p6, int p7) {
     record("glTextureStorageSparseAMD", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7});
   }
@@ -7773,18 +7961,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glUniform1i", new Object[] {p0, p1});
   }
 
-  @Override public void glUniform1i64NV(int p0, long p1) {
-    record("glUniform1i64NV", new Object[] {p0, p1});
-  }
-
-  @Override public void glUniform1i64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform1i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform1i64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform1i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glUniform1iARB(int p0, int p1) {
     record("glUniform1iARB", new Object[] {p0, p1});
   }
@@ -7807,18 +7983,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glUniform1ui(int p0, int p1) {
     record("glUniform1ui", new Object[] {p0, p1});
-  }
-
-  @Override public void glUniform1ui64NV(int p0, long p1) {
-    record("glUniform1ui64NV", new Object[] {p0, p1});
-  }
-
-  @Override public void glUniform1ui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform1ui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform1ui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform1ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glUniform1uiv(int p0, int p1, int[] p2, int p3) {
@@ -7857,18 +8021,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glUniform2i", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glUniform2i64NV(int p0, long p1, long p2) {
-    record("glUniform2i64NV", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glUniform2i64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform2i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform2i64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform2i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glUniform2iARB(int p0, int p1, int p2) {
     record("glUniform2iARB", new Object[] {p0, p1, p2});
   }
@@ -7891,18 +8043,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glUniform2ui(int p0, int p1, int p2) {
     record("glUniform2ui", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glUniform2ui64NV(int p0, long p1, long p2) {
-    record("glUniform2ui64NV", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glUniform2ui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform2ui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform2ui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform2ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glUniform2uiv(int p0, int p1, int[] p2, int p3) {
@@ -7941,18 +8081,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glUniform3i", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glUniform3i64NV(int p0, long p1, long p2, long p3) {
-    record("glUniform3i64NV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform3i64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform3i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform3i64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform3i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glUniform3iARB(int p0, int p1, int p2, int p3) {
     record("glUniform3iARB", new Object[] {p0, p1, p2, p3});
   }
@@ -7975,18 +8103,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glUniform3ui(int p0, int p1, int p2, int p3) {
     record("glUniform3ui", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform3ui64NV(int p0, long p1, long p2, long p3) {
-    record("glUniform3ui64NV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform3ui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform3ui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform3ui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform3ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glUniform3uiv(int p0, int p1, int[] p2, int p3) {
@@ -8025,18 +8141,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glUniform4i", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glUniform4i64NV(int p0, long p1, long p2, long p3, long p4) {
-    record("glUniform4i64NV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glUniform4i64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform4i64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform4i64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform4i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glUniform4iARB(int p0, int p1, int p2, int p3, int p4) {
     record("glUniform4iARB", new Object[] {p0, p1, p2, p3, p4});
   }
@@ -8059,18 +8163,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glUniform4ui(int p0, int p1, int p2, int p3, int p4) {
     record("glUniform4ui", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glUniform4ui64NV(int p0, long p1, long p2, long p3, long p4) {
-    record("glUniform4ui64NV", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glUniform4ui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniform4ui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glUniform4ui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
-    record("glUniform4ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glUniform4uiv(int p0, int p1, int[] p2, int p3) {
@@ -8189,12 +8281,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glUniformui64NV", new Object[] {p0, p1});
   }
 
-  @Override public void glUniformui64vNV(int p0, int p1, long[] p2, int p3) {
-    record("glUniformui64vNV", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glUniformui64vNV(int p0, int p1, java.nio.LongBuffer p2) {
     record("glUniformui64vNV", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glUniformui64vNV(int p0, int p1, long[] p2, int p3) {
+    record("glUniformui64vNV", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glUnlockArraysEXT() {
@@ -8213,6 +8305,10 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glUnmapTexture2DINTEL(int p0, int p1) {
     record("glUnmapTexture2DINTEL", new Object[] {p0, p1});
+  }
+
+  @Override public void glUploadGpuMaskNVX(int p0) {
+    record("glUploadGpuMaskNVX", new Object[] {p0});
   }
 
   @Override public void glUseProgram(int p0) {
@@ -8269,6 +8365,16 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public long glVDPAURegisterVideoSurfaceNV(java.nio.Buffer p0, int p1, int p2, java.nio.IntBuffer p3) {
     record("glVDPAURegisterVideoSurfaceNV", new Object[] {p0, p1, p2, p3});
+    return 0L;
+  }
+
+  @Override public long glVDPAURegisterVideoSurfaceWithPictureStructureNV(java.nio.Buffer p0, int p1, int p2, int[] p3, int p4, boolean p5) {
+    record("glVDPAURegisterVideoSurfaceWithPictureStructureNV", new Object[] {p0, p1, p2, p3, p4, p5});
+    return 0L;
+  }
+
+  @Override public long glVDPAURegisterVideoSurfaceWithPictureStructureNV(java.nio.Buffer p0, int p1, int p2, java.nio.IntBuffer p3, boolean p4) {
+    record("glVDPAURegisterVideoSurfaceWithPictureStructureNV", new Object[] {p0, p1, p2, p3, p4});
     return 0L;
   }
 
@@ -8336,12 +8442,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVariantivEXT", new Object[] {p0, p1});
   }
 
-  @Override public void glVariantsvEXT(int p0, short[] p1, int p2) {
-    record("glVariantsvEXT", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVariantsvEXT(int p0, java.nio.ShortBuffer p1) {
     record("glVariantsvEXT", new Object[] {p0, p1});
+  }
+
+  @Override public void glVariantsvEXT(int p0, short[] p1, int p2) {
+    record("glVariantsvEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVariantubvEXT(int p0, byte[] p1, int p2) {
@@ -8360,12 +8466,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVariantuivEXT", new Object[] {p0, p1});
   }
 
-  @Override public void glVariantusvEXT(int p0, short[] p1, int p2) {
-    record("glVariantusvEXT", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVariantusvEXT(int p0, java.nio.ShortBuffer p1) {
     record("glVariantusvEXT", new Object[] {p0, p1});
+  }
+
+  @Override public void glVariantusvEXT(int p0, short[] p1, int p2) {
+    record("glVariantusvEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertex2bOES(byte p0, byte p1) {
@@ -8408,12 +8514,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertex2h", new Object[] {p0, p1});
   }
 
-  @Override public void glVertex2hv(short[] p0, int p1) {
-    record("glVertex2hv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertex2hv(java.nio.ShortBuffer p0) {
     record("glVertex2hv", new Object[] {p0});
+  }
+
+  @Override public void glVertex2hv(short[] p0, int p1) {
+    record("glVertex2hv", new Object[] {p0, p1});
   }
 
   @Override public void glVertex2i(int p0, int p1) {
@@ -8432,12 +8538,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertex2s", new Object[] {p0, p1});
   }
 
-  @Override public void glVertex2sv(short[] p0, int p1) {
-    record("glVertex2sv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertex2sv(java.nio.ShortBuffer p0) {
     record("glVertex2sv", new Object[] {p0});
+  }
+
+  @Override public void glVertex2sv(short[] p0, int p1) {
+    record("glVertex2sv", new Object[] {p0, p1});
   }
 
   @Override public void glVertex3bOES(byte p0, byte p1, byte p2) {
@@ -8480,12 +8586,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertex3h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertex3hv(short[] p0, int p1) {
-    record("glVertex3hv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertex3hv(java.nio.ShortBuffer p0) {
     record("glVertex3hv", new Object[] {p0});
+  }
+
+  @Override public void glVertex3hv(short[] p0, int p1) {
+    record("glVertex3hv", new Object[] {p0, p1});
   }
 
   @Override public void glVertex3i(int p0, int p1, int p2) {
@@ -8504,12 +8610,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertex3s", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertex3sv(short[] p0, int p1) {
-    record("glVertex3sv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertex3sv(java.nio.ShortBuffer p0) {
     record("glVertex3sv", new Object[] {p0});
+  }
+
+  @Override public void glVertex3sv(short[] p0, int p1) {
+    record("glVertex3sv", new Object[] {p0, p1});
   }
 
   @Override public void glVertex4bOES(byte p0, byte p1, byte p2, byte p3) {
@@ -8552,12 +8658,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertex4h", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glVertex4hv(short[] p0, int p1) {
-    record("glVertex4hv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertex4hv(java.nio.ShortBuffer p0) {
     record("glVertex4hv", new Object[] {p0});
+  }
+
+  @Override public void glVertex4hv(short[] p0, int p1) {
+    record("glVertex4hv", new Object[] {p0, p1});
   }
 
   @Override public void glVertex4i(int p0, int p1, int p2, int p3) {
@@ -8576,12 +8682,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertex4s", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glVertex4sv(short[] p0, int p1) {
-    record("glVertex4sv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertex4sv(java.nio.ShortBuffer p0) {
     record("glVertex4sv", new Object[] {p0});
+  }
+
+  @Override public void glVertex4sv(short[] p0, int p1) {
+    record("glVertex4sv", new Object[] {p0, p1});
   }
 
   @Override public void glVertexArrayBindVertexBufferEXT(int p0, int p1, int p2, long p3, int p4) {
@@ -8720,12 +8826,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib1h", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib1hv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib1hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib1hv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib1hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib1hv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib1hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib1s(int p0, short p1) {
@@ -8736,20 +8842,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib1sARB", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib1sv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib1sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib1sv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib1sv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib1svARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib1svARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib1sv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib1sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib1svARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib1svARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib1svARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib1svARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib2d(int p0, double p1, double p2) {
@@ -8804,12 +8910,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib2h", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttrib2hv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib2hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib2hv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib2hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib2hv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib2hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib2s(int p0, short p1, short p2) {
@@ -8820,20 +8926,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib2sARB", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttrib2sv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib2sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib2sv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib2sv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib2svARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib2svARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib2sv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib2sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib2svARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib2svARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib2svARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib2svARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib3d(int p0, double p1, double p2, double p3) {
@@ -8888,12 +8994,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib3h", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glVertexAttrib3hv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib3hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib3hv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib3hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib3hv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib3hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib3s(int p0, short p1, short p2, short p3) {
@@ -8904,20 +9010,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib3sARB", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glVertexAttrib3sv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib3sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib3sv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib3sv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib3svARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib3svARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib3sv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib3sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib3svARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib3svARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib3svARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib3svARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4Nbv(int p0, byte[] p1, int p2) {
@@ -8952,20 +9058,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib4NivARB", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4Nsv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4Nsv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib4Nsv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4Nsv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4NsvARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4NsvARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib4Nsv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4Nsv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4NsvARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4NsvARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib4NsvARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4NsvARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4Nub(int p0, byte p1, byte p2, byte p3, byte p4) {
@@ -9008,20 +9114,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib4NuivARB", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4Nusv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4Nusv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib4Nusv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4Nusv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4NusvARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4NusvARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib4Nusv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4Nusv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4NusvARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4NusvARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib4NusvARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4NusvARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4bv(int p0, byte[] p1, int p2) {
@@ -9092,12 +9198,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib4h", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glVertexAttrib4hv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4hv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib4hv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4hv", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib4hv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4hv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4iv(int p0, int[] p1, int p2) {
@@ -9124,20 +9230,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib4sARB", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glVertexAttrib4sv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib4sv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4sv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4svARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4svARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib4sv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4svARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4svARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib4svARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4svARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4ubv(int p0, byte[] p1, int p2) {
@@ -9172,20 +9278,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttrib4uivARB", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4usv(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4usv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttrib4usv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4usv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttrib4usvARB(int p0, short[] p1, int p2) {
-    record("glVertexAttrib4usvARB", new Object[] {p0, p1, p2});
+  @Override public void glVertexAttrib4usv(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4usv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttrib4usvARB(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttrib4usvARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttrib4usvARB(int p0, short[] p1, int p2) {
+    record("glVertexAttrib4usvARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribDivisor(int p0, int p1) {
@@ -9200,10 +9306,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI1i", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI1iEXT(int p0, int p1) {
-    record("glVertexAttribI1iEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI1iv(int p0, int[] p1, int p2) {
     record("glVertexAttribI1iv", new Object[] {p0, p1, p2});
   }
@@ -9212,20 +9314,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI1iv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI1ivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI1ivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI1ivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI1ivEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI1ui(int p0, int p1) {
     record("glVertexAttribI1ui", new Object[] {p0, p1});
-  }
-
-  @Override public void glVertexAttribI1uiEXT(int p0, int p1) {
-    record("glVertexAttribI1uiEXT", new Object[] {p0, p1});
   }
 
   @Override public void glVertexAttribI1uiv(int p0, int[] p1, int p2) {
@@ -9236,20 +9326,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI1uiv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI1uivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI1uivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI1uivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI1uivEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI2i(int p0, int p1, int p2) {
     record("glVertexAttribI2i", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI2iEXT(int p0, int p1, int p2) {
-    record("glVertexAttribI2iEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribI2iv(int p0, int[] p1, int p2) {
@@ -9260,20 +9338,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI2iv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI2ivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI2ivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI2ivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI2ivEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI2ui(int p0, int p1, int p2) {
     record("glVertexAttribI2ui", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI2uiEXT(int p0, int p1, int p2) {
-    record("glVertexAttribI2uiEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribI2uiv(int p0, int[] p1, int p2) {
@@ -9284,20 +9350,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI2uiv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI2uivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI2uivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI2uivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI2uivEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI3i(int p0, int p1, int p2, int p3) {
     record("glVertexAttribI3i", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glVertexAttribI3iEXT(int p0, int p1, int p2, int p3) {
-    record("glVertexAttribI3iEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexAttribI3iv(int p0, int[] p1, int p2) {
@@ -9308,20 +9362,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI3iv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI3ivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI3ivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI3ivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI3ivEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI3ui(int p0, int p1, int p2, int p3) {
     record("glVertexAttribI3ui", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glVertexAttribI3uiEXT(int p0, int p1, int p2, int p3) {
-    record("glVertexAttribI3uiEXT", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexAttribI3uiv(int p0, int[] p1, int p2) {
@@ -9332,14 +9374,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI3uiv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI3uivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI3uivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI3uivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI3uivEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI4bv(int p0, byte[] p1, int p2) {
     record("glVertexAttribI4bv", new Object[] {p0, p1, p2});
   }
@@ -9348,20 +9382,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI4bv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI4bvEXT(int p0, byte[] p1, int p2) {
-    record("glVertexAttribI4bvEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI4bvEXT(int p0, java.nio.ByteBuffer p1) {
-    record("glVertexAttribI4bvEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI4i(int p0, int p1, int p2, int p3, int p4) {
     record("glVertexAttribI4i", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glVertexAttribI4iEXT(int p0, int p1, int p2, int p3, int p4) {
-    record("glVertexAttribI4iEXT", new Object[] {p0, p1, p2, p3, p4});
   }
 
   @Override public void glVertexAttribI4iv(int p0, int[] p1, int p2) {
@@ -9372,28 +9394,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI4iv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI4ivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI4ivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI4ivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI4ivEXT", new Object[] {p0, p1});
-  }
-
-  @Override public void glVertexAttribI4sv(int p0, short[] p1, int p2) {
-    record("glVertexAttribI4sv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribI4sv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttribI4sv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI4svEXT(int p0, short[] p1, int p2) {
-    record("glVertexAttribI4svEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI4svEXT(int p0, java.nio.ShortBuffer p1) {
-    record("glVertexAttribI4svEXT", new Object[] {p0, p1});
+  @Override public void glVertexAttribI4sv(int p0, short[] p1, int p2) {
+    record("glVertexAttribI4sv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribI4ubv(int p0, byte[] p1, int p2) {
@@ -9404,20 +9410,8 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI4ubv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI4ubvEXT(int p0, byte[] p1, int p2) {
-    record("glVertexAttribI4ubvEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI4ubvEXT(int p0, java.nio.ByteBuffer p1) {
-    record("glVertexAttribI4ubvEXT", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexAttribI4ui(int p0, int p1, int p2, int p3, int p4) {
     record("glVertexAttribI4ui", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glVertexAttribI4uiEXT(int p0, int p1, int p2, int p3, int p4) {
-    record("glVertexAttribI4uiEXT", new Object[] {p0, p1, p2, p3, p4});
   }
 
   @Override public void glVertexAttribI4uiv(int p0, int[] p1, int p2) {
@@ -9428,28 +9422,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribI4uiv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI4uivEXT(int p0, int[] p1, int p2) {
-    record("glVertexAttribI4uivEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI4uivEXT(int p0, java.nio.IntBuffer p1) {
-    record("glVertexAttribI4uivEXT", new Object[] {p0, p1});
-  }
-
-  @Override public void glVertexAttribI4usv(int p0, short[] p1, int p2) {
-    record("glVertexAttribI4usv", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribI4usv(int p0, java.nio.ShortBuffer p1) {
     record("glVertexAttribI4usv", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribI4usvEXT(int p0, short[] p1, int p2) {
-    record("glVertexAttribI4usvEXT", new Object[] {p0, p1, p2});
-  }
-
-  @Override public void glVertexAttribI4usvEXT(int p0, java.nio.ShortBuffer p1) {
-    record("glVertexAttribI4usvEXT", new Object[] {p0, p1});
+  @Override public void glVertexAttribI4usv(int p0, short[] p1, int p2) {
+    record("glVertexAttribI4usv", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribIFormatNV(int p0, int p1, int p2, int p3) {
@@ -9462,10 +9440,6 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glVertexAttribIPointer(int p0, int p1, int p2, int p3, long p4) {
     record("glVertexAttribIPointer", new Object[] {p0, p1, p2, p3, p4});
-  }
-
-  @Override public void glVertexAttribIPointerEXT(int p0, int p1, int p2, int p3, java.nio.Buffer p4) {
-    record("glVertexAttribIPointerEXT", new Object[] {p0, p1, p2, p3, p4});
   }
 
   @Override public void glVertexAttribL1d(int p0, double p1) {
@@ -9484,24 +9458,24 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribL1i64NV", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribL1i64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL1i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL1i64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL1i64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL1i64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL1i64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL1ui64NV(int p0, long p1) {
     record("glVertexAttribL1ui64NV", new Object[] {p0, p1});
   }
 
-  @Override public void glVertexAttribL1ui64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL1ui64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL1ui64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL1ui64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL1ui64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL1ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL2d(int p0, double p1, double p2) {
@@ -9520,24 +9494,24 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribL2i64NV", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttribL2i64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL2i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL2i64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL2i64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL2i64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL2i64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL2ui64NV(int p0, long p1, long p2) {
     record("glVertexAttribL2ui64NV", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttribL2ui64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL2ui64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL2ui64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL2ui64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL2ui64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL2ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL3d(int p0, double p1, double p2, double p3) {
@@ -9556,24 +9530,24 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribL3i64NV", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glVertexAttribL3i64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL3i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL3i64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL3i64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL3i64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL3i64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL3ui64NV(int p0, long p1, long p2, long p3) {
     record("glVertexAttribL3ui64NV", new Object[] {p0, p1, p2, p3});
   }
 
-  @Override public void glVertexAttribL3ui64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL3ui64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL3ui64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL3ui64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL3ui64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL3ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL4d(int p0, double p1, double p2, double p3, double p4) {
@@ -9592,24 +9566,24 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribL4i64NV", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glVertexAttribL4i64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL4i64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL4i64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL4i64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL4i64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL4i64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribL4ui64NV(int p0, long p1, long p2, long p3, long p4) {
     record("glVertexAttribL4ui64NV", new Object[] {p0, p1, p2, p3, p4});
   }
 
-  @Override public void glVertexAttribL4ui64vNV(int p0, long[] p1, int p2) {
-    record("glVertexAttribL4ui64vNV", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glVertexAttribL4ui64vNV(int p0, java.nio.LongBuffer p1) {
     record("glVertexAttribL4ui64vNV", new Object[] {p0, p1});
+  }
+
+  @Override public void glVertexAttribL4ui64vNV(int p0, long[] p1, int p2) {
+    record("glVertexAttribL4ui64vNV", new Object[] {p0, p1, p2});
   }
 
   @Override public void glVertexAttribLFormatNV(int p0, int p1, int p2, int p3) {
@@ -9624,16 +9598,16 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribParameteriAMD", new Object[] {p0, p1, p2});
   }
 
+  @Override public void glVertexAttribPointer(com.jogamp.opengl.GLArrayData p0) {
+    record("glVertexAttribPointer", new Object[] {p0});
+  }
+
   @Override public void glVertexAttribPointer(int p0, int p1, int p2, boolean p3, int p4, java.nio.Buffer p5) {
     record("glVertexAttribPointer", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
   @Override public void glVertexAttribPointer(int p0, int p1, int p2, boolean p3, int p4, long p5) {
     record("glVertexAttribPointer", new Object[] {p0, p1, p2, p3, p4, p5});
-  }
-
-  @Override public void glVertexAttribPointer(com.jogamp.opengl.GLArrayData p0) {
-    record("glVertexAttribPointer", new Object[] {p0});
   }
 
   @Override public void glVertexAttribPointerARB(int p0, int p1, int p2, boolean p3, int p4, java.nio.Buffer p5) {
@@ -9644,36 +9618,36 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexAttribPointerARB", new Object[] {p0, p1, p2, p3, p4, p5});
   }
 
-  @Override public void glVertexAttribs1hv(int p0, int p1, short[] p2, int p3) {
-    record("glVertexAttribs1hv", new Object[] {p0, p1, p2, p3});
-  }
-
   @Override public void glVertexAttribs1hv(int p0, int p1, java.nio.ShortBuffer p2) {
     record("glVertexAttribs1hv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttribs2hv(int p0, int p1, short[] p2, int p3) {
-    record("glVertexAttribs2hv", new Object[] {p0, p1, p2, p3});
+  @Override public void glVertexAttribs1hv(int p0, int p1, short[] p2, int p3) {
+    record("glVertexAttribs1hv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexAttribs2hv(int p0, int p1, java.nio.ShortBuffer p2) {
     record("glVertexAttribs2hv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttribs3hv(int p0, int p1, short[] p2, int p3) {
-    record("glVertexAttribs3hv", new Object[] {p0, p1, p2, p3});
+  @Override public void glVertexAttribs2hv(int p0, int p1, short[] p2, int p3) {
+    record("glVertexAttribs2hv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexAttribs3hv(int p0, int p1, java.nio.ShortBuffer p2) {
     record("glVertexAttribs3hv", new Object[] {p0, p1, p2});
   }
 
-  @Override public void glVertexAttribs4hv(int p0, int p1, short[] p2, int p3) {
-    record("glVertexAttribs4hv", new Object[] {p0, p1, p2, p3});
+  @Override public void glVertexAttribs3hv(int p0, int p1, short[] p2, int p3) {
+    record("glVertexAttribs3hv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexAttribs4hv(int p0, int p1, java.nio.ShortBuffer p2) {
     record("glVertexAttribs4hv", new Object[] {p0, p1, p2});
+  }
+
+  @Override public void glVertexAttribs4hv(int p0, int p1, short[] p2, int p3) {
+    record("glVertexAttribs4hv", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexBlendARB(int p0) {
@@ -9684,16 +9658,16 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexFormatNV", new Object[] {p0, p1, p2});
   }
 
+  @Override public void glVertexPointer(com.jogamp.opengl.GLArrayData p0) {
+    record("glVertexPointer", new Object[] {p0});
+  }
+
   @Override public void glVertexPointer(int p0, int p1, int p2, java.nio.Buffer p3) {
     record("glVertexPointer", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glVertexPointer(int p0, int p1, int p2, long p3) {
     record("glVertexPointer", new Object[] {p0, p1, p2, p3});
-  }
-
-  @Override public void glVertexPointer(com.jogamp.opengl.GLArrayData p0) {
-    record("glVertexPointer", new Object[] {p0});
   }
 
   @Override public void glVertexWeightPointerEXT(int p0, int p1, int p2, java.nio.Buffer p3) {
@@ -9720,12 +9694,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glVertexWeighth", new Object[] {p0});
   }
 
-  @Override public void glVertexWeighthv(short[] p0, int p1) {
-    record("glVertexWeighthv", new Object[] {p0, p1});
-  }
-
   @Override public void glVertexWeighthv(java.nio.ShortBuffer p0) {
     record("glVertexWeighthv", new Object[] {p0});
+  }
+
+  @Override public void glVertexWeighthv(short[] p0, int p1) {
+    record("glVertexWeighthv", new Object[] {p0, p1});
   }
 
   @Override public int glVideoCaptureNV(int p0, int[] p1, int p2, long[] p3, int p4) {
@@ -9764,6 +9738,22 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
 
   @Override public void glViewport(int p0, int p1, int p2, int p3) {
     record("glViewport", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glWaitSemaphoreEXT(int p0, int p1, int[] p2, int p3, int p4, int[] p5, int p6, int[] p7, int p8) {
+    record("glWaitSemaphoreEXT", new Object[] {p0, p1, p2, p3, p4, p5, p6, p7, p8});
+  }
+
+  @Override public void glWaitSemaphoreEXT(int p0, int p1, java.nio.IntBuffer p2, int p3, java.nio.IntBuffer p4, java.nio.IntBuffer p5) {
+    record("glWaitSemaphoreEXT", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
+  @Override public void glWaitSemaphoreui64NVX(int p0, int p1, int[] p2, int p3, long[] p4, int p5) {
+    record("glWaitSemaphoreui64NVX", new Object[] {p0, p1, p2, p3, p4, p5});
+  }
+
+  @Override public void glWaitSemaphoreui64NVX(int p0, int p1, java.nio.IntBuffer p2, java.nio.LongBuffer p3) {
+    record("glWaitSemaphoreui64NVX", new Object[] {p0, p1, p2, p3});
   }
 
   @Override public void glWeightPointerARB(int p0, int p1, int p2, java.nio.Buffer p3) {
@@ -9806,12 +9796,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glWeightivARB", new Object[] {p0, p1});
   }
 
-  @Override public void glWeightsvARB(int p0, short[] p1, int p2) {
-    record("glWeightsvARB", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glWeightsvARB(int p0, java.nio.ShortBuffer p1) {
     record("glWeightsvARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glWeightsvARB(int p0, short[] p1, int p2) {
+    record("glWeightsvARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glWeightubvARB(int p0, byte[] p1, int p2) {
@@ -9830,12 +9820,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glWeightuivARB", new Object[] {p0, p1});
   }
 
-  @Override public void glWeightusvARB(int p0, short[] p1, int p2) {
-    record("glWeightusvARB", new Object[] {p0, p1, p2});
-  }
-
   @Override public void glWeightusvARB(int p0, java.nio.ShortBuffer p1) {
     record("glWeightusvARB", new Object[] {p0, p1});
+  }
+
+  @Override public void glWeightusvARB(int p0, short[] p1, int p2) {
+    record("glWeightusvARB", new Object[] {p0, p1, p2});
   }
 
   @Override public void glWindowPos2d(double p0, double p1) {
@@ -9878,12 +9868,12 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glWindowPos2s", new Object[] {p0, p1});
   }
 
-  @Override public void glWindowPos2sv(short[] p0, int p1) {
-    record("glWindowPos2sv", new Object[] {p0, p1});
-  }
-
   @Override public void glWindowPos2sv(java.nio.ShortBuffer p0) {
     record("glWindowPos2sv", new Object[] {p0});
+  }
+
+  @Override public void glWindowPos2sv(short[] p0, int p1) {
+    record("glWindowPos2sv", new Object[] {p0, p1});
   }
 
   @Override public void glWindowPos3d(double p0, double p1, double p2) {
@@ -9926,12 +9916,20 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     record("glWindowPos3s", new Object[] {p0, p1, p2});
   }
 
+  @Override public void glWindowPos3sv(java.nio.ShortBuffer p0) {
+    record("glWindowPos3sv", new Object[] {p0});
+  }
+
   @Override public void glWindowPos3sv(short[] p0, int p1) {
     record("glWindowPos3sv", new Object[] {p0, p1});
   }
 
-  @Override public void glWindowPos3sv(java.nio.ShortBuffer p0) {
-    record("glWindowPos3sv", new Object[] {p0});
+  @Override public void glWindowRectanglesEXT(int p0, int p1, int[] p2, int p3) {
+    record("glWindowRectanglesEXT", new Object[] {p0, p1, p2, p3});
+  }
+
+  @Override public void glWindowRectanglesEXT(int p0, int p1, java.nio.IntBuffer p2) {
+    record("glWindowRectanglesEXT", new Object[] {p0, p1, p2});
   }
 
   @Override public void glWriteMaskEXT(int p0, int p1, int p2, int p3, int p4, int p5) {
@@ -10108,27 +10106,27 @@ public class RecordingGL2 implements com.jogamp.opengl.GL2 {
     return false;
   }
 
-  @Override public com.jogamp.opengl.GLBufferStorage mapBuffer(int p0, int p1) throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLBufferStorage mapBuffer(int p0, int p1) {
     record("mapBuffer", new Object[] {p0, p1});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GLBufferStorage mapBufferRange(int p0, long p1, long p2, int p3) throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLBufferStorage mapBufferRange(int p0, long p1, long p2, int p3) {
     record("mapBufferRange", new Object[] {p0, p1, p2, p3});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GLBufferStorage mapNamedBufferEXT(int p0, int p1) throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLBufferStorage mapNamedBufferEXT(int p0, int p1) {
     record("mapNamedBufferEXT", new Object[] {p0, p1});
     return null;
   }
 
-  @Override public com.jogamp.opengl.GLBufferStorage mapNamedBufferRangeEXT(int p0, long p1, long p2, int p3) throws com.jogamp.opengl.GLException {
+  @Override public com.jogamp.opengl.GLBufferStorage mapNamedBufferRangeEXT(int p0, long p1, long p2, int p3) {
     record("mapNamedBufferRangeEXT", new Object[] {p0, p1, p2, p3});
     return null;
   }
 
-  @Override public void setSwapInterval(int p0) throws com.jogamp.opengl.GLException {
+  @Override public void setSwapInterval(int p0) {
     record("setSwapInterval", new Object[] {p0});
   }
 

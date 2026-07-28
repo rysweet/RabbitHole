@@ -1,6 +1,7 @@
 package edu.cmu.cs.dennisc.render.joglrenderer;
 
 import com.jogamp.opengl.*;
+import com.jogamp.common.os.DynamicLibraryBundle;
 
 import java.lang.reflect.Method;
 import java.nio.IntBuffer;
@@ -102,6 +103,8 @@ final class TestGLContext extends GLContext implements AutoCloseable {
   public int getDefaultPixelDataType() { return 0; }
   @Override
   public int getDefaultPixelDataFormat() { return 0; }
+  @Override
+  public DynamicLibraryBundle getDynamicLibraryBundle() { return null; }
   @Override
   public String getGLDebugMessageExtension() { return null; }
   @Override

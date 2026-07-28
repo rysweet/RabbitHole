@@ -2,7 +2,7 @@ package edu.cmu.cs.dennisc.render.gl.imp;
 
 
 
-import com.jogamp.opengl.math.FloatUtil;
+import com.jogamp.math.FloatUtil;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
