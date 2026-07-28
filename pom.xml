@@ -92,7 +92,7 @@
     <commons.discovery.version>0.5</commons.discovery.version>
     <openhtml.version>1.0.0</openhtml.version>
     <javax.activation.version>1.2.0</javax.activation.version>
-    <jakarta.api.version>2.3.3</jakarta.api.version>
+    <jakarta.api.version>4.0.5</jakarta.api.version>
     <install4j.version>10.0.6</install4j.version>
     <jacoco.version>0.8.13</jacoco.version>
     <java.awt.headless>true</java.awt.headless>
