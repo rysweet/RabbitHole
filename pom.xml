@@ -106,7 +106,7 @@
     <surefire.forkCount>1</surefire.forkCount>
     <surefire.reuseForks>true</surefire.reuseForks>
 
-    <javafx.version>21.0.7</javafx.version>
+    <javafx.version>26.0.2</javafx.version>
   </properties>
 
   <modules>
