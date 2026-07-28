@@ -6,6 +6,10 @@
 
 [![](https://img.shields.io/badge/3.9.1.0-green.svg)](https://www.alice.org/get-alice/alice-3/)
 
+# Alice Project Feedback Survey
+Thank you for visiting! We are gathering feedback on our latest builds. 
+Please take 5 minutes to fill out our [Feedback Questionnaire](https://forms.gle/qNyV8VVZj9nvVtV56).
+
 ## Building Alice 3 from the source
 
 Download and install the following build tools
